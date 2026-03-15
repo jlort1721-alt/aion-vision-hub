@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0a0f1e" rx="76.8"/>
+  <circle cx="256" cy="256" r="179.2" fill="none" stroke="#3b82f6" stroke-width="20.48"/>
+  <circle cx="256" cy="256" r="71.67999999999999" fill="#3b82f6"/>
+  <circle cx="256" cy="256" r="26.88" fill="#0a0f1e"/>
+  <path d="M40.96000000000001,256 Q256,112.64000000000001 471.03999999999996,256" fill="none" stroke="#60a5fa" stroke-width="12.8" stroke-linecap="round"/>
+  <path d="M40.96000000000001,256 Q256,399.36 471.03999999999996,256" fill="none" stroke="#60a5fa" stroke-width="12.8" stroke-linecap="round"/>
+  <text x="256" y="496.64" text-anchor="middle" fill="#e2e8f0" font-family="system-ui, sans-serif" font-weight="700" font-size="51.2">AION</text>
+</svg>

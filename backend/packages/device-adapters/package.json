@@ -1,0 +1,36 @@
+{
+  "name": "@aion/device-adapters",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@aion/shared-contracts": "workspace:*",
+    "@aion/common-utils": "workspace:*",
+    "pino": "^9.0.0",
+    "undici": "^7.0.0",
+    "onvif": "^0.7.0",
+    "fast-xml-parser": "^4.5.0",
+    "node-digest-auth-client": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0",
+    "vitest": "^3.0.0"
+  }
+}

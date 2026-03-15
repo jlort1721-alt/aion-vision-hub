@@ -1,0 +1,227 @@
+# =============================================================================
+# AION Vision Hub — Deploy to Staging
+# =============================================================================
+# Triggered when CI passes on main. Builds Docker images, pushes to GHCR,
+# and deploys to the staging environment.
+# =============================================================================
+
+name: Deploy → Staging
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/aion
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Gate — only deploy if CI passed
+  # ---------------------------------------------------------------------------
+  gate:
+    name: "Verify CI passed"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - run: echo "CI passed on main — proceeding with staging deploy."
+
+  # ---------------------------------------------------------------------------
+  # Build & Push — Docker images to GHCR
+  # ---------------------------------------------------------------------------
+  build-push:
+    name: "Build & push Docker images"
+    runs-on: ubuntu-latest
+    needs: gate
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - image: backend-api
+            context: backend
+            dockerfile: backend/apps/backend-api/Dockerfile
+          - image: edge-gateway
+            context: backend
+            dockerfile: backend/apps/edge-gateway/Dockerfile
+          - image: gateway
+            context: gateway
+            dockerfile: gateway/Dockerfile
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}
+          tags: |
+            type=sha,prefix=staging-
+            type=raw,value=staging-latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # ---------------------------------------------------------------------------
+  # Build Frontend — upload static assets
+  # ---------------------------------------------------------------------------
+  build-frontend:
+    name: "Build frontend for staging"
+    runs-on: ubuntu-latest
+    needs: gate
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build with staging env
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-staging
+          path: dist/
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # Deploy — staging environment
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: "Deploy to staging"
+    runs-on: ubuntu-latest
+    needs: [build-push, build-frontend]
+    environment:
+      name: staging
+      url: ${{ vars.STAGING_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-staging
+          path: dist/
+
+      # ------------------------------------------------------------------
+      # Deploy strategy depends on your hosting provider.
+      # Uncomment and configure ONE of the following blocks:
+      # ------------------------------------------------------------------
+
+      # ── Option A: SSH + Docker Compose (VPS / bare metal) ──
+      # - name: Deploy via SSH
+      #   uses: appleboy/ssh-action@v1
+      #   with:
+      #     host: ${{ secrets.STAGING_SSH_HOST }}
+      #     username: ${{ secrets.STAGING_SSH_USER }}
+      #     key: ${{ secrets.STAGING_SSH_KEY }}
+      #     script: |
+      #       cd /opt/aion-vision-hub
+      #       docker compose pull
+      #       docker compose up -d --remove-orphans
+      #       docker system prune -f
+
+      # ── Option B: Vercel / Netlify (frontend SPA) ──
+      # - name: Deploy frontend to Vercel
+      #   uses: amondnet/vercel-action@v25
+      #   with:
+      #     vercel-token: ${{ secrets.VERCEL_TOKEN }}
+      #     vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+      #     vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+      #     working-directory: dist/
+
+      # ── Option C: Cloud Run / ECS / Kubernetes ──
+      # - name: Deploy to Cloud Run
+      #   uses: google-github-actions/deploy-cloudrun@v2
+      #   with:
+      #     service: aion-backend-api
+      #     image: ${{ env.IMAGE_PREFIX }}/backend-api:staging-latest
+
+      - name: Staging deploy placeholder
+        run: |
+          echo "============================================"
+          echo "  STAGING DEPLOY — CONFIGURE YOUR PROVIDER"
+          echo "============================================"
+          echo ""
+          echo "Docker images pushed to GHCR:"
+          echo "  - ${{ env.IMAGE_PREFIX }}/backend-api:staging-latest"
+          echo "  - ${{ env.IMAGE_PREFIX }}/edge-gateway:staging-latest"
+          echo "  - ${{ env.IMAGE_PREFIX }}/gateway:staging-latest"
+          echo ""
+          echo "Frontend artifact: frontend-staging (see artifacts)"
+          echo ""
+          echo "Configure one of the deploy options in this workflow."
+
+  # ---------------------------------------------------------------------------
+  # Smoke test — verify staging is healthy
+  # ---------------------------------------------------------------------------
+  smoke-test:
+    name: "Staging smoke test"
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: vars.STAGING_API_URL != ''
+    steps:
+      - name: Health check — backend API
+        run: |
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.STAGING_API_URL }}/health" || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "Backend API is healthy."
+              exit 0
+            fi
+            echo "Attempt $i — status $STATUS, retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::Backend API health check failed after 5 attempts."
+          exit 1
+
+      - name: Health check — gateway
+        if: vars.STAGING_GATEWAY_URL != ''
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.STAGING_GATEWAY_URL }}/health" || true)
+          if [ "$STATUS" = "200" ]; then
+            echo "Gateway is healthy."
+          else
+            echo "::warning::Gateway health check returned status $STATUS"
+          fi

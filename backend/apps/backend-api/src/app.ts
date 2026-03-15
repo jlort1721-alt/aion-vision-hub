@@ -1,0 +1,103 @@
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import jwt from '@fastify/jwt';
+import { createLoggerConfig } from '@aion/common-utils';
+import { config } from './config/env.js';
+import authPlugin from './plugins/auth.js';
+import tenantPlugin from './plugins/tenant.js';
+import auditPlugin from './plugins/audit.js';
+import { registerErrorHandler } from './middleware/error-handler.js';
+import { registerRequestId } from './middleware/request-id.js';
+import { registerRateLimiter } from './middleware/rate-limiter.js';
+
+// Module routes
+import { registerHealthRoutes } from './modules/health/routes.js';
+import { registerAuthRoutes } from './modules/auth/routes.js';
+import { registerTenantRoutes } from './modules/tenants/routes.js';
+import { registerUserRoutes } from './modules/users/routes.js';
+import { registerRoleRoutes } from './modules/roles/routes.js';
+import { registerDeviceRoutes } from './modules/devices/routes.js';
+import { registerSiteRoutes } from './modules/sites/routes.js';
+import { registerStreamRoutes } from './modules/streams/routes.js';
+import { registerEventRoutes } from './modules/events/routes.js';
+import { registerIncidentRoutes } from './modules/incidents/routes.js';
+import { registerIntegrationRoutes } from './modules/integrations/routes.js';
+import { registerAIBridgeRoutes } from './modules/ai-bridge/routes.js';
+import { registerMCPBridgeRoutes } from './modules/mcp-bridge/routes.js';
+import { registerReportRoutes } from './modules/reports/routes.js';
+import { registerAuditRoutes } from './modules/audit/routes.js';
+import { registerDomoticRoutes } from './modules/domotics/routes.js';
+import { registerAccessControlRoutes } from './modules/access-control/routes.js';
+import { registerIntercomRoutes } from './modules/intercom/routes.js';
+import { registerRebootRoutes } from './modules/reboots/routes.js';
+import { registerDatabaseRecordRoutes } from './modules/database-records/routes.js';
+import { registerWhatsAppRoutes } from './modules/whatsapp/routes.js';
+import { registerWebhookRoutes } from './modules/whatsapp/webhook.js';
+import { registerVoiceRoutes } from './modules/voice/routes.js';
+import { registerEmailRoutes } from './modules/email/routes.js';
+import { registerEWeLinkRoutes } from './modules/ewelink/routes.js';
+
+const loggerOpts = { name: 'aion-api', level: config.LOG_LEVEL };
+
+export async function buildApp() {
+  const app = Fastify({
+    logger: createLoggerConfig(loggerOpts),
+    requestIdHeader: 'x-request-id',
+    genReqId: () => crypto.randomUUID(),
+    trustProxy: true,
+  });
+
+  // CORS
+  await app.register(cors, {
+    origin: config.CORS_ORIGINS.split(',').map((o) => o.trim()),
+    credentials: true,
+  });
+
+  // JWT — explicit algorithm to prevent 'alg: none' attacks
+  await app.register(jwt as any, {
+    secret: config.JWT_SECRET,
+    sign: { algorithm: 'HS256', issuer: config.JWT_ISSUER, expiresIn: config.JWT_EXPIRATION },
+    verify: { algorithms: ['HS256'], issuer: config.JWT_ISSUER },
+  });
+
+  // Middleware
+  registerErrorHandler(app);
+  registerRequestId(app);
+  await registerRateLimiter(app);
+
+  // Plugins (order matters: auth → tenant → audit)
+  await app.register(authPlugin);
+  await app.register(tenantPlugin);
+  await app.register(auditPlugin);
+
+  // Routes (health first — no auth required)
+  await app.register(registerHealthRoutes, { prefix: '/health' });
+  await app.register(registerAuthRoutes, { prefix: '/auth' });
+  await app.register(registerTenantRoutes, { prefix: '/tenants' });
+  await app.register(registerUserRoutes, { prefix: '/users' });
+  await app.register(registerRoleRoutes, { prefix: '/roles' });
+  await app.register(registerDeviceRoutes, { prefix: '/devices' });
+  await app.register(registerSiteRoutes, { prefix: '/sites' });
+  await app.register(registerStreamRoutes, { prefix: '/streams' });
+  await app.register(registerEventRoutes, { prefix: '/events' });
+  await app.register(registerIncidentRoutes, { prefix: '/incidents' });
+  await app.register(registerIntegrationRoutes, { prefix: '/integrations' });
+  await app.register(registerAIBridgeRoutes, { prefix: '/ai' });
+  await app.register(registerMCPBridgeRoutes, { prefix: '/mcp' });
+  await app.register(registerReportRoutes, { prefix: '/reports' });
+  await app.register(registerAuditRoutes, { prefix: '/audit' });
+  await app.register(registerDomoticRoutes, { prefix: '/domotics' });
+  await app.register(registerAccessControlRoutes, { prefix: '/access-control' });
+  await app.register(registerIntercomRoutes, { prefix: '/intercom' });
+  await app.register(registerRebootRoutes, { prefix: '/reboots' });
+  await app.register(registerDatabaseRecordRoutes, { prefix: '/database-records' });
+  await app.register(registerWhatsAppRoutes, { prefix: '/whatsapp' });
+  await app.register(registerVoiceRoutes, { prefix: '/voice' });
+  await app.register(registerEmailRoutes, { prefix: '/email' });
+  await app.register(registerEWeLinkRoutes, { prefix: '/ewelink' });
+
+  // Public webhook routes (no JWT — Meta sends requests without auth)
+  await app.register(registerWebhookRoutes, { prefix: '/webhooks/whatsapp' });
+
+  return app;
+}

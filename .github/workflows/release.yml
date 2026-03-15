@@ -1,0 +1,129 @@
+# =============================================================================
+# AION Vision Hub — Release Workflow
+# =============================================================================
+# Manual workflow to create a versioned release.
+# Creates a Git tag and GitHub Release, which triggers deploy-production.yml.
+# =============================================================================
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 1.2.0)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark as pre-release?"
+        required: false
+        type: boolean
+        default: false
+      notes:
+        description: "Release notes (optional — auto-generated if empty)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Validate — ensure the release is safe
+  # ---------------------------------------------------------------------------
+  validate:
+    name: "Validate release"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Invalid version format: $VERSION (expected semver like 1.2.3 or 1.2.3-beta.1)"
+            exit 1
+          fi
+
+      - name: Check tag does not exist
+        run: |
+          if git rev-parse "v${{ inputs.version }}" >/dev/null 2>&1; then
+            echo "::error::Tag v${{ inputs.version }} already exists."
+            exit 1
+          fi
+
+      - name: Verify on main branch
+        run: |
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [[ "$BRANCH" != "main" ]]; then
+            echo "::warning::Releasing from branch '$BRANCH' instead of 'main'."
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Test — full test suite before release
+  # ---------------------------------------------------------------------------
+  test:
+    name: "Full test suite"
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Frontend — test
+        run: npm ci && npm test
+
+      - name: Backend — test
+        working-directory: backend
+        run: pnpm install --frozen-lockfile && pnpm test
+
+      - name: Gateway — test
+        working-directory: gateway
+        run: npm ci && npm test
+
+  # ---------------------------------------------------------------------------
+  # Release — create tag and GitHub release
+  # ---------------------------------------------------------------------------
+  release:
+    name: "Create release v${{ inputs.version }}"
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create and push tag
+        run: |
+          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: v${{ inputs.version }}
+          body: |
+            ${{ inputs.notes || format('Release v{0}', inputs.version) }}
+
+            ---
+            **Deployment:** This release triggers the production deploy pipeline.
+            Check the [Deploy → Production](${{ github.server_url }}/${{ github.repository }}/actions/workflows/deploy-production.yml) workflow for status.
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: ${{ inputs.notes == '' }}

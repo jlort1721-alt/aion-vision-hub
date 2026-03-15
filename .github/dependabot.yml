@@ -1,0 +1,82 @@
+# =============================================================================
+# Dependabot — Automated dependency update PRs
+# =============================================================================
+
+version: 2
+updates:
+  # -------------------------------------------------------------------------
+  # Frontend (root) — npm
+  # -------------------------------------------------------------------------
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - frontend
+    groups:
+      react:
+        patterns:
+          - "react*"
+          - "@types/react*"
+      radix:
+        patterns:
+          - "@radix-ui/*"
+      dev-tooling:
+        patterns:
+          - "eslint*"
+          - "typescript*"
+          - "vite*"
+          - "vitest*"
+          - "@vitejs/*"
+          - "tailwindcss*"
+
+  # -------------------------------------------------------------------------
+  # Backend monorepo — pnpm
+  # -------------------------------------------------------------------------
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - backend
+    groups:
+      backend-all:
+        patterns:
+          - "*"
+
+  # -------------------------------------------------------------------------
+  # Gateway — npm
+  # -------------------------------------------------------------------------
+  - package-ecosystem: npm
+    directory: /gateway
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - gateway
+    groups:
+      fastify:
+        patterns:
+          - "fastify*"
+          - "@fastify/*"
+
+  # -------------------------------------------------------------------------
+  # GitHub Actions
+  # -------------------------------------------------------------------------
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - ci

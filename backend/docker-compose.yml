@@ -1,0 +1,145 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL (development only) ──
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aion_vision_hub
+      POSTGRES_USER: aion
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aion_dev_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aion -d aion_vision_hub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aion-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '1.0'
+
+  # ── Backend API ──
+  backend-api:
+    build:
+      context: .
+      dockerfile: apps/backend-api/Dockerfile
+    environment:
+      PORT: 3000
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: postgres://aion:${POSTGRES_PASSWORD:-aion_dev_password}@postgres:5432/aion_vision_hub
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_ISSUER: aion-vision-hub
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - aion-net
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+
+  # ── Edge Gateway ──
+  edge-gateway:
+    build:
+      context: .
+      dockerfile: apps/edge-gateway/Dockerfile
+    environment:
+      PORT: 3100
+      NODE_ENV: ${NODE_ENV:-development}
+      GATEWAY_ID: ${GATEWAY_ID:-gw-local-01}
+      SITE_ID: ${SITE_ID:-}
+      BACKEND_API_URL: http://backend-api:3000
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      MEDIAMTX_API_URL: http://mediamtx:9997
+      MEDIAMTX_RTSP_PORT: 8554
+      DISCOVERY_NETWORK_RANGE: ${DISCOVERY_NETWORK_RANGE:-192.168.1.0/24}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "3100:3100"
+    depends_on:
+      backend-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3100/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - aion-net
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.5'
+
+  # ── MediaMTX (RTSP → WebRTC/HLS proxy) ──
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    ports:
+      - "8554:8554"   # RTSP
+      - "8888:8888"   # HLS
+      - "8889:8889"   # WebRTC
+      - "9997:9997"   # API
+    environment:
+      MTX_PROTOCOLS: tcp
+      MTX_WEBRTCADDRESS: ":8889"
+      MTX_API: "yes"
+      MTX_APIADDRESS: ":9997"
+    networks:
+      - aion-net
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.5'
+
+volumes:
+  pgdata:
+
+networks:
+  aion-net:
+    driver: bridge
