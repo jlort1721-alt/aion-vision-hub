@@ -16,7 +16,8 @@ import {
   LayoutDashboard, Video, Play, Bell, MonitorSpeaker, MapPin, Puzzle, Bot,
   Settings, ScrollText, FileBarChart, Activity, ChevronLeft, Search,
   LogOut, User, Shield, AlertTriangle, Menu, X, Users, Globe,
-  Zap, DoorOpen, RotateCcw, Phone, Database, MessageSquare
+  Zap, DoorOpen, RotateCcw, Phone, Database, MessageSquare,
+  Clock, Timer, AlertOctagon, Navigation, CalendarClock
 } from 'lucide-react';
 import { hasModuleAccess, ALL_MODULES, DEFAULT_ROLE_PERMISSIONS } from '@/lib/permissions';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,8 +47,13 @@ const NAV_ITEMS: NavItem[] = [
   { labelKey: 'nav.database', path: '/database', icon: <Database size={18} /> },
   { labelKey: 'nav.ai_assistant', path: '/ai-assistant', icon: <Bot size={18} /> },
   { labelKey: 'nav.whatsapp', path: '/whatsapp', icon: <MessageSquare size={18} /> },
+  { labelKey: 'nav.shifts', path: '/shifts', icon: <Clock size={18} /> },
+  { labelKey: 'nav.sla', path: '/sla', icon: <Timer size={18} /> },
+  { labelKey: 'nav.emergency', path: '/emergency', icon: <AlertOctagon size={18} /> },
+  { labelKey: 'nav.patrols', path: '/patrols', icon: <Navigation size={18} /> },
   { labelKey: 'nav.integrations', path: '/integrations', icon: <Puzzle size={18} /> },
   { labelKey: 'nav.reports', path: '/reports', icon: <FileBarChart size={18} /> },
+  { labelKey: 'nav.scheduled_reports', path: '/scheduled-reports', icon: <CalendarClock size={18} /> },
   { labelKey: 'nav.audit', path: '/audit', icon: <ScrollText size={18} /> },
   { labelKey: 'nav.system', path: '/system', icon: <Activity size={18} /> },
   { labelKey: 'nav.settings', path: '/settings', icon: <Settings size={18} /> },

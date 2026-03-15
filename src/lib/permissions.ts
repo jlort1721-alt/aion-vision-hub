@@ -27,6 +27,11 @@ export const ALL_MODULES: ModulePermission[] = [
   { module: 'reports', label: 'Reports', icon: 'FileBarChart', path: '/reports' },
   { module: 'audit', label: 'Audit Log', icon: 'ScrollText', path: '/audit' },
   { module: 'system', label: 'System Health', icon: 'Activity', path: '/system' },
+  { module: 'shifts', label: 'Shifts & Guards', icon: 'Clock', path: '/shifts' },
+  { module: 'sla', label: 'SLA Management', icon: 'Timer', path: '/sla' },
+  { module: 'emergency', label: 'Emergency', icon: 'AlertOctagon', path: '/emergency' },
+  { module: 'patrols', label: 'Patrols', icon: 'Navigation', path: '/patrols' },
+  { module: 'scheduled_reports', label: 'Scheduled Reports', icon: 'CalendarClock', path: '/scheduled-reports' },
   { module: 'settings', label: 'Settings', icon: 'Settings', path: '/settings' },
   { module: 'admin', label: 'Admin', icon: 'Users', path: '/admin' },
 ];
@@ -35,9 +40,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   super_admin: ALL_MODULES.map(m => m.module),
   tenant_admin: ALL_MODULES.map(m => m.module),
   operator: [
-    'dashboard', 'live_view', 'playback', 'events', 'incidents',
+    'dashboard', 'live_view', 'playback', 'events', 'alerts', 'incidents',
     'devices', 'sites', 'domotics', 'access_control', 'reboots',
     'intercom', 'database', 'ai_assistant', 'reports', 'settings',
+    'shifts', 'sla', 'emergency', 'patrols',
   ],
   viewer: [
     'dashboard', 'live_view', 'playback', 'events', 'reports',

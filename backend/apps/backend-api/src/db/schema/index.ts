@@ -12,6 +12,13 @@ export { callSessions, voipConfig } from './call-sessions.js';
 export { databaseRecords } from './database-records.js';
 export { waConversations, waMessages, waTemplates } from './whatsapp.js';
 export { alertRules, escalationPolicies, alertInstances, notificationChannels, notificationLog } from './alerts.js';
+export {
+  shifts, shiftAssignments,
+  slaDefinitions, slaTracking,
+  emergencyProtocols, emergencyContacts, emergencyActivations,
+  patrolRoutes, patrolCheckpoints, patrolLogs,
+  scheduledReports,
+} from './operations.js';
 
 import { pgTable, uuid, varchar, text, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';

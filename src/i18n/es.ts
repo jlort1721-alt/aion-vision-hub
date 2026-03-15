@@ -366,6 +366,13 @@ const es: Record<string, string> = {
   // Search
   'search.placeholder': 'Buscar dispositivos, eventos, sitios... (⌘K)',
 
+  // Phase 2 nav
+  'nav.shifts': 'Turnos y Guardias',
+  'nav.sla': 'Gestión SLA',
+  'nav.emergency': 'Emergencias',
+  'nav.patrols': 'Patrullas',
+  'nav.scheduled_reports': 'Reportes Programados',
+
   // New modules nav
   'nav.domotics': 'Domóticos',
   'nav.access_control': 'Control de Acceso',

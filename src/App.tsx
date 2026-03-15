@@ -72,6 +72,11 @@ const IntercomPage = lazy(() => import("@/pages/IntercomPage"));
 const DatabasePage = lazy(() => import("@/pages/DatabasePage"));
 const WhatsAppPage = lazy(() => import("@/pages/WhatsAppPage"));
 const AlertsPage = lazy(() => import("@/pages/AlertsPage"));
+const ShiftsPage = lazy(() => import("@/pages/ShiftsPage"));
+const SLAPage = lazy(() => import("@/pages/SLAPage"));
+const EmergencyPage = lazy(() => import("@/pages/EmergencyPage"));
+const PatrolsPage = lazy(() => import("@/pages/PatrolsPage"));
+const ScheduledReportsPage = lazy(() => import("@/pages/ScheduledReportsPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -145,7 +150,12 @@ function AppRoutes() {
           <Route path="settings" element={<ModuleGuard module="settings"><SettingsPage /></ModuleGuard>} />
           <Route path="admin" element={<ModuleGuard module="admin"><AdminPage /></ModuleGuard>} />
           <Route path="whatsapp" element={<ModuleGuard module="integrations"><WhatsAppPage /></ModuleGuard>} />
-          <Route path="alerts" element={<ModuleGuard module="events"><AlertsPage /></ModuleGuard>} />
+          <Route path="alerts" element={<ModuleGuard module="alerts"><AlertsPage /></ModuleGuard>} />
+          <Route path="shifts" element={<ModuleGuard module="shifts"><ShiftsPage /></ModuleGuard>} />
+          <Route path="sla" element={<ModuleGuard module="sla"><SLAPage /></ModuleGuard>} />
+          <Route path="emergency" element={<ModuleGuard module="emergency"><EmergencyPage /></ModuleGuard>} />
+          <Route path="patrols" element={<ModuleGuard module="patrols"><PatrolsPage /></ModuleGuard>} />
+          <Route path="scheduled-reports" element={<ModuleGuard module="scheduled_reports"><ScheduledReportsPage /></ModuleGuard>} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
