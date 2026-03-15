@@ -24,7 +24,7 @@
     "@supabase/supabase-js": "^2.49.4",
     "onvif": "^0.7.0",
     "node-digest-auth-client": "^0.8.0",
-    "pino": "^9.0.0",
+    "pino": "^10.3.1",
     "pino-pretty": "^11.0.0",
     "zod": "^3.23.0",
     "dotenv": "^16.4.0",
