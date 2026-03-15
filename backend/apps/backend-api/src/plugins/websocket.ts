@@ -99,7 +99,7 @@ async function websocketPlugin(app: FastifyInstance) {
     }));
 
     // Handle incoming messages (subscribe/unsubscribe/pong)
-    socket.on('message', (raw) => {
+    socket.on('message', (raw: any) => {
       try {
         const msg = JSON.parse(raw.toString());
         client.lastPing = Date.now();
@@ -130,7 +130,7 @@ async function websocketPlugin(app: FastifyInstance) {
       logger.info({ clientId }, 'WebSocket client disconnected');
     });
 
-    socket.on('error', (err) => {
+    socket.on('error', (err: any) => {
       logger.error({ clientId, error: err }, 'WebSocket error');
       clients.delete(clientId);
     });
