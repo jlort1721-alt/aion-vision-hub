@@ -4,6 +4,7 @@ const en: Record<string, string> = {
   'nav.live_view': 'Live View',
   'nav.playback': 'Playback',
   'nav.events': 'Events',
+  'nav.alerts': 'Alerts',
   'nav.incidents': 'Incidents',
   'nav.devices': 'Devices',
   'nav.sites': 'Sites',

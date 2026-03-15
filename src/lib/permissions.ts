@@ -13,6 +13,7 @@ export const ALL_MODULES: ModulePermission[] = [
   { module: 'live_view', label: 'Live View', icon: 'Video', path: '/live-view' },
   { module: 'playback', label: 'Playback', icon: 'Play', path: '/playback' },
   { module: 'events', label: 'Events', icon: 'Bell', path: '/events' },
+  { module: 'alerts', label: 'Alerts', icon: 'Shield', path: '/alerts' },
   { module: 'incidents', label: 'Incidents', icon: 'AlertTriangle', path: '/incidents' },
   { module: 'devices', label: 'Devices', icon: 'MonitorSpeaker', path: '/devices' },
   { module: 'sites', label: 'Sites', icon: 'MapPin', path: '/sites' },

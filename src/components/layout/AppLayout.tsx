@@ -21,6 +21,7 @@ import {
 import { hasModuleAccess, ALL_MODULES, DEFAULT_ROLE_PERMISSIONS } from '@/lib/permissions';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { useWebSocket } from '@/hooks/use-websocket';
 
 interface NavItem {
   labelKey: string;
@@ -34,6 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   { labelKey: 'nav.live_view', path: '/live-view', icon: <Video size={18} /> },
   { labelKey: 'nav.playback', path: '/playback', icon: <Play size={18} /> },
   { labelKey: 'nav.events', path: '/events', icon: <Bell size={18} />, badge: 3 },
+  { labelKey: 'nav.alerts', path: '/alerts', icon: <Shield size={18} /> },
   { labelKey: 'nav.incidents', path: '/incidents', icon: <AlertTriangle size={18} />, badge: 1 },
   { labelKey: 'nav.devices', path: '/devices', icon: <MonitorSpeaker size={18} /> },
   { labelKey: 'nav.sites', path: '/sites', icon: <MapPin size={18} /> },
@@ -59,6 +61,7 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const { user, profile, logout, roles } = useAuth();
   const { t, lang, setLang } = useI18n();
+  useWebSocket(); // Establish real-time connection
 
   const { data: dbPerms } = useQuery({
     queryKey: ['role-module-permissions', profile?.tenant_id],

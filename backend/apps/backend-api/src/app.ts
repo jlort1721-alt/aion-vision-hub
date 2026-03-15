@@ -36,6 +36,8 @@ import { registerWebhookRoutes } from './modules/whatsapp/webhook.js';
 import { registerVoiceRoutes } from './modules/voice/routes.js';
 import { registerEmailRoutes } from './modules/email/routes.js';
 import { registerEWeLinkRoutes } from './modules/ewelink/routes.js';
+import { registerAlertRoutes } from './modules/alerts/routes.js';
+import websocketPlugin from './plugins/websocket.js';
 
 const loggerOpts = { name: 'aion-api', level: config.LOG_LEVEL };
 
@@ -96,8 +98,14 @@ export async function buildApp() {
   await app.register(registerEmailRoutes, { prefix: '/email' });
   await app.register(registerEWeLinkRoutes, { prefix: '/ewelink' });
 
+  // Alert system
+  await app.register(registerAlertRoutes, { prefix: '/alerts' });
+
   // Public webhook routes (no JWT — Meta sends requests without auth)
   await app.register(registerWebhookRoutes, { prefix: '/webhooks/whatsapp' });
+
+  // WebSocket for real-time updates (JWT via query param)
+  await app.register(websocketPlugin);
 
   return app;
 }

@@ -1,6 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth.js';
 import { eventService } from './service.js';
+import { alertEngine } from '../alerts/engine.js';
+import { broadcast } from '../../plugins/websocket.js';
 import {
   createEventSchema,
   assignEventSchema,
@@ -48,6 +50,21 @@ export async function registerEventRoutes(app: FastifyInstance) {
       const body = createEventSchema.parse(request.body);
       const data = await eventService.create(body, request.tenantId);
 
+      // Broadcast new event to connected WebSocket clients
+      broadcast(request.tenantId, 'events', { type: 'event.new', event: data });
+
+      // Process event through alert engine (non-blocking)
+      alertEngine.processEvent({
+        id: data.id,
+        tenantId: request.tenantId,
+        deviceId: data.deviceId,
+        siteId: data.siteId,
+        type: data.type,
+        severity: data.severity,
+        title: data.title,
+        description: data.description,
+      }).catch(() => { /* logged internally */ });
+
       await request.audit('event.create', 'events', data.id, {
         type: data.type,
         severity: data.severity,
@@ -65,6 +82,8 @@ export async function registerEventRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const body = assignEventSchema.parse(request.body);
       const data = await eventService.assign(request.params.id, body, request.tenantId);
+
+      broadcast(request.tenantId, 'events', { type: 'event.assigned', event: data });
 
       await request.audit('event.assign', 'events', data.id, {
         assignedTo: body.assignedTo,
@@ -85,6 +104,8 @@ export async function registerEventRoutes(app: FastifyInstance) {
         body,
         request.tenantId,
       );
+
+      broadcast(request.tenantId, 'events', { type: 'event.status_changed', event: data });
 
       await request.audit('event.status', 'events', data.id, {
         status: body.status,

@@ -71,6 +71,7 @@ const RebootsPage = lazy(() => import("@/pages/RebootsPage"));
 const IntercomPage = lazy(() => import("@/pages/IntercomPage"));
 const DatabasePage = lazy(() => import("@/pages/DatabasePage"));
 const WhatsAppPage = lazy(() => import("@/pages/WhatsAppPage"));
+const AlertsPage = lazy(() => import("@/pages/AlertsPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -144,6 +145,7 @@ function AppRoutes() {
           <Route path="settings" element={<ModuleGuard module="settings"><SettingsPage /></ModuleGuard>} />
           <Route path="admin" element={<ModuleGuard module="admin"><AdminPage /></ModuleGuard>} />
           <Route path="whatsapp" element={<ModuleGuard module="integrations"><WhatsAppPage /></ModuleGuard>} />
+          <Route path="alerts" element={<ModuleGuard module="events"><AlertsPage /></ModuleGuard>} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

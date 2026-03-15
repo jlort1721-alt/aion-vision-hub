@@ -4,6 +4,7 @@ const es: Record<string, string> = {
   'nav.live_view': 'Vista en Vivo',
   'nav.playback': 'Reproducción',
   'nav.events': 'Eventos',
+  'nav.alerts': 'Alertas',
   'nav.incidents': 'Incidentes',
   'nav.devices': 'Dispositivos',
   'nav.sites': 'Sitios',
