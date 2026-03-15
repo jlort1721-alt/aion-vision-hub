@@ -19,6 +19,12 @@ export {
   patrolRoutes, patrolCheckpoints, patrolLogs,
   scheduledReports,
 } from './operations.js';
+export {
+  automationRules, automationExecutions,
+  visitors, visitorPasses,
+  kpiSnapshots,
+  pushSubscriptions,
+} from './phase3.js';
 
 import { pgTable, uuid, varchar, text, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';

@@ -20,7 +20,7 @@ declare module 'fastify' {
   }
 }
 
-const PUBLIC_ROUTES = ['/health', '/health/ready', '/health/metrics', '/webhooks/whatsapp', '/ws'];
+const PUBLIC_ROUTES = ['/health', '/health/ready', '/health/metrics', '/webhooks/whatsapp', '/ws', '/push/vapid-public-key'];
 
 /**
  * Check if a request URL matches a public route.

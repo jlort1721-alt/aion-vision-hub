@@ -77,6 +77,9 @@ const SLAPage = lazy(() => import("@/pages/SLAPage"));
 const EmergencyPage = lazy(() => import("@/pages/EmergencyPage"));
 const PatrolsPage = lazy(() => import("@/pages/PatrolsPage"));
 const ScheduledReportsPage = lazy(() => import("@/pages/ScheduledReportsPage"));
+const AutomationPage = lazy(() => import("@/pages/AutomationPage"));
+const VisitorsPage = lazy(() => import("@/pages/VisitorsPage"));
+const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -156,6 +159,9 @@ function AppRoutes() {
           <Route path="emergency" element={<ModuleGuard module="emergency"><EmergencyPage /></ModuleGuard>} />
           <Route path="patrols" element={<ModuleGuard module="patrols"><PatrolsPage /></ModuleGuard>} />
           <Route path="scheduled-reports" element={<ModuleGuard module="scheduled_reports"><ScheduledReportsPage /></ModuleGuard>} />
+          <Route path="automation" element={<ModuleGuard module="automation"><AutomationPage /></ModuleGuard>} />
+          <Route path="visitors" element={<ModuleGuard module="visitors"><VisitorsPage /></ModuleGuard>} />
+          <Route path="analytics" element={<ModuleGuard module="analytics"><AnalyticsPage /></ModuleGuard>} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

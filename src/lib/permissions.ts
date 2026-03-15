@@ -32,6 +32,9 @@ export const ALL_MODULES: ModulePermission[] = [
   { module: 'emergency', label: 'Emergency', icon: 'AlertOctagon', path: '/emergency' },
   { module: 'patrols', label: 'Patrols', icon: 'Navigation', path: '/patrols' },
   { module: 'scheduled_reports', label: 'Scheduled Reports', icon: 'CalendarClock', path: '/scheduled-reports' },
+  { module: 'automation', label: 'Automation', icon: 'Cog', path: '/automation' },
+  { module: 'visitors', label: 'Visitors', icon: 'UserCheck', path: '/visitors' },
+  { module: 'analytics', label: 'Analytics', icon: 'BarChart3', path: '/analytics' },
   { module: 'settings', label: 'Settings', icon: 'Settings', path: '/settings' },
   { module: 'admin', label: 'Admin', icon: 'Users', path: '/admin' },
 ];
@@ -44,6 +47,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'devices', 'sites', 'domotics', 'access_control', 'reboots',
     'intercom', 'database', 'ai_assistant', 'reports', 'settings',
     'shifts', 'sla', 'emergency', 'patrols',
+    'automation', 'visitors', 'analytics',
   ],
   viewer: [
     'dashboard', 'live_view', 'playback', 'events', 'reports',

@@ -42,6 +42,10 @@ import { registerSLARoutes } from './modules/sla/routes.js';
 import { registerEmergencyRoutes } from './modules/emergency/routes.js';
 import { registerPatrolRoutes } from './modules/patrols/routes.js';
 import { registerScheduledReportRoutes } from './modules/scheduled-reports/routes.js';
+import { registerAutomationRoutes } from './modules/automation/routes.js';
+import { registerVisitorRoutes } from './modules/visitors/routes.js';
+import { registerAnalyticsRoutes } from './modules/analytics/routes.js';
+import { registerPushRoutes } from './modules/push/routes.js';
 import websocketPlugin from './plugins/websocket.js';
 
 const loggerOpts = { name: 'aion-api', level: config.LOG_LEVEL };
@@ -112,6 +116,12 @@ export async function buildApp() {
   await app.register(registerEmergencyRoutes, { prefix: '/emergency' });
   await app.register(registerPatrolRoutes, { prefix: '/patrols' });
   await app.register(registerScheduledReportRoutes, { prefix: '/scheduled-reports' });
+
+  // Phase 3: Automation, Visitors, Analytics, Push
+  await app.register(registerAutomationRoutes, { prefix: '/automation' });
+  await app.register(registerVisitorRoutes, { prefix: '/visitors' });
+  await app.register(registerAnalyticsRoutes, { prefix: '/analytics' });
+  await app.register(registerPushRoutes, { prefix: '/push' });
 
   // Public webhook routes (no JWT — Meta sends requests without auth)
   await app.register(registerWebhookRoutes, { prefix: '/webhooks/whatsapp' });

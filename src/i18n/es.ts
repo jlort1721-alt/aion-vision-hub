@@ -372,6 +372,9 @@ const es: Record<string, string> = {
   'nav.emergency': 'Emergencias',
   'nav.patrols': 'Patrullas',
   'nav.scheduled_reports': 'Reportes Programados',
+  'nav.automation': 'Automatización',
+  'nav.visitors': 'Visitantes',
+  'nav.analytics': 'Analíticas',
 
   // New modules nav
   'nav.domotics': 'Domóticos',
