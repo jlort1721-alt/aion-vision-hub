@@ -22,7 +22,7 @@
     "@fastify/jwt": "^9.0.0",
     "@fastify/websocket": "^11.0.0",
     "@supabase/supabase-js": "^2.49.4",
-    "onvif": "^0.7.0",
+    "onvif": "^0.8.1",
     "node-digest-auth-client": "^0.8.0",
     "pino": "^9.0.0",
     "pino-pretty": "^11.0.0",
