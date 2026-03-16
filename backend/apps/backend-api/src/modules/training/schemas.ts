@@ -8,7 +8,7 @@ export const CreateProgramInput = z.object({
   isRequired: z.boolean().default(false),
   validityMonths: z.number().int().min(0).default(12),
   passingScore: z.number().int().min(0).max(100).default(70),
-  content: z.array(z.any()).default([]),
+  content: z.array(z.object({ module: z.string(), topics: z.array(z.string()).optional(), duration: z.number().optional() }).passthrough()).default([]),
 });
 
 export const UpdateProgramInput = CreateProgramInput.partial();
