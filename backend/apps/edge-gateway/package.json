@@ -20,21 +20,21 @@
     "@aion/common-utils": "workspace:*",
     "@aion/device-adapters": "workspace:*",
     "fastify": "^5.2.0",
-    "@fastify/cors": "^10.0.0",
-    "@fastify/jwt": "^9.0.0",
+    "@fastify/cors": "^11.2.0",
+    "@fastify/jwt": "^10.0.0",
     "@fastify/websocket": "^11.0.0",
-    "pino": "^9.0.0",
-    "pino-pretty": "^11.0.0",
-    "zod": "^3.23.0",
-    "dotenv": "^16.4.0",
-    "undici": "^7.0.0"
+    "pino": "^10.3.1",
+    "pino-pretty": "^13.1.3",
+    "zod": "^4.3.6",
+    "dotenv": "^17.3.1",
+    "undici": "^7.24.4"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
     "tsx": "^4.19.0",
-    "vitest": "^3.0.0",
-    "@types/node": "^22.0.0",
-    "eslint": "^9.0.0"
+    "vitest": "^4.1.0",
+    "@types/node": "^25.5.0",
+    "eslint": "^10.0.3"
   },
   "engines": {
     "node": ">=20.0.0"
