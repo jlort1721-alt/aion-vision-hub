@@ -58,6 +58,12 @@ export function getConnectedClients(tenantId?: string): { total: number; byTenan
 async function websocketPlugin(app: FastifyInstance) {
   await app.register(websocket);
 
+  // Raise max listeners on the underlying WebSocket server to prevent
+  // MaxListenersExceededWarning during PM2 graceful restarts / hot-reloads.
+  if (app.websocketServer) {
+    app.websocketServer.setMaxListeners(20);
+  }
+
   // WebSocket endpoint — requires JWT token as query param
   app.get('/ws', { websocket: true }, (socket, request) => {
     const token = (request.query as Record<string, string>).token;

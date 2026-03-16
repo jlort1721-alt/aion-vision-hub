@@ -32,3 +32,5 @@ gateway/**/.env
 *.sln
 *.sw?
 *.tar.gz
+*.tsbuildinfo
+supabase/.temp/

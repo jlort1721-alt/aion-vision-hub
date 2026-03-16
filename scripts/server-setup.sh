@@ -58,8 +58,10 @@ echo "  pnpm: $(pnpm -v 2>/dev/null || echo 'installed')"
 echo "[5/10] Creating 'aion' user..."
 if ! id aion &>/dev/null; then
   useradd -m -s /bin/bash -G docker,sudo aion
-  echo "aion:AionSecure2026!" | chpasswd
-  echo "  User 'aion' created (password: AionSecure2026!)"
+  AION_PASSWORD=$(openssl rand -base64 24)
+  echo "aion:${AION_PASSWORD}" | chpasswd
+  echo "  User 'aion' created (password: ${AION_PASSWORD})"
+  echo "  ⚠️  SAVE THIS PASSWORD — it will not be shown again."
 else
   usermod -aG docker aion 2>/dev/null || true
   echo "  User 'aion' already exists"

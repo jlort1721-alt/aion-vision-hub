@@ -54,9 +54,13 @@ tar czf "$TARBALL" \
   backend/packages/shared-contracts/package.json \
   backend/packages/shared-contracts/dist/ \
   backend/docker-compose.prod.yml \
-  backend/.env \
-  .env \
-  scripts/ \
+  backend/ecosystem.config.cjs \
+  scripts/deploy.sh \
+  scripts/backup.sh \
+  scripts/restore-db.sh \
+  scripts/healthcheck.sh \
+  scripts/logs.sh \
+  scripts/nginx-aionseg.conf \
   2>/dev/null
 
 echo "[3/3] Package complete!"
