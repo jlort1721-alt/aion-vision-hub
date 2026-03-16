@@ -375,6 +375,10 @@ const en: Record<string, string> = {
   'nav.automation': 'Automation',
   'nav.visitors': 'Visitors',
   'nav.analytics': 'Analytics',
+  'nav.contracts': 'Contracts',
+  'nav.keys': 'Key Management',
+  'nav.compliance': 'Compliance',
+  'nav.training': 'Training',
 
   // New modules nav
   'nav.domotics': 'Domotics',

@@ -46,6 +46,10 @@ import { registerAutomationRoutes } from './modules/automation/routes.js';
 import { registerVisitorRoutes } from './modules/visitors/routes.js';
 import { registerAnalyticsRoutes } from './modules/analytics/routes.js';
 import { registerPushRoutes } from './modules/push/routes.js';
+import { registerContractRoutes } from './modules/contracts/routes.js';
+import { registerKeyRoutes } from './modules/keys/routes.js';
+import { registerComplianceRoutes } from './modules/compliance/routes.js';
+import { registerTrainingRoutes } from './modules/training/routes.js';
 import websocketPlugin from './plugins/websocket.js';
 
 const loggerOpts = { name: 'aion-api', level: config.LOG_LEVEL };
@@ -122,6 +126,12 @@ export async function buildApp() {
   await app.register(registerVisitorRoutes, { prefix: '/visitors' });
   await app.register(registerAnalyticsRoutes, { prefix: '/analytics' });
   await app.register(registerPushRoutes, { prefix: '/push' });
+
+  // Phase 4: Contracts, Keys, Compliance, Training
+  await app.register(registerContractRoutes, { prefix: '/contracts' });
+  await app.register(registerKeyRoutes, { prefix: '/keys' });
+  await app.register(registerComplianceRoutes, { prefix: '/compliance' });
+  await app.register(registerTrainingRoutes, { prefix: '/training' });
 
   // Public webhook routes (no JWT — Meta sends requests without auth)
   await app.register(registerWebhookRoutes, { prefix: '/webhooks/whatsapp' });

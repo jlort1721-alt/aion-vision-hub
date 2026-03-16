@@ -18,7 +18,7 @@ import {
   LogOut, User, Shield, AlertTriangle, Menu, X, Users, Globe,
   Zap, DoorOpen, RotateCcw, Phone, Database, MessageSquare,
   Clock, Timer, AlertOctagon, Navigation, CalendarClock,
-  Cog, UserCheck, BarChart3
+  Cog, UserCheck, BarChart3, FileText, KeyRound, ShieldCheck, GraduationCap
 } from 'lucide-react';
 import { hasModuleAccess, ALL_MODULES, DEFAULT_ROLE_PERMISSIONS } from '@/lib/permissions';
 import { supabase } from '@/integrations/supabase/client';
@@ -58,6 +58,10 @@ const NAV_ITEMS: NavItem[] = [
   { labelKey: 'nav.automation', path: '/automation', icon: <Cog size={18} /> },
   { labelKey: 'nav.visitors', path: '/visitors', icon: <UserCheck size={18} /> },
   { labelKey: 'nav.analytics', path: '/analytics', icon: <BarChart3 size={18} /> },
+  { labelKey: 'nav.contracts', path: '/contracts', icon: <FileText size={18} /> },
+  { labelKey: 'nav.keys', path: '/keys', icon: <KeyRound size={18} /> },
+  { labelKey: 'nav.compliance', path: '/compliance', icon: <ShieldCheck size={18} /> },
+  { labelKey: 'nav.training', path: '/training', icon: <GraduationCap size={18} /> },
   { labelKey: 'nav.audit', path: '/audit', icon: <ScrollText size={18} /> },
   { labelKey: 'nav.system', path: '/system', icon: <Activity size={18} /> },
   { labelKey: 'nav.settings', path: '/settings', icon: <Settings size={18} /> },

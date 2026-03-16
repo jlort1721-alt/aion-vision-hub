@@ -35,6 +35,10 @@ export const ALL_MODULES: ModulePermission[] = [
   { module: 'automation', label: 'Automation', icon: 'Cog', path: '/automation' },
   { module: 'visitors', label: 'Visitors', icon: 'UserCheck', path: '/visitors' },
   { module: 'analytics', label: 'Analytics', icon: 'BarChart3', path: '/analytics' },
+  { module: 'contracts', label: 'Contracts & Billing', icon: 'FileText', path: '/contracts' },
+  { module: 'keys', label: 'Key Management', icon: 'KeyRound', path: '/keys' },
+  { module: 'compliance', label: 'Compliance', icon: 'ShieldCheck', path: '/compliance' },
+  { module: 'training', label: 'Training', icon: 'GraduationCap', path: '/training' },
   { module: 'settings', label: 'Settings', icon: 'Settings', path: '/settings' },
   { module: 'admin', label: 'Admin', icon: 'Users', path: '/admin' },
 ];
@@ -48,6 +52,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'intercom', 'database', 'ai_assistant', 'reports', 'settings',
     'shifts', 'sla', 'emergency', 'patrols',
     'automation', 'visitors', 'analytics',
+    'contracts', 'keys', 'training',
   ],
   viewer: [
     'dashboard', 'live_view', 'playback', 'events', 'reports',

@@ -25,6 +25,12 @@ export {
   kpiSnapshots,
   pushSubscriptions,
 } from './phase3.js';
+export {
+  contracts, invoices,
+  keyInventory, keyLogs,
+  complianceTemplates, dataRetentionPolicies,
+  trainingPrograms, certifications,
+} from './phase4.js';
 
 import { pgTable, uuid, varchar, text, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';

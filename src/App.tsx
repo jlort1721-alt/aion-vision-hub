@@ -80,6 +80,10 @@ const ScheduledReportsPage = lazy(() => import("@/pages/ScheduledReportsPage"));
 const AutomationPage = lazy(() => import("@/pages/AutomationPage"));
 const VisitorsPage = lazy(() => import("@/pages/VisitorsPage"));
 const AnalyticsPage = lazy(() => import("@/pages/AnalyticsPage"));
+const ContractsPage = lazy(() => import("@/pages/ContractsPage"));
+const KeysPage = lazy(() => import("@/pages/KeysPage"));
+const CompliancePage = lazy(() => import("@/pages/CompliancePage"));
+const TrainingPage = lazy(() => import("@/pages/TrainingPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -162,6 +166,10 @@ function AppRoutes() {
           <Route path="automation" element={<ModuleGuard module="automation"><AutomationPage /></ModuleGuard>} />
           <Route path="visitors" element={<ModuleGuard module="visitors"><VisitorsPage /></ModuleGuard>} />
           <Route path="analytics" element={<ModuleGuard module="analytics"><AnalyticsPage /></ModuleGuard>} />
+          <Route path="contracts" element={<ModuleGuard module="contracts"><ContractsPage /></ModuleGuard>} />
+          <Route path="keys" element={<ModuleGuard module="keys"><KeysPage /></ModuleGuard>} />
+          <Route path="compliance" element={<ModuleGuard module="compliance"><CompliancePage /></ModuleGuard>} />
+          <Route path="training" element={<ModuleGuard module="training"><TrainingPage /></ModuleGuard>} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
