@@ -1,15 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { operationsApi, cloudAccountsApi, analyticsApi } from '@/services/api';
 
 export function useDevices(refetchInterval?: number) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['devices'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('devices').select('*').order('name');
+      const { data, error } = await supabase
+        .from('devices')
+        .select('*, sites!inner(wan_ip, name)')
+        .order('name');
       if (error) throw error;
-      return data;
+      // Enrich each device with remoteAddress computed from site WAN IP + device port
+      return (data ?? []).map((d: any) => ({
+        ...d,
+        site_wan_ip: d.sites?.wan_ip ?? null,
+        site_name: d.sites?.name ?? null,
+        remote_address: d.sites?.wan_ip && d.port ? `${d.sites.wan_ip}:${d.port}` : null,
+      }));
     },
     enabled: isAuthenticated,
     refetchInterval,
@@ -164,6 +174,34 @@ export function useAiSessions() {
       if (error) throw error;
       return data;
     },
+    enabled: isAuthenticated,
+  });
+}
+
+export function useOperationsDashboard(refetchInterval?: number) {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['operations-dashboard'],
+    queryFn: () => operationsApi.dashboard(),
+    enabled: isAuthenticated,
+    refetchInterval,
+  });
+}
+
+export function useCloudAccountMapping() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['cloud-account-mapping'],
+    queryFn: () => cloudAccountsApi.mapping(),
+    enabled: isAuthenticated,
+  });
+}
+
+export function useRiskScore() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['risk-score'],
+    queryFn: () => analyticsApi.riskScore(),
     enabled: isAuthenticated,
   });
 }

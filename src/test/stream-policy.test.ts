@@ -10,7 +10,16 @@ import { describe, it, expect } from "vitest";
  * - Stream state machine transitions
  */
 
-import type { StreamState, StreamProfile } from "../../gateway/src/adapters/types";
+// Inline type definitions (gateway module is not available to frontend)
+type StreamState = "idle" | "connecting" | "live" | "degraded" | "reconnecting" | "failed" | "unauthorized" | "unavailable";
+
+interface StreamProfile {
+  type: string;
+  url: string;
+  codec: string;
+  resolution: string;
+  fps: number;
+}
 
 describe("Stream Policy", () => {
   describe("Stream Key Generation", () => {

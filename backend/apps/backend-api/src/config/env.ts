@@ -12,6 +12,9 @@ export const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().url(),
 
+  // Redis (optional — falls back to in-memory when not configured)
+  REDIS_URL: z.string().url().optional(),
+
   // JWT
   JWT_SECRET: z.string().min(32),
   JWT_ISSUER: z.string().default('aion-vision-hub'),
@@ -73,8 +76,21 @@ export const envSchema = z.object({
   EWELINK_APP_SECRET: z.string().optional(),
   EWELINK_REGION: z.enum(['us', 'eu', 'as', 'cn']).default('us'),
 
+  // Push notifications (VAPID)
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().default('mailto:admin@aionvisionhub.com'),
+
   // Logging
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+
+  // Monitoring / Observability
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
+  PROMETHEUS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  GRAFANA_ADMIN_PASSWORD: z.string().optional(),
 });
 
 export const config = envSchema.parse(process.env);

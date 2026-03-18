@@ -18,13 +18,13 @@ export { WhatsAppService, whatsapp } from './whatsapp';
 export type { WhatsAppConfig, WhatsAppMessage, WhatsAppSendResult, WhatsAppHealthCheck } from './whatsapp';
 
 export { EmailService, emailService } from './email';
-export type { EmailConfig, EmailMessage, EmailSendResult, EmailHealthCheck } from './email';
+export type { EmailMessage, EmailSendResult, EmailHealthCheck } from './email';
 
 export { EWeLinkService, ewelink } from './ewelink';
 export type { EWeLinkDevice, EWeLinkDeviceAction, EWeLinkResult, EWeLinkHealthCheck, EWeLinkStatus } from './ewelink';
 
 export { VoIPService, voipService } from './voip';
-export type { VoIPConfig, SIPDevice, CallRequest, CallResult, VoIPHealthCheck } from './voip';
+export type { VoIPConfig, SIPDevice, InitiateCallRequest, InitiateCallResult, VoIPHealthCheck } from './voip';
 
 /** Run health checks on all configured integrations */
 export async function checkAllIntegrations(): Promise<Record<string, { status: string; message: string; latencyMs: number }>> {

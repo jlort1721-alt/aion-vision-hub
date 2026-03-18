@@ -21,7 +21,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import rateLimit from '@fastify/rate-limit';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { integrations, auditLogs, waConversations } from '../../db/schema/index.js';
 import { whatsappService } from './service.js';
@@ -143,9 +143,9 @@ async function auditWebhookEvent(
       userId: SYSTEM_USER_ID,
       userEmail: 'webhook@system',
       action,
-      resource: 'whatsapp',
-      resourceId,
-      details,
+      entityType: 'whatsapp',
+      entityId: resourceId,
+      afterState: details,
       ipAddress: ipAddress || null,
       userAgent: 'meta-webhook',
     });
@@ -209,16 +209,17 @@ export async function registerWebhookRoutes(app: FastifyInstance) {
         return reply.code(400).send('Bad Request');
       }
 
-      // Find the tenant whose verify_token matches
-      const allWaIntegrations = await db
+      // Direct indexed lookup by verifyToken (no O(n) scan)
+      const [matching] = await db
         .select()
         .from(integrations)
-        .where(eq(integrations.type, 'whatsapp'));
-
-      const matching = allWaIntegrations.find((i) => {
-        const cfg = i.config as Record<string, unknown>;
-        return cfg.verifyToken === token;
-      });
+        .where(
+          and(
+            eq(integrations.type, 'whatsapp'),
+            sql`${integrations.config}->>'verifyToken' = ${token}`,
+          ),
+        )
+        .limit(1);
 
       if (!matching) {
         logger.warn('Webhook verification failed: no matching verify_token');
@@ -274,16 +275,17 @@ export async function registerWebhookRoutes(app: FastifyInstance) {
         return;
       }
 
-      // Find tenant by phoneNumberId
-      const allWaIntegrations = await db
+      // Direct indexed lookup by phoneNumberId (O(1) via idx_integrations_wa_phone)
+      const [integration] = await db
         .select()
         .from(integrations)
-        .where(eq(integrations.type, 'whatsapp'));
-
-      const integration = allWaIntegrations.find((i) => {
-        const cfg = i.config as Record<string, unknown>;
-        return cfg.phoneNumberId === phoneNumberId;
-      });
+        .where(
+          and(
+            eq(integrations.type, 'whatsapp'),
+            sql`${integrations.config}->>'phoneNumberId' = ${phoneNumberId}`,
+          ),
+        )
+        .limit(1);
 
       if (!integration) {
         logger.warn({ phoneNumberId }, 'No tenant found for phone_number_id');

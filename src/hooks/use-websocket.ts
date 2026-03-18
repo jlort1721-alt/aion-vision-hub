@@ -53,6 +53,11 @@ export function useWebSocket() {
     if (!session?.access_token) return;
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
+    if (!API_URL) {
+      console.warn('[useWebSocket] VITE_API_URL is not set — skipping WebSocket connection.');
+      return;
+    }
+
     const wsUrl = API_URL.replace(/^http/, 'ws');
     const ws = new WebSocket(`${wsUrl}/ws?token=${session.access_token}`);
     wsRef.current = ws;

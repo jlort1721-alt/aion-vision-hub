@@ -17,7 +17,7 @@ export class AuditService {
       conditions.push(eq(auditLogs.action, query.action));
     }
     if (query.resource) {
-      conditions.push(eq(auditLogs.resource, query.resource));
+      conditions.push(eq(auditLogs.entityType, query.resource));
     }
     if (query.from) {
       conditions.push(gte(auditLogs.createdAt, new Date(query.from)));
@@ -90,9 +90,9 @@ export class AuditService {
       db.select({ action: auditLogs.action, count: count() })
         .from(auditLogs).where(whereClause)
         .groupBy(auditLogs.action).orderBy(desc(count())),
-      db.select({ resource: auditLogs.resource, count: count() })
+      db.select({ resource: auditLogs.entityType, count: count() })
         .from(auditLogs).where(whereClause)
-        .groupBy(auditLogs.resource).orderBy(desc(count())),
+        .groupBy(auditLogs.entityType).orderBy(desc(count())),
       db.select({ userId: auditLogs.userId, userEmail: auditLogs.userEmail, count: count() })
         .from(auditLogs).where(whereClause)
         .groupBy(auditLogs.userId, auditLogs.userEmail).orderBy(desc(count())).limit(10),

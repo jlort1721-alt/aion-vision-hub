@@ -45,7 +45,8 @@ export class IntegrationService {
         name: input.name,
         type: input.type,
         config: input.config,
-        isActive: input.isActive ?? true,
+        provider: input.provider ?? '',
+        status: input.status ?? 'active',
       })
       .returning();
 
@@ -191,8 +192,8 @@ export class IntegrationService {
     await db
       .update(integrations)
       .set({
-        lastTestedAt: new Date(),
-        lastError: success ? null : message,
+        lastSync: new Date(),
+        errorMessage: success ? null : message,
         updatedAt: new Date(),
       })
       .where(and(eq(integrations.id, id), eq(integrations.tenantId, tenantId)));

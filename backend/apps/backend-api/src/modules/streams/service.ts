@@ -1,44 +1,129 @@
+import { createHmac } from 'crypto';
 import { NotFoundError, AppError, ErrorCodes } from '@aion/shared-contracts';
 import type { StreamRegistration, SignedStreamUrl } from '@aion/shared-contracts';
 import type { RegisterStreamInput, StreamUrlInput } from './schemas.js';
+import { config } from '../../config/env.js';
+import { redis } from '../../lib/redis.js';
 
 /**
- * In-memory stream registry.
- * Key: `${tenantId}:${deviceId}`
- *
- * In production this would be backed by Redis or a similar fast store
- * so that state is shared across API instances.
+ * Sign a stream token payload with HMAC-SHA256.
+ * Format: base64url(payload).base64url(signature)
  */
-const streamRegistry = new Map<string, StreamRegistration & { tenantId: string }>();
+function signStreamToken(payload: Record<string, unknown>): string {
+  const data = JSON.stringify(payload);
+  const dataB64 = Buffer.from(data).toString('base64url');
+  const signature = createHmac('sha256', config.JWT_SECRET).update(dataB64).digest('base64url');
+  return `${dataB64}.${signature}`;
+}
+
+/**
+ * Verify and decode a stream token.
+ * Returns the decoded payload if valid and not expired, null otherwise.
+ */
+export function verifyStreamToken(token: string): Record<string, unknown> | null {
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+
+  const [dataB64, sig] = parts;
+  const expectedSig = createHmac('sha256', config.JWT_SECRET).update(dataB64).digest('base64url');
+
+  // Constant-time comparison via Buffer.equals
+  if (!Buffer.from(sig).equals(Buffer.from(expectedSig))) return null;
+
+  try {
+    const payload = JSON.parse(Buffer.from(dataB64, 'base64url').toString()) as Record<string, unknown>;
+    if (typeof payload.exp === 'number' && payload.exp < Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+// ── Stream Registry (Redis-backed with in-memory fallback) ──
+
+type RegistryEntry = StreamRegistration & { tenantId: string };
+
+/** In-memory fallback when Redis is not configured. */
+const memoryRegistry = new Map<string, RegistryEntry>();
+
+const REDIS_PREFIX = 'stream:';
+const STREAM_TTL_SECONDS = 600; // 10 min — gateways re-register periodically
 
 function registryKey(tenantId: string, deviceId: string): string {
   return `${tenantId}:${deviceId}`;
 }
 
+async function registryGet(key: string): Promise<RegistryEntry | null> {
+  if (redis) {
+    const data = await redis.get(`${REDIS_PREFIX}${key}`);
+    if (!data) return null;
+    const entry = JSON.parse(data) as RegistryEntry;
+    entry.registeredAt = new Date(entry.registeredAt);
+    entry.lastStateChange = new Date(entry.lastStateChange);
+    return entry;
+  }
+  return memoryRegistry.get(key) ?? null;
+}
+
+async function registrySet(key: string, entry: RegistryEntry): Promise<void> {
+  if (redis) {
+    await redis.set(`${REDIS_PREFIX}${key}`, JSON.stringify(entry), 'EX', STREAM_TTL_SECONDS);
+  } else {
+    memoryRegistry.set(key, entry);
+  }
+}
+
+async function registryDel(key: string): Promise<boolean> {
+  if (redis) {
+    const count = await redis.del(`${REDIS_PREFIX}${key}`);
+    return count > 0;
+  }
+  return memoryRegistry.delete(key);
+}
+
+async function registryListByTenant(tenantId: string): Promise<RegistryEntry[]> {
+  if (redis) {
+    const keys = await redis.keys(`${REDIS_PREFIX}${tenantId}:*`);
+    if (!keys.length) return [];
+    const pipeline = redis.pipeline();
+    for (const k of keys) pipeline.get(k);
+    const results = await pipeline.exec();
+    return (results ?? [])
+      .filter(([err, val]: [Error | null, unknown]) => !err && val)
+      .map(([, val]: [Error | null, unknown]) => {
+        const entry = JSON.parse(val as string) as RegistryEntry;
+        entry.registeredAt = new Date(entry.registeredAt);
+        entry.lastStateChange = new Date(entry.lastStateChange);
+        return entry;
+      });
+  }
+  const results: RegistryEntry[] = [];
+  for (const entry of memoryRegistry.values()) {
+    if (entry.tenantId === tenantId) results.push(entry);
+  }
+  return results;
+}
+
+// ── Service ─────────────────────────────────────────────────
+
 export class StreamService {
   /**
    * List all registered stream entries for a tenant.
    */
-  list(tenantId: string) {
-    const results: Array<StreamRegistration & { tenantId: string }> = [];
-    for (const entry of streamRegistry.values()) {
-      if (entry.tenantId === tenantId) {
-        results.push(entry);
-      }
-    }
-    return results;
+  async list(tenantId: string) {
+    return registryListByTenant(tenantId);
   }
 
   /**
    * Register (or re-register) stream profiles coming from a gateway.
    */
-  register(data: RegisterStreamInput, tenantId: string) {
+  async register(data: RegisterStreamInput, tenantId: string) {
     const key = registryKey(tenantId, data.deviceId);
 
-    const registration: StreamRegistration & { tenantId: string } = {
+    const registration: RegistryEntry = {
       tenantId,
       deviceId: data.deviceId,
-      gatewayId: data.gatewayId,
+      gatewayId: data.gatewayId ?? '',
       siteId: data.siteId,
       profiles: data.profiles.map((p) => ({
         type: p.type,
@@ -55,20 +140,20 @@ export class StreamService {
       lastStateChange: new Date(),
     };
 
-    streamRegistry.set(key, registration);
+    await registrySet(key, registration);
     return registration;
   }
 
   /**
    * Generate a time-limited signed URL for a specific stream.
    */
-  getStreamUrl(
+  async getStreamUrl(
     deviceId: string,
     params: StreamUrlInput,
     tenantId: string,
-  ): SignedStreamUrl {
+  ): Promise<SignedStreamUrl> {
     const key = registryKey(tenantId, deviceId);
-    const entry = streamRegistry.get(key);
+    const entry = await registryGet(key);
 
     if (!entry) {
       throw new NotFoundError('Stream registration', deviceId);
@@ -97,11 +182,9 @@ export class StreamService {
       );
     }
 
-    // Generate a signed token (placeholder — use HMAC or JWT in production)
-    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
-    const token = Buffer.from(
-      JSON.stringify({ deviceId, type: params.type, exp: expiresAt }),
-    ).toString('base64url');
+    // Generate HMAC-SHA256 signed stream token (5 min TTL)
+    const expiresAt = Date.now() + 5 * 60 * 1000;
+    const token = signStreamToken({ deviceId, tenantId, type: params.type, exp: expiresAt });
 
     // Build the mediated URL depending on requested protocol
     let url: string;
@@ -131,9 +214,9 @@ export class StreamService {
   /**
    * Remove a stream registration (e.g. when a device goes offline).
    */
-  unregister(deviceId: string, tenantId: string) {
+  async unregister(deviceId: string, tenantId: string) {
     const key = registryKey(tenantId, deviceId);
-    return streamRegistry.delete(key);
+    return registryDel(key);
   }
 }
 

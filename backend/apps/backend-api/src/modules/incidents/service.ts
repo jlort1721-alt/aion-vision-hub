@@ -104,7 +104,7 @@ export class IncidentService {
         status: 'open',
         siteId: data.siteId ?? null,
         eventIds: data.eventIds ?? [],
-        evidence: [],
+        evidenceUrls: [],
         comments: [],
         createdBy: userId,
       })
@@ -120,9 +120,7 @@ export class IncidentService {
     const now = new Date();
     const timestampFields: Record<string, Date> = {};
 
-    if (data.status === 'resolved') {
-      timestampFields.resolvedAt = now;
-    } else if (data.status === 'closed') {
+    if (data.status === 'closed' || data.status === 'resolved') {
       timestampFields.closedAt = now;
     }
 
@@ -161,12 +159,12 @@ export class IncidentService {
       addedAt: new Date().toISOString(),
     };
 
-    const currentEvidence = Array.isArray(existing.evidence) ? existing.evidence : [];
+    const currentUrls = Array.isArray(existing.evidenceUrls) ? existing.evidenceUrls : [];
 
     const [incident] = await db
       .update(incidents)
       .set({
-        evidence: [...currentEvidence, evidenceEntry],
+        evidenceUrls: [...currentUrls, evidenceEntry.url ?? evidenceEntry.content ?? ''],
         updatedAt: new Date(),
       })
       .where(and(eq(incidents.id, id), eq(incidents.tenantId, tenantId)))

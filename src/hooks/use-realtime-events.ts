@@ -9,6 +9,9 @@ import { addNotification } from '@/lib/notification-history';
 interface NotificationPrefs {
   critical_events?: boolean;
   high_severity?: boolean;
+  medium_severity?: boolean;
+  low_severity?: boolean;
+  info_events?: boolean;
   device_offline?: boolean;
   health_changes?: boolean;
   incident_updates?: boolean;
@@ -49,28 +52,31 @@ export function useRealtimeEvents() {
           const shouldNotify =
             (evt.severity === 'critical' && prefs.critical_events !== false) ||
             (evt.severity === 'high' && prefs.high_severity !== false) ||
-            (evt.severity === 'medium') ||
-            (evt.severity === 'low') ||
-            (evt.severity === 'info');
+            (evt.severity === 'medium' && prefs.medium_severity !== false) ||
+            (evt.severity === 'low' && prefs.low_severity !== false) ||
+            (evt.severity === 'info' && prefs.info_events !== false);
 
           const isCritical = evt.severity === 'critical' || evt.severity === 'high';
 
-          // Store in notification history
+          // Store in notification history (always, regardless of prefs)
           addNotification({
             title: evt.title,
             body: `${evt.event_type?.replace(/_/g, ' ')} — ${evt.severity}`,
             severity: evt.severity,
           });
 
-          toast({
-            title: `🚨 ${evt.title}`,
-            description: `${evt.event_type?.replace(/_/g, ' ')} — ${evt.severity}`,
-            variant: isCritical ? 'destructive' : 'default',
-          });
+          // Only show toast if user preferences allow this severity
+          if (shouldNotify) {
+            toast({
+              title: `${isCritical ? '[!] ' : ''}${evt.title}`,
+              description: `${evt.event_type?.replace(/_/g, ' ')} — ${evt.severity}`,
+              variant: isCritical ? 'destructive' : 'default',
+            });
+          }
 
           if (shouldNotify && isCritical && permission === 'granted') {
             showNotification(
-              `🚨 ${evt.severity.toUpperCase()}: ${evt.title}`,
+              `${evt.severity.toUpperCase()}: ${evt.title}`,
               `${evt.event_type?.replace(/_/g, ' ')} — Requires immediate attention`,
               `event-${evt.id}`
             );

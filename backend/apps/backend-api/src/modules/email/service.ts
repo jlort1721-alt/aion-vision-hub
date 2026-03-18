@@ -146,8 +146,8 @@ class EmailServiceImpl {
           userId: auditContext.userId,
           userEmail: auditContext.userEmail,
           action: `email.${action}`,
-          resource: 'email',
-          details: {
+          entityType: 'email',
+          afterState: {
             provider: this.providerName,
             to: toList,
             subject: params.subject,

@@ -1,35 +1,35 @@
 project_id = "nzpttxepmvvhmbqrhegp"
 
 [functions.ai-chat]
-verify_jwt = false
+verify_jwt = true
 
 [functions.devices-api]
-verify_jwt = false
+verify_jwt = true
 
 [functions.events-api]
-verify_jwt = false
+verify_jwt = true
 
 [functions.incidents-api]
-verify_jwt = false
+verify_jwt = true
 
 [functions.health-api]
-verify_jwt = false
+verify_jwt = true
 
 [functions.reports-api]
-verify_jwt = false
+verify_jwt = true
 
 [functions.mcp-api]
-verify_jwt = false
+verify_jwt = true
 
 [functions.integrations-api]
-verify_jwt = false
+verify_jwt = true
 
 [functions.reports-pdf]
-verify_jwt = false
+verify_jwt = true
 
 [functions.event-alerts]
-verify_jwt = false
+verify_jwt = true
 
 [functions.admin-users]
-verify_jwt = false
+verify_jwt = true
 

@@ -37,7 +37,8 @@ export async function registerEventRoutes(app: FastifyInstance) {
   app.get(
     '/stats',
     async (request, reply) => {
-      const data = await eventService.getStats(request.tenantId);
+      const { from, to } = request.query as { from?: string; to?: string };
+      const data = await eventService.getStats(request.tenantId, from, to);
       return reply.send({ success: true, data });
     },
   );
@@ -59,14 +60,14 @@ export async function registerEventRoutes(app: FastifyInstance) {
         tenantId: request.tenantId,
         deviceId: data.deviceId,
         siteId: data.siteId,
-        type: data.type,
+        type: data.eventType,
         severity: data.severity,
         title: data.title,
         description: data.description,
       }).catch(() => { /* logged internally */ });
 
       await request.audit('event.create', 'events', data.id, {
-        type: data.type,
+        type: data.eventType,
         severity: data.severity,
         deviceId: data.deviceId,
       });

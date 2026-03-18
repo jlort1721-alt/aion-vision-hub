@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { Component } from "react";
+import React, { Component } from "react";
 
 // We need to test the ErrorBoundary from App.tsx, so we recreate it here
 // since it's not exported separately. This tests the exact same logic.
@@ -51,7 +51,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 }
 
 // A component that throws an error on render
-function ThrowingComponent({ message }: { message: string }) {
+function ThrowingComponent({ message }: { message: string }): React.JSX.Element {
   throw new Error(message);
 }
 
@@ -100,7 +100,7 @@ describe("ErrorBoundary", () => {
   });
 
   it("shows generic message when error has no message", () => {
-    function ThrowEmptyError() {
+    function ThrowEmptyError(): React.JSX.Element {
       throw new Error("");
     }
     render(

@@ -114,8 +114,9 @@ export class WhatsAppService {
         tenantId,
         name: 'WhatsApp Business',
         type: 'whatsapp',
+        provider: 'meta',
+        status: 'active',
         config: configData,
-        isActive: true,
       });
     }
 
@@ -671,8 +672,8 @@ export class WhatsAppService {
       await db
         .update(integrations)
         .set({
-          lastTestedAt: new Date(),
-          lastError: result.connected ? null : result.error || 'Health check failed',
+          lastSync: new Date(),
+          errorMessage: result.connected ? null : result.error || 'Health check failed',
           updatedAt: new Date(),
         })
         .where(eq(integrations.id, config.integrationId));

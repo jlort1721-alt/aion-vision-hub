@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "../test-utils";
 import userEvent from "@testing-library/user-event";
 
@@ -204,7 +204,8 @@ describe("DomoticsPage — UI/Backend Contract", () => {
 
   it("shows footer with device count", () => {
     render(<DomoticsPage />);
-    expect(screen.getByText(/3 devices/)).toBeInTheDocument();
+    // DataTable renders "{total} items" in its toolbar
+    expect(screen.getByText(/3 items/)).toBeInTheDocument();
   });
 
   it("filters devices by search term", async () => {

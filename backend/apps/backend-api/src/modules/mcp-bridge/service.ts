@@ -7,26 +7,17 @@ import type { ExecuteToolInput } from './schemas.js';
 
 /**
  * Extended MCPTool type that includes optional requiredScopes.
- * Tools stored in the JSONB `tools` column may carry a requiredScopes
+ * Tools defined in the connector config may carry a requiredScopes
  * array that is not part of the base MCPTool contract.
  */
 interface MCPToolWithScopes extends MCPTool {
   requiredScopes?: string[];
 }
 
-/**
- * Represents a connector row with an optional `scopes` field.
- * The `scopes` array may be stored alongside the standard columns
- * to declare which scopes the connector has been granted.
- */
-interface ConnectorWithScopes {
-  scopes?: string[];
-}
-
 export class MCPBridgeService {
   /**
    * List all available MCP tools across active connectors for a tenant.
-   * Aggregates the tools array from each connector, tagging each tool
+   * Aggregates the tools array from each connector's config, tagging each tool
    * with its source connector ID.
    */
   async listTools(tenantId: string): Promise<MCPTool[]> {
@@ -34,13 +25,14 @@ export class MCPBridgeService {
       .select()
       .from(mcpConnectors)
       .where(
-        and(eq(mcpConnectors.tenantId, tenantId), eq(mcpConnectors.isActive, true)),
+        and(eq(mcpConnectors.tenantId, tenantId), eq(mcpConnectors.health, 'healthy')),
       );
 
     const tools: MCPTool[] = [];
 
     for (const connector of connectors) {
-      const connectorTools = (connector.tools ?? []) as MCPTool[];
+      const cfg = connector.config as Record<string, unknown>;
+      const connectorTools = (cfg?.tools ?? []) as MCPTool[];
       for (const tool of connectorTools) {
         tools.push({
           ...tool,
@@ -75,14 +67,15 @@ export class MCPBridgeService {
       .select()
       .from(mcpConnectors)
       .where(
-        and(eq(mcpConnectors.tenantId, tenantId), eq(mcpConnectors.isActive, true)),
+        and(eq(mcpConnectors.tenantId, tenantId), eq(mcpConnectors.health, 'healthy')),
       );
 
     let targetConnector: typeof connectors[number] | null = null;
     let matchedTool: MCPToolWithScopes | null = null;
 
     for (const connector of connectors) {
-      const connectorTools = (connector.tools ?? []) as MCPToolWithScopes[];
+      const cfg = connector.config as Record<string, unknown>;
+      const connectorTools = (cfg?.tools ?? []) as MCPToolWithScopes[];
       const tool = connectorTools.find((t) => t.name === toolName);
       if (tool) {
         targetConnector = connector;
@@ -105,7 +98,7 @@ export class MCPBridgeService {
     // whose scopes have been revoked or were never granted.
     const requiredScopes = matchedTool.requiredScopes;
     if (requiredScopes && requiredScopes.length > 0) {
-      const connectorScopes = (targetConnector as unknown as ConnectorWithScopes).scopes ?? [];
+      const connectorScopes = targetConnector.scopes ?? [];
       const missingScopes = requiredScopes.filter(
         (scope) => !connectorScopes.includes(scope),
       );
@@ -156,7 +149,7 @@ export class MCPBridgeService {
       // Update last health check timestamp
       await db
         .update(mcpConnectors)
-        .set({ lastHealthCheck: new Date(), updatedAt: new Date() })
+        .set({ lastCheck: new Date(), updatedAt: new Date() })
         .where(eq(mcpConnectors.id, targetConnector.id));
 
       return {

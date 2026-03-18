@@ -1,0 +1,98 @@
+# ═══════════════════════════════════════════════════════════════════
+# AION Vision Hub — Promtail Configuration
+# Collects Docker container logs and ships them to Loki
+# ═══════════════════════════════════════════════════════════════════
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    batchwait: 1s
+    batchsize: 1048576
+    timeout: 10s
+
+scrape_configs:
+  # ── Docker container logs ──────────────────────────────────────
+  - job_name: docker
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docker
+          __path__: /var/lib/docker/containers/*/*-json.log
+
+    pipeline_stages:
+      # Parse Docker JSON log format
+      - docker: {}
+
+      # Extract container name from the file path
+      - regex:
+          source: filename
+          expression: '/var/lib/docker/containers/(?P<container_id>[^/]+)/.*'
+
+      # Add labels based on container name patterns
+      - match:
+          selector: '{job="docker"}'
+          stages:
+            - json:
+                expressions:
+                  log: log
+                  stream: stream
+                  time: time
+
+      # Map known AION services to service labels
+      - match:
+          selector: '{job="docker"} |~ "aion-|backend-api|edge-gateway|mediamtx|postgres|redis"'
+          stages:
+            - labels:
+                stream:
+
+      # Extract log level from structured JSON logs (pino format)
+      - match:
+          selector: '{job="docker"}'
+          stages:
+            - json:
+                expressions:
+                  level: level
+                  msg: msg
+                  service: name
+            - labels:
+                level:
+                service:
+
+      # Drop health-check noise to reduce log volume
+      - match:
+          selector: '{job="docker"} |~ "GET /health"'
+          action: drop
+          drop_counter_reason: health_check
+
+      # Rate-limit verbose debug logs
+      - match:
+          selector: '{level="debug"}'
+          stages:
+            - limit:
+                rate: 100
+                burst: 200
+
+  # ── System logs (optional, when running on host) ───────────────
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: system
+          __path__: /var/log/syslog
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\S+ \S+ \S+) (?P<hostname>\S+) (?P<service>\S+?)(\[(?P<pid>\d+)\])?: (?P<message>.*)$'
+      - labels:
+          hostname:
+          service:
+      - timestamp:
+          source: timestamp
+          format: "Jan  2 15:04:05"

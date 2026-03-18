@@ -128,13 +128,10 @@ export const kpiSnapshots = pgTable('kpi_snapshots', {
 
 export const pushSubscriptions = pgTable('push_subscriptions', {
   id: uuid('id').defaultRandom().primaryKey(),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').notNull(),
-  // Web Push subscription JSON (endpoint, keys.p256dh, keys.auth)
-  subscription: jsonb('subscription').notNull(),
-  userAgent: varchar('user_agent', { length: 512 }),
-  isActive: boolean('is_active').notNull().default(true),
-  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  endpoint: text('endpoint').notNull(),
+  keys: jsonb('keys').notNull().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   index('idx_push_subscriptions_user').on(table.tenantId, table.userId),

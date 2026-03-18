@@ -1,0 +1,73 @@
+# ═══════════════════════════════════════════════════════════════════
+# AION Vision Hub — Prometheus Configuration
+# ═══════════════════════════════════════════════════════════════════
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+  external_labels:
+    cluster: "aion-vision-hub"
+    environment: "production"
+
+# Alerting rules
+rule_files:
+  - "/etc/prometheus/alerts.yml"
+
+# Scrape targets
+scrape_configs:
+  # ── Backend API — Custom application metrics (prom-client) ──
+  - job_name: "aion-backend-api"
+    metrics_path: /health/metrics
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["backend-api:3000"]
+        labels:
+          service: "backend-api"
+          component: "api"
+
+  # ── Backend API — OpenTelemetry Prometheus exporter ──
+  - job_name: "aion-backend-otel"
+    metrics_path: /metrics
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["backend-api:9464"]
+        labels:
+          service: "backend-api"
+          component: "otel"
+
+  # ── Edge Gateway — Custom metrics ──
+  - job_name: "aion-edge-gateway"
+    metrics_path: /health/metrics
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["edge-gateway:3100"]
+        labels:
+          service: "edge-gateway"
+          component: "gateway"
+
+  # ── MediaMTX — RTSP/WebRTC stream metrics ──
+  - job_name: "mediamtx"
+    metrics_path: /metrics
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["mediamtx:9998"]
+        labels:
+          service: "mediamtx"
+          component: "streaming"
+
+  # ── Node Exporter (optional — for host-level metrics) ──
+  - job_name: "node-exporter"
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          service: "node-exporter"
+          component: "infrastructure"
+
+  # ── Prometheus self-monitoring ──
+  - job_name: "prometheus"
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["localhost:9090"]

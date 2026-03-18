@@ -87,7 +87,7 @@ export class AIBridgeService {
       provider,
       model: result.model,
       messages: params.messages,
-      tokensUsed: String(result.tokens.prompt + result.tokens.completion),
+      totalTokens: result.tokens.prompt + result.tokens.completion,
     });
 
     return result;
@@ -123,7 +123,7 @@ export class AIBridgeService {
       provider,
       model,
       messages: params.messages,
-      tokensUsed: String(Math.ceil(totalContent.length / 4)), // Approximate token count
+      totalTokens: Math.ceil(totalContent.length / 4), // Approximate token count
     });
   }
 
@@ -150,7 +150,7 @@ export class AIBridgeService {
       .orderBy(desc(aiSessions.createdAt));
 
     const totalTokens = sessions.reduce(
-      (sum, s) => sum + (parseInt(s.tokensUsed ?? '0', 10) || 0),
+      (sum, s) => sum + (s.totalTokens ?? 0),
       0,
     );
 
@@ -161,7 +161,7 @@ export class AIBridgeService {
           acc[s.provider] = { sessions: 0, tokens: 0 };
         }
         acc[s.provider].sessions += 1;
-        acc[s.provider].tokens += parseInt(s.tokensUsed ?? '0', 10) || 0;
+        acc[s.provider].tokens += s.totalTokens ?? 0;
         return acc;
       },
       {},
@@ -174,7 +174,7 @@ export class AIBridgeService {
           acc[s.model] = { sessions: 0, tokens: 0 };
         }
         acc[s.model].sessions += 1;
-        acc[s.model].tokens += parseInt(s.tokensUsed ?? '0', 10) || 0;
+        acc[s.model].tokens += s.totalTokens ?? 0;
         return acc;
       },
       {},

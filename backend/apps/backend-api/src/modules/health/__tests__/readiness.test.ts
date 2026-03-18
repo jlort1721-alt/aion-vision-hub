@@ -97,19 +97,28 @@ describe('Health Routes', () => {
       expect(body).toHaveProperty('timestamp');
     });
 
-    it('includes reason on database failure', async () => {
+    it('includes checks object on database failure', async () => {
       mockDbExecute.mockRejectedValue(new Error('Timeout'));
 
       const res = await app.inject({ method: 'GET', url: '/health/ready' });
       const body = res.json();
-      expect(body).toHaveProperty('reason', 'database_unreachable');
+      expect(body.checks.database).toBe('fail');
     });
   });
 
   // ── GET /health/metrics ──────────────────────────────────────
   describe('GET /health/metrics', () => {
-    it('returns 200 with system metrics', async () => {
+    it('returns 200 with Prometheus text format', async () => {
       const res = await app.inject({ method: 'GET', url: '/health/metrics' });
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['content-type']).toContain('text/plain');
+    });
+  });
+
+  // ── GET /health/metrics/json ───────────────────────────────
+  describe('GET /health/metrics/json', () => {
+    it('returns 200 with system metrics', async () => {
+      const res = await app.inject({ method: 'GET', url: '/health/metrics/json' });
       expect(res.statusCode).toBe(200);
       const body = res.json();
       expect(body).toHaveProperty('uptime');
@@ -118,7 +127,7 @@ describe('Health Routes', () => {
     });
 
     it('includes memory usage breakdown', async () => {
-      const res = await app.inject({ method: 'GET', url: '/health/metrics' });
+      const res = await app.inject({ method: 'GET', url: '/health/metrics/json' });
       const body = res.json();
       expect(body.memory).toHaveProperty('rss');
       expect(body.memory).toHaveProperty('heapTotal');

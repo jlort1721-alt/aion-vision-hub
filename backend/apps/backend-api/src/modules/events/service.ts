@@ -88,7 +88,7 @@ export class EventService {
         tenantId,
         deviceId: data.deviceId,
         siteId: data.siteId,
-        type: data.type,
+        eventType: data.type,
         severity: data.severity,
         title: data.title,
         description: data.description ?? null,
@@ -126,9 +126,7 @@ export class EventService {
     const now = new Date();
     const timestampFields: Record<string, Date> = {};
 
-    if (data.status === 'acknowledged') {
-      timestampFields.acknowledgedAt = now;
-    } else if (data.status === 'resolved') {
+    if (data.status === 'resolved') {
       timestampFields.resolvedAt = now;
     }
 
@@ -149,8 +147,18 @@ export class EventService {
   /**
    * Get aggregated event statistics by severity and status.
    */
-  async getStats(tenantId: string) {
-    // Single query with conditional aggregation instead of 3 separate queries
+  async getStats(tenantId: string, from?: string, to?: string) {
+    // Default: last 30 days if no range specified
+    const conditions = [eq(events.tenantId, tenantId)];
+    if (from) {
+      conditions.push(gte(events.createdAt, new Date(from)));
+    } else {
+      conditions.push(gte(events.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)));
+    }
+    if (to) {
+      conditions.push(lte(events.createdAt, new Date(to)));
+    }
+
     const [result] = await db
       .select({
         total: sql<number>`count(*)::int`,
@@ -165,7 +173,7 @@ export class EventService {
         status_dismissed: sql<number>`count(*) filter (where ${events.status} = 'dismissed')::int`,
       })
       .from(events)
-      .where(eq(events.tenantId, tenantId));
+      .where(and(...conditions));
 
     return {
       total: result?.total ?? 0,

@@ -8,20 +8,72 @@ import { describe, it, expect } from "vitest";
  * without requiring actual device connectivity.
  */
 
-// Import adapter types from the shared types
-import type {
-  DeviceConnectionConfig,
-  ConnectionResult,
-  ConnectionTestResult,
-  DiscoveredDevice,
-  DeviceIdentity,
-  StreamProfile,
-  StreamState,
-  DeviceCapabilities,
-  DeviceHealthReport,
-  PTZCommand,
-  PTZPreset,
-} from "../../gateway/src/adapters/types";
+// Inline adapter type definitions (gateway module is not available to frontend)
+interface DeviceConnectionConfig {
+  ip: string;
+  port: number;
+  username: string;
+  password: string;
+  brand: string;
+  protocol?: string;
+}
+
+interface ConnectionResult {
+  success: boolean;
+  message: string;
+  sessionId?: string;
+}
+
+interface StreamProfile {
+  type: string;
+  url: string;
+  codec: string;
+  resolution: string;
+  fps: number;
+}
+
+type StreamState = "idle" | "connecting" | "live" | "degraded" | "reconnecting" | "failed" | "unauthorized" | "unavailable";
+
+interface DeviceCapabilities {
+  ptz: boolean;
+  audio: boolean;
+  smartEvents: boolean;
+  anpr: boolean;
+  faceDetection: boolean;
+  channels: number;
+  codecs: string[];
+  maxResolution: string;
+}
+
+interface DeviceHealthReport {
+  online: boolean;
+  latencyMs: number;
+  cpuUsage?: number;
+  memoryUsage?: number;
+  errors: string[];
+}
+
+interface PTZCommand {
+  action: string;
+  speed?: number;
+  presetId?: number;
+}
+
+interface PTZPreset {
+  id: number;
+  name: string;
+  position?: { pan: number; tilt: number; zoom: number };
+}
+
+interface DiscoveredDevice {
+  ip: string;
+  port: number;
+  brand: string;
+  model: string;
+  serial: string;
+  mac: string;
+  protocols: string[];
+}
 
 describe("Device Adapter Contracts", () => {
   describe("DeviceConnectionConfig", () => {

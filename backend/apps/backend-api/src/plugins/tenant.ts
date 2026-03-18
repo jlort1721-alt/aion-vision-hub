@@ -15,7 +15,7 @@ async function tenantPlugin(app: FastifyInstance) {
     if (!request.tenantId) return;
 
     const [tenant] = await db
-      .select({ isActive: tenants.isActive })
+      .select({ id: tenants.id })
       .from(tenants)
       .where(eq(tenants.id, request.tenantId))
       .limit(1);
@@ -24,14 +24,6 @@ async function tenantPlugin(app: FastifyInstance) {
       reply.code(403).send({
         success: false,
         error: { code: 'TENANT_NOT_FOUND', message: 'Tenant not found' },
-      });
-      return;
-    }
-
-    if (!tenant.isActive) {
-      reply.code(403).send({
-        success: false,
-        error: { code: 'TENANT_INACTIVE', message: 'Tenant account is inactive' },
       });
       return;
     }

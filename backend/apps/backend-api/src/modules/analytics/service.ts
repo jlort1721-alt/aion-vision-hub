@@ -188,7 +188,7 @@ export class AnalyticsService {
         closed: sql<number>`count(*) filter (where ${incidents.status} = 'closed')::int`,
         avgResolutionMinutes: sql<number>`
           coalesce(
-            round(extract(epoch from avg(${incidents.resolvedAt} - ${incidents.createdAt})) / 60)::int,
+            round(extract(epoch from avg(${incidents.closedAt} - ${incidents.createdAt})) / 60)::int,
             0
           )
         `,
@@ -243,7 +243,7 @@ export class AnalyticsService {
   async getTopEventTypes(tenantId: string, from: string, to: string, limit: number) {
     const rows = await db
       .select({
-        type: events.type,
+        type: events.eventType,
         count: sql<number>`count(*)::int`,
       })
       .from(events)
@@ -252,7 +252,7 @@ export class AnalyticsService {
         gte(events.createdAt, new Date(from)),
         lte(events.createdAt, new Date(to)),
       ))
-      .groupBy(events.type)
+      .groupBy(events.eventType)
       .orderBy(desc(sql`count(*)`))
       .limit(limit);
 

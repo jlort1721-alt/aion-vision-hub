@@ -32,8 +32,15 @@ export default function DevicesPage() {
   const { data: devices = [], isLoading } = useDevices();
   const { data: sites = [] } = useSites();
 
-  const filtered = devices.filter(d => {
-    if (search && !d.name.toLowerCase().includes(search.toLowerCase()) && !d.ip_address.includes(search)) return false;
+  const filtered = devices.filter((d: any) => {
+    if (search) {
+      const s = search.toLowerCase();
+      const matchName = d.name?.toLowerCase().includes(s);
+      const matchIp = d.ip_address?.includes(s);
+      const matchRemote = d.remote_address?.includes(s);
+      const matchWan = d.site_wan_ip?.includes(s);
+      if (!matchName && !matchIp && !matchRemote && !matchWan) return false;
+    }
     if (brandFilter !== 'all' && d.brand !== brandFilter) return false;
     if (statusFilter !== 'all' && d.status !== statusFilter) return false;
     return true;
@@ -72,9 +79,10 @@ export default function DevicesPage() {
               <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('devices.all_status')}</SelectItem>
+                <SelectItem value="active">Activo</SelectItem>
+                <SelectItem value="pending_configuration">Pendiente</SelectItem>
                 <SelectItem value="online">{t('common.online')}</SelectItem>
                 <SelectItem value="offline">{t('common.offline')}</SelectItem>
-                <SelectItem value="degraded">Degraded</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -96,7 +104,8 @@ export default function DevicesPage() {
                   <TableHead className="w-8"></TableHead>
                   <TableHead>{t('common.name')}</TableHead>
                   <TableHead>{t('devices.brand')} / {t('devices.model')}</TableHead>
-                  <TableHead>{t('devices.ip_address')}</TableHead>
+                  <TableHead>IP Pública (Remota)</TableHead>
+                  <TableHead>IP LAN</TableHead>
                   <TableHead>{t('events.site')}</TableHead>
                   <TableHead>{t('common.type')}</TableHead>
                   <TableHead>{t('common.status')}</TableHead>
@@ -109,16 +118,18 @@ export default function DevicesPage() {
                   return (
                     <TableRow key={device.id} className={cn("cursor-pointer", selectedDevice === device.id && "bg-muted/50")} onClick={() => setSelectedDevice(device.id)}>
                       <TableCell>
-                        {device.status === 'online' ? <Wifi className="h-3.5 w-3.5 text-success" /> :
+                        {device.status === 'online' || device.status === 'active' ? <Wifi className="h-3.5 w-3.5 text-success" /> :
                          device.status === 'offline' ? <WifiOff className="h-3.5 w-3.5 text-destructive" /> :
+                         device.status === 'pending_configuration' ? <AlertCircle className="h-3.5 w-3.5 text-yellow-500" /> :
                          <AlertCircle className="h-3.5 w-3.5 text-warning" />}
                       </TableCell>
                       <TableCell className="font-medium text-sm">{device.name}</TableCell>
                       <TableCell><div className="text-xs"><span className="capitalize">{device.brand}</span><span className="text-muted-foreground ml-1">{device.model}</span></div></TableCell>
-                      <TableCell className="font-mono text-xs">{device.ip_address}</TableCell>
-                      <TableCell className="text-xs">{site?.name?.split('—')[0]?.trim()}</TableCell>
+                      <TableCell className="font-mono text-xs">{device.remote_address ? <span className="text-green-400">{device.remote_address}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{device.ip_address || '—'}</TableCell>
+                      <TableCell className="text-xs">{device.site_name || site?.name?.split('—')[0]?.trim()}</TableCell>
                       <TableCell><Badge variant="outline" className="text-[10px] capitalize">{device.type}</Badge></TableCell>
-                      <TableCell><Badge variant={device.status === 'online' ? 'default' : device.status === 'offline' ? 'destructive' : 'secondary'} className="text-[10px] capitalize">{device.status}</Badge></TableCell>
+                      <TableCell><Badge variant={device.status === 'online' || device.status === 'active' ? 'default' : device.status === 'offline' ? 'destructive' : 'secondary'} className="text-[10px] capitalize">{device.status === 'pending_configuration' ? 'pendiente' : device.status}</Badge></TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
@@ -139,7 +150,7 @@ export default function DevicesPage() {
           )}
         </div>
         <div className="px-4 py-2 border-t text-xs text-muted-foreground">
-          {filtered.length} {t('devices.title').toLowerCase()} • {filtered.filter(d => d.status === 'online').length} {t('common.online').toLowerCase()}
+          {filtered.length} {t('devices.title').toLowerCase()} • {filtered.filter((d: any) => d.status === 'active' || d.status === 'online').length} activos • {filtered.filter((d: any) => d.status === 'pending_configuration').length} pendientes
         </div>
       </div>
 
@@ -155,8 +166,10 @@ export default function DevicesPage() {
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('devices.connection')}</CardTitle></CardHeader>
             <CardContent className="space-y-1 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">IP</span><span className="font-mono">{selected.ip_address}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Port</span><span>{selected.port}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">IP Pública (Remota)</span><span className="font-mono text-green-400">{selected.remote_address || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">WAN Site</span><span className="font-mono">{selected.site_wan_ip || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">IP LAN</span><span className="font-mono">{selected.ip_address || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Puerto Mapeado</span><span>{selected.port || '—'}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">RTSP</span><span>{selected.rtsp_port}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">ONVIF</span><span>{selected.onvif_port}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">{t('devices.firmware')}</span><span className="font-mono text-xs">{selected.firmware_version}</span></div>

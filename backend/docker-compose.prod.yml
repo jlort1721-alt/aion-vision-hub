@@ -74,6 +74,37 @@ services:
         reservations:
           memory: 1g
 
+  # ── PgBouncer (Connection Pooling) ──
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - aion-net
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: '0.5'
+        reservations:
+          memory: 32m
+
   # ── Backend API (Production) ──
   backend-api:
     build:
@@ -83,7 +114,7 @@ services:
       PORT: 3000
       HOST: "0.0.0.0"
       NODE_ENV: production
-      DATABASE_URL: postgres://aion:${POSTGRES_PASSWORD}@postgres:5432/aion_vision_hub
+      DATABASE_URL: postgres://aion:${POSTGRES_PASSWORD}@pgbouncer:6432/aion_vision_hub
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_ISSUER: aion-vision-hub
       JWT_EXPIRATION: "24h"
@@ -124,7 +155,7 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]

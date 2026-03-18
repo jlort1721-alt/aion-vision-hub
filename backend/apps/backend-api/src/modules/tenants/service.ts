@@ -18,11 +18,10 @@ export class TenantService {
     return tenant;
   }
 
-  async create(data: { name: string; slug: string; plan?: string }) {
+  async create(data: { name: string; slug: string }) {
     const [tenant] = await db.insert(tenants).values({
       name: data.name,
       slug: data.slug,
-      plan: data.plan ?? 'starter',
     }).returning();
     return tenant;
   }

@@ -3,6 +3,7 @@ import fp from 'fastify-plugin';
 import websocket from '@fastify/websocket';
 import type { WebSocket } from 'ws';
 import { createLogger } from '@aion/common-utils';
+import { redisPublisher, redisSubscriber } from '../lib/redis.js';
 
 const logger = createLogger({ name: 'websocket' });
 
@@ -15,16 +16,19 @@ interface WSClient {
   lastPing: number;
 }
 
-// Global client registry
+// Local client registry (this instance's connections only)
 const clients = new Map<string, WSClient>();
 
 // Ping interval handle
 let pingInterval: ReturnType<typeof setInterval> | null = null;
 
+// Redis pub/sub channel prefix
+const PUBSUB_PREFIX = 'ws:broadcast:';
+
 /**
- * Broadcast a message to all connected clients for a specific tenant.
+ * Deliver a message to local clients for a specific tenant/channel.
  */
-export function broadcast(tenantId: string, channel: string, payload: unknown): void {
+function deliverLocal(tenantId: string, channel: string, payload: unknown): void {
   const message = JSON.stringify({ channel, payload, timestamp: new Date().toISOString() });
 
   for (const [id, client] of clients) {
@@ -42,6 +46,24 @@ export function broadcast(tenantId: string, channel: string, payload: unknown): 
 }
 
 /**
+ * Broadcast a message to all connected clients for a specific tenant.
+ * When Redis is configured, publishes to Redis pub/sub so all instances receive it.
+ * When Redis is not configured, delivers only to local clients.
+ */
+export function broadcast(tenantId: string, channel: string, payload: unknown): void {
+  // Always deliver locally
+  deliverLocal(tenantId, channel, payload);
+
+  // Publish to Redis for cross-instance delivery
+  if (redisPublisher) {
+    const msg = JSON.stringify({ tenantId, channel, payload });
+    redisPublisher.publish(`${PUBSUB_PREFIX}${tenantId}`, msg).catch((err: Error) => {
+      logger.error({ err }, 'Failed to publish WebSocket broadcast to Redis');
+    });
+  }
+}
+
+/**
  * Get count of connected clients per tenant.
  */
 export function getConnectedClients(tenantId?: string): { total: number; byTenant: Record<string, number> } {
@@ -55,13 +77,39 @@ export function getConnectedClients(tenantId?: string): { total: number; byTenan
   };
 }
 
+/** Track which tenant channels we're subscribed to in Redis. */
+const subscribedTenants = new Set<string>();
+
+function ensureRedisSubscription(tenantId: string): void {
+  if (!redisSubscriber || subscribedTenants.has(tenantId)) return;
+  subscribedTenants.add(tenantId);
+
+  const channel = `${PUBSUB_PREFIX}${tenantId}`;
+  redisSubscriber.subscribe(channel).catch((err: Error) => {
+    logger.error({ err, channel }, 'Failed to subscribe to Redis channel');
+    subscribedTenants.delete(tenantId);
+  });
+}
+
 async function websocketPlugin(app: FastifyInstance) {
   await app.register(websocket);
 
-  // Raise max listeners on the underlying WebSocket server to prevent
-  // MaxListenersExceededWarning during PM2 graceful restarts / hot-reloads.
+  // Raise max listeners on the underlying WebSocket server
   if (app.websocketServer) {
     app.websocketServer.setMaxListeners(20);
+  }
+
+  // Set up Redis subscriber to receive cross-instance broadcasts
+  if (redisSubscriber) {
+    redisSubscriber.on('message', (_channel: string, message: string) => {
+      try {
+        const { tenantId, channel: wsChannel, payload } = JSON.parse(message);
+        // Deliver to local clients only (avoid re-publishing loop)
+        deliverLocal(tenantId, wsChannel, payload);
+      } catch (err) {
+        logger.error({ err }, 'Error handling Redis pub/sub message');
+      }
+    });
   }
 
   // WebSocket endpoint — requires JWT token as query param
@@ -95,6 +143,10 @@ async function websocketPlugin(app: FastifyInstance) {
     };
 
     clients.set(clientId, client);
+
+    // Ensure we receive Redis broadcasts for this tenant
+    ensureRedisSubscription(payload.tenant_id);
+
     logger.info({ clientId, tenantId: payload.tenant_id, userId: payload.sub }, 'WebSocket client connected');
 
     // Send welcome message
@@ -105,7 +157,7 @@ async function websocketPlugin(app: FastifyInstance) {
     }));
 
     // Handle incoming messages (subscribe/unsubscribe/pong)
-    socket.on('message', (raw: any) => {
+    socket.on('message', (raw: Buffer | string) => {
       try {
         const msg = JSON.parse(raw.toString());
         client.lastPing = Date.now();
@@ -136,7 +188,7 @@ async function websocketPlugin(app: FastifyInstance) {
       logger.info({ clientId }, 'WebSocket client disconnected');
     });
 
-    socket.on('error', (err: any) => {
+    socket.on('error', (err: Error) => {
       logger.error({ clientId, error: err }, 'WebSocket error');
       clients.delete(clientId);
     });

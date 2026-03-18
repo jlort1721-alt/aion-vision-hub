@@ -214,7 +214,7 @@ describe('EWeLinkProxyService', () => {
         }),
       });
       await ewelinkProxyService.login('tenant-refail', 'u@x.com', 'p', '+1');
-      expect(ewelinkProxyService.isAuthenticated('tenant-refail')).toBe(true);
+      expect(await ewelinkProxyService.isAuthenticated('tenant-refail')).toBe(true);
 
       // Refresh fails
       mockFetch.mockResolvedValueOnce({
@@ -223,7 +223,7 @@ describe('EWeLinkProxyService', () => {
 
       const result = await ewelinkProxyService.refreshToken('tenant-refail');
       expect(result).toBe(false);
-      expect(ewelinkProxyService.isAuthenticated('tenant-refail')).toBe(false);
+      expect(await ewelinkProxyService.isAuthenticated('tenant-refail')).toBe(false);
     });
   });
 
@@ -239,10 +239,10 @@ describe('EWeLinkProxyService', () => {
         }),
       });
       await ewelinkProxyService.login('tenant-logout', 'u@x.com', 'p', '+1');
-      expect(ewelinkProxyService.isAuthenticated('tenant-logout')).toBe(true);
+      expect(await ewelinkProxyService.isAuthenticated('tenant-logout')).toBe(true);
 
       await ewelinkProxyService.logout('tenant-logout');
-      expect(ewelinkProxyService.isAuthenticated('tenant-logout')).toBe(false);
+      expect(await ewelinkProxyService.isAuthenticated('tenant-logout')).toBe(false);
     });
   });
 

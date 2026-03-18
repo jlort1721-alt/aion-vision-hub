@@ -1,6 +1,7 @@
 export { tenants } from './tenants.js';
+export { refreshTokens } from './refresh-tokens.js';
 export { profiles, userRoles } from './users.js';
-export { sites, devices } from './devices.js';
+export { sites, devices, deviceGroups } from './devices.js';
 export { events } from './events.js';
 export { incidents } from './incidents.js';
 export { sections } from './sections.js';
@@ -31,20 +32,23 @@ export {
   complianceTemplates, dataRetentionPolicies,
   trainingPrograms, certifications,
 } from './phase4.js';
+export { reports } from './reports.js';
 
-import { pgTable, uuid, varchar, text, boolean, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, boolean, integer, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 import { tenants } from './tenants.js';
 
 export const auditLogs = pgTable('audit_logs', {
   id: uuid('id').defaultRandom().primaryKey(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').notNull(),
-  userEmail: varchar('user_email', { length: 255 }).notNull(),
-  action: varchar('action', { length: 64 }).notNull(),
-  resource: varchar('resource', { length: 64 }).notNull(),
-  resourceId: varchar('resource_id', { length: 128 }),
-  details: jsonb('details'),
-  ipAddress: varchar('ip_address', { length: 45 }),
+  userEmail: text('user_email').notNull(),
+  action: text('action').notNull(),
+  entityType: text('entity_type').notNull(),
+  entityId: text('entity_id'),
+  beforeState: jsonb('before_state'),
+  afterState: jsonb('after_state'),
+  ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -52,39 +56,29 @@ export const auditLogs = pgTable('audit_logs', {
 export const integrations = pgTable('integrations', {
   id: uuid('id').defaultRandom().primaryKey(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  name: varchar('name', { length: 255 }).notNull(),
-  type: varchar('type', { length: 64 }).notNull(),
-  config: jsonb('config').default({}),
-  isActive: boolean('is_active').notNull().default(true),
-  lastTestedAt: timestamp('last_tested_at', { withTimezone: true }),
-  lastError: text('last_error'),
+  name: text('name').notNull(),
+  type: text('type').notNull(),
+  provider: text('provider').notNull(),
+  status: text('status').notNull().default('inactive'),
+  config: jsonb('config').notNull().default({}),
+  lastSync: timestamp('last_sync', { withTimezone: true }),
+  errorMessage: text('error_message'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
-
-export const reports = pgTable('reports', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  name: varchar('name', { length: 255 }).notNull(),
-  type: varchar('type', { length: 64 }).notNull(),
-  format: varchar('format', { length: 16 }).notNull().default('json'),
-  parameters: jsonb('parameters').default({}),
-  status: varchar('status', { length: 32 }).notNull().default('pending'),
-  outputUrl: varchar('output_url', { length: 1024 }),
-  generatedAt: timestamp('generated_at', { withTimezone: true }),
-  createdBy: uuid('created_by').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const mcpConnectors = pgTable('mcp_connectors', {
   id: uuid('id').defaultRandom().primaryKey(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  name: varchar('name', { length: 255 }).notNull(),
-  type: varchar('type', { length: 64 }).notNull(),
-  endpoint: varchar('endpoint', { length: 1024 }).notNull(),
-  tools: jsonb('tools').default([]),
-  isActive: boolean('is_active').notNull().default(true),
-  lastHealthCheck: timestamp('last_health_check', { withTimezone: true }),
+  name: text('name').notNull(),
+  type: text('type').notNull(),
+  status: text('status').notNull().default('disconnected'),
+  endpoint: text('endpoint'),
+  scopes: text('scopes').array().default(sql`'{}'::text[]`),
+  health: text('health').notNull().default('unknown'),
+  lastCheck: timestamp('last_check', { withTimezone: true }),
+  errorCount: integer('error_count').notNull().default(0),
+  config: jsonb('config').notNull().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -93,9 +87,72 @@ export const aiSessions = pgTable('ai_sessions', {
   id: uuid('id').defaultRandom().primaryKey(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').notNull(),
-  provider: varchar('provider', { length: 64 }).notNull(),
-  model: varchar('model', { length: 128 }).notNull(),
-  messages: jsonb('messages').default([]),
-  tokensUsed: varchar('tokens_used', { length: 32 }),
+  provider: text('provider').notNull().default('lovable'),
+  model: text('model').notNull().default('google/gemini-3-flash-preview'),
+  contextType: text('context_type'),
+  contextId: text('context_id'),
+  messages: jsonb('messages').notNull().default([]),
+  totalTokens: integer('total_tokens').notNull().default(0),
+  estimatedCost: text('estimated_cost').notNull().default('0'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const featureFlags = pgTable('feature_flags', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  key: text('key').notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  enabled: boolean('enabled').notNull().default(false),
+  tenantOverride: jsonb('tenant_override').default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const roleModulePermissions = pgTable('role_module_permissions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(),
+  module: text('module').notNull(),
+  enabled: boolean('enabled').notNull().default(true),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const liveViewLayouts = pgTable('live_view_layouts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull(),
+  name: text('name').notNull(),
+  grid: integer('grid').notNull().default(9),
+  slots: jsonb('slots').notNull().default([]),
+  isFavorite: boolean('is_favorite').notNull().default(false),
+  isShared: boolean('is_shared').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const streams = pgTable('streams', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  deviceId: uuid('device_id').notNull(),
+  channel: integer('channel').notNull().default(1),
+  type: text('type').notNull().default('main'),
+  codec: text('codec').notNull().default('H.264'),
+  resolution: text('resolution').notNull().default('1920x1080'),
+  fps: integer('fps').notNull().default(25),
+  bitrate: integer('bitrate'),
+  urlTemplate: text('url_template').notNull().default(''),
+  protocol: text('protocol').notNull().default('rtsp'),
+  isActive: boolean('is_active').notNull().default(true),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+});
+
+export const playbackRequests = pgTable('playback_requests', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  deviceId: uuid('device_id').notNull(),
+  channel: integer('channel').notNull().default(1),
+  startTime: timestamp('start_time', { withTimezone: true }).notNull(),
+  endTime: timestamp('end_time', { withTimezone: true }).notNull(),
+  status: text('status').notNull().default('pending'),
+  outputUrl: text('output_url'),
+  createdBy: uuid('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

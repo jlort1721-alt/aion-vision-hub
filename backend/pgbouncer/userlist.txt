@@ -1,0 +1,5 @@
+; PgBouncer userlist — format: "username" "password"
+; Replace with the actual MD5 password hash or SCRAM secret
+; Generate MD5: echo -n "md5$(echo -n 'PASSWORD_HEREaion' | md5sum | cut -d' ' -f1)"
+; Or use plaintext (not recommended for production):
+"aion" "POSTGRES_PASSWORD_PLACEHOLDER"

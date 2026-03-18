@@ -18,25 +18,31 @@ vi.mock('../../../config/env.js', () => ({
 }));
 
 // Mock the database client — GET handler queries integrations table
-const { mockInsert } = vi.hoisted(() => ({
+const { mockInsert, mockLimitFn } = vi.hoisted(() => ({
   mockInsert: vi.fn().mockReturnValue({ values: vi.fn().mockResolvedValue(undefined) }),
+  mockLimitFn: vi.fn(),
 }));
+
+// Default: return matching integration
+mockLimitFn.mockResolvedValue([
+  {
+    id: 'int-1',
+    tenantId: 'tenant-1',
+    type: 'whatsapp',
+    config: {
+      verifyToken: 'test-verify-token',
+      phoneNumberId: '456',
+    },
+  },
+]);
 
 vi.mock('../../../db/client.js', () => ({
   db: {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue([
-          {
-            id: 'int-1',
-            tenantId: 'tenant-1',
-            type: 'whatsapp',
-            config: {
-              verifyToken: 'test-verify-token',
-              phoneNumberId: '456',
-            },
-          },
-        ]),
+        where: vi.fn().mockReturnValue({
+          limit: mockLimitFn,
+        }),
       }),
     }),
     insert: mockInsert,
@@ -66,11 +72,15 @@ vi.mock('../../../db/schema/index.js', () => ({
   waConversations: { tenantId: 'tenant_id', waContactPhone: 'wa_contact_phone' },
 }));
 
-// Mock drizzle-orm operators
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn().mockImplementation((a: unknown, b: unknown) => ({ op: 'eq', a, b })),
-  and: vi.fn().mockImplementation((...args: unknown[]) => ({ op: 'and', args })),
-}));
+// Mock drizzle-orm operators (sql is used as tagged template literal)
+vi.mock('drizzle-orm', () => {
+  const sqlFn = (strings: TemplateStringsArray, ...values: unknown[]) => ({ __type: 'sql', strings, values });
+  return {
+    eq: vi.fn().mockImplementation((a: unknown, b: unknown) => ({ op: 'eq', a, b })),
+    and: vi.fn().mockImplementation((...args: unknown[]) => ({ op: 'and', args })),
+    sql: sqlFn,
+  };
+});
 
 // Mock logger
 vi.mock('@aion/common-utils', () => ({
@@ -153,6 +163,9 @@ describe('WhatsApp Webhook', () => {
     });
 
     it('returns 403 when verify token does not match', async () => {
+      // No integration matches the wrong token
+      mockLimitFn.mockResolvedValueOnce([]);
+
       const res = await app.inject({
         method: 'GET',
         url: '/whatsapp',

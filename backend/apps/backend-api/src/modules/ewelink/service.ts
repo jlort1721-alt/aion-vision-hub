@@ -19,6 +19,7 @@ import { config } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { integrations } from '../../db/schema/index.js';
 import { createLogger, encrypt, decrypt, withRetry } from '@aion/common-utils';
+import { RedisCache } from '../../lib/cache.js';
 
 const logger = createLogger({ name: 'ewelink-proxy' });
 
@@ -118,8 +119,7 @@ function decryptToken(ciphertext: string): string {
 // ── Service ────────────────────────────────────────────────────
 
 class EWeLinkProxyService {
-  /** In-memory cache — always checked first to avoid DB round-trips. */
-  private tenantTokens = new Map<string, TenantTokens>();
+  private tenantTokens = new RedisCache<TenantTokens>('ewelink:tokens', TOKEN_LIFETIME_MS);
 
   private get appId(): string {
     return config.EWELINK_APP_ID || '';
@@ -137,9 +137,9 @@ class EWeLinkProxyService {
     return this.appId.length > 0 && this.appSecret.length > 0;
   }
 
-  isAuthenticated(tenantId: string): boolean {
-    const tokens = this.tenantTokens.get(tenantId);
-    return tokens !== undefined && Date.now() < tokens.expiresAt;
+  async isAuthenticated(tenantId: string): Promise<boolean> {
+    const tokens = await this.tenantTokens.get(tenantId);
+    return tokens !== null && Date.now() < tokens.expiresAt;
   }
 
   // ── Token Persistence (encrypted in DB) ───────────────────
@@ -164,7 +164,7 @@ class EWeLinkProxyService {
           .update(integrations)
           .set({
             config: { tokens: payload, region: config.EWELINK_REGION },
-            isActive: true,
+            status: 'active',
             updatedAt: new Date(),
           })
           .where(eq(integrations.id, existing[0].id));
@@ -173,8 +173,9 @@ class EWeLinkProxyService {
           tenantId,
           name: INTEGRATION_NAME,
           type: INTEGRATION_TYPE,
+          provider: 'ewelink',
           config: { tokens: payload, region: config.EWELINK_REGION },
-          isActive: true,
+          status: 'active',
         });
       }
 
@@ -210,8 +211,8 @@ class EWeLinkProxyService {
         expiresAt: tokensPayload.exp,
       };
 
-      // Populate in-memory cache
-      this.tenantTokens.set(tenantId, tokens);
+      // Populate Redis/memory cache
+      await this.tenantTokens.set(tenantId, tokens);
       return tokens;
     } catch (err) {
       logger.error({ tenantId, err: err instanceof Error ? err.message : 'unknown' }, 'Failed to load eWeLink tokens from DB');
@@ -225,7 +226,7 @@ class EWeLinkProxyService {
         .update(integrations)
         .set({
           config: { tokens: null, region: config.EWELINK_REGION },
-          isActive: false,
+          status: 'inactive',
           updatedAt: new Date(),
         })
         .where(and(eq(integrations.tenantId, tenantId), eq(integrations.type, INTEGRATION_TYPE)));
@@ -236,8 +237,8 @@ class EWeLinkProxyService {
 
   /** Ensure we have valid tokens, loading from DB if needed. */
   private async ensureTokens(tenantId: string): Promise<TenantTokens | null> {
-    // 1. Check in-memory cache
-    const cached = this.tenantTokens.get(tenantId);
+    // 1. Check Redis/memory cache
+    const cached = await this.tenantTokens.get(tenantId);
     if (cached && Date.now() < cached.expiresAt) return cached;
 
     // 2. Try loading from DB
@@ -286,7 +287,7 @@ class EWeLinkProxyService {
         expiresAt: Date.now() + TOKEN_LIFETIME_MS,
       };
 
-      this.tenantTokens.set(tenantId, tokens);
+      await this.tenantTokens.set(tenantId, tokens);
       await this.persistTokens(tenantId, tokens);
 
       logger.info({ tenantId }, 'eWeLink login successful for %s', maskEmail(email));
@@ -329,7 +330,7 @@ class EWeLinkProxyService {
       const data = (await resp.json()) as { error: number; data?: { at: string; rt: string } };
       if (data.error !== 0) {
         logger.warn({ tenantId }, 'eWeLink token refresh failed — clearing session');
-        this.tenantTokens.delete(tenantId);
+        await this.tenantTokens.del(tenantId);
         await this.clearPersistedTokens(tenantId);
         return false;
       }
@@ -340,21 +341,21 @@ class EWeLinkProxyService {
         expiresAt: Date.now() + TOKEN_LIFETIME_MS,
       };
 
-      this.tenantTokens.set(tenantId, newTokens);
+      await this.tenantTokens.set(tenantId, newTokens);
       await this.persistTokens(tenantId, newTokens);
 
       logger.info({ tenantId }, 'eWeLink token refreshed successfully');
       return true;
     } catch (err) {
       logger.error({ tenantId, err: err instanceof Error ? err.message : 'unknown' }, 'eWeLink token refresh error');
-      this.tenantTokens.delete(tenantId);
+      await this.tenantTokens.del(tenantId);
       await this.clearPersistedTokens(tenantId);
       return false;
     }
   }
 
   async logout(tenantId: string) {
-    this.tenantTokens.delete(tenantId);
+    await this.tenantTokens.del(tenantId);
     await this.clearPersistedTokens(tenantId);
     logger.info({ tenantId }, 'eWeLink session cleared');
   }
@@ -372,7 +373,7 @@ class EWeLinkProxyService {
       // Try token refresh as last resort
       const refreshed = await this.refreshToken(tenantId);
       if (!refreshed) throw new Error('Not authenticated. Call login first.');
-      tokens = this.tenantTokens.get(tenantId)!;
+      tokens = (await this.tenantTokens.get(tenantId))!;
     }
 
     const url = `${this.apiBase}${path}`;
@@ -401,8 +402,8 @@ class EWeLinkProxyService {
     if (result.error === 401) {
       const refreshed = await this.refreshToken(tenantId);
       if (refreshed) {
-        const retryTokens = this.tenantTokens.get(tenantId)!;
-        headers['Authorization'] = `Bearer ${retryTokens.accessToken}`;
+        const retryTokens = await this.tenantTokens.get(tenantId);
+        headers['Authorization'] = `Bearer ${retryTokens!.accessToken}`;
         const retryResp = await fetchWithTimeout(url, {
           method,
           headers,
@@ -532,8 +533,8 @@ class EWeLinkProxyService {
         headers: { 'Content-Type': 'application/json', 'X-CK-Appid': this.appId },
       });
 
-      // Check authentication — try memory first, then DB
-      let authenticated = this.isAuthenticated(tenantId);
+      // Check authentication — try Redis/memory cache first, then DB
+      let authenticated = await this.isAuthenticated(tenantId);
       if (!authenticated) {
         const dbTokens = await this.loadTokensFromDb(tenantId);
         authenticated = dbTokens !== null && Date.now() < dbTokens.expiresAt;

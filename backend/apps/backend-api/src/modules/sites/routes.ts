@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth.js';
 import { siteService } from './service.js';
+import { deviceService } from '../devices/service.js';
 import { createSiteSchema, updateSiteSchema } from './schemas.js';
 import type { CreateSiteInput, UpdateSiteInput } from './schemas.js';
 
@@ -69,6 +70,15 @@ export async function registerSiteRoutes(app: FastifyInstance) {
     '/:id/devices',
     async (request, reply) => {
       const data = await siteService.listDevices(request.params.id, request.tenantId);
+      return reply.send({ success: true, data });
+    },
+  );
+
+  // ── GET /:id/health — Batch health check all devices in site via WAN IP ──
+  app.get<{ Params: { id: string } }>(
+    '/:id/health',
+    async (request, reply) => {
+      const data = await deviceService.siteHealthCheck(request.params.id, request.tenantId);
       return reply.send({ success: true, data });
     },
   );

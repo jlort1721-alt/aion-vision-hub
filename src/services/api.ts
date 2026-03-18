@@ -208,3 +208,48 @@ export const whatsappApi = {
   syncTemplates: () =>
     apiFetch<any>('whatsapp-api', { action: 'sync-templates' }, { method: 'POST' }),
 };
+
+// ── Operations API ──────────────────────────────────────
+export const operationsApi = {
+  dashboard: () =>
+    apiFetch<any>('operations-api', { action: 'dashboard' }, { method: 'GET' }),
+
+  sitesStatus: () =>
+    apiFetch<any>('operations-api', { action: 'sites-status' }, { method: 'GET' }),
+};
+
+// ── Cloud Accounts API ──────────────────────────────────
+export const cloudAccountsApi = {
+  mapping: () =>
+    apiFetch<any>('cloud-accounts-api', { action: 'mapping' }, { method: 'GET' }),
+
+  inventory: () =>
+    apiFetch<any>('cloud-accounts-api', { action: 'inventory' }, { method: 'GET' }),
+
+  pending: () =>
+    apiFetch<any>('cloud-accounts-api', { action: 'pending' }, { method: 'GET' }),
+};
+
+// ── Backup API ──────────────────────────────────────────
+export const backupApi = {
+  status: () =>
+    apiFetch<any>('backup-api', undefined, { method: 'GET' }),
+
+  trigger: () =>
+    apiFetch<any>('backup-api', { action: 'trigger' }, { method: 'POST' }),
+
+  list: () =>
+    apiFetch<any[]>('backup-api', { action: 'list' }, { method: 'GET' }),
+};
+
+// ── AI API ──────────────────────────────────────────────
+export const aiApi = {
+  shiftSummary: () =>
+    apiFetch<any>('ai-api', { action: 'shift-summary' }, { method: 'GET' }),
+};
+
+// ── Analytics API ───────────────────────────────────────
+export const analyticsApi = {
+  riskScore: () =>
+    apiFetch<any>('analytics-api', { action: 'risk-score' }, { method: 'GET' }),
+};

@@ -29,12 +29,6 @@ export async function registerReportRoutes(app: FastifyInstance) {
         input,
       );
 
-      await request.audit('report.create', 'report', report.id, {
-        name: report.name,
-        type: report.type,
-        format: report.format,
-      });
-
       return reply.code(201).send({
         success: true,
         data: report,
@@ -65,8 +59,6 @@ export async function registerReportRoutes(app: FastifyInstance) {
         request.params.id,
         request.tenantId,
       );
-
-      await request.audit('report.export', 'report', request.params.id);
 
       return { success: true, data: exportData } satisfies ApiResponse;
     },

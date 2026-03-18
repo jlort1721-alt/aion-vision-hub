@@ -32,7 +32,6 @@ export class SmtpProvider implements EmailProvider {
     // This stub returns an error prompting the admin to use Resend/SendGrid.
     try {
       // Attempt to import nodemailer dynamically
-      // @ts-expect-error nodemailer is an optional dependency
       const nodemailer = await import('nodemailer').catch(() => null);
 
       if (!nodemailer) {

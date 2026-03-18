@@ -9,7 +9,7 @@ export async function registerStreamRoutes(app: FastifyInstance) {
   app.get(
     '/',
     async (request, reply) => {
-      const data = streamService.list(request.tenantId);
+      const data = await streamService.list(request.tenantId);
       return reply.send({ success: true, data });
     },
   );
@@ -20,7 +20,7 @@ export async function registerStreamRoutes(app: FastifyInstance) {
     { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const body = registerStreamSchema.parse(request.body);
-      const data = streamService.register(body, request.tenantId);
+      const data = await streamService.register(body, request.tenantId);
 
       await request.audit('stream.register', 'streams', body.deviceId, {
         gatewayId: body.gatewayId,
@@ -36,7 +36,7 @@ export async function registerStreamRoutes(app: FastifyInstance) {
     '/:id/url',
     async (request, reply) => {
       const params = streamUrlSchema.parse(request.query);
-      const data = streamService.getStreamUrl(
+      const data = await streamService.getStreamUrl(
         request.params.id,
         params,
         request.tenantId,

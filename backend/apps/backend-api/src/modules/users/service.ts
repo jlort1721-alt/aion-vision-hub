@@ -75,7 +75,7 @@ export class UserService {
       .insert(profiles)
       .values({
         id: userId,
-        email: data.email,
+        userId: userId,
         fullName: data.fullName,
         tenantId: targetTenantId,
         avatarUrl: data.avatarUrl ?? null,

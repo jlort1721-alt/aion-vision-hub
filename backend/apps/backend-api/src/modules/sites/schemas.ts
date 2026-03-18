@@ -15,7 +15,6 @@ export const createSiteSchema = z.object({
     .regex(/^-?\d+(\.\d+)?$/, 'Must be a valid longitude')
     .optional(),
   timezone: z.string().max(64).default('UTC'),
-  gatewayId: z.string().max(128).optional(),
 });
 
 export type CreateSiteInput = z.infer<typeof createSiteSchema>;
@@ -35,8 +34,7 @@ export const updateSiteSchema = z.object({
     .regex(/^-?\d+(\.\d+)?$/, 'Must be a valid longitude')
     .optional(),
   timezone: z.string().max(64).optional(),
-  gatewayId: z.string().max(128).optional(),
-  isActive: z.boolean().optional(),
+  status: z.string().max(32).optional(),
 });
 
 export type UpdateSiteInput = z.infer<typeof updateSiteSchema>;

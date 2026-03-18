@@ -171,25 +171,109 @@ jobs:
           path: dist/
 
       # ------------------------------------------------------------------
-      # Configure your production deploy strategy below.
+      # Deploy via SSH + Docker Compose to production VPS
       # The "production" environment in GitHub Settings should have
       # required reviewers and a deployment branch policy.
       # ------------------------------------------------------------------
 
-      - name: Production deploy placeholder
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          known_hosts: unnecessary
+          if_key_exists: replace
+
+      - name: Add production host to known_hosts
+        run: ssh-keyscan -H ${{ secrets.PRODUCTION_SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Login to GHCR on production server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PRODUCTION_SSH_HOST }}
+          username: ${{ secrets.PRODUCTION_SSH_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Deploy backend services
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PRODUCTION_SSH_HOST }}
+          username: ${{ secrets.PRODUCTION_SSH_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            APP_DIR="/opt/aion/app"
+            RELEASE_TAG="${{ github.event.release.tag_name }}"
+            cd "$APP_DIR/backend"
+
+            echo "=== Production deploy: $RELEASE_TAG ==="
+            echo "=== Creating pre-deploy backup marker ==="
+            date -u "+%Y-%m-%dT%H:%M:%SZ deploy=$RELEASE_TAG" >> "$APP_DIR/deploy.log"
+
+            echo "=== Pulling production images ==="
+            docker compose -f docker-compose.prod.yml pull
+
+            echo "=== Running database migrations ==="
+            for migration in "$APP_DIR/backend/apps/backend-api/src/db/migrations"/*.sql; do
+              if [ -f "$migration" ]; then
+                echo "  Applying: $(basename "$migration")"
+                docker compose -f docker-compose.prod.yml exec -T postgres \
+                  psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f "/migrations/$(basename "$migration")" 2>/dev/null || \
+                  echo "  (skipped or already applied)"
+              fi
+            done
+
+            echo "=== Stopping services gracefully ==="
+            docker compose -f docker-compose.prod.yml stop backend-api edge-gateway 2>/dev/null || true
+
+            echo "=== Starting services ==="
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+            echo "=== Cleaning up old images ==="
+            docker image prune -f
+
+            echo "=== Waiting for services to start ==="
+            sleep 15
+
+            echo "=== Health checks ==="
+            PASS=0; FAIL=0
+            for svc in "localhost:3000/health:API" "localhost:3100/health:Gateway" "localhost:9997/v3/paths:MediaMTX"; do
+              URL=$(echo "$svc" | cut -d: -f1-2)
+              NAME=$(echo "$svc" | cut -d: -f3)
+              RETRIES=3
+              OK=0
+              for i in $(seq 1 $RETRIES); do
+                if curl -sf "http://$URL" --max-time 10 >/dev/null 2>&1; then
+                  OK=1
+                  break
+                fi
+                echo "  $NAME: attempt $i/$RETRIES failed, retrying in 5s..."
+                sleep 5
+              done
+              if [ "$OK" -eq 1 ]; then
+                echo "  $NAME: OK"
+                PASS=$((PASS+1))
+              else
+                echo "  $NAME: FAILED"
+                FAIL=$((FAIL+1))
+              fi
+            done
+
+            if [ "$FAIL" -gt 0 ]; then
+              echo "CRITICAL: $FAIL service(s) unhealthy after production deploy"
+              docker compose -f docker-compose.prod.yml logs --tail=50
+              exit 1
+            fi
+            echo "All services healthy ($PASS/$((PASS+FAIL)))"
+            echo "Production deploy $RELEASE_TAG complete."
+
+      - name: Deploy frontend assets
         run: |
-          echo "============================================"
-          echo "  PRODUCTION DEPLOY — ${{ github.event.release.tag_name }}"
-          echo "============================================"
-          echo ""
-          echo "Docker images pushed to GHCR:"
-          echo "  - ${{ env.IMAGE_PREFIX }}/backend-api:${{ github.event.release.tag_name }}"
-          echo "  - ${{ env.IMAGE_PREFIX }}/edge-gateway:${{ github.event.release.tag_name }}"
-          echo "  - ${{ env.IMAGE_PREFIX }}/gateway:${{ github.event.release.tag_name }}"
-          echo ""
-          echo "Frontend artifact: frontend-production-${{ github.event.release.tag_name }}"
-          echo ""
-          echo "Configure your deploy provider in this workflow."
+          rsync -azP --delete \
+            dist/ \
+            ${{ secrets.PRODUCTION_SSH_USER }}@${{ secrets.PRODUCTION_SSH_HOST }}:/opt/aion/app/frontend/dist/
 
   # ---------------------------------------------------------------------------
   # Post-deploy verification

@@ -7,8 +7,8 @@ import {
 } from '@/lib/permissions';
 
 describe('ALL_MODULES', () => {
-  it('contains exactly 19 modules', () => {
-    expect(ALL_MODULES).toHaveLength(19);
+  it('contains exactly 32 modules', () => {
+    expect(ALL_MODULES).toHaveLength(32);
   });
 
   it('each module has required properties', () => {
@@ -28,19 +28,19 @@ describe('ALL_MODULES', () => {
 });
 
 describe('getModulesForRole', () => {
-  it('super_admin gets all 19 modules', () => {
+  it('super_admin gets all 32 modules', () => {
     const modules = getModulesForRole('super_admin');
-    expect(modules).toHaveLength(19);
+    expect(modules).toHaveLength(32);
   });
 
-  it('tenant_admin gets all 19 modules', () => {
+  it('tenant_admin gets all 32 modules', () => {
     const modules = getModulesForRole('tenant_admin');
-    expect(modules).toHaveLength(19);
+    expect(modules).toHaveLength(32);
   });
 
-  it('operator gets 15 modules', () => {
+  it('operator gets 26 modules', () => {
     const modules = getModulesForRole('operator');
-    expect(modules).toHaveLength(15);
+    expect(modules).toHaveLength(26);
     expect(modules).not.toContain('admin');
     expect(modules).not.toContain('audit');
     expect(modules).not.toContain('system');

@@ -1,23 +1,25 @@
-import { pgTable, uuid, varchar, integer, timestamp, jsonb, text } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, integer, timestamp, jsonb, text } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 import { devices, sites } from './devices.js';
 
 export const events = pgTable('events', {
   id: uuid('id').defaultRandom().primaryKey(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  deviceId: uuid('device_id').notNull().references(() => devices.id, { onDelete: 'cascade' }),
   siteId: uuid('site_id').notNull().references(() => sites.id, { onDelete: 'cascade' }),
-  type: varchar('type', { length: 64 }).notNull(),
-  severity: varchar('severity', { length: 16 }).notNull().default('info'),
-  status: varchar('status', { length: 32 }).notNull().default('new'),
-  title: varchar('title', { length: 255 }).notNull(),
-  description: text('description'),
+  deviceId: uuid('device_id').notNull().references(() => devices.id, { onDelete: 'cascade' }),
   channel: integer('channel'),
-  snapshotUrl: varchar('snapshot_url', { length: 1024 }),
+  eventType: text('event_type').notNull(),
+  severity: text('severity').notNull().default('info'),
+  status: text('status').notNull().default('new'),
+  title: text('title').notNull(),
+  description: text('description'),
+  metadata: jsonb('metadata').notNull().default({}),
+  snapshotUrl: text('snapshot_url'),
+  clipUrl: text('clip_url'),
   assignedTo: uuid('assigned_to'),
-  acknowledgedAt: timestamp('acknowledged_at', { withTimezone: true }),
+  resolvedBy: uuid('resolved_by'),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
-  metadata: jsonb('metadata').default({}),
+  aiSummary: text('ai_summary'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

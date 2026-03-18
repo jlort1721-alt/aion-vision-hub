@@ -94,17 +94,30 @@ describe('Health routes', () => {
       expect(res.statusCode).toBe(503);
       const body = res.json();
       expect(body.status).toBe('not_ready');
-      expect(body.reason).toBe('database_unreachable');
+      expect(body.checks.database).toBe('fail');
       expect(body).toHaveProperty('timestamp');
     });
   });
 
   // ── GET /health/metrics ────────────────────────────────────
   describe('GET /health/metrics', () => {
-    it('returns 200 with uptime, memory, cpu, and timestamp', async () => {
+    it('returns 200 with Prometheus text format', async () => {
       const res = await app.inject({
         method: 'GET',
         url: '/health/metrics',
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['content-type']).toContain('text/plain');
+    });
+  });
+
+  // ── GET /health/metrics/json ──────────────────────────────
+  describe('GET /health/metrics/json', () => {
+    it('returns 200 with uptime, memory, cpu, and timestamp', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/health/metrics/json',
       });
 
       expect(res.statusCode).toBe(200);
@@ -121,7 +134,7 @@ describe('Health routes', () => {
     it('memory object contains expected memoryUsage fields', async () => {
       const res = await app.inject({
         method: 'GET',
-        url: '/health/metrics',
+        url: '/health/metrics/json',
       });
 
       const body = res.json();

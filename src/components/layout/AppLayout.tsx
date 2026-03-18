@@ -25,47 +25,91 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useWebSocket } from '@/hooks/use-websocket';
 
+// ── Navigation with categories ─────────────────────────────
+
 interface NavItem {
   labelKey: string;
   path: string;
   icon: React.ReactNode;
-  badge?: number;
+  badgeKey?: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { labelKey: 'nav.dashboard', path: '/dashboard', icon: <LayoutDashboard size={18} /> },
-  { labelKey: 'nav.live_view', path: '/live-view', icon: <Video size={18} /> },
-  { labelKey: 'nav.playback', path: '/playback', icon: <Play size={18} /> },
-  { labelKey: 'nav.events', path: '/events', icon: <Bell size={18} />, badge: 3 },
-  { labelKey: 'nav.alerts', path: '/alerts', icon: <Shield size={18} /> },
-  { labelKey: 'nav.incidents', path: '/incidents', icon: <AlertTriangle size={18} />, badge: 1 },
-  { labelKey: 'nav.devices', path: '/devices', icon: <MonitorSpeaker size={18} /> },
-  { labelKey: 'nav.sites', path: '/sites', icon: <MapPin size={18} /> },
-  { labelKey: 'nav.domotics', path: '/domotics', icon: <Zap size={18} /> },
-  { labelKey: 'nav.access_control', path: '/access-control', icon: <DoorOpen size={18} /> },
-  { labelKey: 'nav.reboots', path: '/reboots', icon: <RotateCcw size={18} /> },
-  { labelKey: 'nav.intercom', path: '/intercom', icon: <Phone size={18} /> },
-  { labelKey: 'nav.database', path: '/database', icon: <Database size={18} /> },
-  { labelKey: 'nav.ai_assistant', path: '/ai-assistant', icon: <Bot size={18} /> },
-  { labelKey: 'nav.whatsapp', path: '/whatsapp', icon: <MessageSquare size={18} /> },
-  { labelKey: 'nav.shifts', path: '/shifts', icon: <Clock size={18} /> },
-  { labelKey: 'nav.sla', path: '/sla', icon: <Timer size={18} /> },
-  { labelKey: 'nav.emergency', path: '/emergency', icon: <AlertOctagon size={18} /> },
-  { labelKey: 'nav.patrols', path: '/patrols', icon: <Navigation size={18} /> },
-  { labelKey: 'nav.integrations', path: '/integrations', icon: <Puzzle size={18} /> },
-  { labelKey: 'nav.reports', path: '/reports', icon: <FileBarChart size={18} /> },
-  { labelKey: 'nav.scheduled_reports', path: '/scheduled-reports', icon: <CalendarClock size={18} /> },
-  { labelKey: 'nav.automation', path: '/automation', icon: <Cog size={18} /> },
-  { labelKey: 'nav.visitors', path: '/visitors', icon: <UserCheck size={18} /> },
-  { labelKey: 'nav.analytics', path: '/analytics', icon: <BarChart3 size={18} /> },
-  { labelKey: 'nav.contracts', path: '/contracts', icon: <FileText size={18} /> },
-  { labelKey: 'nav.keys', path: '/keys', icon: <KeyRound size={18} /> },
-  { labelKey: 'nav.compliance', path: '/compliance', icon: <ShieldCheck size={18} /> },
-  { labelKey: 'nav.training', path: '/training', icon: <GraduationCap size={18} /> },
-  { labelKey: 'nav.audit', path: '/audit', icon: <ScrollText size={18} /> },
-  { labelKey: 'nav.system', path: '/system', icon: <Activity size={18} /> },
-  { labelKey: 'nav.settings', path: '/settings', icon: <Settings size={18} /> },
-  { labelKey: 'nav.admin', path: '/admin', icon: <Users size={18} /> },
+interface NavCategory {
+  key: string;
+  labelKey: string;
+  items: NavItem[];
+}
+
+const NAV_CATEGORIES: NavCategory[] = [
+  {
+    key: 'monitoring',
+    labelKey: 'nav.cat.monitoring',
+    items: [
+      { labelKey: 'nav.dashboard', path: '/dashboard', icon: <LayoutDashboard size={18} /> },
+      { labelKey: 'nav.live_view', path: '/live-view', icon: <Video size={18} /> },
+      { labelKey: 'nav.playback', path: '/playback', icon: <Play size={18} /> },
+      { labelKey: 'nav.events', path: '/events', icon: <Bell size={18} />, badgeKey: 'events' },
+      { labelKey: 'nav.alerts', path: '/alerts', icon: <Shield size={18} />, badgeKey: 'alerts' },
+      { labelKey: 'nav.incidents', path: '/incidents', icon: <AlertTriangle size={18} />, badgeKey: 'incidents' },
+    ],
+  },
+  {
+    key: 'infrastructure',
+    labelKey: 'nav.cat.infrastructure',
+    items: [
+      { labelKey: 'nav.devices', path: '/devices', icon: <MonitorSpeaker size={18} /> },
+      { labelKey: 'nav.sites', path: '/sites', icon: <MapPin size={18} /> },
+      { labelKey: 'nav.domotics', path: '/domotics', icon: <Zap size={18} /> },
+      { labelKey: 'nav.access_control', path: '/access-control', icon: <DoorOpen size={18} /> },
+      { labelKey: 'nav.reboots', path: '/reboots', icon: <RotateCcw size={18} /> },
+      { labelKey: 'nav.intercom', path: '/intercom', icon: <Phone size={18} /> },
+    ],
+  },
+  {
+    key: 'operations',
+    labelKey: 'nav.cat.operations',
+    items: [
+      { labelKey: 'nav.shifts', path: '/shifts', icon: <Clock size={18} /> },
+      { labelKey: 'nav.patrols', path: '/patrols', icon: <Navigation size={18} /> },
+      { labelKey: 'nav.visitors', path: '/visitors', icon: <UserCheck size={18} /> },
+      { labelKey: 'nav.emergency', path: '/emergency', icon: <AlertOctagon size={18} /> },
+      { labelKey: 'nav.sla', path: '/sla', icon: <Timer size={18} /> },
+      { labelKey: 'nav.automation', path: '/automation', icon: <Cog size={18} /> },
+    ],
+  },
+  {
+    key: 'intelligence',
+    labelKey: 'nav.cat.intelligence',
+    items: [
+      { labelKey: 'nav.ai_assistant', path: '/ai-assistant', icon: <Bot size={18} /> },
+      { labelKey: 'nav.analytics', path: '/analytics', icon: <BarChart3 size={18} /> },
+      { labelKey: 'nav.reports', path: '/reports', icon: <FileBarChart size={18} /> },
+      { labelKey: 'nav.scheduled_reports', path: '/scheduled-reports', icon: <CalendarClock size={18} /> },
+      { labelKey: 'nav.database', path: '/database', icon: <Database size={18} /> },
+    ],
+  },
+  {
+    key: 'management',
+    labelKey: 'nav.cat.management',
+    items: [
+      { labelKey: 'nav.contracts', path: '/contracts', icon: <FileText size={18} /> },
+      { labelKey: 'nav.keys', path: '/keys', icon: <KeyRound size={18} /> },
+      { labelKey: 'nav.compliance', path: '/compliance', icon: <ShieldCheck size={18} /> },
+      { labelKey: 'nav.training', path: '/training', icon: <GraduationCap size={18} /> },
+      { labelKey: 'nav.whatsapp', path: '/whatsapp', icon: <MessageSquare size={18} /> },
+      { labelKey: 'nav.integrations', path: '/integrations', icon: <Puzzle size={18} /> },
+    ],
+  },
+  {
+    key: 'system',
+    labelKey: 'nav.cat.system',
+    items: [
+      { labelKey: 'nav.audit', path: '/audit', icon: <ScrollText size={18} /> },
+      { labelKey: 'nav.system', path: '/system', icon: <Activity size={18} /> },
+      { labelKey: 'nav.settings', path: '/settings', icon: <Settings size={18} /> },
+      { labelKey: 'nav.admin', path: '/admin', icon: <Users size={18} /> },
+    ],
+  },
 ];
 
 export default function AppLayout() {
@@ -89,26 +133,32 @@ export default function AppLayout() {
     enabled: !!profile?.tenant_id,
   });
 
+  interface DbPermRow { role: string; module: string; enabled: boolean; tenant_id: string }
+
   const effectivePerms = useMemo(() => {
     const map: Record<string, string[]> = { ...DEFAULT_ROLE_PERMISSIONS };
     if (dbPerms && dbPerms.length > 0) {
       const editableRoles = ['operator', 'viewer', 'auditor'];
       for (const role of editableRoles) {
-        const roleRows = dbPerms.filter((p: any) => p.role === role);
+        const roleRows = (dbPerms as DbPermRow[]).filter((p) => p.role === role);
         if (roleRows.length > 0) {
-          map[role] = roleRows.filter((p: any) => p.enabled).map((p: any) => p.module);
+          map[role] = roleRows.filter((p) => p.enabled).map((p) => p.module);
         }
       }
     }
     return map;
   }, [dbPerms]);
 
-  const visibleNavItems = useMemo(() => {
-    return NAV_ITEMS.filter(item => {
-      const mod = ALL_MODULES.find(m => m.path === item.path);
-      if (!mod) return true;
-      return hasModuleAccess(roles, mod.module, effectivePerms);
-    });
+  // Filter categories based on user permissions
+  const visibleCategories = useMemo(() => {
+    return NAV_CATEGORIES.map(cat => ({
+      ...cat,
+      items: cat.items.filter((item: NavItem) => {
+        const mod = ALL_MODULES.find(m => m.path === item.path);
+        if (!mod) return true;
+        return hasModuleAccess(roles, mod.module, effectivePerms);
+      }),
+    })).filter(cat => cat.items.length > 0);
   }, [roles, effectivePerms]);
 
   const displayName = profile?.full_name || user?.email || 'User';
@@ -144,36 +194,45 @@ export default function AppLayout() {
         </div>
 
         <nav className="flex-1 overflow-y-auto scrollbar-thin py-2 px-2">
-          {visibleNavItems.map(item => {
-            const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
-            const label = t(item.labelKey);
-            return (
-              <button
-                key={item.path}
-                onClick={() => { navigate(item.path); setMobileOpen(false); }}
-                className={cn(
-                  "flex items-center gap-3 w-full rounded-md px-3 py-2 text-sm transition-colors mb-0.5",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-primary-foreground font-medium"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-primary-foreground"
-                )}
-                title={collapsed ? label : undefined}
-              >
-                <span className="shrink-0">{item.icon}</span>
-                {!collapsed && (
-                  <>
-                    <span className="truncate">{label}</span>
-                    {item.badge && (
-                      <Badge variant="destructive" className="ml-auto h-5 min-w-5 text-[10px] px-1.5">{item.badge}</Badge>
+          {visibleCategories.map((cat) => (
+            <div key={cat.key} className="mb-1">
+              {!collapsed && (
+                <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted/70 mt-2 first:mt-0">
+                  {t(cat.labelKey) || cat.key}
+                </div>
+              )}
+              {collapsed && <div className="border-t border-sidebar-border/30 mx-2 my-1.5" />}
+              {cat.items.map((item: NavItem) => {
+                const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+                const label = t(item.labelKey);
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                    className={cn(
+                      "flex items-center gap-3 w-full rounded-md px-3 py-1.5 text-sm transition-colors mb-0.5 relative",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-primary-foreground font-medium"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-primary-foreground"
                     )}
-                  </>
-                )}
-                {collapsed && item.badge && (
-                  <span className="absolute left-10 top-0.5 w-2 h-2 bg-destructive rounded-full" />
-                )}
-              </button>
-            );
-          })}
+                    title={collapsed ? label : undefined}
+                  >
+                    <span className="shrink-0">{item.icon}</span>
+                    {!collapsed && (
+                      <>
+                        <span className="truncate">{label}</span>
+                        {item.badgeKey && (
+                          <span className="ml-auto flex items-center justify-center h-5 min-w-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-medium px-1.5">
+                            •
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className="border-t border-sidebar-border p-2">
