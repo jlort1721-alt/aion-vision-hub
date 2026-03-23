@@ -22,7 +22,7 @@ jobs:
         fetch-depth: 1
 
     - name: Install pnpm / Node Environment
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
