@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { UserService } from './service.js';
 import { createUserSchema, updateUserSchema } from './schemas.js';
 import { requireRole } from '../../plugins/auth.js';
+import { enforcePlanLimit } from '../../plugins/plan-limits.js';
 
 export async function registerUserRoutes(app: FastifyInstance) {
   const service = new UserService();
@@ -26,7 +27,7 @@ export async function registerUserRoutes(app: FastifyInstance) {
   });
 
   // Create a new user (tenant_admin or above)
-  app.post('/', { preHandler: [requireRole('super_admin', 'tenant_admin')] }, async (request, reply) => {
+  app.post('/', { preHandler: [requireRole('super_admin', 'tenant_admin'), enforcePlanLimit('users')] }, async (request, reply) => {
     const body = createUserSchema.parse(request.body);
     const data = await service.create(body, request.tenantId, request.userRole);
     await request.audit('create', 'users', data.id);

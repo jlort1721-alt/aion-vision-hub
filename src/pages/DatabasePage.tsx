@@ -19,8 +19,6 @@ import {
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import * as XLSX from 'xlsx';
-
 export default function DatabasePage() {
   const { t } = useI18n();
   const { data: sections = [] } = useSections();
@@ -84,20 +82,24 @@ export default function DatabasePage() {
   };
 
   const handleExport = () => {
-    const exportData = filtered.map((r: any) => ({
-      Name: r.title,
-      Category: r.category,
-      Section: getSectionName(r.section_id),
-      Unit: r.content?.unit || '',
-      Phone: r.content?.phone || '',
-      Email: r.content?.email || '',
-      Status: r.status,
-      Created: new Date(r.created_at).toLocaleDateString(),
-    }));
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Database');
-    XLSX.writeFile(wb, `aion_database_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    const headers = ['Name', 'Category', 'Section', 'Unit', 'Phone', 'Email', 'Status', 'Created'];
+    const rows = filtered.map((r: any) => [
+      `"${(r.title || '').replace(/"/g, '""')}"`,
+      `"${(r.category || '').replace(/"/g, '""')}"`,
+      `"${(getSectionName(r.section_id) || '').replace(/"/g, '""')}"`,
+      `"${(r.content?.unit || '').replace(/"/g, '""')}"`,
+      `"${(r.content?.phone || '').replace(/"/g, '""')}"`,
+      `"${(r.content?.email || '').replace(/"/g, '""')}"`,
+      `"${(r.status || '').replace(/"/g, '""')}"`,
+      `"${new Date(r.created_at).toLocaleDateString()}"`
+    ]);
+    
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `clave_database_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
   };
 
   return (

@@ -45,8 +45,8 @@ export interface User {
 // ── Device ──────────────────────────────────────────────────
 
 export type DeviceStatus = 'online' | 'offline' | 'degraded' | 'maintenance' | 'unknown';
-export type DeviceBrand = 'hikvision' | 'dahua' | 'onvif' | 'generic';
-export type DeviceType = 'camera' | 'nvr' | 'dvr' | 'encoder' | 'decoder' | 'access_control' | 'intercom';
+export type DeviceBrand = 'hikvision' | 'dahua' | 'axis' | 'hanwha' | 'uniview' | 'generic_onvif' | 'generic' | 'other';
+export type DeviceType = 'camera' | 'nvr' | 'dvr' | 'encoder' | 'decoder' | 'access_control' | 'intercom' | 'other';
 
 export interface Device {
   id: string;
@@ -91,7 +91,7 @@ export interface Site {
 
 // ── Event ───────────────────────────────────────────────────
 
-export type EventSeverity = 'info' | 'warning' | 'critical';
+export type EventSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
 export type EventStatus = 'new' | 'acknowledged' | 'resolved' | 'dismissed';
 
 export interface DeviceEvent {
@@ -117,7 +117,7 @@ export interface DeviceEvent {
 // ── Incident ────────────────────────────────────────────────
 
 export type IncidentPriority = 'low' | 'medium' | 'high' | 'critical';
-export type IncidentStatus = 'open' | 'investigating' | 'mitigating' | 'resolved' | 'closed';
+export type IncidentStatus = 'open' | 'investigating' | 'mitigating' | 'pending' | 'resolved' | 'closed';
 
 export interface Incident {
   id: string;

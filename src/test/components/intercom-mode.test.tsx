@@ -216,7 +216,7 @@ describe("IntercomPage — Mode Selection & Tabs", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "AION greets, then transfers to operator if needed"
+          "La IA saluda y transfiere al operador si es necesario"
         )
       ).toBeInTheDocument();
     });

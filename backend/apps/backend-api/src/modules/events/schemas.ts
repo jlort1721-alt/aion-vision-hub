@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const eventSeverities = ['info', 'warning', 'critical'] as const;
+const eventSeverities = ['critical', 'high', 'medium', 'low', 'info'] as const;
 const eventStatuses = ['new', 'acknowledged', 'resolved', 'dismissed'] as const;
 
 // ── Create Event ────────────────────────────────────────────

@@ -257,7 +257,7 @@ export default function RebootsPage() {
 
                 {/* AI result area */}
                 <div className="p-2 rounded bg-muted/50 border mt-2">
-                  <div className="flex items-center gap-1 mb-1"><Bot className="h-3 w-3 text-primary" /><span className="text-[10px] font-semibold">AION</span></div>
+                  <div className="flex items-center gap-1 mb-1"><Bot className="h-3 w-3 text-primary" /><span className="text-[10px] font-semibold">Asistente IA</span></div>
                   {aiLoading ? (
                     <div className="flex items-center gap-2 py-2">
                       <Loader2 className="h-3 w-3 animate-spin text-primary" />

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // ── Device Brands & Types (extended for monitoring station) ──
-const deviceBrands = ['hikvision', 'dahua', 'onvif', 'generic', 'linksys', 'mikrotik', 'fanvil', 'grandstream', 'ezviz', 'sonoff', 'cisco'] as const;
+const deviceBrands = ['hikvision', 'dahua', 'axis', 'hanwha', 'uniview', 'generic_onvif', 'onvif', 'generic', 'linksys', 'mikrotik', 'fanvil', 'grandstream', 'ezviz', 'sonoff', 'cisco', 'other'] as const;
 const deviceTypes = [
   'camera', 'nvr', 'dvr', 'xvr', 'encoder', 'decoder',
   'access_control', 'intercom',

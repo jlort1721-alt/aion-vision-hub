@@ -18,7 +18,7 @@ export function PWAUpdateNotification() {
       }
     },
     onRegisterError(error) {
-      console.error("[AION PWA] Registration error:", error);
+      console.error("[PWA] Registration error:", error);
     },
   });
 
@@ -32,7 +32,7 @@ export function PWAUpdateNotification() {
 
   useEffect(() => {
     if (offlineReady) {
-      toast.success("AION Vision Hub ready for offline use", {
+      toast.success("Clave Seguridad listo para uso offline", {
         duration: 4000,
       });
       setOfflineReady(false);
@@ -41,15 +41,15 @@ export function PWAUpdateNotification() {
 
   useEffect(() => {
     if (needRefresh) {
-      toast("New version available", {
-        description: "Click Update to get the latest features and fixes.",
+      toast("Nueva versión disponible", {
+        description: "Haz clic en Actualizar para obtener las últimas mejoras.",
         duration: Infinity,
         action: {
-          label: "Update",
+          label: "Actualizar",
           onClick: handleUpdate,
         },
         cancel: {
-          label: "Later",
+          label: "Después",
           onClick: handleDismiss,
         },
       });

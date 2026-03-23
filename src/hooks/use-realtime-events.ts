@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client'; // ALLOWED: Supabase Realtime channels (postgres_changes)
+import { apiClient } from '@/lib/api-client';
 import { useToast } from '@/hooks/use-toast';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,9 +27,8 @@ export function useRealtimeEvents() {
   const { data: tenant } = useQuery({
     queryKey: ['tenant'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('tenants').select('settings').limit(1).single();
-      if (error) throw error;
-      return data;
+      const response = await apiClient.get<any>('/tenants/current');
+      return response.data;
     },
     enabled: !!profile,
     staleTime: 60000,

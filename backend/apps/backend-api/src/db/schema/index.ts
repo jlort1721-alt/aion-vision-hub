@@ -33,6 +33,8 @@ export {
   trainingPrograms, certifications,
 } from './phase4.js';
 export { reports } from './reports.js';
+export { biomarkers } from './biomarkers.js';
+export { apiKeys } from '../../modules/api-keys/schema.js';
 
 import { pgTable, uuid, text, boolean, integer, timestamp, jsonb } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';

@@ -11,7 +11,6 @@ import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import * as XLSX from 'xlsx';
 import { FileBarChart, Download, BarChart3, TrendingUp, PieChart, Bot, FileText, Loader2, CalendarIcon, FileSpreadsheet } from 'lucide-react';
 import ReportsCharts from '@/components/reports/ReportsCharts';
 
@@ -32,14 +31,6 @@ function exportCSV(data: any[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function exportXLSX(data: any[], filename: string) {
-  if (!data.length) return;
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Data');
-  XLSX.writeFile(wb, filename);
-}
-
 export default function ReportsPage() {
   const { t } = useI18n();
   const { data: events = [], isLoading: le } = useEventsLegacy();
@@ -54,16 +45,14 @@ export default function ReportsPage() {
   const exportPdf = async (type: string) => {
     setExportingPdf(type);
     try {
+      const params: Record<string, string> = { type };
+      if (dateFrom) params.from = dateFrom.toISOString();
+      if (dateTo) params.to = dateTo.toISOString();
+      const queryStr = new URLSearchParams(params).toString();
+      const apiUrl = import.meta.env.VITE_API_URL || '';
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-      let url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports-pdf?type=${type}`;
-      if (dateFrom) url += `&from=${dateFrom.toISOString()}`;
-      if (dateTo) url += `&to=${dateTo.toISOString()}`;
-      const resp = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
+      const resp = await fetch(`${apiUrl}/reports/export?${queryStr}`, {
+        headers: session ? { Authorization: `Bearer ${session.access_token}` } : {},
       });
       if (!resp.ok) throw new Error('Export failed');
       const blob = await resp.blob();
@@ -86,25 +75,21 @@ export default function ReportsPage() {
       name: t('reports.events_summary'), description: t('reports.events_desc'),
       icon: <BarChart3 className="h-8 w-8 text-primary" />, count: events.length, pdfType: 'events',
       onCSV: () => exportCSV(events, 'events-report.csv'),
-      onXLSX: () => exportXLSX(events, 'events-report.xlsx'),
     },
     {
       name: t('reports.incident_report'), description: t('reports.incident_desc'),
       icon: <TrendingUp className="h-8 w-8 text-warning" />, count: incidents.length, pdfType: 'incidents',
       onCSV: () => exportCSV(incidents.map(({ comments, ...rest }) => rest), 'incidents-report.csv'),
-      onXLSX: () => exportXLSX(incidents.map(({ comments, ...rest }) => rest), 'incidents-report.xlsx'),
     },
     {
       name: t('reports.device_health'), description: t('reports.device_desc'),
       icon: <PieChart className="h-8 w-8 text-success" />, count: devices.length, pdfType: 'devices',
       onCSV: () => exportCSV(devices.map(({ capabilities, ...rest }) => rest), 'devices-report.csv'),
-      onXLSX: () => exportXLSX(devices.map(({ capabilities, ...rest }) => rest), 'devices-report.xlsx'),
     },
     {
       name: t('reports.ai_usage'), description: t('reports.ai_desc'),
       icon: <Bot className="h-8 w-8 text-info" />, count: aiSessions.length, pdfType: 'summary',
       onCSV: () => exportCSV(aiSessions.map(({ messages, ...rest }) => rest), 'ai-usage-report.csv'),
-      onXLSX: () => exportXLSX(aiSessions.map(({ messages, ...rest }) => rest), 'ai-usage-report.xlsx'),
     },
   ];
 
@@ -164,9 +149,6 @@ export default function ReportsPage() {
                       <Badge variant="outline" className="text-xs">{report.count} {t('common.records')}</Badge>
                       <Button variant="outline" size="sm" className="h-7 text-xs" onClick={report.onCSV}>
                         <Download className="mr-1 h-3 w-3" /> CSV
-                      </Button>
-                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={report.onXLSX}>
-                        <FileSpreadsheet className="mr-1 h-3 w-3" /> XLSX
                       </Button>
                       <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => exportPdf(report.pdfType)} disabled={exportingPdf === report.pdfType}>
                         {exportingPdf === report.pdfType ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <FileText className="mr-1 h-3 w-3" />} PDF

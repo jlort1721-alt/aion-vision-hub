@@ -142,7 +142,7 @@ describe("AppLayout", () => {
 
   it("renders the sidebar navigation", () => {
     render(<AppLayout />);
-    expect(screen.getByText("AION")).toBeInTheDocument();
+    expect(screen.getByText("Clave")).toBeInTheDocument();
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Live View")).toBeInTheDocument();
     expect(screen.getByText("Events")).toBeInTheDocument();

@@ -1,4 +1,12 @@
 const en: Record<string, string> = {
+  // Nav categories
+  'nav.cat.monitoring': 'Monitoring',
+  'nav.cat.infrastructure': 'Infrastructure',
+  'nav.cat.operations': 'Operations',
+  'nav.cat.intelligence': 'Intelligence',
+  'nav.cat.management': 'Management',
+  'nav.cat.system': 'System',
+
   // Nav
   'nav.dashboard': 'Dashboard',
   'nav.live_view': 'Live View',
@@ -340,11 +348,11 @@ const en: Record<string, string> = {
   'system.fetch_error': 'Failed to fetch health data',
 
   // AI Assistant
-  'ai.title': 'AION AI Assistant',
+  'ai.title': 'AI Assistant',
   'ai.subtitle': 'Operational intelligence powered by AI',
-  'ai.welcome': 'AION AI Assistant',
+  'ai.welcome': 'AI Assistant',
   'ai.welcome_desc': 'Ask about device status, event analysis, incident reports, operational procedures, or any surveillance-related question.',
-  'ai.placeholder': 'Ask AION about your surveillance operations...',
+  'ai.placeholder': 'Ask about your surveillance operations...',
   'ai.clear': 'Clear chat',
   'ai.summarize_alerts': 'Summarize alerts',
   'ai.device_status': 'Device status',
@@ -386,6 +394,14 @@ const en: Record<string, string> = {
   'nav.reboots': 'Reboots',
   'nav.intercom': 'IP Intercom',
   'nav.database': 'Database',
+  'nav.notes': 'Operational Notes',
+  'nav.documents': 'Documents',
+  'nav.network': 'Network Center',
+  'nav.posts': 'Guard Posts',
+  'nav.minuta': 'Shift Logbook',
+  'nav.phone': 'Phone Panel',
+  'nav.predictive_crime': 'Predictive Criminology',
+  'nav.biogenetic_search': 'Biogenetic Search',
 
   // Domotics
   'domotics.title': 'Domotics',
@@ -477,8 +493,8 @@ const en: Record<string, string> = {
   'reboots.failed': 'Failed',
   'reboots.pending_status': 'Pending',
   'reboots.procedures': 'Procedures',
-  'reboots.aion_assistant': 'AION Assistant',
-  'reboots.aion_desc': 'Get help from AION agent to diagnose and resolve issues',
+  'reboots.aion_assistant': 'AI Assistant',
+  'reboots.aion_desc': 'Get help from AI assistant to diagnose and resolve issues',
   'reboots.diagnose_device': 'Diagnose device',
   'reboots.suggest_action': 'Suggest action',
   'reboots.generate_report': 'Generate report',

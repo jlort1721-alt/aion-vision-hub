@@ -21,7 +21,10 @@ export const envSchema = z.object({
   JWT_EXPIRATION: z.string().default('24h'),
 
   // CORS
-  CORS_ORIGINS: z.string().default('http://localhost:5173'),
+  CORS_ORIGINS: z.string().default('http://localhost:5173').refine(
+    (val) => !val.split(',').some((o) => o.trim() === '*'),
+    { message: 'CORS_ORIGINS must not contain wildcard (*). Specify explicit origins.' },
+  ),
 
   // Rate limiting
   RATE_LIMIT_MAX: z.coerce.number().default(100),

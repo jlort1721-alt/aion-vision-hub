@@ -64,7 +64,7 @@ export class ApiClientError extends Error {
 
 // ── Configuration ──────────────────────────────────────────
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const SUPABASE_FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 const DEFAULT_TIMEOUT_MS = 30_000;

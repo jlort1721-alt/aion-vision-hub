@@ -1,7 +1,15 @@
+// ═══════════════════════════════════════════════════════════
+// Module Data Hooks — migrated to Fastify backend
+// All CRUD operations route through apiClient for proper
+// tenant isolation, audit logging, rate limiting, and RBAC.
+// ═══════════════════════════════════════════════════════════
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+
+interface ApiResponse<T = any> { data: T[] | T; meta?: any }
 
 // ── Sections ──
 export function useSections() {
@@ -9,12 +17,8 @@ export function useSections() {
   return useQuery({
     queryKey: ['sections'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('sections' as any)
-        .select('*')
-        .order('order_index');
-      if (error) throw error;
-      return (data ?? []) as any[];
+      const response = await apiClient.get<ApiResponse>('/database-records', { category: 'section' });
+      return (Array.isArray(response.data) ? response.data : []) as any[];
     },
     enabled: isAuthenticated,
   });
@@ -22,15 +26,10 @@ export function useSections() {
 
 export function useSectionMutations() {
   const qc = useQueryClient();
-  const { profile } = useAuth();
 
   const create = useMutation({
     mutationFn: async (input: { name: string; type?: string; description?: string; site_id?: string }) => {
-      const { error } = await supabase.from('sections' as any).insert({
-        ...input,
-        tenant_id: profile!.tenant_id,
-      } as any);
-      if (error) throw error;
+      await apiClient.post('/database-records', { ...input, category: 'section' });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sections'] }); toast.success('Section created'); },
     onError: (e: Error) => toast.error(e.message),
@@ -38,8 +37,7 @@ export function useSectionMutations() {
 
   const update = useMutation({
     mutationFn: async ({ id, ...input }: { id: string; name?: string; type?: string; description?: string; is_active?: boolean }) => {
-      const { error } = await supabase.from('sections' as any).update(input as any).eq('id', id);
-      if (error) throw error;
+      await apiClient.patch(`/database-records/${id}`, input);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sections'] }); toast.success('Section updated'); },
     onError: (e: Error) => toast.error(e.message),
@@ -47,8 +45,7 @@ export function useSectionMutations() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('sections' as any).delete().eq('id', id);
-      if (error) throw error;
+      await apiClient.delete(`/database-records/${id}`);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['sections'] }); toast.success('Section deleted'); },
     onError: (e: Error) => toast.error(e.message),
@@ -63,12 +60,8 @@ export function useDomoticDevices() {
   return useQuery({
     queryKey: ['domotic_devices'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('domotic_devices' as any)
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return (data ?? []) as any[];
+      const response = await apiClient.get<ApiResponse>('/domotics/devices');
+      return (Array.isArray(response.data) ? response.data : []) as any[];
     },
     enabled: isAuthenticated,
   });
@@ -76,15 +69,10 @@ export function useDomoticDevices() {
 
 export function useDomoticMutations() {
   const qc = useQueryClient();
-  const { profile } = useAuth();
 
   const create = useMutation({
     mutationFn: async (input: { name: string; type: string; section_id?: string; brand?: string; model?: string }) => {
-      const { error } = await supabase.from('domotic_devices' as any).insert({
-        ...input,
-        tenant_id: profile!.tenant_id,
-      } as any);
-      if (error) throw error;
+      await apiClient.post('/domotics/devices', input);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['domotic_devices'] }); toast.success('Device added'); },
     onError: (e: Error) => toast.error(e.message),
@@ -92,8 +80,7 @@ export function useDomoticMutations() {
 
   const update = useMutation({
     mutationFn: async ({ id, ...input }: { id: string; [key: string]: any }) => {
-      const { error } = await supabase.from('domotic_devices' as any).update(input as any).eq('id', id);
-      if (error) throw error;
+      await apiClient.patch(`/domotics/devices/${id}`, input);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['domotic_devices'] }); toast.success('Device updated'); },
     onError: (e: Error) => toast.error(e.message),
@@ -101,8 +88,7 @@ export function useDomoticMutations() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('domotic_devices' as any).delete().eq('id', id);
-      if (error) throw error;
+      await apiClient.delete(`/domotics/devices/${id}`);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['domotic_devices'] }); toast.success('Device removed'); },
     onError: (e: Error) => toast.error(e.message),
@@ -111,12 +97,11 @@ export function useDomoticMutations() {
   const toggleState = useMutation({
     mutationFn: async ({ id, currentState }: { id: string; currentState: string }) => {
       const newState = currentState === 'on' ? 'off' : 'on';
-      const { error } = await supabase.from('domotic_devices' as any).update({
+      await apiClient.patch(`/domotics/devices/${id}`, {
         state: newState,
         last_action: `Switched ${newState} by operator`,
         last_sync: new Date().toISOString(),
-      } as any).eq('id', id);
-      if (error) throw error;
+      });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['domotic_devices'] }); toast.success('State toggled'); },
     onError: (e: Error) => toast.error(e.message),
@@ -131,11 +116,10 @@ export function useDomoticActions(deviceId?: string) {
   return useQuery({
     queryKey: ['domotic_actions', deviceId],
     queryFn: async () => {
-      let query = supabase.from('domotic_actions' as any).select('*').order('created_at', { ascending: false }).limit(50);
-      if (deviceId) query = query.eq('device_id', deviceId);
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data ?? []) as any[];
+      const params: Record<string, string> = { limit: '50' };
+      if (deviceId) params.deviceId = deviceId;
+      const response = await apiClient.get<ApiResponse>('/domotics/actions', params);
+      return (Array.isArray(response.data) ? response.data : []) as any[];
     },
     enabled: isAuthenticated,
   });
@@ -147,9 +131,8 @@ export function useAccessPeople() {
   return useQuery({
     queryKey: ['access_people'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('access_people' as any).select('*').order('full_name');
-      if (error) throw error;
-      return (data ?? []) as any[];
+      const response = await apiClient.get<ApiResponse>('/access-control/people');
+      return (Array.isArray(response.data) ? response.data : []) as any[];
     },
     enabled: isAuthenticated,
   });
@@ -157,15 +140,10 @@ export function useAccessPeople() {
 
 export function useAccessPeopleMutations() {
   const qc = useQueryClient();
-  const { profile } = useAuth();
 
   const create = useMutation({
     mutationFn: async (input: { full_name: string; type: string; section_id?: string; phone?: string; email?: string; unit?: string; document_id?: string; notes?: string }) => {
-      const { error } = await supabase.from('access_people' as any).insert({
-        ...input,
-        tenant_id: profile!.tenant_id,
-      } as any);
-      if (error) throw error;
+      await apiClient.post('/access-control/people', input);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_people'] }); toast.success('Person added'); },
     onError: (e: Error) => toast.error(e.message),
@@ -173,8 +151,7 @@ export function useAccessPeopleMutations() {
 
   const update = useMutation({
     mutationFn: async ({ id, ...input }: { id: string; [key: string]: any }) => {
-      const { error } = await supabase.from('access_people' as any).update(input as any).eq('id', id);
-      if (error) throw error;
+      await apiClient.patch(`/access-control/people/${id}`, input);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_people'] }); toast.success('Person updated'); },
     onError: (e: Error) => toast.error(e.message),
@@ -182,8 +159,7 @@ export function useAccessPeopleMutations() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('access_people' as any).delete().eq('id', id);
-      if (error) throw error;
+      await apiClient.delete(`/access-control/people/${id}`);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_people'] }); toast.success('Person removed'); },
     onError: (e: Error) => toast.error(e.message),
@@ -198,9 +174,8 @@ export function useAccessVehicles() {
   return useQuery({
     queryKey: ['access_vehicles'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('access_vehicles' as any).select('*').order('plate');
-      if (error) throw error;
-      return (data ?? []) as any[];
+      const response = await apiClient.get<ApiResponse>('/access-control/vehicles');
+      return (Array.isArray(response.data) ? response.data : []) as any[];
     },
     enabled: isAuthenticated,
   });
@@ -208,15 +183,10 @@ export function useAccessVehicles() {
 
 export function useAccessVehicleMutations() {
   const qc = useQueryClient();
-  const { profile } = useAuth();
 
   const create = useMutation({
     mutationFn: async (input: { plate: string; person_id?: string; brand?: string; model?: string; color?: string; type?: string }) => {
-      const { error } = await supabase.from('access_vehicles' as any).insert({
-        ...input,
-        tenant_id: profile!.tenant_id,
-      } as any);
-      if (error) throw error;
+      await apiClient.post('/access-control/vehicles', input);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_vehicles'] }); toast.success('Vehicle added'); },
     onError: (e: Error) => toast.error(e.message),
@@ -224,8 +194,7 @@ export function useAccessVehicleMutations() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('access_vehicles' as any).delete().eq('id', id);
-      if (error) throw error;
+      await apiClient.delete(`/access-control/vehicles/${id}`);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_vehicles'] }); toast.success('Vehicle removed'); },
     onError: (e: Error) => toast.error(e.message),
@@ -240,9 +209,8 @@ export function useAccessLogs() {
   return useQuery({
     queryKey: ['access_logs'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('access_logs' as any).select('*').order('created_at', { ascending: false }).limit(200);
-      if (error) throw error;
-      return (data ?? []) as any[];
+      const response = await apiClient.get<ApiResponse>('/access-control/logs', { limit: '200' });
+      return (Array.isArray(response.data) ? response.data : []) as any[];
     },
     enabled: isAuthenticated,
   });
@@ -250,16 +218,10 @@ export function useAccessLogs() {
 
 export function useAccessLogMutations() {
   const qc = useQueryClient();
-  const { profile, user } = useAuth();
 
   const create = useMutation({
     mutationFn: async (input: { person_id?: string; vehicle_id?: string; section_id?: string; direction: string; method: string; notes?: string }) => {
-      const { error } = await supabase.from('access_logs' as any).insert({
-        ...input,
-        tenant_id: profile!.tenant_id,
-        operator_id: user!.id,
-      } as any);
-      if (error) throw error;
+      await apiClient.post('/access-control/logs', input);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_logs'] }); toast.success('Access logged'); },
     onError: (e: Error) => toast.error(e.message),
@@ -274,9 +236,8 @@ export function useRebootTasks() {
   return useQuery({
     queryKey: ['reboot_tasks'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('reboot_tasks' as any).select('*').order('created_at', { ascending: false }).limit(100);
-      if (error) throw error;
-      return (data ?? []) as any[];
+      const response = await apiClient.get<ApiResponse>('/reboots', { limit: '100' });
+      return (Array.isArray(response.data) ? response.data : []) as any[];
     },
     enabled: isAuthenticated,
   });
@@ -284,17 +245,10 @@ export function useRebootTasks() {
 
 export function useRebootMutations() {
   const qc = useQueryClient();
-  const { profile, user } = useAuth();
 
   const create = useMutation({
     mutationFn: async (input: { device_id?: string; section_id?: string; reason: string }) => {
-      const { error } = await supabase.from('reboot_tasks' as any).insert({
-        ...input,
-        tenant_id: profile!.tenant_id,
-        initiated_by: user!.id,
-        status: 'pending',
-      } as any);
-      if (error) throw error;
+      await apiClient.post('/reboots', { ...input, status: 'pending' });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['reboot_tasks'] }); toast.success('Reboot initiated'); },
     onError: (e: Error) => toast.error(e.message),
@@ -306,8 +260,7 @@ export function useRebootMutations() {
       if (result) updates.result = result;
       if (recovery_time_seconds) updates.recovery_time_seconds = recovery_time_seconds;
       if (status === 'completed' || status === 'failed') updates.completed_at = new Date().toISOString();
-      const { error } = await supabase.from('reboot_tasks' as any).update(updates).eq('id', id);
-      if (error) throw error;
+      await apiClient.patch(`/reboots/${id}`, updates);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['reboot_tasks'] }); toast.success('Reboot status updated'); },
     onError: (e: Error) => toast.error(e.message),
@@ -322,9 +275,8 @@ export function useIntercomDevices() {
   return useQuery({
     queryKey: ['intercom_devices'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('intercom_devices' as any).select('*').order('name');
-      if (error) throw error;
-      return (data ?? []) as any[];
+      const response = await apiClient.get<ApiResponse>('/intercom/devices');
+      return (Array.isArray(response.data) ? response.data : []) as any[];
     },
     enabled: isAuthenticated,
   });
@@ -332,15 +284,10 @@ export function useIntercomDevices() {
 
 export function useIntercomMutations() {
   const qc = useQueryClient();
-  const { profile } = useAuth();
 
   const create = useMutation({
     mutationFn: async (input: { name: string; section_id?: string; brand?: string; model?: string; ip_address?: string; sip_uri?: string }) => {
-      const { error } = await supabase.from('intercom_devices' as any).insert({
-        ...input,
-        tenant_id: profile!.tenant_id,
-      } as any);
-      if (error) throw error;
+      await apiClient.post('/intercom/devices', input);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['intercom_devices'] }); toast.success('Device added'); },
     onError: (e: Error) => toast.error(e.message),
@@ -355,9 +302,8 @@ export function useIntercomCalls() {
   return useQuery({
     queryKey: ['intercom_calls'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('intercom_calls' as any).select('*').order('created_at', { ascending: false }).limit(100);
-      if (error) throw error;
-      return (data ?? []) as any[];
+      const response = await apiClient.get<ApiResponse>('/intercom/calls', { limit: '100' });
+      return (Array.isArray(response.data) ? response.data : []) as any[];
     },
     enabled: isAuthenticated,
   });
@@ -369,9 +315,8 @@ export function useDatabaseRecords() {
   return useQuery({
     queryKey: ['database_records'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('database_records' as any).select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as any[];
+      const response = await apiClient.get<ApiResponse>('/database-records');
+      return (Array.isArray(response.data) ? response.data : []) as any[];
     },
     enabled: isAuthenticated,
   });
@@ -379,17 +324,10 @@ export function useDatabaseRecords() {
 
 export function useDatabaseRecordMutations() {
   const qc = useQueryClient();
-  const { profile, user } = useAuth();
 
   const create = useMutation({
     mutationFn: async (input: { title: string; category: string; section_id?: string; content?: any; tags?: string[] }) => {
-      const { error } = await supabase.from('database_records' as any).insert({
-        ...input,
-        content: input.content || {},
-        tenant_id: profile!.tenant_id,
-        created_by: user!.id,
-      } as any);
-      if (error) throw error;
+      await apiClient.post('/database-records', { ...input, content: input.content || {} });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['database_records'] }); toast.success('Record created'); },
     onError: (e: Error) => toast.error(e.message),
@@ -397,8 +335,7 @@ export function useDatabaseRecordMutations() {
 
   const update = useMutation({
     mutationFn: async ({ id, ...input }: { id: string; [key: string]: any }) => {
-      const { error } = await supabase.from('database_records' as any).update({ ...input, updated_at: new Date().toISOString() } as any).eq('id', id);
-      if (error) throw error;
+      await apiClient.patch(`/database-records/${id}`, input);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['database_records'] }); toast.success('Record updated'); },
     onError: (e: Error) => toast.error(e.message),
@@ -406,8 +343,7 @@ export function useDatabaseRecordMutations() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('database_records' as any).delete().eq('id', id);
-      if (error) throw error;
+      await apiClient.delete(`/database-records/${id}`);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['database_records'] }); toast.success('Record deleted'); },
     onError: (e: Error) => toast.error(e.message),

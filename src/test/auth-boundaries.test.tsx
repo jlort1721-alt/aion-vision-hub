@@ -17,7 +17,7 @@ describe("Auth Boundaries", () => {
   });
 
   it("viewer role has restricted access", () => {
-    const allowedModules = ["dashboard", "live_view", "playback", "events", "reports"];
+    const allowedModules = ["dashboard", "live_view", "playback", "events", "reports", "documents"];
     const deniedModules = ALL_MODULES
       .map((m) => m.module)
       .filter((m) => !allowedModules.includes(m));

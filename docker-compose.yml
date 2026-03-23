@@ -1,0 +1,163 @@
+version: '3.8'
+
+# ==========================================================
+# CLAVE SEGURIDAD: PRODUCTION DEPLOYMENT COMPOSITION
+# ==========================================================
+# Usage:
+#   cp .env.docker.example .env.docker
+#   docker compose --env-file .env.docker up -d --build
+
+services:
+  # ==========================================
+  # 1. Frontend (React + NGINX)
+  # ==========================================
+  clave-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      - clave-backend
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - clave_net
+
+  # ==========================================
+  # 2. Backend API (Fastify)
+  # ==========================================
+  clave-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgres://${DB_USER:-clave}:${DB_PASSWORD}@clave-postgres:5432/${DB_NAME:-clave_db}
+      - REDIS_URL=redis://clave-redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:8080}
+      - MEDIAMTX_API_URL=http://clave-mediamtx:9997/v3
+    depends_on:
+      clave-postgres:
+        condition: service_healthy
+      clave-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - clave_net
+
+  # ==========================================
+  # 3. PostgreSQL + pgvector
+  # ==========================================
+  clave-postgres:
+    image: ankane/pgvector:latest
+    environment:
+      POSTGRES_USER: ${DB_USER:-clave}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-clave_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - clave_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-clave}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - clave_net
+
+  # ==========================================
+  # 4. MediaMTX Stream Gateway (RTSP/HLS/WebRTC)
+  # ==========================================
+  clave-mediamtx:
+    image: bluenviron/mediamtx:latest-ffmpeg
+    ports:
+      - "8554:8554"  # RTSP
+      - "8888:8888"  # HLS
+      - "8889:8889"  # WebRTC
+    volumes:
+      - clave_media_storage:/var/lib/mediamtx
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - clave_net
+
+  # ==========================================
+  # 5. Redis Cache & Message Broker (Pub/Sub)
+  # ==========================================
+  clave-redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - clave_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - clave_net
+
+volumes:
+  clave_pgdata:
+  clave_redis_data:
+  clave_media_storage:
+
+networks:
+  clave_net:
+    driver: bridge

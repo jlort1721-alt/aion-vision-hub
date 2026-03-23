@@ -38,7 +38,7 @@ export function PWAInstallPrompt() {
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
-      toast.success("AION Vision Hub installed successfully");
+      toast.success("Clave Seguridad instalado correctamente");
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
@@ -55,7 +55,7 @@ export function PWAInstallPrompt() {
     await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === "accepted") {
-      console.log("[AION PWA] User accepted install prompt");
+      // Install accepted
     }
     setDeferredPrompt(null);
   }, [deferredPrompt]);
@@ -63,16 +63,16 @@ export function PWAInstallPrompt() {
   useEffect(() => {
     if (!deferredPrompt || isInstalled) return;
     const timer = setTimeout(() => {
-      toast("Install AION Vision Hub", {
+      toast("Instalar Clave Seguridad", {
         description:
-          "Get quick access from your home screen with offline support.",
+          "Acceso rápido desde tu pantalla de inicio con soporte offline.",
         duration: 15000,
         action: {
-          label: "Install",
+          label: "Instalar",
           onClick: handleInstall,
         },
         cancel: {
-          label: "Not now",
+          label: "Ahora no",
           onClick: () => {},
         },
       });

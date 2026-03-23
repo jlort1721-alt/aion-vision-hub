@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Settings, User, Shield, Bell, Palette, Globe, Key, Database, Save, Loader2, Flag, BellRing, History, Trash2 } from 'lucide-react';
@@ -35,9 +35,8 @@ export default function SettingsPage() {
   const { data: tenant, isLoading: loadingTenant } = useQuery({
     queryKey: ['tenant'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('tenants').select('*').limit(1).single();
-      if (error) throw error;
-      return data;
+      const response = await apiClient.get<any>('/tenants/current');
+      return response.data;
     },
     enabled: !!profile,
   });
@@ -46,9 +45,8 @@ export default function SettingsPage() {
   const { data: featureFlags = [], isLoading: loadingFlags } = useQuery({
     queryKey: ['feature_flags'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('feature_flags').select('*').order('name');
-      if (error) throw error;
-      return data;
+      const response = await apiClient.get<any>('/database-records', { category: 'feature_flag' });
+      return Array.isArray(response.data) ? response.data : [];
     },
   });
 
@@ -107,10 +105,9 @@ export default function SettingsPage() {
         event_retention: eventRetention, audit_retention: auditRetention,
         notifications,
       };
-      const { error } = await supabase.from('tenants').update({
+      await apiClient.patch(`/tenants/${tenant.id}`, {
         name: tenantName, timezone: tenantTimezone, settings,
-      }).eq('id', tenant.id);
-      if (error) throw error;
+      });
       queryClient.invalidateQueries({ queryKey: ['tenant'] });
       toast.success('Settings saved');
     } catch (err) {
@@ -124,8 +121,7 @@ export default function SettingsPage() {
     if (!profile) return;
     setSaving('profile');
     try {
-      const { error } = await supabase.from('profiles').update({ full_name: fullName }).eq('id', profile.id);
-      if (error) throw error;
+      await apiClient.patch(`/users/${profile.id}`, { fullName });
       toast.success('Profile updated');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');
@@ -401,7 +397,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-3">
               {loadingFlags ? <Skeleton className="h-24 w-full" /> : featureFlags.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No feature flags configured</p>
-              ) : featureFlags.map(flag => (
+              ) : featureFlags.map((flag: any) => (
                 <div key={flag.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
                   <div>
                     <div className="flex items-center gap-2">

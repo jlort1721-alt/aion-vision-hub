@@ -25,7 +25,7 @@ const translationLoaders: Record<Language, () => Promise<{ default: Record<strin
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Language>(() => {
-    const stored = localStorage.getItem('aion-lang');
+    const stored = localStorage.getItem('clave-lang');
     if (stored === 'en' || stored === 'es') return stored;
     return 'es'; // Default Spanish
   });
@@ -62,7 +62,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
         const savedLang = (tenant?.settings as any)?.language;
         if (savedLang === 'en' || savedLang === 'es') {
           setLangState(savedLang);
-          localStorage.setItem('aion-lang', savedLang);
+          localStorage.setItem('clave-lang', savedLang);
         }
       } catch { /* ignore */ }
     })();
@@ -70,7 +70,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   const setLang = useCallback(async (newLang: Language) => {
     setLangState(newLang);
-    localStorage.setItem('aion-lang', newLang);
+    localStorage.setItem('clave-lang', newLang);
     // Persist to DB
     try {
       const { data: { session } } = await supabase.auth.getSession();

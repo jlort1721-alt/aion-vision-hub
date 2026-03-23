@@ -65,6 +65,7 @@ vi.mock('@aion/shared-contracts', () => ({
 }));
 
 import { registerAuthRoutes } from '../modules/auth/routes.js';
+import { registerErrorHandler } from '../middleware/error-handler.js';
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -76,6 +77,7 @@ describe('Auth Token Refresh Endpoint', () => {
 
   beforeAll(async () => {
     app = Fastify({ logger: false });
+    registerErrorHandler(app);
 
     app.decorate('jwt', { sign: mockJwtSign, verify: vi.fn() } as any);
     app.decorateRequest('userId', 'user-123');
@@ -150,8 +152,10 @@ describe('Auth Token Refresh Endpoint', () => {
         payload: {},
       });
 
-      // Zod parse error results in 400 or 500 depending on error handler
-      expect(res.statusCode).toBeGreaterThanOrEqual(400);
+      expect(res.statusCode).toBe(400);
+      const body = res.json();
+      expect(body).toHaveProperty('success', false);
+      expect(body.error.code).toBe('VALIDATION_ERROR');
     });
 
     it('returns 401 when refresh token is not in DB', async () => {

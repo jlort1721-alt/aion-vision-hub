@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -38,12 +38,10 @@ export function usePushNotifications() {
 
     // Store subscription reference in DB
     try {
-      await supabase.from('push_subscriptions' as any).upsert({
-        user_id: user.id,
-        tenant_id: profile.tenant_id,
+      await apiClient.post('/push/subscribe', {
         endpoint: `browser-${navigator.userAgent.slice(0, 50)}`,
         keys: { type: 'browser-native', ua: navigator.userAgent.slice(0, 100) },
-      } as any, { onConflict: 'user_id,endpoint' });
+      });
       setIsSubscribed(true);
       toast.success('Subscribed to critical event notifications');
     } catch (e) {
@@ -53,7 +51,7 @@ export function usePushNotifications() {
 
   const unsubscribe = useCallback(async () => {
     if (!user) return;
-    await supabase.from('push_subscriptions' as any).delete().eq('user_id', user.id);
+    await apiClient.post('/push/unsubscribe', {});
     setIsSubscribed(false);
     toast.success('Unsubscribed from notifications');
   }, [user]);

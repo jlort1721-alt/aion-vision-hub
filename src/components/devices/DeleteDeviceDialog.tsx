@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface Props {
@@ -23,9 +23,8 @@ export default function DeleteDeviceDialog({ open, onOpenChange, device, onDelet
     if (!device) return;
     setDeleting(true);
     try {
-      const { error } = await supabase.from('devices').delete().eq('id', device.id);
-      if (error) throw error;
-      toast({ title: 'Device deleted', description: `${device.name} has been removed.` });
+      await apiClient.delete(`/devices/${device.id}`);
+      toast({ title: 'Dispositivo eliminado', description: `${device.name} ha sido removido.` });
       queryClient.invalidateQueries({ queryKey: ['devices'] });
       onOpenChange(false);
       onDeleted?.();
@@ -40,15 +39,15 @@ export default function DeleteDeviceDialog({ open, onOpenChange, device, onDelet
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Device</AlertDialogTitle>
+          <AlertDialogTitle>Eliminar Dispositivo</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete <strong>{device?.name}</strong>? This action cannot be undone. All associated events will retain their references but the device record will be permanently removed.
+            ¿Estás seguro de que deseas eliminar <strong>{device?.name}</strong>? Esta acción no se puede deshacer. Los eventos asociados conservarán sus referencias pero el registro del dispositivo será eliminado permanentemente.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            {deleting ? 'Deleting...' : 'Delete'}
+            {deleting ? 'Eliminando...' : 'Eliminar'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

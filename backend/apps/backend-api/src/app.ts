@@ -57,7 +57,16 @@ import { registerComplianceRoutes } from './modules/compliance/routes.js';
 import { registerTrainingRoutes } from './modules/training/routes.js';
 import { registerBackupRoutes } from './modules/backup/routes.js';
 import { registerCloudAccountRoutes } from './modules/cloud-accounts/routes.js';
+import { registerCloudPlatformRoutes } from './modules/cloud-accounts/cloud-routes.js';
+import { registerExtensionRoutes } from './modules/extensions/routes.js';
 import { registerOperationsRoutes } from './modules/operations/routes.js';
+import { biomarkerRoutes } from './modules/biomarkers/routes.js';
+import { registerLprRoutes } from './modules/lpr/routes.js';
+import { registerRelayRoutes } from './modules/relay/routes.js';
+import { registerZktecoRoutes } from './modules/zkteco/routes.js';
+import { registerDeviceControlRoutes } from './modules/device-control/routes.js';
+import { registerNetworkRoutes } from './modules/network/routes.js';
+import { registerApiKeyRoutes } from './modules/api-keys/routes.js';
 import websocketPlugin from './plugins/websocket.js';
 
 const loggerOpts = { name: 'aion-api', level: config.LOG_LEVEL };
@@ -68,6 +77,7 @@ export async function buildApp() {
     requestIdHeader: 'x-request-id',
     genReqId: () => crypto.randomUUID(),
     trustProxy: true,
+    bodyLimit: 15 * 1024 * 1024, // 15 MB — supports file uploads
   }).withTypeProvider<ZodTypeProvider>();
 
   // Add Zod validation/serialization compilers BEFORE registering routes
@@ -143,6 +153,7 @@ export async function buildApp() {
   await app.register(registerTenantRoutes, { prefix: '/tenants' });
   await app.register(registerUserRoutes, { prefix: '/users' });
   await app.register(registerRoleRoutes, { prefix: '/roles' });
+  await app.register(biomarkerRoutes, { prefix: '/analytics/biomarkers' });
   await app.register(registerDeviceRoutes, { prefix: '/devices' });
   await app.register(registerSiteRoutes, { prefix: '/sites' });
   await app.register(registerStreamRoutes, { prefix: '/streams' });
@@ -190,9 +201,26 @@ export async function buildApp() {
 
   // Cloud account mapping & validation
   await app.register(registerCloudAccountRoutes, { prefix: '/cloud-accounts' });
+  // Cloud platform integrations (Hik-Connect, DMSS/IMOU)
+  await app.register(registerCloudPlatformRoutes, { prefix: '/cloud' });
+  // Voice extensions (ElevenLabs TTS greetings/announcements)
+  await app.register(registerExtensionRoutes, { prefix: '/extensions' });
 
   // Operations dashboard (consolidated overview)
   await app.register(registerOperationsRoutes, { prefix: '/operations' });
+
+  // LPR (License Plate Recognition)
+  await app.register(registerLprRoutes, { prefix: '/lpr' });
+  // Universal relay control (eWeLink, HTTP, GPIO, ZKTeco, Hikvision, Dahua)
+  await app.register(registerRelayRoutes, { prefix: '/relay' });
+  // ZKTeco access control panels
+  await app.register(registerZktecoRoutes, { prefix: '/zkteco' });
+  // Universal device control (auto-detect + execute any command)
+  await app.register(registerDeviceControlRoutes, { prefix: '/device-control' });
+  // Network scanner, VPN profiles, diagnostics
+  await app.register(registerNetworkRoutes, { prefix: '/network' });
+  // API key management (service-to-service authentication)
+  await app.register(registerApiKeyRoutes, { prefix: '/api-keys' });
 
   // Public webhook routes (no JWT — Meta sends requests without auth)
   await app.register(registerWebhookRoutes, { prefix: '/webhooks/whatsapp' });

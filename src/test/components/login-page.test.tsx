@@ -79,34 +79,34 @@ describe("LoginPage", () => {
 
   it("renders login form by default", () => {
     renderLoginPage();
-    expect(screen.getByText("AION Vision Hub")).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Sign In" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Sign Up" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+    expect(screen.getByText("Clave Seguridad")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Iniciar Sesión" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Registrarse" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Correo Electrónico")).toBeInTheDocument();
+    expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
   });
 
   it("submits login form with credentials", async () => {
     renderLoginPage();
 
-    await userEvent.type(screen.getByLabelText("Email"), "admin@aion.dev");
-    await userEvent.type(screen.getByLabelText("Password"), "password123");
+    await userEvent.type(screen.getByLabelText("Correo Electrónico"), "admin@clave.dev");
+    await userEvent.type(screen.getByLabelText("Contraseña"), "password123");
 
-    const signInButton = screen.getByRole("button", { name: /sign in/i });
+    const signInButton = screen.getByRole("button", { name: /iniciar sesión/i });
     await userEvent.click(signInButton);
 
     await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith("admin@aion.dev", "password123");
+      expect(mockLogin).toHaveBeenCalledWith("admin@clave.dev", "password123");
     });
   });
 
   it("navigates to dashboard after successful login", async () => {
     renderLoginPage();
 
-    await userEvent.type(screen.getByLabelText("Email"), "admin@aion.dev");
-    await userEvent.type(screen.getByLabelText("Password"), "pass123");
+    await userEvent.type(screen.getByLabelText("Correo Electrónico"), "admin@clave.dev");
+    await userEvent.type(screen.getByLabelText("Contraseña"), "pass123");
 
-    await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    await userEvent.click(screen.getByRole("button", { name: /iniciar sesión/i }));
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
@@ -116,18 +116,17 @@ describe("LoginPage", () => {
   it("shows signup form when tab is clicked", async () => {
     renderLoginPage();
 
-    await userEvent.click(screen.getByText("Sign Up"));
+    await userEvent.click(screen.getByText("Registrarse"));
 
-    expect(screen.getByLabelText("Full Name")).toBeInTheDocument();
+    expect(screen.getByLabelText("Nombre Completo")).toBeInTheDocument();
   });
 
   it("toggles password visibility", async () => {
     renderLoginPage();
 
-    const passwordInput = screen.getByLabelText("Password");
+    const passwordInput = screen.getByLabelText("Contraseña");
     expect(passwordInput).toHaveAttribute("type", "password");
 
-    // Click the toggle button (the eye icon button)
     const toggleButtons = screen.getAllByRole("button");
     const eyeToggle = toggleButtons.find(
       (btn) => btn.querySelector("svg") && btn.closest(".relative")
@@ -141,13 +140,13 @@ describe("LoginPage", () => {
   it("shows password reset form", async () => {
     renderLoginPage();
 
-    await userEvent.click(screen.getByText("Forgot password?"));
+    await userEvent.click(screen.getByText("¿Olvidaste tu contraseña?"));
 
     expect(
-      screen.getByText("Enter your email to receive a password reset link.")
+      screen.getByText("Ingresa tu correo para recibir un enlace de recuperación de contraseña.")
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /send reset link/i })
+      screen.getByRole("button", { name: /enviar enlace/i })
     ).toBeInTheDocument();
   });
 
@@ -155,50 +154,48 @@ describe("LoginPage", () => {
     mockLogin.mockRejectedValue(new Error("Invalid credentials"));
     renderLoginPage();
 
-    await userEvent.type(screen.getByLabelText("Email"), "bad@test.com");
-    await userEvent.type(screen.getByLabelText("Password"), "wrong");
+    await userEvent.type(screen.getByLabelText("Correo Electrónico"), "bad@test.com");
+    await userEvent.type(screen.getByLabelText("Contraseña"), "wrong");
 
-    await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    await userEvent.click(screen.getByRole("button", { name: /iniciar sesión/i }));
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalled();
     });
-    // Button should be re-enabled after error
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /sign in/i })
+        screen.getByRole("button", { name: /iniciar sesión/i })
       ).not.toBeDisabled();
     });
   });
 
   it("validates password length on signup", async () => {
     renderLoginPage();
-    await userEvent.click(screen.getByText("Sign Up"));
+    await userEvent.click(screen.getByText("Registrarse"));
 
-    await userEvent.type(screen.getByLabelText("Full Name"), "Test User");
-    await userEvent.type(screen.getByLabelText("Email"), "test@test.com");
-    await userEvent.type(screen.getByLabelText("Password"), "12345"); // Too short
+    await userEvent.type(screen.getByLabelText("Nombre Completo"), "Test User");
+    await userEvent.type(screen.getByLabelText("Correo Electrónico"), "test@test.com");
+    await userEvent.type(screen.getByLabelText("Contraseña"), "12345");
 
     await userEvent.click(
-      screen.getByRole("button", { name: /create account/i })
+      screen.getByRole("button", { name: /crear cuenta/i })
     );
 
-    // signup should NOT be called with short password
     expect(mockSignup).not.toHaveBeenCalled();
   });
 
   it("shows Google sign in option", () => {
     renderLoginPage();
     expect(
-      screen.getByRole("button", { name: /continue with google/i })
+      screen.getByRole("button", { name: /continuar con google/i })
     ).toBeInTheDocument();
   });
 
   it("shows back to login from reset form", async () => {
     renderLoginPage();
-    await userEvent.click(screen.getByText("Forgot password?"));
+    await userEvent.click(screen.getByText("¿Olvidaste tu contraseña?"));
 
-    const backBtn = screen.getByRole("button", { name: /back to login/i });
+    const backBtn = screen.getByRole("button", { name: /volver al inicio/i });
     expect(backBtn).toBeInTheDocument();
   });
 });

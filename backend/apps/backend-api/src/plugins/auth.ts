@@ -5,6 +5,9 @@ import type { UserRole } from '@aion/shared-contracts';
 import { db } from '../db/client.js';
 import { profiles, userRoles } from '../db/schema/index.js';
 import { verifySupabaseToken } from '../lib/supabase.js';
+import { ApiKeyService } from '../modules/api-keys/service.js';
+
+const apiKeyService = new ApiKeyService();
 
 export interface JWTPayload {
   sub: string;
@@ -76,6 +79,20 @@ async function authPlugin(app: FastifyInstance) {
       return;
     } catch {
       // Fall through to Supabase token verification
+    }
+
+    // Try API key (X-API-Key header)
+    const apiKey = request.headers['x-api-key'] as string | undefined;
+    if (apiKey) {
+      const keyCtx = await apiKeyService.validate(apiKey);
+      if (keyCtx) {
+        request.userId = keyCtx.createdBy;
+        request.userEmail = 'api-key';
+        request.tenantId = keyCtx.tenantId;
+        request.userRole = 'operator'; // API keys get operator-level access
+        return;
+      }
+      return reply.code(401).send({ success: false, error: { code: 'AUTH_API_KEY_INVALID', message: 'Invalid or expired API key' } });
     }
 
     // Try Supabase token

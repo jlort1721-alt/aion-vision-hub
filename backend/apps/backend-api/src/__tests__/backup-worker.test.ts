@@ -254,6 +254,10 @@ describe('Backup Worker', () => {
   describe('startBackupWorker', () => {
     it('returns a cleanup function', () => {
       mockFs.existsSync.mockReturnValue(false);
+      // Use non-backup hour to avoid accidentally triggering a backup
+      const safeTime = new Date();
+      safeTime.setHours(10, 0, 0, 0);
+      vi.setSystemTime(safeTime);
       const db = { execute: mockExecute } as any;
       const cleanup = startBackupWorker(db);
       expect(typeof cleanup).toBe('function');
@@ -262,6 +266,10 @@ describe('Backup Worker', () => {
 
     it('prevents double-start', () => {
       mockFs.existsSync.mockReturnValue(false);
+      // Use non-backup hour to avoid accidentally triggering a backup
+      const safeTime = new Date();
+      safeTime.setHours(10, 0, 0, 0);
+      vi.setSystemTime(safeTime);
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const db = { execute: mockExecute } as any;
 
@@ -276,9 +284,8 @@ describe('Backup Worker', () => {
 
     it('triggers backup when current hour matches BACKUP_HOUR and no backup today', async () => {
       mockFs.existsSync.mockReturnValue(false);
-      // BACKUP_HOUR = 2 — uses local time via getHours(), so build a Date at local 2:00 AM
-      const atBackupHour = new Date();
-      atBackupHour.setHours(2, 0, 0, 0);
+      // BACKUP_HOUR = 2 — use a unique future date to avoid lastBackupDate collision from prior tests
+      const atBackupHour = new Date(2099, 5, 15, 2, 0, 0, 0);
       vi.setSystemTime(atBackupHour);
 
       const db = { execute: mockExecute } as any;

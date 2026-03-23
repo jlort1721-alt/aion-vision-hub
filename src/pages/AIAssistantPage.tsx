@@ -16,7 +16,7 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+const CHAT_URL = `${import.meta.env.VITE_API_URL || ''}/ai/chat`;
 
 async function getAuthHeaders() {
   const { data: { session } } = await supabase.auth.getSession();
@@ -24,7 +24,6 @@ async function getAuthHeaders() {
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${session.access_token}`,
-    'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   };
 }
 

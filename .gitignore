@@ -16,6 +16,7 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+.env.docker
 backend/.env
 backend/**/.env
 gateway/.env

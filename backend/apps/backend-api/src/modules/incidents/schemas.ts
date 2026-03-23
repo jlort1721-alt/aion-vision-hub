@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const incidentPriorities = ['low', 'medium', 'high', 'critical'] as const;
-const incidentStatuses = ['open', 'investigating', 'mitigating', 'resolved', 'closed'] as const;
+const incidentStatuses = ['open', 'investigating', 'mitigating', 'pending', 'resolved', 'closed'] as const;
 const evidenceTypes = ['snapshot', 'clip', 'log', 'note'] as const;
 
 // ── Create Incident ─────────────────────────────────────────

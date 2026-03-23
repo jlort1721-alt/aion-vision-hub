@@ -18,8 +18,9 @@ import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ewelink } from '@/services/integrations/ewelink';
 import type { EWeLinkDeviceAction } from '@/services/integrations/ewelink';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const QUERY_KEYS = {
@@ -113,16 +114,12 @@ export function useEWeLinkControl() {
         throw new Error(result.error || 'Control command failed');
       }
 
-      // Log action to domotic_actions table
-      if (profile?.tenant_id) {
-        await supabase.from('domotic_actions' as any).insert({
-          tenant_id: profile.tenant_id,
-          device_id: action.deviceId,
-          action: action.action,
-          result: 'success',
-          user_id: user?.id,
-        } as any);
-      }
+      // Log action to domotic_actions table via Fastify
+      await apiClient.post('/domotics/actions', {
+        device_id: action.deviceId,
+        action: action.action,
+        result: 'success',
+      });
 
       return result;
     },
@@ -148,31 +145,25 @@ export function useEWeLinkSync() {
     mutationFn: async () => {
       const syncResult = await ewelink.syncDevices();
 
-      // Upsert synced devices into domotic_devices table
-      if (profile?.tenant_id && syncResult.devices.length > 0) {
-        for (const device of syncResult.devices) {
-          await supabase.from('domotic_devices' as any).upsert(
-            {
-              id: device.deviceId,
-              tenant_id: profile.tenant_id,
-              name: device.name,
-              type: inferDeviceType(device.productModel),
-              brand: device.brandName,
-              model: device.productModel,
-              status: device.online ? 'online' : 'offline',
-              state: extractDeviceState(device),
-              section_id: device.sectionId || null,
-              last_sync: new Date().toISOString(),
-              config: {
-                ewelink_id: device.deviceId,
-                firmware: device.firmware,
-                device_type: device.deviceType,
-                params: device.params,
-              },
-            } as any,
-            { onConflict: 'id' },
-          );
-        }
+      // Sync devices via Fastify backend
+      if (syncResult.devices.length > 0) {
+        await apiClient.post('/ewelink/sync', {
+          devices: syncResult.devices.map((device: any) => ({
+            id: device.deviceId,
+            name: device.name,
+            type: inferDeviceType(device.productModel),
+            brand: device.brandName,
+            model: device.productModel,
+            status: device.online ? 'online' : 'offline',
+            state: extractDeviceState(device),
+            config: {
+              ewelink_id: device.deviceId,
+              firmware: device.firmware,
+              device_type: device.deviceType,
+              params: device.params,
+            },
+          })),
+        });
       }
 
       return syncResult;

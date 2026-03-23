@@ -436,7 +436,7 @@ describe('E2E Integration Flow', () => {
         deviceId: ids.device,
         siteId: ids.site,
         eventType: 'motion_detected',
-        severity: 'warning',
+        severity: 'medium',
         status: 'new',
         title: 'Movimiento detectado - Entrada Norte',
         description: 'Movimiento detectado fuera del horario laboral',
@@ -452,7 +452,7 @@ describe('E2E Integration Flow', () => {
           deviceId: ids.device,
           siteId: ids.site,
           type: 'motion_detected',
-          severity: 'warning',
+          severity: 'medium',
           title: 'Movimiento detectado - Entrada Norte',
           description: 'Movimiento detectado fuera del horario laboral',
           metadata: { zone: 'perimeter', confidence: 0.95 },
@@ -461,7 +461,7 @@ describe('E2E Integration Flow', () => {
       );
 
       expect(result.id).toBe(ids.event);
-      expect(result.severity).toBe('warning');
+      expect(result.severity).toBe('medium');
       expect(result.status).toBe('new');
     });
 
@@ -748,7 +748,10 @@ describe('E2E Integration Flow', () => {
 
   describe('Step 6: Audit Trail Verification', () => {
     it('lists audit entries for the tenant', async () => {
-      mockSelectRows.current = [{ total: 6 }];
+      mockSelectRows.queue = [
+        [{ total: 6 }],
+        [],
+      ];
 
       const result = await auditService.list(TENANT_ID, {
         page: 1,
@@ -761,7 +764,10 @@ describe('E2E Integration Flow', () => {
     });
 
     it('filters audit entries by action type', async () => {
-      mockSelectRows.current = [{ total: 4 }];
+      mockSelectRows.queue = [
+        [{ total: 4 }],
+        [],
+      ];
 
       const result = await auditService.list(TENANT_ID, {
         action: 'create',
@@ -775,7 +781,10 @@ describe('E2E Integration Flow', () => {
     });
 
     it('filters audit entries by entity type', async () => {
-      mockSelectRows.current = [{ total: 2 }];
+      mockSelectRows.queue = [
+        [{ total: 2 }],
+        [],
+      ];
 
       const result = await auditService.list(TENANT_ID, {
         resource: 'incident',

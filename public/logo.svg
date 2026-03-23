@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Background Shield -->
+  <path d="M256 32L448 112V240C448 368 362 464 256 496C150 464 64 368 64 240V112L256 32Z" fill="#1e293b" stroke="#3b82f6" stroke-width="8"/>
+  <!-- Inner Shield Glow -->
+  <path d="M256 56L424 128V240C424 352 348 440 256 468C164 440 88 352 88 240V128L256 56Z" fill="#0f172a"/>
+  <!-- Key Symbol -->
+  <circle cx="256" cy="200" r="48" stroke="#3b82f6" stroke-width="10" fill="none"/>
+  <circle cx="256" cy="200" r="20" fill="#3b82f6"/>
+  <rect x="250" y="248" width="12" height="80" rx="4" fill="#3b82f6"/>
+  <rect x="262" y="280" width="28" height="10" rx="3" fill="#3b82f6"/>
+  <rect x="262" y="300" width="20" height="10" rx="3" fill="#3b82f6"/>
+  <!-- Signal Waves -->
+  <path d="M180 160C160 180 160 220 180 240" stroke="#60a5fa" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <path d="M160 140C130 170 130 230 160 260" stroke="#60a5fa" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.4"/>
+  <path d="M332 160C352 180 352 220 332 240" stroke="#60a5fa" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <path d="M352 140C382 170 382 230 352 260" stroke="#60a5fa" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.4"/>
+  <!-- Text: CS -->
+  <text x="256" y="410" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-weight="800" font-size="64" fill="#e2e8f0" letter-spacing="8">CS</text>
+  <!-- Dot accent -->
+  <circle cx="256" cy="430" r="4" fill="#3b82f6"/>
+</svg>

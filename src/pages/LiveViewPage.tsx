@@ -146,7 +146,7 @@ export default function LiveViewPage() {
 
   const allCameras = useMemo(() => {
     return (devices || []).filter(d =>
-      d.type === 'camera' && (selectedSite === 'all' || d.siteId === selectedSite)
+      d.type === 'camera' && (selectedSite === 'all' || d.site_id === selectedSite)
     );
   }, [devices, selectedSite]);
 
@@ -163,11 +163,11 @@ export default function LiveViewPage() {
     return undefined;
   }, [slotAssignments, allCameras]);
 
-  const handleDragStartFromSidebar = (device: DeviceRow) => {
+  const handleDragStartFromSidebar = (device: Device) => {
     setDraggedDevice(device);
   };
 
-  const handleDragStartFromGrid = (device: DeviceRow) => {
+  const handleDragStartFromGrid = (device: Device) => {
     setDraggedDevice(device);
   };
 
@@ -337,6 +337,14 @@ export default function LiveViewPage() {
               onClick={() => { setEventsOpen(!eventsOpen); if (!eventsOpen) { setTourOpen(false); } }}
             >
               <Bell className="mr-1 h-3 w-3" /> Events
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              className="h-8 text-xs bg-cyan-500 hover:bg-cyan-600 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+              onClick={() => { window.location.href = '/immersive' }}
+            >
+              <Zap className="mr-1 h-3 w-3" /> Immersive 3D
             </Button>
             {!opsOpen && (
               <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => { setOpsOpen(true); setTourOpen(false); }}>Ops Panel</Button>

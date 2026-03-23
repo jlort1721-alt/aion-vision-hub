@@ -14,7 +14,7 @@ import { useI18n } from '@/contexts/I18nContext';
 import { useSections, useAccessPeople, useAccessPeopleMutations, useAccessVehicles, useAccessLogs } from '@/hooks/use-module-data';
 import {
   UserCheck, Users, Car, Search, Plus, FileText, Download,
-  Shield, Clock, Pencil, Trash2, MoreHorizontal, Eye, Key
+  Shield, Clock, Pencil, Trash2, MoreHorizontal, Eye, Key, Camera, ScanLine, CarFront, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -88,6 +88,7 @@ export default function AccessControlPage() {
               <TabsTrigger value="residents" className="text-xs"><Users className="mr-1 h-3 w-3" /> {t('access.people')}</TabsTrigger>
               <TabsTrigger value="logs" className="text-xs"><Clock className="mr-1 h-3 w-3" /> {t('access.access_log')}</TabsTrigger>
               <TabsTrigger value="vehicles" className="text-xs"><Car className="mr-1 h-3 w-3" /> {t('access.vehicles')}</TabsTrigger>
+              <TabsTrigger value="lpr_scanner" className="text-xs text-primary data-[state=active]:bg-primary/20"><ScanLine className="mr-1 h-3 w-3" /> LPR Vision</TabsTrigger>
               <TabsTrigger value="reports" className="text-xs"><FileText className="mr-1 h-3 w-3" /> {t('reports.title')}</TabsTrigger>
               <TabsTrigger value="credentials" className="text-xs"><Key className="mr-1 h-3 w-3" /> {t('access.credentials')}</TabsTrigger>
             </TabsList>
@@ -203,6 +204,90 @@ export default function AccessControlPage() {
                 </TableBody>
               </Table>
             )}
+          </TabsContent>
+
+          <TabsContent value="lpr_scanner" className="flex-1 overflow-auto m-0 p-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+               {/* Camera Feed Context */}
+               <Card className="flex flex-col border-primary/20 shadow-[0_0_15px_rgba(0,180,216,0.05)] overflow-hidden">
+                 <CardHeader className="py-3 px-4 bg-background/50 border-b flex flex-row items-center justify-between">
+                   <CardTitle className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+                     <Camera className="h-4 w-4" /> Entry Lane: Cam-LPR-01
+                   </CardTitle>
+                   <div className="flex items-center gap-2">
+                     <span className="relative flex h-2 w-2">
+                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                       <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                     </span>
+                     <span className="text-[10px] text-muted-foreground font-mono">LIVE / OCR ACTIVE</span>
+                   </div>
+                 </CardHeader>
+                 <CardContent className="p-0 flex-1 relative bg-black flex items-center justify-center overflow-hidden min-h-[300px]">
+                   <ScanLine className="absolute h-full w-full text-primary/20 animate-pulse pointer-events-none p-12" />
+                   <div className="w-[80%] h-[60%] border-2 border-dashed border-primary/50 relative">
+                     <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary -translate-x-1 -translate-y-1"></div>
+                     <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary translate-x-1 -translate-y-1"></div>
+                     <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-primary -translate-x-1 translate-y-1"></div>
+                     <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary translate-x-1 translate-y-1"></div>
+                   </div>
+                   <div className="absolute bottom-4 left-4 right-4 flex justify-between tracking-widest font-mono text-[9px] text-primary/70">
+                     <span>OPTICAL RECOGNITION...</span>
+                     <span>98.8% CONFIDENCE TARGET</span>
+                   </div>
+                 </CardContent>
+               </Card>
+
+               {/* OCR Extracted Plates Logic */}
+               <Card className="flex flex-col max-h-[500px]">
+                 <CardHeader className="py-3 px-4 border-b bg-muted/20">
+                    <CardTitle className="text-xs font-bold flex items-center gap-2">
+                      <CarFront className="h-4 w-4 text-muted-foreground" /> OCR Plate Buffer
+                    </CardTitle>
+                 </CardHeader>
+                 <CardContent className="p-4 overflow-y-auto space-y-3">
+                   {/* MOCK PLATE 1 */}
+                   <div className="flex items-center justify-between p-3 rounded-lg border border-success/30 bg-success/5">
+                     <div className="flex gap-4 items-center">
+                       <div className="h-10 w-24 bg-white rounded border-2 border-black flex items-center justify-center">
+                         <span className="text-black font-extrabold font-mono tracking-widest">AZE-891</span>
+                       </div>
+                       <div>
+                         <p className="text-sm font-bold text-success flex items-center gap-1"><CheckCircle2 className="h-4 w-4" /> AUTHORIZED</p>
+                         <p className="text-[10px] text-muted-foreground">Resident: Carlos Mendoza • Tower B</p>
+                       </div>
+                     </div>
+                     <span className="text-xs text-muted-foreground font-mono">14 sec ago</span>
+                   </div>
+                   {/* MOCK PLATE 2 */}
+                   <div className="flex items-center justify-between p-3 rounded-lg border border-destructive/30 bg-destructive/5 relative overflow-hidden">
+                     <div className="absolute top-0 left-0 w-1 h-full bg-red-500 animate-pulse" />
+                     <div className="flex gap-4 items-center">
+                       <div className="h-10 w-24 bg-yellow-400 rounded border-2 border-black flex items-center justify-center">
+                         <span className="text-black font-extrabold font-mono tracking-widest">KTR-92F</span>
+                       </div>
+                       <div>
+                         <p className="text-sm font-bold text-destructive flex items-center gap-1"><AlertCircle className="h-4 w-4" /> UNKNOWN</p>
+                         <p className="text-[10px] text-muted-foreground">No records in DB</p>
+                       </div>
+                     </div>
+                     <Button size="sm" variant="destructive" className="h-7 text-[10px]">Open Gate</Button>
+                   </div>
+                   {/* MOCK PLATE 3 */}
+                   <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/10 opacity-60">
+                     <div className="flex gap-4 items-center">
+                       <div className="h-10 w-24 bg-white rounded border-2 border-black flex items-center justify-center">
+                         <span className="text-black font-extrabold font-mono tracking-widest">GZP-019</span>
+                       </div>
+                       <div>
+                         <p className="text-sm font-bold text-muted-foreground">AUTHORIZED</p>
+                         <p className="text-[10px] text-muted-foreground">Staff: Maintenance</p>
+                       </div>
+                     </div>
+                     <span className="text-xs text-muted-foreground font-mono">5 mins ago</span>
+                   </div>
+                 </CardContent>
+               </Card>
+             </div>
           </TabsContent>
 
           <TabsContent value="reports" className="flex-1 overflow-auto m-0 p-4">

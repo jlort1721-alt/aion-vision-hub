@@ -1,6 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth.js';
+import { enforcePlanLimit } from '../../plugins/plan-limits.js';
 import { deviceService } from './service.js';
+import { registerDeviceStreams, removeStreamFromMediaMTX, listMediaMTXStreams, buildRtspUrl } from '../../services/stream-bridge.js';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import '@fastify/swagger';
 import {
@@ -50,7 +52,7 @@ export async function registerDeviceRoutes(app: FastifyInstance) {
   server.post<{ Body: CreateDeviceInput }>(
     '/',
     {
-      preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')],
+      preHandler: [requireRole('operator', 'tenant_admin', 'super_admin'), enforcePlanLimit('devices')],
       schema: {
         tags: ['Devices'],
         summary: 'Create a new device',
@@ -140,6 +142,114 @@ export async function registerDeviceRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { id } = request.params;
       const data = await deviceService.healthCheck(id, request.tenantId);
+      return reply.send({ success: true, data });
+    },
+  );
+
+  // ── POST /:id/register-stream — Register device stream in MediaMTX ─
+  server.post<{ Params: { id: string } }>(
+    '/:id/register-stream',
+    {
+      preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')],
+      schema: {
+        tags: ['Devices'],
+        summary: 'Register device RTSP stream in MediaMTX for live view',
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const device = await deviceService.getById(id, request.tenantId) as Record<string, unknown>;
+
+      const result = await registerDeviceStreams({
+        id: String(device.id),
+        brand: String(device.brand || 'generic_onvif'),
+        ipAddress: (device.ipAddress || device.ip_address || null) as string | null,
+        port: (device.port || null) as number | null,
+        rtspPort: (device.rtspPort || device.rtsp_port || 554) as number | null,
+        username: (device.username || null) as string | null,
+        password: (device.password || null) as string | null,
+        channels: Number(device.channels) || 1,
+        type: String(device.type || 'camera'),
+        connectionType: (device.connectionType || device.connection_type || 'ip') as string | null,
+      });
+
+      await request.audit('device.stream.register', 'devices', id, {
+        registered: result.registered,
+        errors: result.errors,
+      });
+
+      return reply.send({ success: true, data: result });
+    },
+  );
+
+  // ── POST /:id/unregister-stream — Remove device stream from MediaMTX ─
+  server.post<{ Params: { id: string } }>(
+    '/:id/unregister-stream',
+    {
+      preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')],
+      schema: {
+        tags: ['Devices'],
+        summary: 'Remove device stream from MediaMTX',
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      await removeStreamFromMediaMTX(id);
+      return reply.send({ success: true });
+    },
+  );
+
+  // ── GET /:id/rtsp-url — Get the generated RTSP URL for a device ─
+  server.get<{ Params: { id: string }; Querystring: { channel?: string; substream?: string } }>(
+    '/:id/rtsp-url',
+    {
+      preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')],
+      schema: {
+        tags: ['Devices'],
+        summary: 'Get generated RTSP URL for device (credentials masked)',
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const channel = parseInt(request.query.channel || '1', 10);
+      const substream = request.query.substream === 'true';
+      const device = await deviceService.getById(id, request.tenantId) as Record<string, unknown>;
+
+      const rtspUrl = buildRtspUrl({
+        brand: String(device.brand || 'generic_onvif'),
+        ip: String(device.ipAddress || device.ip_address || ''),
+        port: Number(device.rtspPort || device.rtsp_port || 554),
+        username: device.username ? String(device.username) : undefined,
+        password: device.password ? '****' : undefined,
+        channel,
+        substream,
+      });
+
+      const channels = Number(device.channels) || 1;
+      return reply.send({
+        success: true,
+        data: {
+          deviceId: id,
+          channel,
+          substream,
+          rtspUrl,
+          streamId: channels > 1 ? `${id}-ch${channel}` : id,
+        },
+      });
+    },
+  );
+
+  // ── GET /streams/active — List active MediaMTX streams ────
+  server.get(
+    '/streams/active',
+    {
+      schema: {
+        tags: ['Devices'],
+        summary: 'List all active streams in MediaMTX',
+      },
+    },
+    async (_request, reply) => {
+      const data = await listMediaMTXStreams();
       return reply.send({ success: true, data });
     },
   );

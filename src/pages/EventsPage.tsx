@@ -86,8 +86,8 @@ export default function EventsPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)]">
-      <div className={cn("flex-1 flex flex-col", selectedEvent && "max-w-[60%]")}>
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-3.5rem)]">
+      <div className={cn("flex-1 flex flex-col", selectedEvent && "lg:max-w-[60%] hidden lg:flex")}>
         <EventFiltersBar filters={filters} onChange={updateFilters} onReset={resetFilters} devices={devices} sites={sites} newCount={totalCount} />
         <div className="flex-1 overflow-auto">
           {isLoading ? (
@@ -100,8 +100,8 @@ export default function EventsPage() {
                 <TableRow>
                   <TableHead className="w-8"></TableHead>
                   <TableHead>{t('events.event')}</TableHead>
-                  <TableHead>{t('events.device')}</TableHead>
-                  <TableHead>{t('events.site')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('events.device')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('events.site')}</TableHead>
                   <TableHead>{t('events.time')}</TableHead>
                   <TableHead>{t('common.status')}</TableHead>
                   <TableHead className="w-10"></TableHead>
@@ -121,8 +121,8 @@ export default function EventsPage() {
                           <p className="text-xs text-muted-foreground capitalize">{event.event_type.replace(/_/g, ' ')}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs">{device?.name}</TableCell>
-                      <TableCell className="text-xs">{site?.name?.split('—')[0]?.trim()}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs">{device?.name}</TableCell>
+                      <TableCell className="hidden md:table-cell text-xs">{site?.name?.split('—')[0]?.trim()}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{new Date(event.created_at).toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge variant={event.status === 'new' ? 'destructive' : event.status === 'resolved' ? 'secondary' : 'outline'} className="text-[10px] capitalize">{event.status}</Badge>
@@ -176,7 +176,12 @@ export default function EventsPage() {
           </div>
         </div>
       </div>
-      {selectedEvent && <EventDetailPanel event={selectedEvent} devices={devices} sites={sites} actionLoading={actionLoading} onAction={handleAction} />}
+      {selectedEvent && (
+        <div className="fixed inset-0 z-40 bg-background lg:static lg:z-auto lg:flex-1 overflow-auto">
+          <button onClick={() => setSelected(null)} className="lg:hidden text-xs text-muted-foreground p-4 pb-0 flex items-center gap-1 hover:text-foreground">&larr; {t('common.back') || 'Back'}</button>
+          <EventDetailPanel event={selectedEvent} devices={devices} sites={sites} actionLoading={actionLoading} onAction={handleAction} />
+        </div>
+      )}
     </div>
   );
 }

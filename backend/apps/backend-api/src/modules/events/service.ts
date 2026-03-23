@@ -2,6 +2,7 @@ import { eq, and, sql, desc, asc, gte, lte } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { events } from '../../db/schema/index.js';
 import { NotFoundError } from '@aion/shared-contracts';
+import { broadcast } from '../../plugins/websocket.js';
 import type {
   CreateEventInput,
   AssignEventInput,
@@ -99,6 +100,9 @@ export class EventService {
       })
       .returning();
 
+    // Broadcast to websocket clients
+    broadcast(tenantId, 'events', { type: 'event.new', event });
+
     return event;
   }
 
@@ -116,6 +120,9 @@ export class EventService {
       .returning();
 
     if (!event) throw new NotFoundError('Event', id);
+
+    broadcast(tenantId, 'events', { type: 'event.updated', event });
+
     return event;
   }
 
@@ -141,6 +148,9 @@ export class EventService {
       .returning();
 
     if (!event) throw new NotFoundError('Event', id);
+
+    broadcast(tenantId, 'events', { type: 'event.updated', event });
+
     return event;
   }
 

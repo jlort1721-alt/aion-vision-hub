@@ -31,17 +31,17 @@ export default defineConfig(({ mode }) => ({
       ],
 
       manifest: {
-        name: "AION Vision Hub",
-        short_name: "AION",
+        name: "Clave Seguridad",
+        short_name: "Clave",
         description:
-          "Unified Video Surveillance Platform with AI-powered analytics",
+          "Centro de Monitoreo, Control de Acceso y Videovigilancia con IA",
         start_url: "/",
         scope: "/",
         display: "standalone",
         orientation: "any",
         background_color: "#0a0f1e",
         theme_color: "#3b82f6",
-        lang: "en",
+        lang: "es",
         categories: ["security", "business", "utilities"],
         icons: [
           {
@@ -105,7 +105,7 @@ export default defineConfig(({ mode }) => ({
             purpose: "maskable",
           },
           {
-            src: "/icons/icon-512.svg",
+            src: "/favicon.svg",
             sizes: "any",
             type: "image/svg+xml",
             purpose: "any",
@@ -113,24 +113,24 @@ export default defineConfig(({ mode }) => ({
         ],
         shortcuts: [
           {
-            name: "Dashboard",
+            name: "Panel Principal",
             url: "/dashboard",
-            description: "Open main dashboard",
+            description: "Abrir panel de operaciones",
           },
           {
-            name: "Live View",
+            name: "Vista en Vivo",
             url: "/live-view",
-            description: "Open live camera view",
+            description: "Monitoreo de cámaras en tiempo real",
           },
           {
-            name: "Events",
+            name: "Eventos",
             url: "/events",
-            description: "View security events",
+            description: "Ver eventos de seguridad",
           },
           {
-            name: "Incidents",
+            name: "Incidentes",
             url: "/incidents",
-            description: "Manage incidents",
+            description: "Gestionar incidentes",
           },
         ],
       },
@@ -177,7 +177,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: /\.(?:png|jpg|jpeg|gif|svg|webp|ico)$/i,
             handler: "CacheFirst",
             options: {
-              cacheName: "aion-images",
+              cacheName: "clave-images",
               expiration: {
                 maxEntries: 200,
                 maxAgeSeconds: 60 * 60 * 24 * 30,
@@ -189,7 +189,7 @@ export default defineConfig(({ mode }) => ({
             urlPattern: /\.(?:woff2?|ttf|eot)$/i,
             handler: "CacheFirst",
             options: {
-              cacheName: "aion-fonts",
+              cacheName: "clave-fonts",
               expiration: {
                 maxEntries: 20,
                 maxAgeSeconds: 60 * 60 * 24 * 365,
@@ -234,12 +234,22 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("@supabase/")) {
             return "vendor-supabase";
           }
-          // Heavy libs — only load with their lazy pages (NOT in initial bundle)
-          // recharts: loads with DashboardPage / ReportsPage
-          // leaflet: loads with SitesPage
-          // xlsx: loads with DatabasePage / ReportsPage
-          // These are intentionally NOT in manualChunks so they
-          // stay in the lazy page chunks or auto-split by Vite.
+          // HLS.js — only loaded with LiveView (522KB)
+          if (id.includes("hls.js")) {
+            return "vendor-hls";
+          }
+          // Three.js / React Three Fiber — only loaded with Immersive3D
+          if (id.includes("three") || id.includes("@react-three")) {
+            return "vendor-3d";
+          }
+          // Recharts — only loaded with Dashboard/Reports
+          if (id.includes("recharts")) {
+            return "vendor-charts";
+          }
+          // Leaflet — only loaded with Sites
+          if (id.includes("leaflet")) {
+            return "vendor-maps";
+          }
         },
       },
     },

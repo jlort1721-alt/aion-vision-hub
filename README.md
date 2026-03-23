@@ -15,9 +15,9 @@ AION Vision Hub replaces iVMS-4200 (Hikvision) and DSS (Dahua) with a modern, un
 │                    AION Vision Hub                          │
 ├──────────┬──────────┬──────────┬──────────┬────────────────┤
 │ Frontend │ Backend  │ Edge GW  │ AI Layer │ Cloud Services │
-│ React/TS │ Edge Fn  │ Local    │ Multi-LLM│ Auth/DB/Store  │
-│ PWA      │ REST API │ RTSP/    │ MCP Tools│ Events/Audit   │
-│ Desktop  │ Services │ ONVIF    │ Prompts  │ Notifications  │
+│ React/TS │ Fastify  │ Local    │ Multi-LLM│ PostgreSQL/DB  │
+│ PWA/Vite │ REST / WS│ RTSP/    │ MCP Tools│ Events/Redis   │
+│ UI Glass │ Services │ MediaMTX │ Prompts  │ Notifications  │
 └──────────┴──────────┴──────────┴──────────┴────────────────┘
 ```
 

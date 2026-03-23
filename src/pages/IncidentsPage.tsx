@@ -97,8 +97,8 @@ export default function IncidentsPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)]">
-      <div className="w-80 border-r flex flex-col">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-3.5rem)]">
+      <div className={cn("w-full md:w-80 border-r flex flex-col", selected && "hidden md:flex")}>
         <div className="px-3 py-3 border-b space-y-2">
           <div className="flex items-center justify-between">
             <h1 className="text-base font-bold">{t('incidents.title')}</h1>
@@ -117,7 +117,7 @@ export default function IncidentsPage() {
                     <Label>{t('incidents.description_label')}</Label>
                     <Textarea value={newIncident.description} onChange={e => setNewIncident(p => ({ ...p, description: e.target.value }))} />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>{t('incidents.priority')}</Label>
                       <Select value={newIncident.priority} onValueChange={v => setNewIncident(p => ({ ...p, priority: v }))}>
@@ -177,8 +177,9 @@ export default function IncidentsPage() {
       </div>
 
       {selectedInc ? (
-        <div className="flex-1 overflow-auto p-6 space-y-4">
-          <div className="flex items-start justify-between">
+        <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-4">
+          <button onClick={() => setSelected(null)} className="md:hidden text-xs text-muted-foreground mb-2 flex items-center gap-1 hover:text-foreground">&larr; {t('common.back') || 'Back'}</button>
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Badge variant="outline" className="capitalize">{selectedInc.status}</Badge>
@@ -211,7 +212,7 @@ export default function IncidentsPage() {
             </Card>
           )}
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card><CardContent className="p-3 space-y-1 text-sm"><p className="text-xs text-muted-foreground">{t('incidents.assigned_to')}</p><p className="font-medium flex items-center gap-1"><User className="h-3 w-3" /> {selectedInc.assigned_to ? 'Operator' : t('incidents.unassigned')}</p></CardContent></Card>
             <Card><CardContent className="p-3 space-y-1 text-sm"><p className="text-xs text-muted-foreground">{t('incidents.related_events')}</p><p className="font-medium">{selectedInc.event_ids?.length || 0} {t('events.count')}</p></CardContent></Card>
             <Card><CardContent className="p-3 space-y-1 text-sm"><p className="text-xs text-muted-foreground">{t('incidents.created')}</p><p className="font-medium flex items-center gap-1"><Clock className="h-3 w-3" /> {new Date(selectedInc.created_at).toLocaleString()}</p></CardContent></Card>

@@ -112,85 +112,118 @@ async function websocketPlugin(app: FastifyInstance) {
     });
   }
 
-  // WebSocket endpoint — requires JWT token as query param
+  // WebSocket endpoint — supports two auth methods:
+  // 1. First message: { type: 'auth', token: '...' } (preferred, token not in logs)
+  // 2. Query param: ?token=... (legacy, kept for backward compatibility)
   app.get('/ws', { websocket: true }, (socket, request) => {
-    const token = (request.query as Record<string, string>).token;
+    const queryToken = (request.query as Record<string, string>).token;
 
-    if (!token) {
-      socket.send(JSON.stringify({ error: 'Missing token' }));
-      socket.close(1008, 'Missing token');
+    // Helper to register an authenticated client
+    function registerClient(jwtPayload: { sub: string; email: string; tenant_id: string; role: string }): void {
+      const clientId = crypto.randomUUID();
+      const client: WSClient = {
+        ws: socket,
+        tenantId: jwtPayload.tenant_id,
+        userId: jwtPayload.sub,
+        userEmail: jwtPayload.email,
+        subscribedChannels: new Set(),
+        lastPing: Date.now(),
+      };
+
+      clients.set(clientId, client);
+      ensureRedisSubscription(jwtPayload.tenant_id);
+
+      logger.info({ clientId, tenantId: jwtPayload.tenant_id, userId: jwtPayload.sub }, 'WebSocket client connected');
+
+      socket.send(JSON.stringify({
+        channel: 'system',
+        payload: { type: 'connected', clientId, connectedClients: getConnectedClients(jwtPayload.tenant_id).total },
+        timestamp: new Date().toISOString(),
+      }));
+
+      // Handle subsequent messages (subscribe/unsubscribe/pong)
+      socket.on('message', (raw: Buffer | string) => {
+        try {
+          const msg = JSON.parse(raw.toString());
+          client.lastPing = Date.now();
+
+          switch (msg.type) {
+            case 'subscribe':
+              if (typeof msg.channel === 'string') {
+                client.subscribedChannels.add(msg.channel);
+                socket.send(JSON.stringify({ channel: 'system', payload: { type: 'subscribed', channel: msg.channel } }));
+              }
+              break;
+            case 'unsubscribe':
+              if (typeof msg.channel === 'string') {
+                client.subscribedChannels.delete(msg.channel);
+              }
+              break;
+            case 'pong':
+              client.lastPing = Date.now();
+              break;
+          }
+        } catch {
+          // Ignore malformed messages
+        }
+      });
+
+      socket.on('close', () => {
+        clients.delete(clientId);
+        logger.info({ clientId }, 'WebSocket client disconnected');
+      });
+
+      socket.on('error', (err: Error) => {
+        logger.error({ clientId, error: err }, 'WebSocket error');
+        clients.delete(clientId);
+      });
+    }
+
+    // Path 1: Legacy query param auth (backward compatibility)
+    if (queryToken) {
+      let payload: { sub: string; email: string; tenant_id: string; role: string };
+      try {
+        payload = app.jwt.verify<typeof payload>(queryToken);
+      } catch {
+        socket.send(JSON.stringify({ error: 'Invalid token' }));
+        socket.close(1008, 'Invalid token');
+        return;
+      }
+      registerClient(payload);
       return;
     }
 
-    // Verify JWT
-    let payload: { sub: string; email: string; tenant_id: string; role: string };
-    try {
-      payload = app.jwt.verify<typeof payload>(token);
-    } catch {
-      socket.send(JSON.stringify({ error: 'Invalid token' }));
-      socket.close(1008, 'Invalid token');
-      return;
-    }
+    // Path 2: First-message auth (preferred — token not in URL/logs)
+    // Wait for the first message to be an auth message within 10 seconds
+    const authTimeout = setTimeout(() => {
+      socket.send(JSON.stringify({ error: 'Auth timeout — send { type: "auth", token: "..." } within 10s' }));
+      socket.close(1008, 'Auth timeout');
+    }, 10000);
 
-    const clientId = crypto.randomUUID();
-    const client: WSClient = {
-      ws: socket,
-      tenantId: payload.tenant_id,
-      userId: payload.sub,
-      userEmail: payload.email,
-      subscribedChannels: new Set(),
-      lastPing: Date.now(),
-    };
-
-    clients.set(clientId, client);
-
-    // Ensure we receive Redis broadcasts for this tenant
-    ensureRedisSubscription(payload.tenant_id);
-
-    logger.info({ clientId, tenantId: payload.tenant_id, userId: payload.sub }, 'WebSocket client connected');
-
-    // Send welcome message
-    socket.send(JSON.stringify({
-      channel: 'system',
-      payload: { type: 'connected', clientId, connectedClients: getConnectedClients(payload.tenant_id).total },
-      timestamp: new Date().toISOString(),
-    }));
-
-    // Handle incoming messages (subscribe/unsubscribe/pong)
-    socket.on('message', (raw: Buffer | string) => {
+    socket.once('message', (raw: Buffer | string) => {
+      clearTimeout(authTimeout);
       try {
         const msg = JSON.parse(raw.toString());
-        client.lastPing = Date.now();
-
-        switch (msg.type) {
-          case 'subscribe':
-            if (typeof msg.channel === 'string') {
-              client.subscribedChannels.add(msg.channel);
-              socket.send(JSON.stringify({ channel: 'system', payload: { type: 'subscribed', channel: msg.channel } }));
-            }
-            break;
-          case 'unsubscribe':
-            if (typeof msg.channel === 'string') {
-              client.subscribedChannels.delete(msg.channel);
-            }
-            break;
-          case 'pong':
-            client.lastPing = Date.now();
-            break;
+        if (msg.type !== 'auth' || typeof msg.token !== 'string') {
+          socket.send(JSON.stringify({ error: 'First message must be { type: "auth", token: "..." }' }));
+          socket.close(1008, 'Invalid auth message');
+          return;
         }
+
+        let payload: { sub: string; email: string; tenant_id: string; role: string };
+        try {
+          payload = app.jwt.verify<typeof payload>(msg.token);
+        } catch {
+          socket.send(JSON.stringify({ error: 'Invalid token' }));
+          socket.close(1008, 'Invalid token');
+          return;
+        }
+
+        registerClient(payload);
       } catch {
-        // Ignore malformed messages
+        socket.send(JSON.stringify({ error: 'Invalid message format' }));
+        socket.close(1008, 'Invalid message');
       }
-    });
-
-    socket.on('close', () => {
-      clients.delete(clientId);
-      logger.info({ clientId }, 'WebSocket client disconnected');
-    });
-
-    socket.on('error', (err: Error) => {
-      logger.error({ clientId, error: err }, 'WebSocket error');
-      clients.delete(clientId);
     });
   });
 

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth.js';
+import { enforcePlanLimit } from '../../plugins/plan-limits.js';
 import { siteService } from './service.js';
 import { deviceService } from '../devices/service.js';
 import { createSiteSchema, updateSiteSchema } from './schemas.js';
@@ -27,7 +28,7 @@ export async function registerSiteRoutes(app: FastifyInstance) {
   // ── POST / — Create site ─────────────────────────────────
   app.post<{ Body: CreateSiteInput }>(
     '/',
-    { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
+    { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin'), enforcePlanLimit('sites')] },
     async (request, reply) => {
       const body = createSiteSchema.parse(request.body);
       const data = await siteService.create(body, request.tenantId);

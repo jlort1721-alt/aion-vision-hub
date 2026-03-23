@@ -11,16 +11,15 @@ import { FastifyInstance } from 'fastify';
  */
 export async function mediamtxPlugin(app: FastifyInstance) {
   const MEDIAMTX_API = process.env.MEDIAMTX_API_URL || 'http://mediamtx:9997/v3';
-  const MEDIAMTX_WEBRTC = process.env.MEDIAMTX_WEBRTC_URL || 'http://mediamtx:8889';
 
   // 1. Health Status check (internal validation)
-  app.get('/api/v1/streams/health', async (request, reply) => {
+  app.get('/api/v1/streams/health', async (_request, reply) => {
     try {
       const response = await fetch(`${MEDIAMTX_API}/paths/list`);
       if (!response.ok) throw new Error('MediaMTX API down');
       
-      const payload = await response.json();
-      const activePaths = payload.items?.filter((i: any) => i.ready) || [];
+      const payload = await response.json() as { items?: Array<{ ready: boolean; name: string }> };
+      const activePaths = payload.items?.filter((i) => i.ready) || [];
       
       return { 
         status: 'healthy',

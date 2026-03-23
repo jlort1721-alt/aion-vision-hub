@@ -31,7 +31,11 @@ async function createRefreshToken(userId: string, tenantId: string, family?: str
 
 export async function registerAuthRoutes(app: FastifyInstance) {
   // Exchange a Supabase access token for a backend JWT + refresh token
-  app.post('/login', async (request, reply) => {
+  app.post('/login', {
+    config: {
+      rateLimit: { max: 10, timeWindow: '1 minute' },
+    },
+  }, async (request, reply) => {
     const { supabaseToken } = loginSchema.parse(request.body);
 
     const supaUser = await verifySupabaseToken(supabaseToken);
@@ -69,7 +73,11 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   // Refresh token rotation: validate old token, revoke it, issue new pair
-  app.post('/refresh', async (request, reply) => {
+  app.post('/refresh', {
+    config: {
+      rateLimit: { max: 20, timeWindow: '1 minute' },
+    },
+  }, async (request, reply) => {
     const { refreshToken } = refreshTokenSchema.parse(request.body);
     const tokenHash = hashToken(refreshToken);
 

@@ -6,9 +6,11 @@ export function registerErrorHandler(app: FastifyInstance): void {
   app.setErrorHandler((error: FastifyError | Error, request: FastifyRequest, reply: FastifyReply) => {
     const logger = request.log ?? app.log;
 
+    const requestId = request.id;
+
     // AppError — our typed errors
     if (error instanceof AppError) {
-      logger.warn({ code: error.code, message: error.message }, 'Application error');
+      logger.warn({ code: error.code, message: error.message, requestId }, 'Application error');
       reply.code(error.statusCode).send({
         success: false,
         error: error.toJSON(),
@@ -46,12 +48,13 @@ export function registerErrorHandler(app: FastifyInstance): void {
     }
 
     // Unexpected errors
-    logger.error({ err: error }, 'Unhandled error');
+    logger.error({ err: error, requestId }, 'Unhandled error');
     reply.code(500).send({
       success: false,
       error: {
         code: 'INTERNAL_ERROR',
         message: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message,
+        ...(requestId ? { requestId } : {}),
       },
     });
   });

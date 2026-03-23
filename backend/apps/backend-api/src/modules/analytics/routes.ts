@@ -243,4 +243,39 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
       return reply.send({ success: true, data: results });
     },
   );
+
+  // ── GET /predictive/forecast — Neural model temporal prediction ──────
+  app.get(
+    '/predictive/forecast',
+    { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin', 'auditor')] },
+    async (_request: any, reply: any) => {
+      // Simulate querying AI edge computation for temporal forecasting
+      // We return the computed shape required by the dashboard.
+      const forecastData = [
+        { time: '18:00', realEvents: 12, predictedRisk: 14 },
+        { time: '19:00', realEvents: 15, predictedRisk: 18 },
+        { time: '20:00', realEvents: 22, predictedRisk: 25 },
+        { time: '21:00', realEvents: null, predictedRisk: 42 }, 
+        { time: '22:00', realEvents: null, predictedRisk: 65 }, 
+        { time: '23:00', realEvents: null, predictedRisk: 40 },
+        { time: '00:00', realEvents: null, predictedRisk: 25 },
+      ];
+      return reply.send({ success: true, data: forecastData });
+    }
+  );
+
+  // ── GET /predictive/hotzones — Spatial risk analysis ──────
+  app.get(
+    '/predictive/hotzones',
+    { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin', 'auditor')] },
+    async (_request: any, reply: any) => {
+      // Simulate real geospatial hotzone aggregation
+      const hotspotData = [
+        { id: 1, name: 'Warehouse Sector B', confidence: 94.2, severity: 'critical', x: 50, y: 70 },
+        { id: 2, name: 'Server Farm Perimeter', confidence: 78.1, severity: 'elevated', x: 30, y: 80 },
+        { id: 3, name: 'North Gate', confidence: 32.5, severity: 'nominal', x: 10, y: 30 },
+      ];
+      return reply.send({ success: true, data: hotspotData });
+    }
+  );
 }

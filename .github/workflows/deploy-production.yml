@@ -56,10 +56,8 @@ jobs:
         working-directory: backend
         run: pnpm install --frozen-lockfile && pnpm test && pnpm typecheck
 
-      # Gateway
-      - name: Gateway — install & test
-        working-directory: gateway
-        run: npm ci && npm test && npx tsc --noEmit
+      # Edge Gateway (part of backend monorepo)
+      # Covered by backend pnpm test & typecheck above
 
   # ---------------------------------------------------------------------------
   # Build & Push — production Docker images
@@ -78,9 +76,6 @@ jobs:
           - image: edge-gateway
             context: backend
             dockerfile: backend/apps/edge-gateway/Dockerfile
-          - image: gateway
-            context: gateway
-            dockerfile: gateway/Dockerfile
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -213,23 +208,23 @@ jobs:
             date -u "+%Y-%m-%dT%H:%M:%SZ deploy=$RELEASE_TAG" >> "$APP_DIR/deploy.log"
 
             echo "=== Pulling production images ==="
-            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.yml --env-file .env.docker pull
 
             echo "=== Running database migrations ==="
             for migration in "$APP_DIR/backend/apps/backend-api/src/db/migrations"/*.sql; do
               if [ -f "$migration" ]; then
                 echo "  Applying: $(basename "$migration")"
-                docker compose -f docker-compose.prod.yml exec -T postgres \
+                docker compose -f docker-compose.yml --env-file .env.docker exec -T postgres \
                   psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f "/migrations/$(basename "$migration")" 2>/dev/null || \
                   echo "  (skipped or already applied)"
               fi
             done
 
             echo "=== Stopping services gracefully ==="
-            docker compose -f docker-compose.prod.yml stop backend-api edge-gateway 2>/dev/null || true
+            docker compose -f docker-compose.yml --env-file .env.docker stop backend-api edge-gateway 2>/dev/null || true
 
             echo "=== Starting services ==="
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker compose -f docker-compose.yml --env-file .env.docker up -d --remove-orphans
 
             echo "=== Cleaning up old images ==="
             docker image prune -f
@@ -263,7 +258,7 @@ jobs:
 
             if [ "$FAIL" -gt 0 ]; then
               echo "CRITICAL: $FAIL service(s) unhealthy after production deploy"
-              docker compose -f docker-compose.prod.yml logs --tail=50
+              docker compose -f docker-compose.yml --env-file .env.docker logs --tail=50
               exit 1
             fi
             echo "All services healthy ($PASS/$((PASS+FAIL)))"

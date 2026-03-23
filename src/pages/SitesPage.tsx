@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSites, useDevices } from '@/hooks/use-supabase-data';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -191,11 +191,11 @@ export default function SitesPage() {
         longitude: form.longitude ? parseFloat(form.longitude) : null, status: form.status,
       };
       if (editingSiteId) {
-        const { error } = await supabase.from('sites').update(payload).eq('id', editingSiteId);
-        if (error) throw error; toast.success('Site updated');
+        await apiClient.patch(`/sites/${editingSiteId}`, payload);
+        toast.success('Site updated');
       } else {
-        const { error } = await supabase.from('sites').insert({ ...payload, tenant_id: profile!.tenant_id });
-        if (error) throw error; toast.success('Site created');
+        await apiClient.post('/sites', payload);
+        toast.success('Site created');
       }
       queryClient.invalidateQueries({ queryKey: ['sites'] }); setDialogOpen(false);
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed to save site'); }
@@ -205,8 +205,8 @@ export default function SitesPage() {
   const handleDelete = async (siteId: string) => {
     if (!confirm('Delete this site?')) return;
     try {
-      const { error } = await supabase.from('sites').delete().eq('id', siteId);
-      if (error) throw error; toast.success('Site deleted');
+      await apiClient.delete(`/sites/${siteId}`);
+      toast.success('Site deleted');
       if (selectedSite === siteId) setSelectedSite(null);
       queryClient.invalidateQueries({ queryKey: ['sites'] });
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed to delete site'); }

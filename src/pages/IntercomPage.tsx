@@ -104,7 +104,7 @@ export default function IntercomPage() {
   const handleTestTTS = async () => {
     setTestingVoice(true);
     try {
-      await elevenlabs.playTTS('Prueba de voz AION. Sistema de citofonía inteligente activo.', selectedVoiceId || undefined);
+      await elevenlabs.playTTS('Prueba de voz Clave Seguridad. Sistema de citofonía inteligente activo.', selectedVoiceId || undefined);
       toast.success('TTS playback complete');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'TTS failed');
@@ -252,7 +252,7 @@ export default function IntercomPage() {
                   <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
                     <li>Send visitor notifications</li>
                     <li>Receive entrance requests</li>
-                    <li>Automated responses via AION</li>
+                    <li>Respuestas automáticas vía IA</li>
                   </ul>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => toast.info('WhatsApp Business API credentials required in Settings > Integrations')}><Settings className="mr-1 h-3 w-3" /> Configure</Button>
@@ -310,9 +310,9 @@ export default function IntercomPage() {
                           <span className="text-sm font-medium capitalize">{attendMode}</span>
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-1">
-                          {attendMode === 'ai' && 'AION handles all calls with ElevenLabs voice synthesis'}
-                          {attendMode === 'human' && 'All calls routed to human operator'}
-                          {attendMode === 'mixed' && 'AION greets, then transfers to operator if needed'}
+                          {attendMode === 'ai' && 'La IA atiende todas las llamadas con síntesis de voz'}
+                          {attendMode === 'human' && 'Todas las llamadas se dirigen al operador humano'}
+                          {attendMode === 'mixed' && 'La IA saluda y transfiere al operador si es necesario'}
                         </p>
                       </div>
                     </CardContent>

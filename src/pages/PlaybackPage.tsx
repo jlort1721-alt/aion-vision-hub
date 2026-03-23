@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { useDevices, useSites, useEventsLegacy } from '@/hooks/use-supabase-data';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -284,15 +285,12 @@ export default function PlaybackPage() {
       startDate.setSeconds(startDate.getSeconds() + clipStart);
       endDate.setSeconds(endDate.getSeconds() + clipEnd);
 
-      const { error } = await supabase.from('playback_requests').insert({
-        tenant_id: profile.tenant_id,
+      await apiClient.post('/streams/playback', {
         device_id: device.id,
         channel: parseInt(selectedChannel),
         start_time: startDate.toISOString(),
         end_time: endDate.toISOString(),
-        created_by: user.id,
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playback_requests'] });
@@ -445,7 +443,7 @@ export default function PlaybackPage() {
             Recent Exports ({playbackRequests.length})
           </p>
           <ScrollArea className="max-h-32">
-            {playbackRequests.slice(0, 5).map(req => (
+            {playbackRequests.slice(0, 5).map((req: any) => (
               <div key={req.id} className="text-[10px] p-1.5 rounded hover:bg-muted/50">
                 <div className="flex items-center justify-between">
                   <span className="font-mono">{new Date(req.start_time).toLocaleTimeString()} → {new Date(req.end_time).toLocaleTimeString()}</span>

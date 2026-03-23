@@ -59,11 +59,14 @@ export function useWebSocket() {
     }
 
     const wsUrl = API_URL.replace(/^http/, 'ws');
-    const ws = new WebSocket(`${wsUrl}/ws?token=${session.access_token}`);
+    // Auth via first message instead of query param to avoid token in server logs
+    const ws = new WebSocket(`${wsUrl}/ws`);
     wsRef.current = ws;
     setStatus('connecting');
 
     ws.onopen = () => {
+      // Send auth token as first message (protocol-level auth)
+      ws.send(JSON.stringify({ type: 'auth', token: session.access_token }));
       setStatus('connected');
       reconnectAttempts.current = 0;
 

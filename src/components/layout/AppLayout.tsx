@@ -16,9 +16,10 @@ import {
   LayoutDashboard, Video, Play, Bell, MonitorSpeaker, MapPin, Puzzle, Bot,
   Settings, ScrollText, FileBarChart, Activity, ChevronLeft, Search,
   LogOut, User, Shield, AlertTriangle, Menu, X, Users, Globe,
-  Zap, DoorOpen, RotateCcw, Phone, Database, MessageSquare,
+  Zap, DoorOpen, RotateCcw, Phone, Database, MessageSquare, StickyNote,
   Clock, Timer, AlertOctagon, Navigation, CalendarClock,
-  Cog, UserCheck, BarChart3, FileText, KeyRound, ShieldCheck, GraduationCap
+  Cog, UserCheck, BarChart3, FileText, KeyRound, ShieldCheck, GraduationCap, Building2,
+  FolderOpen, ClipboardList, PhoneCall, Scan
 } from 'lucide-react';
 import { hasModuleAccess, ALL_MODULES, DEFAULT_ROLE_PERMISSIONS } from '@/lib/permissions';
 import { supabase } from '@/integrations/supabase/client';
@@ -71,21 +72,27 @@ const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { labelKey: 'nav.shifts', path: '/shifts', icon: <Clock size={18} /> },
       { labelKey: 'nav.patrols', path: '/patrols', icon: <Navigation size={18} /> },
+      { labelKey: 'nav.posts', path: '/posts', icon: <Building2 size={18} /> },
       { labelKey: 'nav.visitors', path: '/visitors', icon: <UserCheck size={18} /> },
       { labelKey: 'nav.emergency', path: '/emergency', icon: <AlertOctagon size={18} /> },
       { labelKey: 'nav.sla', path: '/sla', icon: <Timer size={18} /> },
       { labelKey: 'nav.automation', path: '/automation', icon: <Cog size={18} /> },
+      { labelKey: 'nav.minuta', path: '/minuta', icon: <ClipboardList size={18} /> },
+      { labelKey: 'nav.phone', path: '/phone', icon: <PhoneCall size={18} /> },
     ],
   },
   {
     key: 'intelligence',
     labelKey: 'nav.cat.intelligence',
     items: [
+      // PredictiveCriminology and BiogeneticSearch hidden — no backend implementation (ADR-009)
       { labelKey: 'nav.ai_assistant', path: '/ai-assistant', icon: <Bot size={18} /> },
       { labelKey: 'nav.analytics', path: '/analytics', icon: <BarChart3 size={18} /> },
       { labelKey: 'nav.reports', path: '/reports', icon: <FileBarChart size={18} /> },
       { labelKey: 'nav.scheduled_reports', path: '/scheduled-reports', icon: <CalendarClock size={18} /> },
       { labelKey: 'nav.database', path: '/database', icon: <Database size={18} /> },
+      { labelKey: 'nav.notes', path: '/notes', icon: <StickyNote size={18} /> },
+      { labelKey: 'nav.documents', path: '/documents', icon: <FolderOpen size={18} /> },
     ],
   },
   {
@@ -108,6 +115,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { labelKey: 'nav.system', path: '/system', icon: <Activity size={18} /> },
       { labelKey: 'nav.settings', path: '/settings', icon: <Settings size={18} /> },
       { labelKey: 'nav.admin', path: '/admin', icon: <Users size={18} /> },
+      { labelKey: 'nav.network', path: '/network', icon: <Scan size={18} /> },
     ],
   },
 ];
@@ -119,7 +127,19 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const { user, profile, logout, roles } = useAuth();
   const { t, lang, setLang } = useI18n();
-  useWebSocket(); // Establish real-time connection
+  const { status: wsStatus } = useWebSocket(); // Establish real-time connection
+  const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+
+  React.useEffect(() => {
+    const onOnline = () => setIsOnline(true);
+    const onOffline = () => setIsOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
 
   const { data: dbPerms } = useQuery({
     queryKey: ['role-module-permissions', profile?.tenant_id],
@@ -177,11 +197,11 @@ export default function AppLayout() {
       )}>
         <div className="flex items-center h-14 px-3 border-b border-sidebar-border">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground font-bold text-sm shrink-0">AV</div>
+            <img src="/favicon.svg" alt="CS" className="w-8 h-8 shrink-0" />
             {!collapsed && (
               <div className="truncate">
-                <span className="font-semibold text-sm text-sidebar-primary-foreground">AION</span>
-                <span className="text-xs text-sidebar-muted ml-1">Vision Hub</span>
+                <span className="font-semibold text-sm text-sidebar-primary-foreground">Clave</span>
+                <span className="text-xs text-sidebar-muted ml-1">Seguridad</span>
               </div>
             )}
           </div>
@@ -273,6 +293,23 @@ export default function AppLayout() {
             <Input placeholder={t('search.placeholder')} className="pl-9 h-9 bg-muted/50 border-0 focus-visible:ring-1" />
           </div>
           <div className="ml-auto flex items-center gap-2">
+            {/* Network status indicator */}
+            {!isOnline ? (
+              <Badge variant="destructive" className="gap-1 text-[10px] h-6">
+                <span className="w-1.5 h-1.5 rounded-full bg-destructive-foreground animate-pulse" />
+                Offline
+              </Badge>
+            ) : wsStatus === 'connected' ? (
+              <Badge variant="outline" className="gap-1 text-[10px] h-6 border-green-600 text-green-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                Live
+              </Badge>
+            ) : wsStatus === 'connecting' ? (
+              <Badge variant="outline" className="gap-1 text-[10px] h-6 border-yellow-600 text-yellow-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                {t('common.connecting') || 'Connecting'}
+              </Badge>
+            ) : null}
             {/* Language selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

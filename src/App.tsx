@@ -11,6 +11,7 @@ import { I18nProvider } from "@/contexts/I18nContext";
 import { hasModuleAccess } from "@/lib/permissions";
 import AppLayout from "@/components/layout/AppLayout";
 
+
 // ── Error Boundary ──
 interface ErrorBoundaryProps { children: ReactNode; fallback?: ReactNode }
 interface ErrorBoundaryState { hasError: boolean; error: Error | null }
@@ -85,6 +86,15 @@ const ContractsPage = lazy(() => import("@/pages/ContractsPage"));
 const KeysPage = lazy(() => import("@/pages/KeysPage"));
 const CompliancePage = lazy(() => import("@/pages/CompliancePage"));
 const TrainingPage = lazy(() => import("@/pages/TrainingPage"));
+const Immersive3DPage = lazy(() => import("@/pages/Immersive3DPage"));
+const BiogeneticSearchPage = lazy(() => import("@/pages/BiogeneticSearchPage"));
+const PredictiveCriminologyPage = lazy(() => import("@/pages/PredictiveCriminologyPage"));
+const PostsPage = lazy(() => import("@/pages/PostsPage"));
+const NotesPage = lazy(() => import("@/pages/NotesPage"));
+const DocumentsPage = lazy(() => import("@/pages/DocumentsPage"));
+const MinutaPage = lazy(() => import("@/pages/MinutaPage"));
+const PhonePanelPage = lazy(() => import("@/pages/PhonePanelPage"));
+const NetworkPage = lazy(() => import("@/pages/NetworkPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = createQueryClient();
@@ -107,7 +117,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
-          <span className="text-sm text-muted-foreground">Loading AION Vision Hub...</span>
+          <span className="text-sm text-muted-foreground">Cargando Clave Seguridad...</span>
         </div>
       </div>
     );
@@ -140,6 +150,9 @@ function AppRoutes() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<ModuleGuard module="dashboard"><DashboardPage /></ModuleGuard>} />
           <Route path="live-view" element={<ModuleGuard module="live_view"><LiveViewPage /></ModuleGuard>} />
+          <Route path="immersive" element={<ModuleGuard module="live_view"><Immersive3DPage /></ModuleGuard>} />
+          <Route path="biogenetic-search" element={<ModuleGuard module="analytics"><BiogeneticSearchPage /></ModuleGuard>} />
+          <Route path="predictive-criminology" element={<ModuleGuard module="analytics"><PredictiveCriminologyPage /></ModuleGuard>} />
           <Route path="playback" element={<ModuleGuard module="playback"><PlaybackPage /></ModuleGuard>} />
           <Route path="events" element={<ModuleGuard module="events"><EventsPage /></ModuleGuard>} />
           <Route path="incidents" element={<ModuleGuard module="incidents"><IncidentsPage /></ModuleGuard>} />
@@ -171,6 +184,12 @@ function AppRoutes() {
           <Route path="keys" element={<ModuleGuard module="keys"><KeysPage /></ModuleGuard>} />
           <Route path="compliance" element={<ModuleGuard module="compliance"><CompliancePage /></ModuleGuard>} />
           <Route path="training" element={<ModuleGuard module="training"><TrainingPage /></ModuleGuard>} />
+          <Route path="posts" element={<ModuleGuard module="posts"><PostsPage /></ModuleGuard>} />
+          <Route path="notes" element={<ModuleGuard module="notes"><NotesPage /></ModuleGuard>} />
+          <Route path="documents" element={<ModuleGuard module="documents"><DocumentsPage /></ModuleGuard>} />
+          <Route path="minuta" element={<ModuleGuard module="minuta"><MinutaPage /></ModuleGuard>} />
+          <Route path="phone" element={<ModuleGuard module="phone"><PhonePanelPage /></ModuleGuard>} />
+          <Route path="network" element={<ModuleGuard module="system"><NetworkPage /></ModuleGuard>} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

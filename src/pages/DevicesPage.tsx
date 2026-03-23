@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,9 +10,13 @@ import { useDevices, useSites } from '@/hooks/use-supabase-data';
 import { useI18n } from '@/contexts/I18nContext';
 import DeviceFormDialog from '@/components/devices/DeviceFormDialog';
 import DeleteDeviceDialog from '@/components/devices/DeleteDeviceDialog';
+import CloudAccountsPanel from '@/components/devices/CloudAccountsPanel';
+import { lazy, Suspense } from 'react';
+const EWeLinkCloudPanel = lazy(() => import('@/components/devices/EWeLinkCloudPanel'));
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Plus, Search, Upload, Wifi, WifiOff, AlertCircle, MoreHorizontal,
-  RefreshCw, Settings, Eye, Pencil, Trash2,
+  RefreshCw, Settings, Eye, Pencil, Trash2, Video, PlayCircle,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -50,9 +54,37 @@ export default function DevicesPage() {
   const openEdit = (device: any) => { setEditDevice(device); setFormOpen(true); };
   const openAdd = () => { setEditDevice(null); setFormOpen(true); };
 
+  const [pageTab, setPageTab] = useState('inventory');
+
   return (
-    <div className="flex h-[calc(100vh-3.5rem)]">
-      <div className={cn("flex-1 flex flex-col border-r", selected && "max-w-[60%]")}>
+    <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+      <div className="px-4 pt-3 border-b">
+        <Tabs value={pageTab} onValueChange={setPageTab}>
+          <TabsList>
+            <TabsTrigger value="inventory">Inventario</TabsTrigger>
+            <TabsTrigger value="cloud">Hik-Connect / DMSS</TabsTrigger>
+            <TabsTrigger value="ewelink">eWeLink / Sonoff</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {pageTab === 'cloud' && (
+        <div className="flex-1 overflow-auto p-4">
+          <CloudAccountsPanel />
+        </div>
+      )}
+
+      {pageTab === 'ewelink' && (
+        <div className="flex-1 overflow-auto p-4">
+          <Suspense fallback={<div className="flex items-center justify-center h-32"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>}>
+            <EWeLinkCloudPanel />
+          </Suspense>
+        </div>
+      )}
+
+      {pageTab === 'inventory' && (
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+      <div className={cn("flex-1 flex flex-col border-r", selected && "lg:max-w-[60%] hidden lg:flex")}>
         <div className="px-4 py-3 border-b space-y-3">
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-bold">{t('devices.title')}</h1>
@@ -61,13 +93,13 @@ export default function DevicesPage() {
               <Button size="sm" onClick={openAdd}><Plus className="mr-1 h-3 w-3" /> {t('devices.add_device')}</Button>
             </div>
           </div>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
+          <div className="flex flex-wrap gap-2">
+            <div className="relative flex-1 min-w-[150px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder={t('devices.search')} value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
             </div>
             <Select value={brandFilter} onValueChange={setBrandFilter}>
-              <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-24 sm:w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('devices.all_brands')}</SelectItem>
                 <SelectItem value="hikvision">Hikvision</SelectItem>
@@ -76,7 +108,7 @@ export default function DevicesPage() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-24 sm:w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('devices.all_status')}</SelectItem>
                 <SelectItem value="active">Activo</SelectItem>
@@ -103,11 +135,11 @@ export default function DevicesPage() {
                 <TableRow>
                   <TableHead className="w-8"></TableHead>
                   <TableHead>{t('common.name')}</TableHead>
-                  <TableHead>{t('devices.brand')} / {t('devices.model')}</TableHead>
-                  <TableHead>IP Pública (Remota)</TableHead>
-                  <TableHead>IP LAN</TableHead>
-                  <TableHead>{t('events.site')}</TableHead>
-                  <TableHead>{t('common.type')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('devices.brand')} / {t('devices.model')}</TableHead>
+                  <TableHead className="hidden lg:table-cell">IP Pública</TableHead>
+                  <TableHead className="hidden xl:table-cell">IP LAN</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('events.site')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('common.type')}</TableHead>
                   <TableHead>{t('common.status')}</TableHead>
                   <TableHead className="w-10"></TableHead>
                 </TableRow>
@@ -124,11 +156,11 @@ export default function DevicesPage() {
                          <AlertCircle className="h-3.5 w-3.5 text-warning" />}
                       </TableCell>
                       <TableCell className="font-medium text-sm">{device.name}</TableCell>
-                      <TableCell><div className="text-xs"><span className="capitalize">{device.brand}</span><span className="text-muted-foreground ml-1">{device.model}</span></div></TableCell>
-                      <TableCell className="font-mono text-xs">{device.remote_address ? <span className="text-green-400">{device.remote_address}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{device.ip_address || '—'}</TableCell>
-                      <TableCell className="text-xs">{device.site_name || site?.name?.split('—')[0]?.trim()}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-[10px] capitalize">{device.type}</Badge></TableCell>
+                      <TableCell className="hidden md:table-cell"><div className="text-xs"><span className="capitalize">{device.brand}</span><span className="text-muted-foreground ml-1">{device.model}</span></div></TableCell>
+                      <TableCell className="hidden lg:table-cell font-mono text-xs">{device.remote_address ? <span className="text-green-400">{device.remote_address}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
+                      <TableCell className="hidden xl:table-cell font-mono text-xs text-muted-foreground">{device.ip_address || '—'}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs">{device.site_name || site?.name?.split('—')[0]?.trim()}</TableCell>
+                      <TableCell className="hidden md:table-cell"><Badge variant="outline" className="text-[10px] capitalize">{device.type}</Badge></TableCell>
                       <TableCell><Badge variant={device.status === 'online' || device.status === 'active' ? 'default' : device.status === 'offline' ? 'destructive' : 'secondary'} className="text-[10px] capitalize">{device.status === 'pending_configuration' ? 'pendiente' : device.status}</Badge></TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -155,9 +187,12 @@ export default function DevicesPage() {
       </div>
 
       {selected && (
-        <div className="w-[40%] overflow-auto p-4 space-y-4">
+        <div className="fixed inset-0 z-40 bg-background lg:static lg:z-auto lg:w-[40%] overflow-auto p-4 space-y-4">
           <div className="flex items-start justify-between">
-            <div><h2 className="font-bold">{selected.name}</h2><p className="text-sm text-muted-foreground capitalize">{selected.brand} {selected.model}</p></div>
+            <div>
+              <button onClick={() => setSelectedDevice(null)} className="lg:hidden text-xs text-muted-foreground mb-2 flex items-center gap-1 hover:text-foreground">&larr; {t('common.back') || 'Back'}</button>
+              <h2 className="font-bold">{selected.name}</h2><p className="text-sm text-muted-foreground capitalize">{selected.brand} {selected.model}</p>
+            </div>
             <div className="flex items-center gap-2">
               <Badge variant={selected.status === 'online' ? 'default' : 'destructive'} className="capitalize">{selected.status}</Badge>
               <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => openEdit(selected)}><Pencil className="h-3 w-3" /></Button>
@@ -199,16 +234,57 @@ export default function DevicesPage() {
               <CardContent className="text-sm text-muted-foreground">{selected.notes}</CardContent>
             </Card>
           )}
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1"><RefreshCw className="mr-1 h-3 w-3" /> {t('common.test')}</Button>
-            <Button variant="outline" className="flex-1" onClick={() => openEdit(selected)}><Pencil className="mr-1 h-3 w-3" /> {t('common.edit')}</Button>
-            <Button variant="outline" className="text-destructive" onClick={() => setDeleteDevice(selected)}><Trash2 className="h-3 w-3" /></Button>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => {
+                const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+                fetch(`${backendUrl}/api/v1/devices/${selected.id}/test`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+                  .then(r => r.json())
+                  .then(d => {
+                    if (d.data?.reachable) alert(`Conectado — Latencia: ${d.data.latencyMs}ms`);
+                    else alert(`No alcanzable: ${d.data?.error || 'Sin respuesta'}`);
+                  })
+                  .catch(() => alert('Error al probar conexión'));
+              }}>
+                <RefreshCw className="mr-1 h-3 w-3" /> {t('common.test')}
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => openEdit(selected)}><Pencil className="mr-1 h-3 w-3" /> {t('common.edit')}</Button>
+              <Button variant="outline" className="text-destructive" onClick={() => setDeleteDevice(selected)}><Trash2 className="h-3 w-3" /></Button>
+            </div>
+            <Button variant="default" className="w-full" onClick={() => {
+              const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+              fetch(`${backendUrl}/api/v1/devices/${selected.id}/register-stream`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+                .then(r => r.json())
+                .then(d => {
+                  if (d.data?.registered > 0) alert(`Stream registrado: ${d.data.registered} canal(es) en MediaMTX`);
+                  else alert(`Error: ${d.data?.errors?.join(', ') || 'No se pudo registrar'}`);
+                })
+                .catch(() => alert('Error al registrar stream — Verificar que MediaMTX esté activo'));
+            }}>
+              <PlayCircle className="mr-1.5 h-4 w-4" /> Registrar Stream en Vista en Vivo
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => {
+              const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+              fetch(`${backendUrl}/api/v1/devices/${selected.id}/rtsp-url`)
+                .then(r => r.json())
+                .then(d => {
+                  if (d.data?.rtspUrl) {
+                    navigator.clipboard.writeText(d.data.rtspUrl);
+                    alert(`URL RTSP copiada:\n${d.data.rtspUrl}\n\nStream ID: ${d.data.streamId}`);
+                  }
+                })
+                .catch(() => alert('Error al obtener URL RTSP'));
+            }}>
+              <Video className="mr-1.5 h-4 w-4" /> Ver URL RTSP
+            </Button>
           </div>
         </div>
       )}
 
       <DeviceFormDialog open={formOpen} onOpenChange={setFormOpen} device={editDevice} />
       <DeleteDeviceDialog open={!!deleteDevice} onOpenChange={() => setDeleteDevice(null)} device={deleteDevice} onDeleted={() => setSelectedDevice(null)} />
+    </div>
+      )}
     </div>
   );
 }

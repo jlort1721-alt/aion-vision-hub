@@ -39,6 +39,11 @@ export const ALL_MODULES: ModulePermission[] = [
   { module: 'keys', label: 'Key Management', icon: 'KeyRound', path: '/keys' },
   { module: 'compliance', label: 'Compliance', icon: 'ShieldCheck', path: '/compliance' },
   { module: 'training', label: 'Training', icon: 'GraduationCap', path: '/training' },
+  { module: 'posts', label: 'Posts', icon: 'Building2', path: '/posts' },
+  { module: 'notes', label: 'Notes', icon: 'StickyNote', path: '/notes' },
+  { module: 'documents', label: 'Documents', icon: 'FolderOpen', path: '/documents' },
+  { module: 'minuta', label: 'Minuta', icon: 'ClipboardList', path: '/minuta' },
+  { module: 'phone', label: 'Phone Panel', icon: 'Smartphone', path: '/phone' },
   { module: 'settings', label: 'Settings', icon: 'Settings', path: '/settings' },
   { module: 'admin', label: 'Admin', icon: 'Users', path: '/admin' },
 ];
@@ -52,13 +57,16 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'intercom', 'database', 'ai_assistant', 'reports', 'settings',
     'shifts', 'sla', 'emergency', 'patrols',
     'automation', 'visitors', 'analytics',
-    'contracts', 'keys', 'training',
+    'contracts', 'keys', 'training', 'posts',
+    'notes', 'documents', 'minuta', 'phone',
   ],
   viewer: [
     'dashboard', 'live_view', 'playback', 'events', 'reports',
+    'documents',
   ],
   auditor: [
     'dashboard', 'events', 'incidents', 'audit', 'reports',
+    'documents', 'notes',
   ],
 };
 

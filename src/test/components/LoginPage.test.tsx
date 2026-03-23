@@ -69,23 +69,23 @@ describe("LoginPage", () => {
   it("renders login form with email and password fields", () => {
     render(<LoginPage />);
 
-    expect(screen.getByRole("tab", { name: /sign in/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /sign up/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /iniciar sesión/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /registrarse/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/correo electrónico/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/contraseña/i)).toBeInTheDocument();
   });
 
-  it("renders the AION Vision Hub branding", () => {
+  it("renders the Clave Seguridad branding", () => {
     render(<LoginPage />);
 
-    expect(screen.getByText("AION Vision Hub")).toBeInTheDocument();
-    expect(screen.getByText("Unified Video Surveillance Platform")).toBeInTheDocument();
+    expect(screen.getByText("Clave Seguridad")).toBeInTheDocument();
+    expect(screen.getByText("Centro de Monitoreo y Control")).toBeInTheDocument();
   });
 
   it("has a submit button for sign in", () => {
     render(<LoginPage />);
 
-    const signInButton = screen.getByRole("button", { name: /sign in/i });
+    const signInButton = screen.getByRole("button", { name: /iniciar sesión/i });
     expect(signInButton).toBeInTheDocument();
     expect(signInButton).toHaveAttribute("type", "submit");
   });
@@ -93,8 +93,8 @@ describe("LoginPage", () => {
   it("shows validation when submitting empty login form (HTML required)", () => {
     render(<LoginPage />);
 
-    const emailInput = screen.getByLabelText(/email/i);
-    const passwordInput = screen.getByLabelText(/password/i);
+    const emailInput = screen.getByLabelText(/correo electrónico/i);
+    const passwordInput = screen.getByLabelText(/contraseña/i);
 
     expect(emailInput).toBeRequired();
     expect(passwordInput).toBeRequired();
@@ -104,10 +104,10 @@ describe("LoginPage", () => {
     mockLogin.mockResolvedValue(undefined);
     render(<LoginPage />);
 
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "user@test.com" } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText(/correo electrónico/i), { target: { value: "user@test.com" } });
+    fireEvent.change(screen.getByLabelText(/contraseña/i), { target: { value: "password123" } });
 
-    const form = screen.getByRole("button", { name: /sign in/i }).closest("form")!;
+    const form = screen.getByRole("button", { name: /iniciar sesión/i }).closest("form")!;
     fireEvent.submit(form);
 
     await waitFor(() => {
@@ -119,10 +119,10 @@ describe("LoginPage", () => {
     mockLogin.mockResolvedValue(undefined);
     render(<LoginPage />);
 
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "user@test.com" } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "secret" } });
+    fireEvent.change(screen.getByLabelText(/correo electrónico/i), { target: { value: "user@test.com" } });
+    fireEvent.change(screen.getByLabelText(/contraseña/i), { target: { value: "secret" } });
 
-    const form = screen.getByRole("button", { name: /sign in/i }).closest("form")!;
+    const form = screen.getByRole("button", { name: /iniciar sesión/i }).closest("form")!;
     fireEvent.submit(form);
 
     await waitFor(() => {
@@ -134,16 +134,16 @@ describe("LoginPage", () => {
     mockLogin.mockRejectedValue(new Error("Invalid credentials"));
     render(<LoginPage />);
 
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "user@test.com" } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "wrong" } });
+    fireEvent.change(screen.getByLabelText(/correo electrónico/i), { target: { value: "user@test.com" } });
+    fireEvent.change(screen.getByLabelText(/contraseña/i), { target: { value: "wrong" } });
 
-    const form = screen.getByRole("button", { name: /sign in/i }).closest("form")!;
+    const form = screen.getByRole("button", { name: /iniciar sesión/i }).closest("form")!;
     fireEvent.submit(form);
 
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: "Login failed",
+          title: "Error de autenticación",
           variant: "destructive",
         })
       );
@@ -153,7 +153,7 @@ describe("LoginPage", () => {
   it("has a sign up tab visible", () => {
     render(<LoginPage />);
 
-    const signUpTab = screen.getByRole("tab", { name: /sign up/i });
+    const signUpTab = screen.getByRole("tab", { name: /registrarse/i });
     expect(signUpTab).toBeInTheDocument();
   });
 });

@@ -1,213 +1,268 @@
-# AION Vision Hub — Deployment Guide
+# DEPLOYMENT.md - Clave Seguridad
 
-## Architecture Overview
+> Production deployment guide
+> Updated: 2026-03-23
 
-```
-┌─────────────┐     ┌──────────────────────────────────────────┐
-│  Frontend    │     │  Backend Monorepo (pnpm + Turbo)         │
-│  React/Vite  │     │  ┌──────────────┐  ┌──────────────────┐ │
-│  (npm)       │     │  │ backend-api  │  │  edge-gateway    │ │
-│              │     │  │ Fastify:3000 │  │  Fastify:3100    │ │
-│  dist/ → CDN │     │  └──────────────┘  └──────────────────┘ │
-└─────────────┘     └──────────────────────────────────────────┘
-                     ┌──────────────────┐  ┌──────────────────┐
-                     │ gateway (standalone)│  │ MediaMTX (RTSP) │
-                     │ Fastify:3100     │  │ :8554/8888/8889  │
-                     └──────────────────┘  └──────────────────┘
-```
+---
 
-## CI/CD Pipeline
-
-### Workflows
-
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| `ci.yml` | PR + push to `main` | Lint, typecheck, test, build, Docker validate |
-| `deploy-staging.yml` | CI passes on `main` | Build images → push to GHCR → deploy staging |
-| `deploy-production.yml` | Release published | Build images → push to GHCR → deploy production |
-| `release.yml` | Manual dispatch | Validate → test → create tag → GitHub release |
-
-### Pipeline Flow
+## 1. Architecture Overview
 
 ```
-PR opened → CI (lint/typecheck/test/build) → Quality Gate → PR review
+Internet
     │
     ▼
-Merge to main → CI → Deploy Staging → Smoke tests
+[NGINX + TLS]  ─── Port 443 (HTTPS)
     │
-    ▼
-Manual Release (workflow_dispatch) → Tag + GitHub Release
-    │
-    ▼
-Release published → Deploy Production (manual approval) → Health checks
+    ├──► [Frontend SPA]     ─── Static files served by NGINX
+    ├──► [Backend API]      ─── Port 3000 (proxied via /api/)
+    ├──► [WebSocket]        ─── Port 3000 (proxied via /ws/)
+    └──► [Edge Gateway]     ─── Port 3100 (proxied via /edge/)
+              │
+              ▼
+         [MediaMTX]
+         ├── RTSP  (8554)
+         ├── WebRTC (8889)
+         └── HLS   (8888)
+
+[PostgreSQL 16]  ─── Port 5432 (internal)
+[Redis 7]        ─── Port 6379 (internal)
 ```
 
-## Frontend Deployment
+---
 
-### Build
+## 2. Prerequisites
 
+### Hardware (Minimum)
+| Component | Spec |
+|-----------|------|
+| CPU | 4 cores |
+| RAM | 8 GB |
+| Storage | 100 GB SSD |
+| Network | 100 Mbps symmetric |
+| OS | Ubuntu 22.04 LTS / Debian 12 |
+
+### Hardware (Recommended for 50+ cameras)
+| Component | Spec |
+|-----------|------|
+| CPU | 8 cores |
+| RAM | 16 GB |
+| Storage | 500 GB SSD |
+| Network | 1 Gbps symmetric |
+
+### Software
+- Docker >= 24.0
+- Docker Compose >= 2.20
+- Git
+- certbot (for TLS certificates)
+
+---
+
+## 3. Deployment Steps
+
+### Step 1: Clone Repository
 ```bash
-npm ci
-npm run build
-# Output: dist/
+git clone <repo-url> /opt/clave-seguridad
+cd /opt/clave-seguridad
 ```
 
-### Hosting Options
-
-| Provider | Command / Config |
-|----------|-----------------|
-| **Vercel** | Connect repo, set root directory to `/` |
-| **Netlify** | Build command: `npm run build`, publish dir: `dist` |
-| **Cloudflare Pages** | Build command: `npm run build`, output dir: `dist` |
-| **Lovable** | Click **Publish** in Lovable editor |
-| **Self-hosted** | Serve `dist/` with nginx, caddy, or any static server |
-
-### Environment Variables (Build Time)
-
+### Step 2: Configure Environment
 ```bash
+cp .env.docker.example .env.docker
+```
+
+Edit `.env.docker`:
+```env
+# Required
+DB_USER=clave_user
+DB_PASSWORD=<strong-password>
+DB_NAME=clave_db
+DB_PORT=5432
+JWT_SECRET=<min-32-char-secret>
+CORS_ORIGINS=https://your-domain.com
+CREDENTIAL_ENCRYPTION_KEY=<min-32-char-key>
+
+# Backend
+BACKEND_PORT=3000
+NODE_ENV=production
+LOG_LEVEL=info
+
+# Frontend
+FRONTEND_PORT=8080
+VITE_API_URL=https://your-domain.com/api
 VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=eyJ...your-anon-key
+VITE_SUPABASE_PUBLISHABLE_KEY=<your-anon-key>
+
+# Optional integrations
+# OPENAI_API_KEY=sk-...
+# RESEND_API_KEY=re_...
+# WHATSAPP_ACCESS_TOKEN=...
 ```
 
-These are **public/publishable** keys — safe to embed in the frontend bundle.
-
-## Backend Deployment
-
-### Docker (Recommended)
-
+### Step 3: SSL/TLS Setup
 ```bash
-cd backend
+# Install certbot
+apt install certbot
 
+# Get certificate
+certbot certonly --standalone -d your-domain.com
+
+# Update nginx.conf to use certificates
+# Add to server block:
+#   listen 443 ssl;
+#   ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+#   ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+```
+
+### Step 4: Build & Start
+```bash
 # Build all images
-docker compose build
+docker-compose build
 
-# Start all services
-docker compose up -d
+# Start services
+docker-compose up -d
 
-# Check health
-curl http://localhost:3000/health
-curl http://localhost:3100/health
+# Verify all services are healthy
+docker-compose ps
 ```
 
-### Individual Docker Images
-
+### Step 5: Run Migrations
 ```bash
-# Backend API
-docker build -f apps/backend-api/Dockerfile -t aion/backend-api .
-docker run -p 3000:3000 --env-file .env aion/backend-api
-
-# Edge Gateway
-docker build -f apps/edge-gateway/Dockerfile -t aion/edge-gateway .
-docker run -p 3100:3100 --env-file .env aion/edge-gateway
+docker-compose exec backend pnpm db:migrate
 ```
 
-### Node.js (Without Docker)
-
+### Step 6: Verify Health
 ```bash
-cd backend
-pnpm install --frozen-lockfile
-pnpm build
-pnpm --filter @aion/backend-api start
-pnpm --filter @aion/edge-gateway start
+# Backend health
+curl -s https://your-domain.com/api/health | jq .
+
+# Frontend
+curl -s -o /dev/null -w "%{http_code}" https://your-domain.com
+
+# Streams
+curl -s http://localhost:9997/v3/config/global | jq .status
 ```
 
-## Gateway Deployment (Standalone)
-
+### Step 7: Create First Admin User
 ```bash
-cd gateway
-npm ci
-npm run build
-npm start
-# or
-docker build -t aion-gateway .
-docker run -p 3100:3100 --env-file .env aion-gateway
+# Via Supabase dashboard or API
+# Then set role in database:
+docker-compose exec postgres psql -U $DB_USER $DB_NAME -c "
+  UPDATE profiles SET role = 'super_admin' WHERE email = 'admin@example.com';"
 ```
 
-## Database
+---
 
-Schema is managed via Drizzle migrations:
+## 4. Docker Compose Services
 
+| Service | Image | Ports (internal) | Volume |
+|---------|-------|--------|--------|
+| frontend | Dockerfile.frontend | 80 → 8080 | - |
+| backend | backend/Dockerfile | 3000 | - |
+| postgres | postgres:16-alpine | 5432 | clave_pgdata |
+| redis | redis:7-alpine | 6379 | clave_redis_data |
+| mediamtx | bluenviern/mediamtx | 8554,8888,8889,9997 | clave_media_storage |
+
+---
+
+## 5. NGINX Configuration
+
+Key settings in `nginx.conf`:
+- SPA routing (fallback to index.html)
+- API reverse proxy to backend:3000
+- WebSocket upgrade support
+- Static asset caching (30 days, immutable)
+- Security headers (CSP, X-Frame-Options, HSTS)
+- Gzip compression
+
+---
+
+## 6. Backup Strategy
+
+| Type | Schedule | Retention | Method |
+|------|----------|-----------|--------|
+| Database | Daily 2 AM UTC | 30 backups | backup-worker (automatic) |
+| PostgreSQL | Weekly | 4 weeks | pg_dump to external storage |
+| Configuration | On change | Git history | Committed to repository |
+| Media storage | N/A | Per retention policy | retention-worker |
+
+---
+
+## 7. Monitoring Setup
+
+### Health Check URLs
+- Backend: `http://backend:3000/health/ready`
+- PostgreSQL: `pg_isready -h postgres -p 5432`
+- Redis: `redis-cli -h redis ping`
+- MediaMTX: `http://mediamtx:9997/v3/config/global`
+
+### Log Aggregation
 ```bash
-cd backend
-pnpm db:generate   # Generate migration from schema changes
-pnpm db:migrate    # Apply pending migrations
+# View all logs
+docker-compose logs -f --tail=100
+
+# JSON parse backend logs
+docker-compose logs backend 2>&1 | jq -R 'fromjson? // .'
 ```
 
-Supabase migrations live in `supabase/migrations/`.
+### Prometheus Scrape Config
+```yaml
+scrape_configs:
+  - job_name: 'clave-backend'
+    static_configs:
+      - targets: ['backend:3000']
+    metrics_path: '/health/metrics'
+```
 
-## Environment Strategy
+---
 
-| Environment | Branch/Trigger | URL | Purpose |
-|-------------|---------------|-----|---------|
-| **Development** | Local | `localhost:*` | Developer workstation |
-| **Staging** | `main` branch | Configured in GitHub env | Integration testing, QA |
-| **Production** | Release tag | Configured in GitHub env | Live users |
+## 8. Scaling Considerations
 
-### GitHub Environment Setup
+### Vertical Scaling
+- Increase Docker resource limits in docker-compose.yml
+- PostgreSQL: Tune `shared_buffers`, `work_mem`, `max_connections`
+- Redis: Increase `maxmemory`
 
-1. Go to **Settings → Environments**
-2. Create `staging` and `production` environments
-3. For `production`: add **required reviewers** and **deployment branch policy** (tags only)
-4. Set environment variables:
-   - `STAGING_URL` / `PRODUCTION_URL`
-   - `STAGING_API_URL` / `PRODUCTION_API_URL`
-   - `STAGING_GATEWAY_URL` / `PRODUCTION_GATEWAY_URL`
+### Horizontal Scaling
+- Backend API: Run multiple instances behind load balancer (Redis required for state)
+- Edge Gateway: One per physical site
+- MediaMTX: One per ~50 concurrent streams
+- PostgreSQL: Read replicas for reporting queries
 
-## Rollback
+### Resource Limits (docker-compose.yml)
+```yaml
+deploy:
+  resources:
+    limits:
+      memory: 512M    # Backend API
+      cpus: '0.5'
+    limits:
+      memory: 512M    # PostgreSQL
+      cpus: '1.0'
+    limits:
+      memory: 256M    # Redis
+      cpus: '0.25'
+    limits:
+      memory: 256M    # MediaMTX (increase for more streams)
+      cpus: '0.5'
+```
 
-### Docker-Based Rollback
+---
 
+## 9. CI/CD Pipeline
+
+### Automated Deploy (GitHub Actions)
+1. Create GitHub release with tag `v*` (e.g., `v1.0.0`)
+2. Pipeline: tests → Docker build → push to GHCR → SSH deploy → health verify
+3. Production deploy requires manual approval via GitHub Environment
+4. Rollback: re-deploy previous tag
+
+### Manual Deploy
 ```bash
-# 1. Identify the previous working tag
-docker images ghcr.io/your-org/aion/backend-api --format "{{.Tag}}"
-
-# 2. Roll back to previous version
-docker compose down
-export IMAGE_TAG=v1.2.3   # Previous working version
-docker compose up -d
-
-# 3. Verify health
-curl http://localhost:3000/health
+ssh user@server
+cd /opt/clave-seguridad
+git pull origin main
+docker-compose build
+docker-compose up -d
+docker-compose exec backend pnpm db:migrate
+curl http://localhost:3000/health/ready
 ```
-
-### GHCR Image Rollback
-
-```bash
-# Pull specific version
-docker pull ghcr.io/your-org/aion/backend-api:1.2.3
-docker pull ghcr.io/your-org/aion/edge-gateway:1.2.3
-
-# Redeploy with pinned version
-docker compose up -d
-```
-
-### Frontend Rollback
-
-For SPA hosts (Vercel, Netlify), use their built-in rollback:
-- **Vercel**: Deployments → select previous → Promote to Production
-- **Netlify**: Deploys → select previous → Publish deploy
-
-### Database Rollback
-
-```bash
-# Check migration status
-cd backend
-pnpm drizzle-kit status
-
-# Manually revert specific migration if needed
-# (Drizzle doesn't have auto-rollback — prepare DOWN migrations for critical changes)
-```
-
-## Monitoring
-
-- Container health checks: built into Docker Compose and Dockerfiles
-- Application logs: Pino JSON logs → forward to your log aggregator
-- Suggested stack: Grafana + Loki (logs) + Prometheus (metrics)
-
-## PWA Support
-
-The frontend builds as a PWA with:
-- Offline-capable shell (Workbox)
-- Install prompt on compatible browsers
-- Custom icons and splash screens
-- Configured in `vite.config.ts` via `vite-plugin-pwa`

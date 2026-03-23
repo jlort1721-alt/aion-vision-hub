@@ -1,24 +1,36 @@
+// ═══════════════════════════════════════════════════════════
+// AION VISION HUB — Data Hooks (migrated to Fastify backend)
+// These hooks route through apiClient → Fastify for proper
+// tenant isolation, audit logging, rate limiting, and RBAC.
+// ═══════════════════════════════════════════════════════════
+
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { operationsApi, cloudAccountsApi, analyticsApi } from '@/services/api';
+
+// ── Response types ────────────────────────────────────────
+
+interface PaginatedResponse<T> {
+  data: T[];
+  meta?: { total?: number; page?: number; pageSize?: number };
+}
+
+// ── Devices ───────────────────────────────────────────────
 
 export function useDevices(refetchInterval?: number) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['devices'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('devices')
-        .select('*, sites!inner(wan_ip, name)')
-        .order('name');
-      if (error) throw error;
-      // Enrich each device with remoteAddress computed from site WAN IP + device port
-      return (data ?? []).map((d: any) => ({
+      const response = await apiClient.get<PaginatedResponse<any>>('/devices', { limit: '500' });
+      return (response.data ?? []).map((d: any) => ({
         ...d,
-        site_wan_ip: d.sites?.wan_ip ?? null,
-        site_name: d.sites?.name ?? null,
-        remote_address: d.sites?.wan_ip && d.port ? `${d.sites.wan_ip}:${d.port}` : null,
+        site_wan_ip: d.site_wan_ip ?? d.sites?.wan_ip ?? null,
+        site_name: d.site_name ?? d.sites?.name ?? null,
+        remote_address: (d.site_wan_ip || d.sites?.wan_ip) && d.port
+          ? `${d.site_wan_ip || d.sites?.wan_ip}:${d.port}`
+          : null,
       }));
     },
     enabled: isAuthenticated,
@@ -26,19 +38,22 @@ export function useDevices(refetchInterval?: number) {
   });
 }
 
+// ── Sites ─────────────────────────────────────────────────
+
 export function useSites(refetchInterval?: number) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['sites'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('sites').select('*').order('name');
-      if (error) throw error;
-      return data;
+      const response = await apiClient.get<PaginatedResponse<any>>('/sites');
+      return response.data ?? [];
     },
     enabled: isAuthenticated,
     refetchInterval,
   });
 }
+
+// ── Events ────────────────────────────────────────────────
 
 export interface EventFilters {
   search?: string;
@@ -60,39 +75,23 @@ export function useEvents(filters?: EventFilters) {
   return useQuery({
     queryKey: ['events', filters],
     queryFn: async () => {
-      let query = supabase.from('events').select('*', { count: 'exact' });
+      const params: Record<string, string | number> = {
+        page,
+        limit: pageSize,
+      };
+      if (filters?.search) params.search = filters.search;
+      if (filters?.severity && filters.severity !== 'all') params.severity = filters.severity;
+      if (filters?.status && filters.status !== 'all') params.status = filters.status;
+      if (filters?.device_id && filters.device_id !== 'all') params.deviceId = filters.device_id;
+      if (filters?.site_id && filters.site_id !== 'all') params.siteId = filters.site_id;
+      if (filters?.date_from) params.from = filters.date_from;
+      if (filters?.date_to) params.to = filters.date_to;
 
-      if (filters?.search) {
-        query = query.ilike('title', `%${filters.search}%`);
-      }
-      if (filters?.severity && filters.severity !== 'all') {
-        query = query.eq('severity', filters.severity);
-      }
-      if (filters?.status && filters.status !== 'all') {
-        query = query.eq('status', filters.status);
-      }
-      if (filters?.device_id && filters.device_id !== 'all') {
-        query = query.eq('device_id', filters.device_id);
-      }
-      if (filters?.site_id && filters.site_id !== 'all') {
-        query = query.eq('site_id', filters.site_id);
-      }
-      if (filters?.date_from) {
-        query = query.gte('created_at', filters.date_from);
-      }
-      if (filters?.date_to) {
-        query = query.lte('created_at', filters.date_to);
-      }
-
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-
-      const { data, error, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
-
-      if (error) throw error;
-      return { data: data ?? [], count: count ?? 0 };
+      const response = await apiClient.get<PaginatedResponse<any>>('/events', params);
+      return {
+        data: response.data ?? [],
+        count: response.meta?.total ?? (response.data?.length ?? 0),
+      };
     },
     enabled: isAuthenticated,
   });
@@ -104,36 +103,37 @@ export function useEventsLegacy(refetchInterval?: number) {
   return useQuery({
     queryKey: ['events-legacy'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('events').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
+      const response = await apiClient.get<PaginatedResponse<any>>('/events', { limit: '100' });
+      return response.data ?? [];
     },
     enabled: isAuthenticated,
     refetchInterval,
   });
 }
 
+// ── Incidents ─────────────────────────────────────────────
+
 export function useIncidents() {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['incidents'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('incidents').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
+      const response = await apiClient.get<PaginatedResponse<any>>('/incidents', { limit: '100' });
+      return response.data ?? [];
     },
     enabled: isAuthenticated,
   });
 }
+
+// ── Integrations (migrated to Fastify) ──
 
 export function useIntegrations() {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['integrations'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('integrations').select('*').order('name');
-      if (error) throw error;
-      return data;
+      const response = await apiClient.get<PaginatedResponse<any>>('/integrations');
+      return response.data ?? [];
     },
     enabled: isAuthenticated,
   });
@@ -144,39 +144,42 @@ export function useMcpConnectors() {
   return useQuery({
     queryKey: ['mcp_connectors'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('mcp_connectors').select('*').order('name');
-      if (error) throw error;
-      return data;
+      const response = await apiClient.get<PaginatedResponse<any>>('/mcp/connectors');
+      return response.data ?? [];
     },
     enabled: isAuthenticated,
   });
 }
+
+// ── Audit Logs ────────────────────────────────────────────
 
 export function useAuditLogs() {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['audit_logs'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(500);
-      if (error) throw error;
-      return data;
+      const response = await apiClient.get<PaginatedResponse<any>>('/audit/logs', { limit: '500' });
+      return response.data ?? [];
     },
     enabled: isAuthenticated,
   });
 }
+
+// ── AI Sessions (migrated to Fastify) ──
 
 export function useAiSessions() {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['ai_sessions'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('ai_sessions').select('*').order('created_at', { ascending: false }).limit(100);
-      if (error) throw error;
-      return data;
+      const response = await apiClient.get<PaginatedResponse<any>>('/ai/sessions', { limit: '100' });
+      return response.data ?? [];
     },
     enabled: isAuthenticated,
   });
 }
+
+// ── Operations & Analytics (already via API service layer) ──
 
 export function useOperationsDashboard(refetchInterval?: number) {
   const { isAuthenticated } = useAuth();
