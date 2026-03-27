@@ -1,24 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/contexts/I18nContext';
 import { useSections, useAccessPeople, useAccessPeopleMutations, useAccessVehicles, useAccessLogs } from '@/hooks/use-module-data';
 import {
-  UserCheck, Users, Car, Search, Plus, FileText, Download,
-  Shield, Clock, Pencil, Trash2, MoreHorizontal, Eye, Key, Camera, ScanLine, CarFront, CheckCircle2, AlertCircle
+  UserCheck, Users, Car, Search, Plus, FileText, Download, FileUp,
+  Shield, Clock, Pencil, Trash2, MoreHorizontal, Eye, Key, Camera, ScanLine, CarFront, CheckCircle2, AlertCircle, CalendarClock
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import DataImportDialog from '@/components/shared/DataImportDialog';
+import type { ImportEntityType } from '@/services/data-import-api';
+
+// ── Access Schedule Types & Helpers ──────────────────────────
+
+interface AccessSchedule {
+  id: string;
+  name: string;
+  type: 'allow' | 'deny';
+  dayOfWeek: number[]; // 0=Sun, 6=Sat
+  startTime: string;   // "08:00"
+  endTime: string;     // "18:00"
+  applies_to: 'all' | 'visitors' | 'contractors' | 'staff';
+  zone: string;
+  active: boolean;
+}
+
+const SCHEDULES_KEY = 'aion-access-schedules';
+const DAY_LABELS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+const EMPTY_SCHEDULE: Omit<AccessSchedule, 'id'> = {
+  name: '', type: 'allow', dayOfWeek: [1, 2, 3, 4, 5],
+  startTime: '08:00', endTime: '18:00', applies_to: 'all', zone: '', active: true,
+};
+
+function loadSchedules(): AccessSchedule[] {
+  try {
+    const raw = localStorage.getItem(SCHEDULES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function persistSchedules(schedules: AccessSchedule[]) {
+  try { localStorage.setItem(SCHEDULES_KEY, JSON.stringify(schedules)); } catch { /* no-op */ }
+}
 
 export default function AccessControlPage() {
   const { t } = useI18n();
@@ -34,7 +75,59 @@ export default function AccessControlPage() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importType, setImportType] = useState<ImportEntityType>('residents');
   const [form, setForm] = useState({ full_name: '', type: 'resident', section_id: '', unit: '', phone: '', document_id: '', notes: '' });
+
+  // Schedule rules state
+  const [schedules, setSchedules] = useState<AccessSchedule[]>(() => loadSchedules());
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<AccessSchedule | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [scheduleForm, setScheduleForm] = useState<Omit<AccessSchedule, 'id'>>(EMPTY_SCHEDULE);
+
+  // Persist schedules whenever they change
+  useEffect(() => { persistSchedules(schedules); }, [schedules]);
+
+  const openScheduleDialog = useCallback((schedule?: AccessSchedule) => {
+    if (schedule) {
+      setEditingSchedule(schedule);
+      setScheduleForm({ name: schedule.name, type: schedule.type, dayOfWeek: [...schedule.dayOfWeek], startTime: schedule.startTime, endTime: schedule.endTime, applies_to: schedule.applies_to, zone: schedule.zone, active: schedule.active });
+    } else {
+      setEditingSchedule(null);
+      setScheduleForm({ ...EMPTY_SCHEDULE });
+    }
+    setScheduleDialogOpen(true);
+  }, []);
+
+  const saveSchedule = useCallback(() => {
+    if (!scheduleForm.name.trim()) { toast.error('Name is required'); return; }
+    if (editingSchedule) {
+      setSchedules(prev => prev.map(s => s.id === editingSchedule.id ? { ...scheduleForm, id: editingSchedule.id } : s));
+      toast.success('Schedule updated');
+    } else {
+      setSchedules(prev => [...prev, { ...scheduleForm, id: `sched-${Date.now()}` }]);
+      toast.success('Schedule created');
+    }
+    setScheduleDialogOpen(false);
+  }, [scheduleForm, editingSchedule]);
+
+  const deleteSchedule = useCallback((id: string) => {
+    setSchedules(prev => prev.filter(s => s.id !== id));
+    setDeleteConfirm(null);
+    toast.success('Schedule deleted');
+  }, []);
+
+  const toggleScheduleActive = useCallback((id: string) => {
+    setSchedules(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
+  }, []);
+
+  const toggleDay = useCallback((day: number) => {
+    setScheduleForm(prev => {
+      const days = prev.dayOfWeek.includes(day) ? prev.dayOfWeek.filter(d => d !== day) : [...prev.dayOfWeek, day].sort();
+      return { ...prev, dayOfWeek: days };
+    });
+  }, []);
 
   const getSectionName = (id: string) => sections.find((s: any) => s.id === id)?.name || '—';
 
@@ -70,14 +163,15 @@ export default function AccessControlPage() {
               <p className="text-xs text-muted-foreground">{t('access.subtitle')}</p>
             </div>
             <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setImportType('residents'); setImportOpen(true); }}><FileUp className="mr-1 h-3 w-3" /> Import</Button>
               <Button variant="outline" size="sm" onClick={() => toast.info('Export requires selecting a report type in the Reports tab')}><Download className="mr-1 h-3 w-3" /> {t('common.export')}</Button>
               <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="mr-1 h-3 w-3" /> {t('access.add_person')}</Button>
             </div>
           </div>
           <div className="grid grid-cols-4 gap-2">
             <Card className="p-2"><div className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('access.total_people')}</p><p className="text-lg font-bold">{people.length}</p></div></div></Card>
-            <Card className="p-2"><div className="flex items-center gap-2"><UserCheck className="h-4 w-4 text-green-500" /><div><p className="text-xs text-muted-foreground">{t('access.residents')}</p><p className="text-lg font-bold">{people.filter((p: any) => p.type === 'resident').length}</p></div></div></Card>
-            <Card className="p-2"><div className="flex items-center gap-2"><Car className="h-4 w-4 text-blue-500" /><div><p className="text-xs text-muted-foreground">{t('access.vehicles')}</p><p className="text-lg font-bold">{vehicles.length}</p></div></div></Card>
+            <Card className="p-2"><div className="flex items-center gap-2"><UserCheck className="h-4 w-4 text-success" /><div><p className="text-xs text-muted-foreground">{t('access.residents')}</p><p className="text-lg font-bold">{people.filter((p: any) => p.type === 'resident').length}</p></div></div></Card>
+            <Card className="p-2"><div className="flex items-center gap-2"><Car className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('access.vehicles')}</p><p className="text-lg font-bold">{vehicles.length}</p></div></div></Card>
             <Card className="p-2"><div className="flex items-center gap-2"><Clock className="h-4 w-4 text-warning" /><div><p className="text-xs text-muted-foreground">{t('access.today_accesses')}</p><p className="text-lg font-bold">{logs.length}</p></div></div></Card>
           </div>
         </div>
@@ -90,6 +184,7 @@ export default function AccessControlPage() {
               <TabsTrigger value="vehicles" className="text-xs"><Car className="mr-1 h-3 w-3" /> {t('access.vehicles')}</TabsTrigger>
               <TabsTrigger value="lpr_scanner" className="text-xs text-primary data-[state=active]:bg-primary/20"><ScanLine className="mr-1 h-3 w-3" /> LPR Vision</TabsTrigger>
               <TabsTrigger value="reports" className="text-xs"><FileText className="mr-1 h-3 w-3" /> {t('reports.title')}</TabsTrigger>
+              <TabsTrigger value="schedules" className="text-xs"><CalendarClock className="mr-1 h-3 w-3" /> Schedules</TabsTrigger>
               <TabsTrigger value="credentials" className="text-xs"><Key className="mr-1 h-3 w-3" /> {t('access.credentials')}</TabsTrigger>
             </TabsList>
           </div>
@@ -216,8 +311,8 @@ export default function AccessControlPage() {
                    </CardTitle>
                    <div className="flex items-center gap-2">
                      <span className="relative flex h-2 w-2">
-                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                       <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                       <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
                      </span>
                      <span className="text-[10px] text-muted-foreground font-mono">LIVE / OCR ACTIVE</span>
                    </div>
@@ -260,7 +355,7 @@ export default function AccessControlPage() {
                    </div>
                    {/* MOCK PLATE 2 */}
                    <div className="flex items-center justify-between p-3 rounded-lg border border-destructive/30 bg-destructive/5 relative overflow-hidden">
-                     <div className="absolute top-0 left-0 w-1 h-full bg-red-500 animate-pulse" />
+                     <div className="absolute top-0 left-0 w-1 h-full bg-destructive animate-pulse" />
                      <div className="flex gap-4 items-center">
                        <div className="h-10 w-24 bg-yellow-400 rounded border-2 border-black flex items-center justify-center">
                          <span className="text-black font-extrabold font-mono tracking-widest">KTR-92F</span>
@@ -305,6 +400,93 @@ export default function AccessControlPage() {
                 </Card>
               ))}
             </div>
+          </TabsContent>
+
+          <TabsContent value="schedules" className="flex-1 overflow-auto m-0">
+            <div className="px-4 py-3 border-b flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold flex items-center gap-2"><CalendarClock className="h-4 w-4 text-primary" /> Access Schedules</h2>
+                <p className="text-xs text-muted-foreground">Define time-based access rules for zones and groups</p>
+              </div>
+              <Button size="sm" onClick={() => openScheduleDialog()}><Plus className="mr-1 h-3 w-3" /> Add Schedule</Button>
+            </div>
+            {schedules.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <CalendarClock className="h-12 w-12 mb-2 opacity-20" />
+                <p className="text-sm">No access schedules defined</p>
+                <Button variant="outline" size="sm" className="mt-2" onClick={() => openScheduleDialog()}>
+                  <Plus className="mr-1 h-3 w-3" /> Create First Schedule
+                </Button>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Days</TableHead>
+                    <TableHead>Time Range</TableHead>
+                    <TableHead>Applies To</TableHead>
+                    <TableHead>Zone</TableHead>
+                    <TableHead>Active</TableHead>
+                    <TableHead className="w-10"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {schedules.map(sched => (
+                    <TableRow key={sched.id} className={cn(!sched.active && 'opacity-50')}>
+                      <TableCell className="font-medium text-sm">{sched.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={sched.type === 'allow' ? 'default' : 'destructive'} className="text-[10px] capitalize">{sched.type}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-0.5">
+                          {DAY_LABELS.map((label, i) => (
+                            <span
+                              key={i}
+                              className={cn(
+                                'w-5 h-5 rounded text-[9px] flex items-center justify-center font-medium',
+                                sched.dayOfWeek.includes(i)
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-muted text-muted-foreground',
+                              )}
+                            >
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs font-mono">{sched.startTime} - {sched.endTime}</TableCell>
+                      <TableCell className="text-xs capitalize">{sched.applies_to}</TableCell>
+                      <TableCell className="text-xs">{sched.zone || '—'}</TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={sched.active}
+                          onCheckedChange={() => toggleScheduleActive(sched.id)}
+                          className="h-5 w-9 data-[state=checked]:bg-primary"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openScheduleDialog(sched)}>
+                              <Pencil className="mr-2 h-3 w-3" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive" onClick={() => setDeleteConfirm(sched.id)}>
+                              <Trash2 className="mr-2 h-3 w-3" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </TabsContent>
 
           <TabsContent value="credentials" className="flex-1 overflow-auto m-0 p-4">
@@ -395,6 +577,146 @@ export default function AccessControlPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <DataImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        entityType={importType}
+        onImportComplete={() => {
+          // Trigger refetch of the relevant data lists
+          window.location.reload();
+        }}
+      />
+
+      {/* ── Schedule Create/Edit Dialog ─── */}
+      <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingSchedule ? 'Edit Schedule' : 'New Access Schedule'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label>Name *</Label>
+              <Input
+                value={scheduleForm.name}
+                onChange={e => setScheduleForm(p => ({ ...p, name: e.target.value }))}
+                placeholder="e.g. Business Hours"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Type</Label>
+                <Select value={scheduleForm.type} onValueChange={(v: 'allow' | 'deny') => setScheduleForm(p => ({ ...p, type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="allow">Allow</SelectItem>
+                    <SelectItem value="deny">Deny</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Applies To</Label>
+                <Select value={scheduleForm.applies_to} onValueChange={(v: 'all' | 'visitors' | 'contractors' | 'staff') => setScheduleForm(p => ({ ...p, applies_to: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="visitors">Visitors</SelectItem>
+                    <SelectItem value="contractors">Contractors</SelectItem>
+                    <SelectItem value="staff">Staff</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Days of Week</Label>
+              <div className="flex gap-1">
+                {DAY_LABELS.map((label, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => toggleDay(i)}
+                    className={cn(
+                      'w-9 h-9 rounded-md text-xs font-medium transition-colors border',
+                      scheduleForm.dayOfWeek.includes(i)
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted text-muted-foreground border-border hover:bg-muted/80',
+                    )}
+                    title={DAY_NAMES[i]}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Start Time</Label>
+                <Input
+                  type="time"
+                  value={scheduleForm.startTime}
+                  onChange={e => setScheduleForm(p => ({ ...p, startTime: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>End Time</Label>
+                <Input
+                  type="time"
+                  value={scheduleForm.endTime}
+                  onChange={e => setScheduleForm(p => ({ ...p, endTime: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Zone</Label>
+              <Input
+                value={scheduleForm.zone}
+                onChange={e => setScheduleForm(p => ({ ...p, zone: e.target.value }))}
+                placeholder="e.g. Main Entrance, Parking, All"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={scheduleForm.active}
+                onCheckedChange={active => setScheduleForm(p => ({ ...p, active }))}
+                className="h-5 w-9 data-[state=checked]:bg-primary"
+              />
+              <Label className="cursor-pointer">Active</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>Cancel</Button>
+            <Button onClick={saveSchedule} disabled={!scheduleForm.name.trim()}>
+              {editingSchedule ? 'Save Changes' : 'Create Schedule'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Schedule Confirmation ─── */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={open => { if (!open) setDeleteConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Schedule</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this access schedule rule? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteConfirm && deleteSchedule(deleteConfirm)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

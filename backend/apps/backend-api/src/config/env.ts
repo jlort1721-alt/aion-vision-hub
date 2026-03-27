@@ -79,6 +79,12 @@ export const envSchema = z.object({
   EWELINK_APP_SECRET: z.string().optional(),
   EWELINK_REGION: z.enum(['us', 'eu', 'as', 'cn']).default('us'),
 
+  // eWeLink stored accounts for auto-login (up to 2 accounts for 22 sites)
+  EWELINK_EMAIL_1: z.string().email().optional(),
+  EWELINK_PASSWORD_1: z.string().optional(),
+  EWELINK_EMAIL_2: z.string().email().optional(),
+  EWELINK_PASSWORD_2: z.string().optional(),
+
   // Push notifications (VAPID)
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),

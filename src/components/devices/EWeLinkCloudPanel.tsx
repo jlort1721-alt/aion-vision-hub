@@ -223,7 +223,7 @@ export default function EWeLinkCloudPanel() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <Zap className="h-4 w-4 text-yellow-400" />
+            <Zap className="h-4 w-4 text-warning" />
             eWeLink / Sonoff — Dispositivos IoT
           </CardTitle>
         </CardHeader>
@@ -255,16 +255,16 @@ export default function EWeLinkCloudPanel() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5">
-                    <Zap className="h-4 w-4 text-green-400" />
-                    <span className="text-sm font-medium text-green-400">Conectado</span>
+                    <Zap className="h-4 w-4 text-success" />
+                    <span className="text-sm font-medium text-success">Conectado</span>
                   </div>
                   <Badge variant="secondary" className="text-[10px]">{devices.length} dispositivos</Badge>
                   <Badge variant="outline" className="text-[10px]">{onlineCount} en línea</Badge>
-                  <Badge variant="outline" className="text-[10px] text-yellow-400">{onDevices} encendidos</Badge>
+                  <Badge variant="outline" className="text-[10px] text-warning">{onDevices} encendidos</Badge>
                 </div>
                 <div className="flex gap-1.5">
                   <Button variant="outline" size="sm" onClick={checkHealth} title="Verificar salud">
-                    <Heart className={`h-3 w-3 ${healthStatus === 'healthy' ? 'text-green-400' : healthStatus === 'error' ? 'text-red-400' : ''}`} />
+                    <Heart className={`h-3 w-3 ${healthStatus === 'healthy' ? 'text-success' : healthStatus === 'error' ? 'text-destructive' : ''}`} />
                   </Button>
                   <Button variant="outline" size="sm" onClick={loadDevices} disabled={loading}>
                     <RefreshCw className={`mr-1 h-3 w-3 ${loading ? 'animate-spin' : ''}`} /> Sync
@@ -280,10 +280,10 @@ export default function EWeLinkCloudPanel() {
 
               {/* Batch controls */}
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="text-green-400" onClick={() => batchControl('on')} disabled={loading}>
+                <Button variant="outline" size="sm" className="text-success" onClick={() => batchControl('on')} disabled={loading}>
                   <Power className="mr-1 h-3 w-3" /> Encender Todos
                 </Button>
-                <Button variant="outline" size="sm" className="text-red-400" onClick={() => batchControl('off')} disabled={loading}>
+                <Button variant="outline" size="sm" className="text-destructive" onClick={() => batchControl('off')} disabled={loading}>
                   <PowerOff className="mr-1 h-3 w-3" /> Apagar Todos
                 </Button>
               </div>
@@ -297,14 +297,14 @@ export default function EWeLinkCloudPanel() {
                     const isToggling = toggling.has(device.deviceid);
 
                     return (
-                      <Card key={device.deviceid} className={`transition-colors ${isOn ? 'border-yellow-500/30 bg-yellow-500/5' : ''}`}>
+                      <Card key={device.deviceid} className={`transition-colors ${isOn ? 'border-warning/30 bg-warning/5' : ''}`}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 {device.online
-                                  ? <Wifi className="h-3 w-3 text-green-400 shrink-0" />
-                                  : <WifiOff className="h-3 w-3 text-red-400 shrink-0" />}
+                                  ? <Wifi className="h-3 w-3 text-success shrink-0" />
+                                  : <WifiOff className="h-3 w-3 text-destructive shrink-0" />}
                                 <span className="text-sm font-medium truncate">{device.name}</span>
                               </div>
                               <div className="text-xs text-muted-foreground">
@@ -372,7 +372,7 @@ export default function EWeLinkCloudPanel() {
             <div className="border rounded-lg divide-y max-h-[200px] overflow-auto">
               {devices.map(d => (
                 <div key={d.deviceid} className="flex items-center gap-3 p-2 text-sm">
-                  <Zap className="h-3 w-3 text-yellow-400 shrink-0" />
+                  <Zap className="h-3 w-3 text-warning shrink-0" />
                   <span className="flex-1 truncate">{d.name}</span>
                   <Badge variant={d.online ? 'default' : 'secondary'} className="text-[9px]">
                     {d.online ? 'online' : 'offline'}

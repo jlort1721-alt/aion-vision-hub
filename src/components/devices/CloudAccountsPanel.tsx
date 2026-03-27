@@ -190,11 +190,11 @@ export default function CloudAccountsPanel() {
           <Tabs value={platform} onValueChange={(v) => { setPlatform(v as 'ezviz' | 'imou'); setDevices([]); }}>
             <TabsList className="grid grid-cols-2 w-full">
               <TabsTrigger value="ezviz" className="gap-1.5">
-                {connected.ezviz ? <Cloud className="h-3.5 w-3.5 text-green-400" /> : <CloudOff className="h-3.5 w-3.5" />}
+                {connected.ezviz ? <Cloud className="h-3.5 w-3.5 text-success" /> : <CloudOff className="h-3.5 w-3.5" />}
                 Hik-Connect / EZVIZ
               </TabsTrigger>
               <TabsTrigger value="imou" className="gap-1.5">
-                {connected.imou ? <Cloud className="h-3.5 w-3.5 text-green-400" /> : <CloudOff className="h-3.5 w-3.5" />}
+                {connected.imou ? <Cloud className="h-3.5 w-3.5 text-success" /> : <CloudOff className="h-3.5 w-3.5" />}
                 DMSS / IMOU
               </TabsTrigger>
             </TabsList>
@@ -244,8 +244,8 @@ export default function CloudAccountsPanel() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Cloud className="h-4 w-4 text-green-400" />
-                  <span className="text-sm font-medium text-green-400">Conectado</span>
+                  <Cloud className="h-4 w-4 text-success" />
+                  <span className="text-sm font-medium text-success">Conectado</span>
                   <Badge variant="secondary" className="text-[10px]">{devices.length} dispositivos</Badge>
                 </div>
                 <div className="flex gap-2">
@@ -265,7 +265,7 @@ export default function CloudAccountsPanel() {
                     <div key={device.serialOrId} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
                       <div className="shrink-0">
                         {device.status === 'online'
-                          ? <Wifi className="h-4 w-4 text-green-400" />
+                          ? <Wifi className="h-4 w-4 text-success" />
                           : <WifiOff className="h-4 w-4 text-destructive" />}
                       </div>
                       <div className="shrink-0 text-muted-foreground">{typeIcon(device.type)}</div>

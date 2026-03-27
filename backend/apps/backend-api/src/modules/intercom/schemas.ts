@@ -143,6 +143,7 @@ export const voipConfigSchema = z.object({
   autoOpenEnabled: z.boolean().optional(),
   operatorExtension: z.string().max(32).optional(),
   recordingEnabled: z.boolean().optional(),
+  afterHoursSchedule: z.string().max(32).optional(), // "HH:MM-HH:MM" or "HH:MM-HH:MM|1-5"
   fanvilAdminUser: z.string().max(64).optional(),
   fanvilAdminPassword: z.string().max(128).optional(),
   autoProvisionEnabled: z.boolean().optional(),

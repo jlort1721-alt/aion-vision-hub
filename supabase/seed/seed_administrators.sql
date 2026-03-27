@@ -1,0 +1,50 @@
+-- ═══════════════════════════════════════════════════════════
+-- AION — Multi-tenant Seed Data
+-- Tenant: a0000000-0000-0000-0000-000000000001
+-- Auto-generated from 04_seed_vehicles_access.sql
+-- ═══════════════════════════════════════════════════════════
+
+-- ── Site Administrators (28 records) ───────────────────────
+-- Note: Some source site names differ from canonical names.
+-- A name-mapping CTE normalizes variant spellings.
+
+INSERT INTO public.site_administrators (tenant_id, site_id, name, phone, role)
+SELECT
+  'a0000000-0000-0000-0000-000000000001',
+  s.id,
+  t.admin_name,
+  t.phone,
+  'administrador'
+FROM (VALUES
+  ('ALTAGRACIA', 'CLAUDIA GUIRALES', '3202198120'),
+  ('AREZZO', 'MONITOREA AREZZO', '3006533730'),
+  ('BRESCIA', 'LUCIA ORTIZ (DELEGADA)', '316 6427718'),
+  ('BRESCIA', 'NATALIA CARBAJAL', '3166427718'),
+  ('DOÑA OLIVA', 'CLAUDIA SERNA', '3104016457'),
+  ('HOSPITAL SAN JERONIMO', 'RECEPCION HOSPITAL SAN JERONIMO', '3112460520'),
+  ('HOTEL FACTORY', 'RECEPCION FACTORY', '3004103698'),
+  ('LA PALENCIA', 'CLAUDIA SERNA', '3104016457'),
+  ('LUBECK', 'MONICA FERNANDEZ', '313 6096592'),
+  ('PISQUINES', 'YENIFER GIRALDO CARTAGENA', '3194644189'),
+  ('PISQUINES', 'SEBASTIAN GOMEZ  Administrador', '3105932627'),
+  ('PORTAL PLAZA', 'DOLLY', '3113093282'),
+  ('PORTALEGRE', 'LUZMILA CARDONA', '3136673459'),
+  ('SAN NICOLAS', 'ADRIANO GARZON', '3235905888'),
+  ('SAN SEBASTIAN', 'GLORIA LONDOÑO', '3128635249'),
+  ('SANTANA DE LOS CABALLEROS', 'LUZMILA CARDONA', '3136673459'),
+  ('TERRABAMBA', 'GIOVANNY CORTES', '3218460311'),
+  ('TORRE LUCIA', 'SANDRA VALENCIA', '3007535177'),
+  ('DANUBIOS', 'ALEJANDRO QUERUBIN', '3108455202'),
+  ('DANUBIOS', 'JANETH  LONDOÑO', '3177673807'),
+  ('ALBORADA', 'ALINA AVENDAÑO', '3215665176'),
+  ('TERRAZZINO', 'YESID CARDENAS', '3116158402'),
+  ('APARTACASAS', 'HUBER VALDEZ', '3148320311'),
+  ('PATIO BONITO', 'GUILLERMO', '3147738617'),
+  ('QUINTAS SANTA MARIA', 'MARY LUZ  GOMEZ', '3183165786'),
+  ('SENDEROS DE CALASANZ', 'ALEJANDRO QUERUBIN', '3108455202'),
+  ('ALTOS DEL ROSARIO', 'VICTOR VEGA', '3136441717'),
+  ('MANZANARES', 'ROBERT FARLEY', '3046527973')
+) AS t(site_name, admin_name, phone)
+JOIN public.sites s ON UPPER(s.name) = UPPER(t.site_name)
+  AND s.tenant_id = 'a0000000-0000-0000-0000-000000000001'
+ON CONFLICT DO NOTHING;

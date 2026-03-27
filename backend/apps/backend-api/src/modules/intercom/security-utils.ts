@@ -212,7 +212,9 @@ export type SecurityEventType =
   | 'credential.weak_detected'
   | 'credential.default_detected'
   | 'sip.connection.failed'
-  | 'sip.connection.success';
+  | 'sip.connection.success'
+  | 'intercom.access.granted'
+  | 'intercom.access.denied';
 
 export interface SecurityAuditEntry {
   event: SecurityEventType;

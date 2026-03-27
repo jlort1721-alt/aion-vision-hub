@@ -1,17 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Montserrat:wght@400;600;700;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 @layer base {
   :root {
+    /* ── Brand Design System — Clave Seguridad ── */
+    --color-navy-900: #030810;
+    --color-navy-800: #07111E;
+    --color-navy-700: #0D1B2A;
+    --color-navy-500: #2C4A68;
+    --color-red-600:  #C8232A;
+    --color-red-700:  #A8141A;
+    --color-red-900:  #4A0709;
+    --color-gold-500: #D4A017;
+    --color-gold-700: #9A7A10;
+    --color-gray-50:  #EAEEF3;
+    --color-gray-200: #E2E8EF;
+    --color-text-on-dark: #FFFFFF;
+    --color-text-muted: rgba(255,255,255,0.72);
+    --font-heading: 'Montserrat', 'Inter', sans-serif;
+    --font-body: 'Inter', 'Open Sans', sans-serif;
+    --section-py: 80px;
+    --container-max: 1200px;
+    --shadow-card: 0 4px 24px rgba(13,27,42,0.12);
+    --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
+    --radius-card: 12px;
+    --radius-btn: 6px;
+
+    /* ── Shadcn UI Variables (Brand-aligned) ── */
     --background: 220 20% 97%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 217 91% 60%;
+    --primary: 357 73% 46%;         /* brand-red #C8232A */
     --primary-foreground: 0 0% 100%;
     --secondary: 215 20% 93%;
     --secondary-foreground: 222 47% 11%;
@@ -23,59 +47,62 @@
     --destructive-foreground: 0 0% 100%;
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 217 91% 60%;
+    --ring: 357 73% 46%;            /* brand-red */
     --radius: 0.5rem;
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 43 82% 46%;          /* brand gold #D4A017 */
     --warning-foreground: 0 0% 100%;
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 215 20% 85%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 357 73% 46%;    /* brand-red */
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 33% 17%;
     --sidebar-accent-foreground: 215 20% 85%;
     --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 357 73% 46%;       /* brand-red */
     --sidebar-muted: 215 16% 47%;
   }
 
   .dark {
-    --background: 222 47% 6%;
+    /* ── Brand Navy backgrounds ── */
+    --background: 222 70% 3%;       /* navy-900 #030810 */
     --foreground: 210 40% 96%;
-    --card: 222 47% 9%;
+    --card: 215 64% 7%;             /* navy-800 #07111E */
     --card-foreground: 210 40% 96%;
-    --popover: 222 47% 9%;
+    --popover: 215 64% 7%;
     --popover-foreground: 210 40% 96%;
-    --primary: 217 91% 60%;
+    /* ── Brand Red primary ── */
+    --primary: 357 73% 46%;         /* brand-red #C8232A */
     --primary-foreground: 0 0% 100%;
-    --secondary: 217 33% 15%;
+    --secondary: 211 54% 11%;       /* navy-700 #0D1B2A */
     --secondary-foreground: 210 40% 96%;
-    --muted: 217 33% 15%;
+    --muted: 211 54% 11%;
     --muted-foreground: 215 20% 60%;
-    --accent: 217 33% 15%;
+    --accent: 211 54% 11%;
     --accent-foreground: 210 40% 96%;
-    --destructive: 0 63% 45%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 217 91% 60%;
+    --border: 211 40% 14%;
+    --input: 211 40% 14%;
+    --ring: 357 73% 46%;            /* brand-red */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 43 82% 46%;          /* brand gold #D4A017 */
     --warning-foreground: 0 0% 100%;
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
-    --sidebar-background: 222 47% 6%;
+    /* ── Brand Navy sidebar ── */
+    --sidebar-background: 215 64% 7%;    /* navy-800 */
     --sidebar-foreground: 215 20% 75%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 357 73% 46%;      /* brand-red */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 12%;
+    --sidebar-accent: 211 54% 11%;       /* navy-700 */
     --sidebar-accent-foreground: 215 20% 85%;
-    --sidebar-border: 217 33% 12%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-border: 211 40% 14%;
+    --sidebar-ring: 357 73% 46%;
     --sidebar-muted: 215 16% 40%;
   }
 }
@@ -86,7 +113,7 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: var(--font-body);
   }
   code, pre, .font-mono {
     font-family: 'JetBrains Mono', monospace;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +34,7 @@ export default function AdminPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('operator');
@@ -64,9 +65,15 @@ export default function AdminPage() {
     enabled: isAdmin,
   });
 
+  const PAGE_SIZE = 25;
+
   const filtered = users.filter(u =>
     !search || u.full_name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const safePage = Math.min(page, Math.max(1, totalPages));
+  const paginatedUsers = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const handleInvite = async () => {
     if (!inviteEmail) return;
@@ -278,6 +285,7 @@ export default function AdminPage() {
               {isLoading ? (
                 <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
               ) : (
+                <>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -289,7 +297,7 @@ export default function AdminPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.map(user => {
+                    {paginatedUsers.map(user => {
                       const initials = user.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || '??';
                       const primaryRole = user.roles[0] || 'viewer';
                       const isSelf = user.user_id === profile?.user_id;
@@ -335,6 +343,18 @@ export default function AdminPage() {
                     })}
                   </TableBody>
                 </Table>
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {((page - 1) * PAGE_SIZE) + 1}-{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+                    </p>
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+                      <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+                    </div>
+                  </div>
+                )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -350,7 +370,7 @@ export default function AdminPage() {
 
 // Editable permissions component
 function PermissionsEditor({ tenantId }: { tenantId?: string }) {
-  const EDITABLE_ROLES = ['operator', 'viewer', 'auditor'];
+  const EDITABLE_ROLES = useMemo(() => ['operator', 'viewer', 'auditor'], []);
   const queryClient = useQueryClient();
   const [perms, setPerms] = useState<Record<string, Set<string>>>({});
   const [saving, setSaving] = useState(false);
@@ -388,7 +408,7 @@ function PermissionsEditor({ tenantId }: { tenantId?: string }) {
     }
     setPerms(map);
     setDirty(false);
-  }, [dbPerms]);
+  }, [dbPerms, EDITABLE_ROLES]);
 
   const togglePerm = (role: string, module: string) => {
     setPerms(prev => {

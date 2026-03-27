@@ -35,7 +35,7 @@ export async function biomarkerRoutes(app: FastifyInstance) {
           201: z.object({ id: z.string().uuid(), message: z.string() })
         }
       },
-      preHandler: [(server as any).authenticate, requireRole(['operator', 'auditor'] as any)]
+      preHandler: [requireRole('operator', 'auditor')]
     },
     async (request, reply) => {
       const tenantId = request.tenantId;
@@ -78,7 +78,7 @@ export async function biomarkerRoutes(app: FastifyInstance) {
           }))
         }
       },
-      preHandler: [(server as any).authenticate, requireRole(['operator', 'auditor'] as any)]
+      preHandler: [requireRole('operator', 'auditor')]
     },
     async (request) => {
       const tenantId = request.tenantId;

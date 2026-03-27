@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,12 +14,15 @@ import { useSections, useIntercomDevices, useIntercomCalls, useIntercomMutations
 import {
   Phone, PhoneCall, PhoneOff, MessageSquare, Bot, Mic, Volume2,
   Search, Plus, Settings, Wifi, WifiOff, Clock, Users,
-  Send, RefreshCw, Activity, Radio, CheckCircle, XCircle, AlertTriangle, Play, Loader2
+  Send, RefreshCw, Activity, Radio, CheckCircle, XCircle, AlertTriangle, Play, Loader2, Headphones,
+  Download, Square, PhoneIncoming, PhoneOutgoing
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { elevenlabs } from '@/services/integrations/elevenlabs';
 import type { VoiceHealthCheck, VoiceInfo, VoiceConfig, GreetingTemplate } from '@/services/integrations/elevenlabs';
+
+const OperatorCallDashboard = lazy(() => import('@/components/intercom/OperatorCallDashboard'));
 
 export default function IntercomPage() {
   const { t } = useI18n();
@@ -43,6 +46,48 @@ export default function IntercomPage() {
   const [testingVoice, setTestingVoice] = useState(false);
   const [playingGreeting, setPlayingGreeting] = useState<string | null>(null);
   const [selectedVoiceId, setSelectedVoiceId] = useState('');
+
+  // Call recording playback state
+  const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const handlePlayRecording = (callId: string, recordingUrl: string) => {
+    if (playingRecordingId === callId) {
+      // Stop current playback
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      setPlayingRecordingId(null);
+      return;
+    }
+    // Start new playback
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    setPlayingRecordingId(callId);
+  };
+
+  const handleRecordingEnded = () => {
+    setPlayingRecordingId(null);
+  };
+
+  const handleDownloadRecording = (recordingUrl: string, callId: string) => {
+    const a = document.createElement('a');
+    a.href = recordingUrl;
+    a.download = `recording-${callId}.wav`;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const formatDuration = (seconds: number | null | undefined): string => {
+    if (!seconds) return '--:--';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   const loadVoiceData = useCallback(async () => {
     setVoiceLoading(true);
@@ -114,9 +159,9 @@ export default function IntercomPage() {
   };
 
   const voiceStatusIcon = (status?: string) => {
-    if (status === 'healthy') return <CheckCircle className="h-4 w-4 text-green-500" />;
-    if (status === 'error' || status === 'degraded') return <XCircle className="h-4 w-4 text-red-500" />;
-    return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+    if (status === 'healthy') return <CheckCircle className="h-4 w-4 text-success" />;
+    if (status === 'error' || status === 'degraded') return <XCircle className="h-4 w-4 text-destructive" />;
+    return <AlertTriangle className="h-4 w-4 text-warning" />;
   };
 
   const getSectionName = (id: string) => sections.find((s: any) => s.id === id)?.name || '—';
@@ -159,8 +204,8 @@ export default function IntercomPage() {
 
           <div className="grid grid-cols-4 gap-2">
             <Card className="p-2"><div className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('intercom.total_devices')}</p><p className="text-lg font-bold">{devices.length}</p></div></div></Card>
-            <Card className="p-2"><div className="flex items-center gap-2"><Wifi className="h-4 w-4 text-green-500" /><div><p className="text-xs text-muted-foreground">{t('common.online')}</p><p className="text-lg font-bold">{onlineCount}</p></div></div></Card>
-            <Card className="p-2"><div className="flex items-center gap-2"><PhoneCall className="h-4 w-4 text-blue-500" /><div><p className="text-xs text-muted-foreground">{t('intercom.calls_today')}</p><p className="text-lg font-bold">{calls.length}</p></div></div></Card>
+            <Card className="p-2"><div className="flex items-center gap-2"><Wifi className="h-4 w-4 text-success" /><div><p className="text-xs text-muted-foreground">{t('common.online')}</p><p className="text-lg font-bold">{onlineCount}</p></div></div></Card>
+            <Card className="p-2"><div className="flex items-center gap-2"><PhoneCall className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('intercom.calls_today')}</p><p className="text-lg font-bold">{calls.length}</p></div></div></Card>
             <Card className="p-2"><div className="flex items-center gap-2"><Bot className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('intercom.attend_mode')}</p><p className="text-lg font-bold capitalize">{attendMode}</p></div></div></Card>
           </div>
         </div>
@@ -172,6 +217,7 @@ export default function IntercomPage() {
               <TabsTrigger value="calls" className="text-xs"><PhoneCall className="mr-1 h-3 w-3" /> {t('intercom.call_history')}</TabsTrigger>
               <TabsTrigger value="whatsapp" className="text-xs"><MessageSquare className="mr-1 h-3 w-3" /> WhatsApp</TabsTrigger>
               <TabsTrigger value="voice_ai" className="text-xs"><Mic className="mr-1 h-3 w-3" /> {t('intercom.voice_ai')}</TabsTrigger>
+              <TabsTrigger value="call_dashboard" className="text-xs"><Headphones className="mr-1 h-3 w-3" /> Call Dashboard</TabsTrigger>
             </TabsList>
             <div className="ml-auto">
               <Select value={sectionFilter} onValueChange={setSectionFilter}>
@@ -218,22 +264,84 @@ export default function IntercomPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="calls" className="flex-1 overflow-auto m-0">
+          <TabsContent value="calls" className="flex-1 overflow-auto m-0" aria-label="Call history">
             {calls.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-muted-foreground"><PhoneCall className="h-12 w-12 mb-2 opacity-20" /><p className="text-sm">No call history yet</p></div>
             ) : (
-              <Table>
-                <TableHeader><TableRow><TableHead>Time</TableHead><TableHead>Direction</TableHead><TableHead>Section</TableHead><TableHead>Duration</TableHead><TableHead>Attended By</TableHead><TableHead>{t('common.status')}</TableHead></TableRow></TableHeader>
+              <Table aria-label="Call history table">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Caller</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
+                    <TableHead>Recording</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                   {calls.map((call: any) => (
-                    <TableRow key={call.id}>
-                      <TableCell className="text-xs font-mono">{new Date(call.created_at).toLocaleString()}</TableCell>
-                      <TableCell><Badge variant={call.direction === 'inbound' ? 'default' : 'secondary'} className="text-[10px]">{call.direction}</Badge></TableCell>
-                      <TableCell className="text-xs">{getSectionName(call.section_id)}</TableCell>
-                      <TableCell className="text-xs font-mono">{call.duration_seconds ? `${call.duration_seconds}s` : '—'}</TableCell>
-                      <TableCell className="text-xs capitalize">{call.attended_by}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-[10px] capitalize">{call.status}</Badge></TableCell>
-                    </TableRow>
+                    <React.Fragment key={call.id}>
+                      <TableRow>
+                        <TableCell className="text-xs font-mono">{new Date(call.created_at).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs">
+                          <div>
+                            <span className="font-medium">{call.caller_name || call.caller_id || '—'}</span>
+                            {call.section_id && <span className="block text-muted-foreground">{getSectionName(call.section_id)}</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs font-mono">{formatDuration(call.duration_seconds)}</TableCell>
+                        <TableCell>
+                          <Badge variant={call.direction === 'inbound' ? 'default' : 'secondary'} className="text-[10px] gap-1">
+                            {call.direction === 'inbound' ? <PhoneIncoming className="h-3 w-3" /> : <PhoneOutgoing className="h-3 w-3" />}
+                            {call.direction === 'inbound' ? 'Incoming' : 'Outgoing'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell><Badge variant="outline" className="text-[10px] capitalize">{call.status}</Badge></TableCell>
+                        <TableCell>
+                          {call.recording_url ? (
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => handlePlayRecording(call.id, call.recording_url)}
+                                aria-label={playingRecordingId === call.id ? 'Stop recording' : 'Play recording'}
+                              >
+                                {playingRecordingId === call.id ? <Square className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => handleDownloadRecording(call.recording_url, call.id)}
+                                aria-label="Download recording"
+                              >
+                                <Download className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No recording</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      {playingRecordingId === call.id && call.recording_url && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="py-2">
+                            <audio
+                              ref={audioRef}
+                              controls
+                              autoPlay
+                              src={call.recording_url}
+                              onEnded={handleRecordingEnded}
+                              onError={handleRecordingEnded}
+                              className="w-full h-8"
+                              aria-label={`Recording playback for call from ${call.caller_name || call.caller_id || 'unknown'}`}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
@@ -305,7 +413,7 @@ export default function IntercomPage() {
                       <div className="p-2 rounded bg-muted/50 border">
                         <div className="flex items-center gap-2">
                           {attendMode === 'ai' && <Bot className="h-4 w-4 text-primary" />}
-                          {attendMode === 'human' && <Users className="h-4 w-4 text-blue-500" />}
+                          {attendMode === 'human' && <Users className="h-4 w-4 text-primary" />}
                           {attendMode === 'mixed' && <Radio className="h-4 w-4 text-orange-500" />}
                           <span className="text-sm font-medium capitalize">{attendMode}</span>
                         </div>
@@ -376,6 +484,12 @@ export default function IntercomPage() {
                 </Card>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="call_dashboard" className="flex-1 overflow-auto m-0 p-4">
+            <Suspense fallback={<div className="p-4 space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div>}>
+              <OperatorCallDashboard />
+            </Suspense>
           </TabsContent>
         </Tabs>
       </div>

@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const CommandPalette = lazy(() => import('@/components/CommandPalette'));
 import { useI18n } from '@/contexts/I18nContext';
+import { useBranding } from '@/contexts/BrandingContext';
+import { useNetworkStatus } from '@/hooks/use-network-status';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -25,6 +27,7 @@ import { hasModuleAccess, ALL_MODULES, DEFAULT_ROLE_PERMISSIONS } from '@/lib/pe
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useWebSocket } from '@/hooks/use-websocket';
+import Logo from '@/components/brand/Logo';
 
 // ── Navigation with categories ─────────────────────────────
 
@@ -127,19 +130,9 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const { user, profile, logout, roles } = useAuth();
   const { t, lang, setLang } = useI18n();
+  const { branding } = useBranding();
+  const { isOnline, isSlowConnection } = useNetworkStatus();
   const { status: wsStatus } = useWebSocket(); // Establish real-time connection
-  const [isOnline, setIsOnline] = React.useState(navigator.onLine);
-
-  React.useEffect(() => {
-    const onOnline = () => setIsOnline(true);
-    const onOffline = () => setIsOnline(false);
-    window.addEventListener('online', onOnline);
-    window.addEventListener('offline', onOffline);
-    return () => {
-      window.removeEventListener('online', onOnline);
-      window.removeEventListener('offline', onOffline);
-    };
-  }, []);
 
   const { data: dbPerms } = useQuery({
     queryKey: ['role-module-permissions', profile?.tenant_id],
@@ -190,32 +183,38 @@ export default function AppLayout() {
         <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
-      <aside className={cn(
+      <aside
+        role="navigation"
+        aria-label="Main navigation"
+        className={cn(
         "fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200",
         collapsed ? "w-16" : "w-60",
         mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         <div className="flex items-center h-14 px-3 border-b border-sidebar-border">
           <div className="flex items-center gap-2 min-w-0">
-            <img src="/favicon.svg" alt="CS" className="w-8 h-8 shrink-0" />
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} alt={branding.name || 'AION'} className="w-8 h-8 shrink-0" />
+            ) : (
+              <Logo variant="icon" height={32} className="shrink-0" onClick={() => {}} />
+            )}
             {!collapsed && (
               <div className="truncate">
-                <span className="font-semibold text-sm text-sidebar-primary-foreground">Clave</span>
-                <span className="text-xs text-sidebar-muted ml-1">Seguridad</span>
+                <span className="font-semibold text-sm text-sidebar-primary-foreground" style={{ fontFamily: 'var(--font-heading)' }}>{branding.name || 'Clave Seguridad'}</span>
               </div>
             )}
           </div>
-          <Button variant="ghost" size="icon" className="ml-auto h-7 w-7 text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent hidden lg:flex" onClick={() => setCollapsed(!collapsed)}>
+          <Button variant="ghost" size="icon" className="ml-auto h-7 w-7 text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent hidden lg:flex" onClick={() => setCollapsed(!collapsed)} aria-label="Toggle sidebar" aria-expanded={!collapsed}>
             <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
           </Button>
-          <Button variant="ghost" size="icon" className="ml-auto h-7 w-7 text-sidebar-muted lg:hidden" onClick={() => setMobileOpen(false)}>
+          <Button variant="ghost" size="icon" className="ml-auto h-7 w-7 text-sidebar-muted lg:hidden" onClick={() => setMobileOpen(false)} aria-label="Close menu">
             <X className="h-4 w-4" />
           </Button>
         </div>
 
         <nav className="flex-1 overflow-y-auto scrollbar-thin py-2 px-2">
           {visibleCategories.map((cat) => (
-            <div key={cat.key} className="mb-1">
+            <div key={cat.key} className="mb-1" role="group" aria-label={t(cat.labelKey) || cat.key}>
               {!collapsed && (
                 <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted/70 mt-2 first:mt-0">
                   {t(cat.labelKey) || cat.key}
@@ -236,6 +235,7 @@ export default function AppLayout() {
                         : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-primary-foreground"
                     )}
                     title={collapsed ? label : undefined}
+                    aria-current={isActive ? 'page' : undefined}
                   >
                     <span className="shrink-0">{item.icon}</span>
                     {!collapsed && (
@@ -258,7 +258,9 @@ export default function AppLayout() {
         <div className="border-t border-sidebar-border p-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className={cn(
+              <button
+                aria-label="User menu"
+                className={cn(
                 "flex items-center gap-3 w-full rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent/50 transition-colors",
                 collapsed && "justify-center px-0"
               )}>
@@ -285,7 +287,7 @@ export default function AppLayout() {
 
       <div className={cn("flex-1 flex flex-col transition-all duration-200", collapsed ? "lg:ml-16" : "lg:ml-60")}>
         <header className="sticky top-0 z-30 flex items-center h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <Button variant="ghost" size="icon" className="lg:hidden mr-2" onClick={() => setMobileOpen(true)}>
+          <Button variant="ghost" size="icon" className="lg:hidden mr-2" onClick={() => setMobileOpen(true)} aria-label="Open menu">
             <Menu className="h-5 w-5" />
           </Button>
           <div className="relative flex-1 max-w-md">
@@ -297,16 +299,21 @@ export default function AppLayout() {
             {!isOnline ? (
               <Badge variant="destructive" className="gap-1 text-[10px] h-6">
                 <span className="w-1.5 h-1.5 rounded-full bg-destructive-foreground animate-pulse" />
-                Offline
+                [OFFLINE]
+              </Badge>
+            ) : isSlowConnection ? (
+              <Badge variant="outline" className="gap-1 text-[10px] h-6 border-warning text-warning">
+                <span className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
+                {t('common.slow_connection') || 'Slow'}
               </Badge>
             ) : wsStatus === 'connected' ? (
-              <Badge variant="outline" className="gap-1 text-[10px] h-6 border-green-600 text-green-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              <Badge variant="outline" className="gap-1 text-[10px] h-6 border-success text-success">
+                <span className="w-1.5 h-1.5 rounded-full bg-success" />
                 Live
               </Badge>
             ) : wsStatus === 'connecting' ? (
-              <Badge variant="outline" className="gap-1 text-[10px] h-6 border-yellow-600 text-yellow-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+              <Badge variant="outline" className="gap-1 text-[10px] h-6 border-warning text-warning">
+                <span className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
                 {t('common.connecting') || 'Connecting'}
               </Badge>
             ) : null}

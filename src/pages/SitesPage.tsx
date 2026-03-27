@@ -302,7 +302,7 @@ export default function SitesPage() {
               {selected.latitude && (
                 <div className="flex justify-between"><span className="text-muted-foreground">Coordinates</span><span className="flex items-center gap-1 text-xs"><Navigation className="h-3 w-3" /> {selected.latitude?.toFixed(4)}, {selected.longitude?.toFixed(4)}</span></div>
               )}
-              {(selected as any).wan_ip && <div className="flex justify-between"><span className="text-muted-foreground">IP Pública (WAN)</span><span className="font-mono text-green-400">{(selected as any).wan_ip}</span></div>}
+              {(selected as any).wan_ip && <div className="flex justify-between"><span className="text-muted-foreground">IP Pública (WAN)</span><span className="font-mono text-success">{(selected as any).wan_ip}</span></div>}
               <div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge variant="outline" className="capitalize text-[10px]">{selected.status}</Badge></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Created</span><span className="text-xs">{new Date(selected.created_at).toLocaleDateString()}</span></div>
             </CardContent>
@@ -315,7 +315,7 @@ export default function SitesPage() {
               ) : selectedDevices.map(d => (
                 <div key={d.id} className="flex items-center justify-between p-2 rounded bg-muted/50">
                   <div className="flex items-center gap-2">
-                    <div className={cn("w-2 h-2 rounded-full", d.status === 'online' || d.status === 'active' ? 'bg-success' : d.status === 'offline' ? 'bg-destructive' : d.status === 'pending_configuration' ? 'bg-yellow-500' : 'bg-muted-foreground')} />
+                    <div className={cn("w-2 h-2 rounded-full", d.status === 'online' || d.status === 'active' ? 'bg-success' : d.status === 'offline' ? 'bg-destructive' : d.status === 'pending_configuration' ? 'bg-warning' : 'bg-muted-foreground')} />
                     <div><p className="text-xs font-medium">{d.name}</p><p className="text-[10px] text-muted-foreground">{d.brand} · {(d as any).remote_address || d.ip_address || '—'}</p></div>
                   </div>
                   <Badge variant="outline" className="text-[10px] capitalize">{d.status}</Badge>

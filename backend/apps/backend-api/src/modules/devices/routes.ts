@@ -9,8 +9,9 @@ import {
   createDeviceSchema,
   updateDeviceSchema,
   deviceFiltersSchema,
+  bulkImportDeviceSchema,
 } from './schemas.js';
-import type { CreateDeviceInput, UpdateDeviceInput, DeviceFilters } from './schemas.js';
+import type { CreateDeviceInput, UpdateDeviceInput, DeviceFilters, BulkImportDeviceInput } from './schemas.js';
 
 export async function registerDeviceRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();
@@ -250,6 +251,169 @@ export async function registerDeviceRoutes(app: FastifyInstance) {
     },
     async (_request, reply) => {
       const data = await listMediaMTXStreams();
+      return reply.send({ success: true, data });
+    },
+  );
+
+  // ── POST /bulk-import — Bulk import devices ──────────────────
+  server.post<{ Body: BulkImportDeviceInput }>(
+    '/bulk-import',
+    {
+      preHandler: [requireRole('tenant_admin', 'super_admin')],
+      schema: {
+        tags: ['Devices'],
+        summary: 'Bulk import devices from array',
+        body: bulkImportDeviceSchema,
+      },
+    },
+    async (request, reply) => {
+      const { devices: records } = request.body;
+      let imported = 0;
+      let skipped = 0;
+      const errors: { index: number; error: string }[] = [];
+
+      for (let i = 0; i < records.length; i++) {
+        try {
+          await deviceService.create(records[i], request.tenantId);
+          imported++;
+        } catch (err: any) {
+          if (err.message?.includes('duplicate') || err.message?.includes('already exists')) {
+            skipped++;
+          } else {
+            errors.push({ index: i, error: err.message || 'Unknown error' });
+          }
+        }
+      }
+
+      await request.audit('device.bulk_import', 'devices', undefined, {
+        total: records.length,
+        imported,
+        skipped,
+        errors: errors.length,
+      });
+
+      return reply.send({
+        success: true,
+        data: { total: records.length, imported, skipped, errors },
+      });
+    },
+  );
+
+  // ── POST /:id/validate — Full device validation ─────────────
+  server.post<{ Params: { id: string } }>(
+    '/:id/validate',
+    {
+      preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')],
+      schema: { tags: ['Devices'], summary: 'Run full validation on a device (TCP + auth + snapshot)' },
+    },
+    async (request, reply) => {
+      const device = await deviceService.getById(request.params.id, request.tenantId) as Record<string, unknown>;
+      if (!device) return reply.code(404).send({ success: false, error: 'Device not found' });
+
+      const ip = device.ipAddress as string || device.ip as string || '';
+      const port = (device.port as number) || 80;
+      const username = device.username as string | undefined;
+      const password = device.password as string | undefined;
+
+      const results: Record<string, { ok: boolean; latencyMs?: number; error?: string }> = {};
+
+      // TCP probe
+      const tcpStart = Date.now();
+      try {
+        const net = await import('net');
+        await new Promise<void>((resolve, reject) => {
+          const sock = new net.Socket();
+          sock.setTimeout(5000);
+          sock.on('connect', () => { sock.destroy(); resolve(); });
+          sock.on('timeout', () => { sock.destroy(); reject(new Error('timeout')); });
+          sock.on('error', reject);
+          sock.connect(port, ip);
+        });
+        results.tcp = { ok: true, latencyMs: Date.now() - tcpStart };
+      } catch (err: unknown) {
+        results.tcp = { ok: false, latencyMs: Date.now() - tcpStart, error: (err as Error).message };
+      }
+
+      // Auth probe (HTTP login attempt)
+      if (results.tcp.ok && ip) {
+        const authStart = Date.now();
+        try {
+          const url = `http://${ip}:${port}/`;
+          const resp = await fetch(url, {
+            method: 'GET',
+            signal: AbortSignal.timeout(5000),
+            headers: username ? { Authorization: `Basic ${Buffer.from(`${username}:${password || ''}`).toString('base64')}` } : {},
+          });
+          results.auth = { ok: resp.status < 500, latencyMs: Date.now() - authStart };
+        } catch (err: unknown) {
+          results.auth = { ok: false, latencyMs: Date.now() - authStart, error: (err as Error).message };
+        }
+      }
+
+      await request.audit('device.validate', 'devices', request.params.id, { results });
+
+      return reply.send({ success: true, data: { deviceId: request.params.id, results } });
+    },
+  );
+
+  // ── POST /:id/reconnect — Force reconnect device ────────────
+  server.post<{ Params: { id: string } }>(
+    '/:id/reconnect',
+    {
+      preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')],
+      schema: { tags: ['Devices'], summary: 'Force reconnect to a device' },
+    },
+    async (request, reply) => {
+      const device = await deviceService.getById(request.params.id, request.tenantId);
+      if (!device) return reply.code(404).send({ success: false, error: 'Device not found' });
+
+      // Update status to trigger health check re-evaluation
+      await deviceService.update(request.params.id, { status: 'unknown' }, request.tenantId);
+
+      await request.audit('device.reconnect', 'devices', request.params.id);
+
+      return reply.send({ success: true, data: { message: 'Reconnect triggered, health check will re-evaluate' } });
+    },
+  );
+
+  // ── GET /:id/channels — List channels/streams for a device ──
+  server.get<{ Params: { id: string } }>(
+    '/:id/channels',
+    {
+      schema: {
+        tags: ['Devices'],
+        summary: 'List all channels/streams for a device',
+        description: 'Returns the stream profiles (channels) stored in the streams table for this device.',
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const data = await deviceService.getChannels(id, request.tenantId);
+      return reply.send({ success: true, data });
+    },
+  );
+
+  // ── POST /:id/sync-channels — Trigger channel sync from device ─
+  server.post<{ Params: { id: string } }>(
+    '/:id/sync-channels',
+    {
+      preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')],
+      schema: {
+        tags: ['Devices'],
+        summary: 'Sync channels/streams from device adapter into database',
+        description: 'Queries the device for its stream profiles and syncs them with the streams table. Creates new, updates existing, and disables removed streams.',
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const data = await deviceService.syncChannels(id, request.tenantId);
+
+      await request.audit('device.sync_channels', 'devices', id, {
+        created: data.created,
+        updated: data.updated,
+        disabled: data.disabled,
+      });
+
       return reply.send({ success: true, data });
     },
   );

@@ -84,6 +84,13 @@ vi.mock('../db/schema/index.js', () => ({
 vi.mock('@aion/common-utils', () => ({
   encrypt: vi.fn((v: string) => `enc:${v}`),
   decrypt: vi.fn((v: string) => v.replace('enc:', '')),
+  createLogger: vi.fn(() => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+  })),
 }));
 
 vi.mock('@aion/shared-contracts', () => ({

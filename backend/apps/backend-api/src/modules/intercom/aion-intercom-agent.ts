@@ -34,6 +34,11 @@ import type {
   VoiceIntegrationContract,
 } from './types.js';
 import { voiceService } from '../voice/service.js';
+import { aiBridgeService } from '../ai-bridge/service.js';
+import { config } from '../../config/env.js';
+import { createLogger } from '@aion/common-utils';
+
+const logger = createLogger({ name: 'aion-intercom-agent' });
 
 // ── System Prompts ────────────────────────────────────────
 
@@ -96,9 +101,9 @@ export class AionIntercomAgent implements AionAgentContract {
 
   constructor() {
     this.logger = {
-      info: (...args) => console.log('[AionIntercomAgent]', ...args),
-      warn: (...args) => console.warn('[AionIntercomAgent]', ...args),
-      error: (...args) => console.error('[AionIntercomAgent]', ...args),
+      info: (...args: unknown[]) => logger.info(args[0] as string),
+      warn: (...args: unknown[]) => logger.warn(args[0] as string),
+      error: (...args: unknown[]) => logger.error({ err: args[1] }, args[0] as string),
     };
   }
 
@@ -108,9 +113,10 @@ export class AionIntercomAgent implements AionAgentContract {
   ): Promise<AgentResponse> {
     this.logger.info(`Processing visitor input: "${transcribedText.slice(0, 100)}" (call ${callContext.callId})`);
 
-    // Build conversation context for AI
-    const systemPrompt = callContext.mode === 'ai'
-      ? INTERCOM_SYSTEM_PROMPT
+    // Select system prompt based on site language context
+    // Use English prompt if the site name suggests English context, otherwise Spanish
+    const systemPrompt = callContext.siteName?.match(/^[a-zA-Z\s]+$/)
+      ? INTERCOM_SYSTEM_PROMPT_EN
       : INTERCOM_SYSTEM_PROMPT;
 
     const userMessage = this.buildContextualPrompt(transcribedText, callContext);
@@ -256,40 +262,75 @@ export class AionIntercomAgent implements AionAgentContract {
     return `[Contexto: ${contextLines.join(' | ')}]\n\nVisitante dice: "${visitorText}"`;
   }
 
-  private async callAIBridge(_systemPrompt: string, _userMessage: string): Promise<string> {
-    // In production, this calls the ai-bridge module:
-    // POST /ai/chat { messages: [...], systemPrompt, useCase: 'intercom_agent' }
-    //
-    // For now, return a structured fallback indicating the contract is ready
-    // but requires ai-bridge connection with OpenAI/Anthropic API key.
+  private async callAIBridge(systemPrompt: string, userMessage: string): Promise<string> {
+    // Check if an AI provider key is available
+    if (!config.OPENAI_API_KEY && !config.ANTHROPIC_API_KEY) {
+      this.logger.warn('AI Bridge not connected — returning fallback response. Set OPENAI_API_KEY or ANTHROPIC_API_KEY.');
+      return JSON.stringify({
+        text: 'Bienvenido. ¿Con quién desea comunicarse? Por favor indique su nombre y el apartamento o persona que visita.',
+        action: 'continue',
+        confidence: 1.0,
+        collectedInfo: {},
+      });
+    }
 
-    this.logger.warn('AI Bridge not connected — returning fallback response. Set OPENAI_API_KEY or ANTHROPIC_API_KEY.');
+    // Call the real AI bridge service with intercom-specific parameters
+    const result = await aiBridgeService.chat(
+      {
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+        temperature: 0.4, // Lower temperature for consistent, deterministic responses
+        maxTokens: 256,   // Short responses for intercom TTS latency
+      },
+      'system',          // tenantId — system-level usage for intercom agent
+      'aion-intercom',   // userId — identifies intercom agent usage
+    );
 
-    return JSON.stringify({
-      text: 'Bienvenido. ¿Con quién desea comunicarse? Por favor indique su nombre y el apartamento o persona que visita.',
-      action: 'continue',
-      confidence: 1.0,
-      collectedInfo: {},
-    });
+    this.logger.info(`AI response received: provider=${result.provider}, model=${result.model}, tokens=${result.tokens.prompt + result.tokens.completion}`);
+    return result.content;
   }
 
   private parseAgentResponse(raw: string): AgentResponse {
     try {
+      // First try direct JSON parse
       const parsed = JSON.parse(raw);
-      return {
-        text: parsed.text || 'Un momento por favor.',
-        action: parsed.action || 'continue',
-        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
-        collectedInfo: parsed.collectedInfo,
-      };
+      return this.normalizeAgentResponse(parsed);
     } catch {
+      // AI may have wrapped JSON in markdown code fences or included preamble text
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return this.normalizeAgentResponse(parsed);
+        } catch {
+          // Fall through to plain text handling
+        }
+      }
+
       // If AI returned plain text instead of JSON
+      this.logger.warn('AI returned non-JSON response, using as plain text');
       return {
         text: raw.slice(0, 200),
         action: 'continue',
         confidence: 0.5,
       };
     }
+  }
+
+  private normalizeAgentResponse(parsed: Record<string, unknown>): AgentResponse {
+    const validActions = ['continue', 'grant_access', 'deny_access', 'handoff'] as const;
+    const action = validActions.includes(parsed.action as any)
+      ? (parsed.action as AgentResponse['action'])
+      : 'continue';
+
+    return {
+      text: typeof parsed.text === 'string' ? parsed.text : 'Un momento por favor.',
+      action,
+      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
+      collectedInfo: parsed.collectedInfo as AgentResponse['collectedInfo'],
+    };
   }
 }
 

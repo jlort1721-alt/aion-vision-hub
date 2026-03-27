@@ -61,12 +61,20 @@ export interface EWeLinkHealthCheck {
   encryptionEnabled?: boolean;
 }
 
+export interface EWeLinkStoredAccount {
+  label: string;
+  email: string; // masked
+}
+
 export interface EWeLinkStatus {
   configured: boolean;
   authenticated: boolean;
   region: string;
   encryptionEnabled: boolean;
   tokenExpiresAt: string | null;
+  activeAccount: string | null;
+  storedAccounts: EWeLinkStoredAccount[];
+  hasStoredAccounts: boolean;
 }
 
 export interface EWeLinkSyncResult {
@@ -190,6 +198,66 @@ export class EWeLinkService {
     this._authenticated = false;
     apiCall('POST', '/ewelink/logout').catch(() => {});
     this.log('info', 'logout', 'Session cleared');
+  }
+
+  // ── Stored Account Operations (via backend proxy) ──
+
+  async getStoredAccounts(): Promise<{ accounts: EWeLinkStoredAccount[]; hasStoredAccounts: boolean }> {
+    try {
+      const result = await apiCall<{ success: boolean; data: { accounts: EWeLinkStoredAccount[]; hasStoredAccounts: boolean } }>(
+        'GET',
+        '/ewelink/accounts',
+      );
+      return result.data;
+    } catch {
+      return { accounts: [], hasStoredAccounts: false };
+    }
+  }
+
+  async autoLogin(accountLabel?: string): Promise<EWeLinkResult> {
+    this.log('info', 'auto_login', `Auto-login attempt${accountLabel ? ` with ${accountLabel}` : ''}`);
+
+    try {
+      const result = await apiCall<{ success: boolean; data: { success: boolean; error?: string; account?: string } }>(
+        'POST',
+        '/ewelink/auto-login',
+        accountLabel ? { accountLabel } : {},
+      );
+
+      if (result.data?.success) {
+        this._authenticated = true;
+        this.log('info', 'auto_login', `Auto-login successful (${result.data.account})`);
+      }
+
+      return { success: result.data?.success ?? false, error: result.data?.error, data: result.data };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Auto-login failed';
+      this.log('error', 'auto_login', msg);
+      return { success: false, error: msg };
+    }
+  }
+
+  async switchAccount(accountLabel: string): Promise<EWeLinkResult> {
+    this.log('info', 'switch_account', `Switching to ${accountLabel}`);
+
+    try {
+      const result = await apiCall<{ success: boolean; data: { success: boolean; error?: string; account?: string } }>(
+        'POST',
+        '/ewelink/switch-account',
+        { accountLabel },
+      );
+
+      if (result.data?.success) {
+        this._authenticated = true;
+        this.log('info', 'switch_account', `Switched to ${accountLabel}`);
+      }
+
+      return { success: result.data?.success ?? false, error: result.data?.error, data: result.data };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Account switch failed';
+      this.log('error', 'switch_account', msg);
+      return { success: false, error: msg };
+    }
   }
 
   // ── Device Operations (via backend proxy) ──

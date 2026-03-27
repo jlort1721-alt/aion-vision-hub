@@ -14,18 +14,19 @@ import { apiClient } from '@/lib/api-client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ClipboardList, Plus, Clock, Filter, Printer, Download, Edit, Trash2,
-  CheckCircle, AlertTriangle, Search,
+  CheckCircle, AlertTriangle, Search, Bot, Copy, Loader2,
 } from 'lucide-react';
+import { sanitizeText } from '@/lib/sanitize';
 
 // ── Entry types with colors ─────────────────────────────
 const ENTRY_TYPES = [
-  { value: 'novedad', label: 'Novedad', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
-  { value: 'ingreso', label: 'Ingreso', color: 'bg-green-500/20 text-green-400 border-green-500/30' },
+  { value: 'novedad', label: 'Novedad', color: 'bg-primary/20 text-primary border-primary/30' },
+  { value: 'ingreso', label: 'Ingreso', color: 'bg-success/20 text-success border-success/30' },
   { value: 'salida', label: 'Salida', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
-  { value: 'ronda', label: 'Ronda', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
-  { value: 'incidente', label: 'Incidente', color: 'bg-red-500/20 text-red-400 border-red-500/30' },
-  { value: 'llamada', label: 'Llamada', color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' },
-  { value: 'mantenimiento', label: 'Mantenimiento', color: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
+  { value: 'ronda', label: 'Ronda', color: 'bg-info/20 text-info border-info/30' },
+  { value: 'incidente', label: 'Incidente', color: 'bg-destructive/20 text-destructive border-destructive/30' },
+  { value: 'llamada', label: 'Llamada', color: 'bg-info/20 text-info border-info/30' },
+  { value: 'mantenimiento', label: 'Mantenimiento', color: 'bg-warning/20 text-warning border-warning/30' },
   { value: 'observacion', label: 'Observación', color: 'bg-gray-500/20 text-gray-400 border-gray-500/30' },
 ];
 
@@ -93,6 +94,22 @@ export default function MinutaPage() {
   const [entryType, setEntryType] = useState('novedad');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('normal');
+
+  // AI Summary
+  const [showAiSummary, setShowAiSummary] = useState(false);
+  const [aiSummaryText, setAiSummaryText] = useState('');
+
+  const aiSummaryMutation = useMutation({
+    mutationFn: async () => {
+      const result = await apiClient.get<{ success: boolean; data: { summary: string } }>('/ai/shift-summary');
+      return result.data?.summary || result.data || 'No summary generated';
+    },
+    onSuccess: (text) => {
+      setAiSummaryText(typeof text === 'string' ? text : JSON.stringify(text, null, 2));
+      setShowAiSummary(true);
+    },
+    onError: (err: Error) => toast({ title: 'Error generating AI summary', description: err.message, variant: 'destructive' }),
+  });
 
   // Filters
   const [filterType, setFilterType] = useState('all');
@@ -234,7 +251,7 @@ export default function MinutaPage() {
           </p>
         </div>
         {isClosed && (
-          <Badge variant="outline" className="border-green-500/50 text-green-400 gap-1 self-start">
+          <Badge variant="outline" className="border-success/50 text-success gap-1 self-start">
             <CheckCircle className="h-3 w-3" /> Turno Cerrado
           </Badge>
         )}
@@ -372,7 +389,7 @@ export default function MinutaPage() {
                             {priorityLabel(entry.priority)}
                           </Badge>
                         </div>
-                        <p className="text-sm text-foreground">{entry.description}</p>
+                        <p className="text-sm text-foreground">{sanitizeText(entry.description)}</p>
                         <p className="text-xs text-muted-foreground">Por: {entry.author_name}</p>
                       </div>
                       {!isClosed && (
@@ -441,6 +458,15 @@ export default function MinutaPage() {
               </div>
 
               <div className="space-y-2 pt-2 border-t border-border/50">
+                <Button
+                  variant="outline"
+                  className="w-full gap-1"
+                  onClick={() => aiSummaryMutation.mutate()}
+                  disabled={aiSummaryMutation.isPending || entries.length === 0}
+                >
+                  {aiSummaryMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+                  Resumen IA
+                </Button>
                 {!isClosed && (
                   <Button
                     variant="default"
@@ -576,6 +602,22 @@ export default function MinutaPage() {
             <Button variant="destructive" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}>
               Eliminar
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Summary Dialog */}
+      <Dialog open={showAiSummary} onOpenChange={setShowAiSummary}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Bot className="h-5 w-5" /> Resumen generado por IA</DialogTitle></DialogHeader>
+          <div className="bg-muted/50 rounded-lg p-4 max-h-80 overflow-y-auto">
+            <pre className="text-sm whitespace-pre-wrap font-sans">{aiSummaryText}</pre>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { navigator.clipboard.writeText(aiSummaryText); toast({ title: 'Copied to clipboard' }); }}>
+              <Copy className="mr-2 h-4 w-4" /> Copiar
+            </Button>
+            <Button onClick={() => setShowAiSummary(false)}>Cerrar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

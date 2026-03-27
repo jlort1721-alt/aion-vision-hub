@@ -42,6 +42,7 @@ import { registerVoiceRoutes } from './modules/voice/routes.js';
 import { registerEmailRoutes } from './modules/email/routes.js';
 import { registerEWeLinkRoutes } from './modules/ewelink/routes.js';
 import { registerAlertRoutes } from './modules/alerts/routes.js';
+import { registerNotificationTemplateRoutes } from './modules/notification-templates/routes.js';
 import { registerShiftRoutes } from './modules/shifts/routes.js';
 import { registerSLARoutes } from './modules/sla/routes.js';
 import { registerEmergencyRoutes } from './modules/emergency/routes.js';
@@ -67,6 +68,10 @@ import { registerZktecoRoutes } from './modules/zkteco/routes.js';
 import { registerDeviceControlRoutes } from './modules/device-control/routes.js';
 import { registerNetworkRoutes } from './modules/network/routes.js';
 import { registerApiKeyRoutes } from './modules/api-keys/routes.js';
+import { registerEvidenceRoutes } from './modules/evidence/routes.js';
+import { registerDataImportRoutes } from './modules/data-import/routes.js';
+import { registerGdprRoutes } from './modules/gdpr/routes.js';
+import { registerAnomalyDetectionRoutes } from './modules/anomaly-detection/routes.js';
 import websocketPlugin from './plugins/websocket.js';
 
 const loggerOpts = { name: 'aion-api', level: config.LOG_LEVEL };
@@ -176,6 +181,7 @@ export async function buildApp() {
 
   // Alert system
   await app.register(registerAlertRoutes, { prefix: '/alerts' });
+  await app.register(registerNotificationTemplateRoutes, { prefix: '/notification-templates' });
 
   // Phase 2: Operations modules
   await app.register(registerShiftRoutes, { prefix: '/shifts' });
@@ -221,6 +227,14 @@ export async function buildApp() {
   await app.register(registerNetworkRoutes, { prefix: '/network' });
   // API key management (service-to-service authentication)
   await app.register(registerApiKeyRoutes, { prefix: '/api-keys' });
+  // Evidence pipeline (snapshots, clips, documents, notes attached to incidents)
+  await app.register(registerEvidenceRoutes, { prefix: '/evidence' });
+  // Bulk data import (residents, vehicles, visitors, devices)
+  await app.register(registerDataImportRoutes, { prefix: '/data-import' });
+  // GDPR / Data Privacy (export, delete, consents, audit integrity)
+  await app.register(registerGdprRoutes, { prefix: '/gdpr' });
+  // Anomaly detection (AI-powered pattern analysis)
+  await app.register(registerAnomalyDetectionRoutes, { prefix: '/anomalies' });
 
   // Public webhook routes (no JWT — Meta sends requests without auth)
   await app.register(registerWebhookRoutes, { prefix: '/webhooks/whatsapp' });

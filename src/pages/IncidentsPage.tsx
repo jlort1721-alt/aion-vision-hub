@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useIncidents, useSites } from '@/hooks/use-supabase-data';
 import { incidentsApi } from '@/services/api';
 import { useQueryClient } from '@tanstack/react-query';
@@ -15,9 +16,11 @@ import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';
 import {
   AlertTriangle, Plus, Search, MessageSquare, Bot,
-  Clock, User, CheckCircle2, Loader2, XCircle
+  Clock, User, CheckCircle2, Loader2, XCircle, Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { sanitizeText } from '@/lib/sanitize';
+import EvidencePanel from '@/components/incidents/EvidencePanel';
 
 const priorityColors: Record<string, string> = {
   critical: 'text-destructive', high: 'text-warning', medium: 'text-info', low: 'text-muted-foreground',
@@ -186,7 +189,7 @@ export default function IncidentsPage() {
                 <Badge className={cn("capitalize text-xs", selectedInc.priority === 'critical' ? 'bg-destructive' : '')}>{selectedInc.priority}</Badge>
               </div>
               <h2 className="text-xl font-bold">{selectedInc.title}</h2>
-              <p className="text-sm text-muted-foreground mt-1">{selectedInc.description}</p>
+              <p className="text-sm text-muted-foreground mt-1">{sanitizeText(selectedInc.description)}</p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleAiSummary} disabled={!!actionLoading}>
@@ -218,35 +221,51 @@ export default function IncidentsPage() {
             <Card><CardContent className="p-3 space-y-1 text-sm"><p className="text-xs text-muted-foreground">{t('incidents.created')}</p><p className="font-medium flex items-center gap-1"><Clock className="h-3 w-3" /> {new Date(selectedInc.created_at).toLocaleString()}</p></CardContent></Card>
           </div>
 
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">{t('incidents.activity')}</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              {Array.isArray(selectedInc.comments) && (selectedInc.comments as any[]).map((c: any, idx: number) => (
-                <div key={c.id || idx} className="flex gap-3">
-                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold shrink-0">
-                    {(c.user_name || 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{c.user_name || 'User'}</span>
-                      <span className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleString()}</span>
+          <Tabs defaultValue="activity" className="w-full">
+            <TabsList>
+              <TabsTrigger value="activity" className="flex items-center gap-1">
+                <MessageSquare className="h-3 w-3" /> {t('incidents.activity')}
+              </TabsTrigger>
+              <TabsTrigger value="evidence" className="flex items-center gap-1">
+                <Shield className="h-3 w-3" /> Evidence
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="activity">
+              <Card>
+                <CardContent className="space-y-3 pt-4">
+                  {Array.isArray(selectedInc.comments) && (selectedInc.comments as any[]).map((c: any, idx: number) => (
+                    <div key={c.id || idx} className="flex gap-3">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold shrink-0">
+                        {(c.user_name || 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{c.user_name || 'User'}</span>
+                          <span className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleString()}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-0.5">{sanitizeText(c.content)}</p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-0.5">{c.content}</p>
-                  </div>
-                </div>
-              ))}
-              {selectedInc.status !== 'closed' && (
-                <>
-                  <Textarea placeholder={t('incidents.add_comment')} className="text-sm min-h-[60px]" value={comment} onChange={e => setComment(e.target.value)} />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleComment} disabled={!comment.trim() || actionLoading === 'comment'}>
-                      {actionLoading === 'comment' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <MessageSquare className="mr-1 h-3 w-3" />} {t('incidents.comment')}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                  ))}
+                  {selectedInc.status !== 'closed' && (
+                    <>
+                      <Textarea placeholder={t('incidents.add_comment')} className="text-sm min-h-[60px]" value={comment} onChange={e => setComment(e.target.value)} />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleComment} disabled={!comment.trim() || actionLoading === 'comment'}>
+                          {actionLoading === 'comment' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <MessageSquare className="mr-1 h-3 w-3" />} {t('incidents.comment')}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="evidence">
+              <EvidencePanel incidentId={selectedInc.id} incidentStatus={selectedInc.status} />
+            </TabsContent>
+          </Tabs>
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center text-muted-foreground">

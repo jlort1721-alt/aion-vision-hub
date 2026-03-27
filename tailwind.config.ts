@@ -27,6 +27,24 @@ export default {
         success: { DEFAULT: "hsl(var(--success))", foreground: "hsl(var(--success-foreground))" },
         warning: { DEFAULT: "hsl(var(--warning))", foreground: "hsl(var(--warning-foreground))" },
         info: { DEFAULT: "hsl(var(--info))", foreground: "hsl(var(--info-foreground))" },
+        /* ── Brand Design System — Clave Seguridad ── */
+        navy: {
+          900: "var(--color-navy-900)",
+          800: "var(--color-navy-800)",
+          700: "var(--color-navy-700)",
+          500: "var(--color-navy-500)",
+        },
+        "brand-red": {
+          DEFAULT: "var(--color-red-600)",
+          600: "var(--color-red-600)",
+          700: "var(--color-red-700)",
+          900: "var(--color-red-900)",
+        },
+        gold: {
+          DEFAULT: "var(--color-gold-500)",
+          500: "var(--color-gold-500)",
+          700: "var(--color-gold-700)",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

@@ -196,7 +196,6 @@ describe("DashboardPage", () => {
 
   it("shows quick action buttons", () => {
     render(<DashboardPage />);
-    expect(screen.getByText("Add Device")).toBeInTheDocument();
     expect(screen.getByText("Live View")).toBeInTheDocument();
     expect(screen.getByText("New Incident")).toBeInTheDocument();
     expect(screen.getByText("AI Assistant")).toBeInTheDocument();

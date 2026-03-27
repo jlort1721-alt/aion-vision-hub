@@ -73,7 +73,7 @@ export default function LiveViewOpsPanel({ onClose }: LiveViewOpsPanelProps) {
           {/* eWeLink Status */}
           <div className="p-2 rounded bg-muted/50 border">
             <div className="flex items-center gap-1.5 mb-1">
-              {ewelinkAuth.isAuthenticated ? <Cloud className="h-3 w-3 text-green-500" /> : <CloudOff className="h-3 w-3 text-muted-foreground" />}
+              {ewelinkAuth.isAuthenticated ? <Cloud className="h-3 w-3 text-success" /> : <CloudOff className="h-3 w-3 text-muted-foreground" />}
               <span className="text-[10px] font-semibold">eWeLink</span>
               <Badge variant={ewelinkAuth.isAuthenticated ? 'default' : 'secondary'} className="text-[8px] ml-auto">
                 {ewelinkAuth.isAuthenticated ? 'Conectado' : 'Desconectado'}
@@ -145,7 +145,7 @@ export default function LiveViewOpsPanel({ onClose }: LiveViewOpsPanelProps) {
                     <span className="text-[9px] truncate flex-1">{d.name}</span>
                     <div className="flex gap-0.5">
                       <Button variant="ghost" size="sm" className="h-4 w-4 p-0" onClick={() => handleQuickControl(d, 'on')}>
-                        <Power className="h-2.5 w-2.5 text-green-500" />
+                        <Power className="h-2.5 w-2.5 text-success" />
                       </Button>
                       <Button variant="ghost" size="sm" className="h-4 w-4 p-0" onClick={() => handleQuickControl(d, 'off')}>
                         <Power className="h-2.5 w-2.5 text-destructive" />

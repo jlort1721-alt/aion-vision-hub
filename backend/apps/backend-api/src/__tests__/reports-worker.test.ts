@@ -2,9 +2,24 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ── Hoisted mocks ─────────────────────────────────────────────────
 
-const { mockSendGeneric } = vi.hoisted(() => ({
+const { mockSendGeneric, mockLogger } = vi.hoisted(() => ({
   mockSendGeneric: vi.fn().mockResolvedValue({ success: true }),
+  mockLogger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+  },
 }));
+
+vi.mock('@aion/common-utils', async () => {
+  const actual = await vi.importActual('@aion/common-utils');
+  return {
+    ...actual,
+    createLogger: vi.fn(() => mockLogger),
+  };
+});
 
 vi.mock('../modules/email/service.js', () => ({
   emailService: {
@@ -141,16 +156,14 @@ describe('Reports Worker', () => {
     });
 
     it('prevents double-start', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const db = createMockDb([]);
 
       startReportsWorker(db as any, 60_000);
       startReportsWorker(db as any, 60_000);
 
-      expect(warnSpy).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining('already running'),
       );
-      warnSpy.mockRestore();
     });
 
     it('runs an immediate tick on start', async () => {
@@ -271,13 +284,11 @@ describe('Reports Worker', () => {
         nextRunAt: new Date(Date.now() - 1000),
       };
 
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const db = createMockDb([dueReport]);
       startReportsWorker(db as any, 60_000);
       await vi.advanceTimersByTimeAsync(0);
 
       expect(mockSendGeneric).not.toHaveBeenCalled();
-      warnSpy.mockRestore();
     });
 
     it('skips sending when recipients is null', async () => {
@@ -294,13 +305,11 @@ describe('Reports Worker', () => {
         nextRunAt: new Date(Date.now() - 1000),
       };
 
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const db = createMockDb([dueReport]);
       startReportsWorker(db as any, 60_000);
       await vi.advanceTimersByTimeAsync(0);
 
       expect(mockSendGeneric).not.toHaveBeenCalled();
-      warnSpy.mockRestore();
     });
 
     it('handles email send failure and persists error', async () => {
@@ -319,7 +328,6 @@ describe('Reports Worker', () => {
         nextRunAt: new Date(Date.now() - 1000),
       };
 
-      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const db = createMockDb([dueReport]);
       startReportsWorker(db as any, 60_000);
       await vi.advanceTimersByTimeAsync(0);
@@ -331,7 +339,6 @@ describe('Reports Worker', () => {
           lastError: expect.stringContaining('Email send failed'),
         }),
       );
-      errSpy.mockRestore();
     });
 
     it('determines frequency from report type (daily)', async () => {
@@ -425,14 +432,12 @@ describe('Reports Worker', () => {
         },
       ];
 
-      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const db = createMockDb(reports);
       startReportsWorker(db as any, 60_000);
       await vi.advanceTimersByTimeAsync(0);
 
       // Both reports should have been attempted
       expect(mockSendGeneric).toHaveBeenCalledTimes(2);
-      errSpy.mockRestore();
     });
 
     it('report HTML contains required sections', async () => {

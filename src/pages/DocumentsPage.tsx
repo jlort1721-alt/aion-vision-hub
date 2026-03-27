@@ -22,11 +22,11 @@ import {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const CATEGORIES = [
-  { value: 'contrato', label: 'Contrato', color: 'text-blue-400' },
-  { value: 'reporte', label: 'Reporte', color: 'text-green-400' },
+  { value: 'contrato', label: 'Contrato', color: 'text-primary' },
+  { value: 'reporte', label: 'Reporte', color: 'text-success' },
   { value: 'minuta', label: 'Minuta', color: 'text-purple-400' },
-  { value: 'procedimiento', label: 'Procedimiento', color: 'text-yellow-400' },
-  { value: 'evidencia', label: 'Evidencia', color: 'text-red-400' },
+  { value: 'procedimiento', label: 'Procedimiento', color: 'text-warning' },
+  { value: 'evidencia', label: 'Evidencia', color: 'text-destructive' },
   { value: 'general', label: 'General', color: 'text-gray-400' },
 ];
 
@@ -71,9 +71,9 @@ function formatBytes(bytes: number): string {
 
 function iconForMime(mime: string) {
   if (mime.startsWith('image/')) return <Image size={20} className="text-pink-400" />;
-  if (mime === 'application/pdf') return <FileText size={20} className="text-red-400" />;
-  if (mime.includes('word')) return <FileText size={20} className="text-blue-400" />;
-  if (mime.includes('spreadsheet') || mime === 'text/csv') return <FileSpreadsheet size={20} className="text-green-400" />;
+  if (mime === 'application/pdf') return <FileText size={20} className="text-destructive" />;
+  if (mime.includes('word')) return <FileText size={20} className="text-primary" />;
+  if (mime.includes('spreadsheet') || mime === 'text/csv') return <FileSpreadsheet size={20} className="text-success" />;
   if (mime.startsWith('text/')) return <FileText size={20} className="text-gray-400" />;
   return <File size={20} className="text-gray-400" />;
 }

@@ -53,6 +53,46 @@ export function WebRTCPlayer({
   const [stats, setStats] = useState({ resolution: '', bitrate: 0, fps: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // ── HLS Fallback ──────────────────────────────────────────
+
+  const initHLSFallback = useCallback(async () => {
+    if (!videoRef.current || !hlsUrl) return;
+
+    // Dynamic import of HLS.js mapping to the HLS endpoint
+    try {
+      const Hls = (await import('hls.js')).default;
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 30, // seconds
+        });
+        hls.loadSource(`${hlsUrl}/${streamId}/index.m3u8`);
+        hls.attachMedia(videoRef.current);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setStatus('playing');
+          if (autoPlay) videoRef.current?.play().catch(e => console.error('HLS Authplay blocked:', e));
+        });
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (data.fatal) {
+            setStatus('error');
+            setErrorMsg('HLS Fallback failed');
+          }
+        });
+      } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native Safari support
+        videoRef.current.src = `${hlsUrl}/${streamId}/index.m3u8`;
+        videoRef.current.addEventListener('loadedmetadata', () => {
+          setStatus('playing');
+          if (autoPlay) videoRef.current?.play().catch(() => {});
+        });
+      }
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg('HLS not supported in this browser');
+    }
+  }, [hlsUrl, streamId, autoPlay]);
+
   // ── Connection Logic ───────────────────────────────────────
 
   const connectWebRTC = useCallback(async () => {
@@ -107,14 +147,14 @@ export function WebRTCPlayer({
       }
 
       const answer = await response.json();
-      
+
       // Set remote answer from MediaMTX
       await pc.setRemoteDescription(new RTCSessionDescription(answer));
 
     } catch (err: any) {
       console.error('[WebRTC] Connection error:', err);
       setErrorMsg(err.message || 'Stream connection failed');
-      
+
       // Attempt HLS Fallback if configured
       if (hlsUrl) {
         setStatus('fallback');
@@ -123,47 +163,7 @@ export function WebRTCPlayer({
         setStatus('error');
       }
     }
-  }, [streamId, webrtcUrl, hlsUrl]);
-
-  // ── HLS Fallback ──────────────────────────────────────────
-
-  const initHLSFallback = async () => {
-    if (!videoRef.current || !hlsUrl) return;
-    
-    // Dynamic import of HLS.js mapping to the HLS endpoint
-    try {
-      const Hls = (await import('hls.js')).default;
-      if (Hls.isSupported()) {
-        const hls = new Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
-          backBufferLength: 30, // seconds
-        });
-        hls.loadSource(`${hlsUrl}/${streamId}/index.m3u8`);
-        hls.attachMedia(videoRef.current);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          setStatus('playing');
-          if (autoPlay) videoRef.current?.play().catch(e => console.error('HLS Authplay blocked:', e));
-        });
-        hls.on(Hls.Events.ERROR, (_, data) => {
-          if (data.fatal) {
-            setStatus('error');
-            setErrorMsg('HLS Fallback failed');
-          }
-        });
-      } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-        // Native Safari support
-        videoRef.current.src = `${hlsUrl}/${streamId}/index.m3u8`;
-        videoRef.current.addEventListener('loadedmetadata', () => {
-          setStatus('playing');
-          if (autoPlay) videoRef.current?.play().catch(() => {});
-        });
-      }
-    } catch (err) {
-      setStatus('error');
-      setErrorMsg('HLS not supported in this browser');
-    }
-  };
+  }, [streamId, webrtcUrl, hlsUrl, initHLSFallback]);
 
   // ── Lifecycle ──────────────────────────────────────────────
 
@@ -198,8 +198,9 @@ export function WebRTCPlayer({
 
     return () => {
       clearInterval(statsInterval);
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
+      const pc = peerConnectionRef.current;
+      if (pc) {
+        pc.close();
       }
     };
   }, [connectWebRTC, status]);
@@ -273,7 +274,7 @@ export function WebRTCPlayer({
 
       {status === 'fallback' && (
         <div className="absolute top-2 left-2 z-20">
-          <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-500 border-yellow-500/50 text-[9px] uppercase">
+          <Badge variant="secondary" className="bg-warning/20 text-warning border-warning/50 text-[9px] uppercase">
             HLS Fallback
           </Badge>
         </div>
@@ -295,8 +296,8 @@ export function WebRTCPlayer({
           <div className="flex gap-2 items-center">
             {status === 'playing' && (
               <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
               </span>
             )}
             {cameraName && <span className="text-white text-xs font-medium drop-shadow-md">{cameraName}</span>}

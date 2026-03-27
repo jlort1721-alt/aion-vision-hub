@@ -15,13 +15,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   StickyNote, Plus, Search, Pin, PinOff, Pencil, Trash2, Clock, AlertCircle,
 } from 'lucide-react';
+import { sanitizeText } from '@/lib/sanitize';
 
 const CATEGORIES = [
-  { value: 'operativa', label: 'Operativa', color: 'text-blue-400' },
-  { value: 'incidente', label: 'Incidente', color: 'text-red-400' },
+  { value: 'operativa', label: 'Operativa', color: 'text-primary' },
+  { value: 'incidente', label: 'Incidente', color: 'text-destructive' },
   { value: 'turno', label: 'Turno', color: 'text-purple-400' },
-  { value: 'dispositivo', label: 'Dispositivo', color: 'text-yellow-400' },
-  { value: 'mantenimiento', label: 'Mantenimiento', color: 'text-orange-400' },
+  { value: 'dispositivo', label: 'Dispositivo', color: 'text-warning' },
+  { value: 'mantenimiento', label: 'Mantenimiento', color: 'text-warning' },
   { value: 'general', label: 'General', color: 'text-gray-400' },
 ];
 
@@ -43,9 +44,12 @@ interface Note {
   updated_at: string;
 }
 
+const PAGE_SIZE = 25;
+
 export default function NotesPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [editNote, setEditNote] = useState<Note | null>(null);
   const [deleteNote, setDeleteNote] = useState<Note | null>(null);
@@ -129,6 +133,10 @@ export default function NotesPage() {
     return true;
   });
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const safePage = Math.min(page, Math.max(1, totalPages));
+  const paginatedNotes = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   const getCategoryColor = (cat: string) => CATEGORIES.find(c => c.value === cat)?.color || 'text-gray-400';
   const getPriorityVariant = (pri: string) => PRIORITIES.find(p => p.value === pri)?.variant || 'secondary';
 
@@ -169,47 +177,60 @@ export default function NotesPage() {
           <Button variant="link" size="sm" onClick={openCreate}>Crear primera nota</Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(note => (
-            <Card key={note.id} className={`relative transition-colors hover:border-primary/30 ${note.is_pinned ? 'border-yellow-500/30 bg-yellow-500/5' : ''}`}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    {note.is_pinned && <Pin className="h-3 w-3 text-yellow-400 shrink-0" />}
-                    <h3 className="font-semibold text-sm truncate">{note.title}</h3>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paginatedNotes.map(note => (
+              <Card key={note.id} className={`relative transition-colors hover:border-primary/30 ${note.is_pinned ? 'border-warning/30 bg-warning/5' : ''}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {note.is_pinned && <Pin className="h-3 w-3 text-warning shrink-0" />}
+                      <h3 className="font-semibold text-sm truncate">{note.title}</h3>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => togglePin.mutate(note)} title={note.is_pinned ? 'Desfijar' : 'Fijar'}>
+                        {note.is_pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEdit(note)}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteNote(note)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0 ml-2">
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => togglePin.mutate(note)} title={note.is_pinned ? 'Desfijar' : 'Fijar'}>
-                      {note.is_pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEdit(note)}>
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteNote(note)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                  <p className="text-xs text-muted-foreground line-clamp-3 mb-3">{note.body ? sanitizeText(note.body) : 'Sin contenido'}</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-1.5">
+                      <Badge variant="outline" className={`text-[9px] ${getCategoryColor(note.category)}`}>
+                        {CATEGORIES.find(c => c.value === note.category)?.label || note.category}
+                      </Badge>
+                      <Badge variant={getPriorityVariant(note.priority)} className="text-[9px]">
+                        {PRIORITIES.find(p => p.value === note.priority)?.label || note.priority}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <Clock className="h-2.5 w-2.5" />
+                      {new Date(note.created_at).toLocaleDateString('es', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </div>
                   </div>
-                </div>
-                <p className="text-xs text-muted-foreground line-clamp-3 mb-3">{note.body || 'Sin contenido'}</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex gap-1.5">
-                    <Badge variant="outline" className={`text-[9px] ${getCategoryColor(note.category)}`}>
-                      {CATEGORIES.find(c => c.value === note.category)?.label || note.category}
-                    </Badge>
-                    <Badge variant={getPriorityVariant(note.priority)} className="text-[9px]">
-                      {PRIORITIES.find(p => p.value === note.priority)?.label || note.priority}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <Clock className="h-2.5 w-2.5" />
-                    {new Date(note.created_at).toLocaleDateString('es', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-                <div className="text-[10px] text-muted-foreground mt-1">Por: {note.author_name}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  <div className="text-[10px] text-muted-foreground mt-1">Por: {note.author_name}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <p className="text-sm text-muted-foreground">
+                Showing {((safePage - 1) * PAGE_SIZE) + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
+              </p>
+              <div className="flex gap-1">
+                <Button variant="outline" size="sm" disabled={safePage === 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+                <Button variant="outline" size="sm" disabled={safePage >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Create/Edit Dialog */}

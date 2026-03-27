@@ -20,7 +20,7 @@
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { callSessions, voipConfig } from '../../db/schema/call-sessions.js';
-import { intercomDevices } from '../../db/schema/index.js';
+import { intercomDevices, accessLogs } from '../../db/schema/index.js';
 import { voiceService } from '../voice/service.js';
 import { AsteriskSipProvider, NoopSipProvider } from './sip-provider.js';
 import { getConnector } from './connectors/index.js';
@@ -31,6 +31,8 @@ import {
   emitSecurityAudit,
   validateDeviceIp,
 } from './security-utils.js';
+import { validateAccess } from './access-validator.js';
+import type { VisitorInfo, AccessValidationResult } from './access-validator.js';
 import type {
   CallSession,
   CallMode,
@@ -45,10 +47,21 @@ import type {
 
 type Logger = { info: (...a: unknown[]) => void; warn: (...a: unknown[]) => void; error: (...a: unknown[]) => void };
 
+/** Active recording metadata tracked per call */
+interface ActiveRecording {
+  callId: string;
+  sessionId: string;
+  recordingName: string;
+  format: string;
+  startedAt: Date;
+}
+
 class OrchestrationService {
   private sipProvider: SipProvider;
   private logger: Logger;
   private configCache: Map<string, any> = new Map();
+  /** Track active recordings by session ID */
+  private activeRecordings: Map<string, ActiveRecording> = new Map();
 
   constructor() {
     this.logger = {
@@ -180,9 +193,12 @@ class OrchestrationService {
     session: CallSession;
     action: 'ai_greeting' | 'ring_operator' | 'ai_then_operator';
     greeting?: { text: string; audio: Buffer; contentType: string };
+    isAfterHours?: boolean;
   }> {
     const config = await this.getTenantVoipConfig(params.tenantId);
-    const mode = (config?.defaultMode as CallMode) || 'mixed';
+
+    // Evaluate after-hours schedule to adjust mode and greeting context
+    const { mode, greetingContext, isAfterHours } = await this.resolveCallMode(params.tenantId);
 
     // Determine operator extension for ring
     const operatorExt = config?.operatorExtension || '100';
@@ -197,21 +213,28 @@ class OrchestrationService {
       callerUri: params.callerUri,
       calleeUri: operatorExt,
       sipCallId: params.sipCallId || undefined,
+      metadata: { isAfterHours },
     }).returning();
 
+    // Start recording if enabled (non-blocking — do not fail the call if recording fails)
+    this.startRecording(session.id, params.tenantId).catch(err => {
+      this.logger.warn(`Background recording start failed for session ${session.id}:`, err);
+    });
+
     // Decide action based on mode
-    if (mode === 'human') {
-      return { session: session as any, action: 'ring_operator' };
+    if (mode === 'human' && !isAfterHours) {
+      return { session: session as any, action: 'ring_operator', isAfterHours };
     }
 
     // AI or Mixed: synthesize greeting
+    // After-hours uses the after_hours greeting context regardless of mode
     try {
-      const greetingCtx = (config?.greetingContext as any) || 'default';
+      const effectiveGreetingCtx = isAfterHours ? 'after_hours' : greetingContext;
       const language = (config?.greetingLanguage as 'es' | 'en') || 'es';
       const siteName = config?.customSiteName || undefined;
 
       const greetingResult = await voiceService.generateGreeting({
-        context: greetingCtx,
+        context: effectiveGreetingCtx as any,
         language,
         siteName,
         voiceId: config?.greetingVoiceId || undefined,
@@ -221,6 +244,20 @@ class OrchestrationService {
         .set({ greetingText: greetingResult.text })
         .where(eq(callSessions.id, session.id));
 
+      // After-hours: play greeting and route to voicemail/recording (no operator ring)
+      if (isAfterHours && mode === 'human') {
+        return {
+          session: { ...session, greetingText: greetingResult.text } as any,
+          action: 'ai_greeting', // Play after-hours greeting only
+          greeting: {
+            text: greetingResult.text,
+            audio: greetingResult.audio,
+            contentType: greetingResult.contentType,
+          },
+          isAfterHours,
+        };
+      }
+
       return {
         session: { ...session, greetingText: greetingResult.text } as any,
         action: mode === 'ai' ? 'ai_greeting' : 'ai_then_operator',
@@ -229,10 +266,11 @@ class OrchestrationService {
           audio: greetingResult.audio,
           contentType: greetingResult.contentType,
         },
+        isAfterHours,
       };
     } catch (err) {
       this.logger.error('Greeting synthesis failed, falling back to ring operator:', err);
-      return { session: session as any, action: 'ring_operator' };
+      return { session: session as any, action: 'ring_operator', isAfterHours };
     }
   }
 
@@ -310,6 +348,268 @@ class OrchestrationService {
     return { success: result.success, message: result.message };
   }
 
+  // ── Call Recording ─────────────────────────────────────
+
+  async startRecording(sessionId: string, tenantId: string): Promise<{ recordingName: string } | null> {
+    const config = await this.getTenantVoipConfig(tenantId);
+
+    // Only record if recording is enabled for this tenant
+    if (!config?.recordingEnabled) {
+      this.logger.info(`Recording not enabled for tenant ${tenantId} — skipping`);
+      return null;
+    }
+
+    const [session] = await db.select().from(callSessions)
+      .where(and(eq(callSessions.id, sessionId), eq(callSessions.tenantId, tenantId)))
+      .limit(1);
+
+    if (!session) {
+      this.logger.warn(`Cannot start recording — session ${sessionId} not found`);
+      return null;
+    }
+
+    if (!session.sipCallId) {
+      this.logger.warn(`Cannot start recording — session ${sessionId} has no SIP call ID`);
+      return null;
+    }
+
+    try {
+      const recordingFormat = 'wav';
+      const result = await this.sipProvider.startRecording(session.sipCallId, {
+        name: `call-${sessionId}-${Date.now()}`,
+        format: recordingFormat,
+        maxDurationSeconds: 3600,
+        beep: false,
+      });
+
+      // Track the active recording
+      this.activeRecordings.set(sessionId, {
+        callId: session.sipCallId,
+        sessionId,
+        recordingName: result.recordingName,
+        format: recordingFormat,
+        startedAt: new Date(),
+      });
+
+      this.logger.info(`Recording started for session ${sessionId}: ${result.recordingName}`);
+      return { recordingName: result.recordingName };
+    } catch (err) {
+      this.logger.error(`Failed to start recording for session ${sessionId}:`, err);
+      return null;
+    }
+  }
+
+  async stopRecording(sessionId: string, tenantId: string): Promise<void> {
+    const activeRec = this.activeRecordings.get(sessionId);
+    if (!activeRec) {
+      this.logger.info(`No active recording for session ${sessionId} — nothing to stop`);
+      return;
+    }
+
+    try {
+      await this.sipProvider.stopRecording(activeRec.recordingName);
+
+      // Calculate recording duration
+      const durationMs = Date.now() - activeRec.startedAt.getTime();
+      const durationSeconds = Math.round(durationMs / 1000);
+
+      // Try to get the recording URL from Asterisk
+      const recordingUrl = await this.sipProvider.getRecordingUrl(activeRec.recordingName);
+
+      // Update the call session with recording metadata
+      const updateData: Record<string, any> = {};
+      if (recordingUrl) {
+        updateData.recordingUrl = recordingUrl;
+      } else {
+        // Store the recording name as a reference even without full URL
+        updateData.recordingUrl = `recording:${activeRec.recordingName}.${activeRec.format}`;
+      }
+
+      // Store recording metadata in session metadata field
+      updateData.metadata = {
+        recording: {
+          name: activeRec.recordingName,
+          format: activeRec.format,
+          durationSeconds,
+          startedAt: activeRec.startedAt.toISOString(),
+          stoppedAt: new Date().toISOString(),
+        },
+      };
+
+      await db.update(callSessions)
+        .set(updateData)
+        .where(and(eq(callSessions.id, sessionId), eq(callSessions.tenantId, tenantId)));
+
+      this.activeRecordings.delete(sessionId);
+      this.logger.info(`Recording stopped for session ${sessionId}: ${activeRec.recordingName} (${durationSeconds}s)`);
+    } catch (err) {
+      this.logger.error(`Failed to stop recording for session ${sessionId}:`, err);
+      this.activeRecordings.delete(sessionId);
+    }
+  }
+
+  // ── DTMF Event Handling ───────────────────────────────────
+
+  async handleDtmfEvent(sessionId: string, tenantId: string, digit: string): Promise<{
+    action: 'door_open' | 'transfer_operator' | 'collected' | 'ignored';
+    detail?: string;
+  }> {
+    const config = await this.getTenantVoipConfig(tenantId);
+    const doorOpenDtmf = config?.doorOpenDtmf || '#';
+
+    this.logger.info(`DTMF received: digit='${digit}' on session ${sessionId}`);
+
+    // Append digit to the session's dtmfCollected field
+    const [session] = await db.select().from(callSessions)
+      .where(and(eq(callSessions.id, sessionId), eq(callSessions.tenantId, tenantId)))
+      .limit(1);
+
+    if (!session) {
+      this.logger.warn(`DTMF event for unknown session ${sessionId}`);
+      return { action: 'ignored', detail: 'Session not found' };
+    }
+
+    const updatedDtmf = (session.dtmfCollected || '') + digit;
+    await db.update(callSessions)
+      .set({ dtmfCollected: updatedDtmf })
+      .where(eq(callSessions.id, sessionId));
+
+    // Check if the digit triggers a door open
+    if (digit === doorOpenDtmf) {
+      this.logger.info(`DTMF door-open trigger '${digit}' on session ${sessionId}`);
+
+      if (session.deviceId) {
+        try {
+          const result = await this.openDoor(session.deviceId, tenantId);
+          if (result.success) {
+            await db.update(callSessions)
+              .set({ accessGranted: true })
+              .where(eq(callSessions.id, sessionId));
+            return { action: 'door_open', detail: result.message };
+          }
+          return { action: 'door_open', detail: `Door open failed: ${result.message}` };
+        } catch (err) {
+          this.logger.error(`DTMF door open failed for session ${sessionId}:`, err);
+          return { action: 'door_open', detail: 'Door open command failed' };
+        }
+      }
+      return { action: 'door_open', detail: 'No device associated with session' };
+    }
+
+    // Check if '0' triggers operator transfer
+    if (digit === '0') {
+      this.logger.info(`DTMF operator transfer '0' on session ${sessionId}`);
+      try {
+        await this.handoffToHuman(sessionId, tenantId, 'Visitor pressed 0 for operator');
+        return { action: 'transfer_operator', detail: 'Transferring to operator' };
+      } catch (err) {
+        this.logger.error(`DTMF operator transfer failed for session ${sessionId}:`, err);
+        return { action: 'transfer_operator', detail: 'Transfer failed' };
+      }
+    }
+
+    return { action: 'collected', detail: `Digit '${digit}' collected. Total: ${updatedDtmf}` };
+  }
+
+  // ── After-Hours Schedule Evaluation ───────────────────────
+
+  /**
+   * Check whether the current time is outside business hours for the given tenant.
+   *
+   * The voipConfig `afterHoursSchedule` field supports a simple format:
+   *   "HH:MM-HH:MM"           — business hours range (24h format), e.g. "08:00-18:00"
+   *   "HH:MM-HH:MM|days"      — with day filter, e.g. "08:00-18:00|1-5" (Mon-Fri)
+   *
+   * If no schedule is configured, always returns false (assume business hours).
+   */
+  isAfterHours(configRow: Record<string, any> | null | undefined): boolean {
+    if (!configRow) return false;
+
+    // Use afterHoursSchedule from the voipConfig metadata if available,
+    // or fall back to a convention stored in config metadata
+    const schedule = (configRow.afterHoursSchedule as string)
+      || ((configRow.metadata as Record<string, any>)?.afterHoursSchedule as string);
+
+    if (!schedule || typeof schedule !== 'string') return false;
+
+    try {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const currentDay = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+
+      // Parse schedule: "HH:MM-HH:MM" or "HH:MM-HH:MM|1-5"
+      const parts = schedule.split('|');
+      const timeRange = parts[0].trim();
+      const dayRange = parts[1]?.trim();
+
+      // Parse time range
+      const timeMatch = timeRange.match(/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/);
+      if (!timeMatch) {
+        this.logger.warn(`Invalid after-hours schedule format: "${schedule}"`);
+        return false;
+      }
+
+      const startHour = parseInt(timeMatch[1], 10);
+      const startMin = parseInt(timeMatch[2], 10);
+      const endHour = parseInt(timeMatch[3], 10);
+      const endMin = parseInt(timeMatch[4], 10);
+
+      const startMinutes = startHour * 60 + startMin;
+      const endMinutes = endHour * 60 + endMin;
+      const currentMinutes = currentHour * 60 + currentMinute;
+
+      // Check day range if specified (e.g., "1-5" = Mon-Fri)
+      if (dayRange) {
+        const dayMatch = dayRange.match(/^(\d)-(\d)$/);
+        if (dayMatch) {
+          const startDay = parseInt(dayMatch[1], 10);
+          const endDay = parseInt(dayMatch[2], 10);
+          // If current day is outside business days, it's after hours
+          if (currentDay < startDay || currentDay > endDay) {
+            return true;
+          }
+        }
+      }
+
+      // During business hours if time is within the range
+      const isDuringBusinessHours = currentMinutes >= startMinutes && currentMinutes < endMinutes;
+      return !isDuringBusinessHours;
+    } catch (err) {
+      this.logger.error('Error evaluating after-hours schedule:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Determine the appropriate greeting context and mode adjustments
+   * based on whether it's currently after hours.
+   */
+  async resolveCallMode(tenantId: string): Promise<{
+    mode: CallMode;
+    greetingContext: string;
+    isAfterHours: boolean;
+  }> {
+    const config = await this.getTenantVoipConfig(tenantId);
+    const baseMode = (config?.defaultMode as CallMode) || 'mixed';
+    const afterHours = this.isAfterHours(config);
+
+    if (afterHours) {
+      this.logger.info(`After-hours detected for tenant ${tenantId}`);
+      return {
+        mode: baseMode === 'ai' ? 'ai' : 'mixed',
+        greetingContext: 'after_hours',
+        isAfterHours: true,
+      };
+    }
+
+    return {
+      mode: baseMode,
+      greetingContext: (config?.greetingContext as string) || 'default',
+      isAfterHours: false,
+    };
+  }
+
   // ── Call Session CRUD ───────────────────────────────────
 
   async listSessions(tenantId: string, filters?: CallSessionFilters) {
@@ -365,6 +665,21 @@ class OrchestrationService {
       .returning();
 
     if (!session) throw new Error(`Call session ${sessionId} not found`);
+
+    // Start recording when call transitions to 'answered' (non-blocking)
+    if (data.status === 'answered') {
+      this.startRecording(sessionId, tenantId).catch(err => {
+        this.logger.warn(`Background recording start on answer failed for session ${sessionId}:`, err);
+      });
+    }
+
+    // Stop recording when call reaches a terminal state
+    if (data.status && ['completed', 'missed', 'rejected', 'failed'].includes(data.status)) {
+      this.stopRecording(sessionId, tenantId).catch(err => {
+        this.logger.warn(`Background recording stop failed for session ${sessionId}:`, err);
+      });
+    }
+
     return session;
   }
 
@@ -374,6 +689,13 @@ class OrchestrationService {
       .limit(1);
 
     if (!session) throw new Error(`Session ${sessionId} not found`);
+
+    // Stop any active recording before ending the call
+    try {
+      await this.stopRecording(sessionId, tenantId);
+    } catch (err) {
+      this.logger.warn(`Failed to stop recording for session ${sessionId} during endCall:`, err);
+    }
 
     // Hang up SIP call
     if (session.sipCallId) {
@@ -482,6 +804,98 @@ class OrchestrationService {
   async testDevice(ipAddress: string, brand: string, credentials?: { username?: string; password?: string }) {
     const connector = getConnector(brand);
     return connector.testDevice(ipAddress, credentials as any);
+  }
+
+  // ── Access Validation (Intercom → Access Control) ─────────
+
+  /**
+   * Validate visitor access during an intercom call.
+   *
+   * Called after the AI agent collects visitor information. Checks the
+   * access_people, access_vehicles, and visitors tables to determine
+   * if the visitor is authorized.
+   *
+   * If authorized and a deviceId is provided, attempts to open the door
+   * via the device connector. If not authorized, the caller should
+   * inform the visitor to wait for operator confirmation.
+   */
+  async validateAndProcessAccess(params: {
+    sessionId: string;
+    tenantId: string;
+    visitorInfo: VisitorInfo;
+    deviceId?: string;
+    autoOpen?: boolean;
+  }): Promise<{
+    validation: AccessValidationResult;
+    doorOpened: boolean;
+    doorMessage?: string;
+  }> {
+    const { sessionId, tenantId, visitorInfo, deviceId, autoOpen } = params;
+
+    // 1. Validate access
+    const validation = await validateAccess(tenantId, visitorInfo);
+
+    this.logger.info(
+      `Access validation for session ${sessionId}: authorized=${validation.authorized}, rule=${validation.accessRule}, reason=${validation.reason}`,
+    );
+
+    // 2. Log the access decision
+    try {
+      await db.insert(accessLogs).values({
+        tenantId,
+        personId: validation.person?.id || null,
+        vehicleId: validation.vehicle?.id || null,
+        direction: 'in',
+        method: 'intercom',
+        notes: `Intercom call session ${sessionId}: ${validation.reason}`,
+        operatorId: null,
+      });
+    } catch (err) {
+      this.logger.error('Failed to log access decision:', err);
+    }
+
+    // 3. Update call session with access decision
+    try {
+      await db.update(callSessions)
+        .set({
+          accessGranted: validation.authorized,
+          visitorName: visitorInfo.name || validation.person?.fullName || validation.visitor?.fullName || undefined,
+          visitorDestination: visitorInfo.apartment || validation.person?.unit || validation.visitor?.hostUnit || undefined,
+          notes: `Access: ${validation.reason} [rule: ${validation.accessRule}]`,
+        })
+        .where(and(eq(callSessions.id, sessionId), eq(callSessions.tenantId, tenantId)));
+    } catch (err) {
+      this.logger.error('Failed to update call session with access decision:', err);
+    }
+
+    // 4. If authorized and auto-open is enabled, open the door
+    let doorOpened = false;
+    let doorMessage: string | undefined;
+
+    if (validation.authorized && autoOpen !== false && deviceId) {
+      try {
+        const result = await this.openDoor(deviceId, tenantId);
+        doorOpened = result.success;
+        doorMessage = result.message;
+      } catch (err) {
+        doorMessage = err instanceof Error ? err.message : 'Door open failed';
+        this.logger.error(`Failed to open door for session ${sessionId}:`, err);
+      }
+    } else if (validation.authorized && !deviceId) {
+      doorMessage = 'Authorized but no device configured for door relay';
+    } else if (!validation.authorized) {
+      doorMessage = 'Access not authorized — waiting for operator confirmation';
+    }
+
+    // 5. Emit security audit event
+    emitSecurityAudit({
+      event: validation.authorized ? 'intercom.access.granted' : 'intercom.access.denied',
+      tenantId,
+      deviceId: deviceId || undefined,
+      detail: `Session ${sessionId}: ${validation.reason}`,
+    });
+
+    return { validation, doorOpened, doorMessage };
   }
 
   async provisionDevice(params: {

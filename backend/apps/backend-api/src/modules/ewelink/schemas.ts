@@ -23,3 +23,13 @@ export const ewelinkDeviceQuerySchema = z.object({
   deviceId: z.string().min(1),
 });
 export type EWeLinkDeviceQuery = z.infer<typeof ewelinkDeviceQuerySchema>;
+
+export const ewelinkAutoLoginSchema = z.object({
+  accountLabel: z.enum(['account_1', 'account_2']).optional(),
+});
+export type EWeLinkAutoLoginInput = z.infer<typeof ewelinkAutoLoginSchema>;
+
+export const ewelinkSwitchAccountSchema = z.object({
+  accountLabel: z.enum(['account_1', 'account_2']),
+});
+export type EWeLinkSwitchAccountInput = z.infer<typeof ewelinkSwitchAccountSchema>;

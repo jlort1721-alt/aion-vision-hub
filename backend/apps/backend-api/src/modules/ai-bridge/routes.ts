@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { eq, and, sql, gte } from 'drizzle-orm';
 import { requireRole } from '../../plugins/auth.js';
 import { aiBridgeService } from './service.js';
+import type { ToolStreamEvent } from './service.js';
 import { chatRequestSchema, chatStreamRequestSchema, usageQuerySchema } from './schemas.js';
 import { db } from '../../db/client.js';
 import { events, incidents, devices } from '../../db/schema/index.js';
@@ -14,7 +15,10 @@ export async function registerAIBridgeRoutes(app: FastifyInstance) {
     { preHandler: [requireRole('tenant_admin', 'operator')] },
     async (request) => {
       const input = chatRequestSchema.parse(request.body);
-      const result = await aiBridgeService.chat(input, request.tenantId, request.userId);
+
+      const result = input.enableTools
+        ? await aiBridgeService.chatWithTools(input, request.tenantId, request.userId)
+        : await aiBridgeService.chat(input, request.tenantId, request.userId);
 
       return { success: true, data: result } satisfies ApiResponse;
     },
@@ -35,18 +39,35 @@ export async function registerAIBridgeRoutes(app: FastifyInstance) {
       });
 
       try {
-        const stream = aiBridgeService.chatStream(input, request.tenantId, request.userId);
+        if (input.enableTools) {
+          // ── Tool-calling stream ──────────────────────────────
+          const stream: AsyncGenerator<ToolStreamEvent> =
+            aiBridgeService.chatStreamWithTools(input, request.tenantId, request.userId);
 
-        for await (const chunk of stream) {
-          const ssePayload = `data: ${JSON.stringify(chunk)}\n\n`;
-          reply.raw.write(ssePayload);
+          for await (const event of stream) {
+            const ssePayload = `data: ${JSON.stringify(event)}\n\n`;
+            reply.raw.write(ssePayload);
 
-          if (chunk.done) {
-            break;
+            if (event.type === 'content' && event.done) {
+              break;
+            }
+          }
+        } else {
+          // ── Plain stream (no tools) ──────────────────────────
+          const stream = aiBridgeService.chatStream(input, request.tenantId, request.userId);
+
+          for await (const chunk of stream) {
+            const ssePayload = `data: ${JSON.stringify(chunk)}\n\n`;
+            reply.raw.write(ssePayload);
+
+            if (chunk.done) {
+              break;
+            }
           }
         }
       } catch (error) {
         const errorPayload = {
+          type: 'content',
           content: '',
           done: true,
           error: error instanceof Error ? error.message : 'Stream failed',

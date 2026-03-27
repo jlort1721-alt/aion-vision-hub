@@ -9,7 +9,14 @@ import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-interface ApiResponse<T = any> { data: T[] | T; meta?: any }
+interface ApiResponseMeta {
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  hasMore?: boolean;
+}
+
+interface ApiResponse<T = Record<string, unknown>> { data: T[] | T; meta?: ApiResponseMeta }
 
 // ── Sections ──
 export function useSections() {
@@ -18,7 +25,7 @@ export function useSections() {
     queryKey: ['sections'],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse>('/database-records', { category: 'section' });
-      return (Array.isArray(response.data) ? response.data : []) as any[];
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: isAuthenticated,
   });
@@ -61,7 +68,7 @@ export function useDomoticDevices() {
     queryKey: ['domotic_devices'],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse>('/domotics/devices');
-      return (Array.isArray(response.data) ? response.data : []) as any[];
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: isAuthenticated,
   });
@@ -79,7 +86,7 @@ export function useDomoticMutations() {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, ...input }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...input }: { id: string; [key: string]: unknown }) => {
       await apiClient.patch(`/domotics/devices/${id}`, input);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['domotic_devices'] }); toast.success('Device updated'); },
@@ -119,7 +126,7 @@ export function useDomoticActions(deviceId?: string) {
       const params: Record<string, string> = { limit: '50' };
       if (deviceId) params.deviceId = deviceId;
       const response = await apiClient.get<ApiResponse>('/domotics/actions', params);
-      return (Array.isArray(response.data) ? response.data : []) as any[];
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: isAuthenticated,
   });
@@ -132,7 +139,7 @@ export function useAccessPeople() {
     queryKey: ['access_people'],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse>('/access-control/people');
-      return (Array.isArray(response.data) ? response.data : []) as any[];
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: isAuthenticated,
   });
@@ -150,7 +157,7 @@ export function useAccessPeopleMutations() {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, ...input }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...input }: { id: string; [key: string]: unknown }) => {
       await apiClient.patch(`/access-control/people/${id}`, input);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_people'] }); toast.success('Person updated'); },
@@ -175,7 +182,7 @@ export function useAccessVehicles() {
     queryKey: ['access_vehicles'],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse>('/access-control/vehicles');
-      return (Array.isArray(response.data) ? response.data : []) as any[];
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: isAuthenticated,
   });
@@ -210,7 +217,7 @@ export function useAccessLogs() {
     queryKey: ['access_logs'],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse>('/access-control/logs', { limit: '200' });
-      return (Array.isArray(response.data) ? response.data : []) as any[];
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: isAuthenticated,
   });
@@ -237,7 +244,7 @@ export function useRebootTasks() {
     queryKey: ['reboot_tasks'],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse>('/reboots', { limit: '100' });
-      return (Array.isArray(response.data) ? response.data : []) as any[];
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: isAuthenticated,
   });
@@ -256,7 +263,7 @@ export function useRebootMutations() {
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status, result, recovery_time_seconds }: { id: string; status: string; result?: string; recovery_time_seconds?: number }) => {
-      const updates: any = { status };
+      const updates: Record<string, unknown> = { status };
       if (result) updates.result = result;
       if (recovery_time_seconds) updates.recovery_time_seconds = recovery_time_seconds;
       if (status === 'completed' || status === 'failed') updates.completed_at = new Date().toISOString();
@@ -276,7 +283,7 @@ export function useIntercomDevices() {
     queryKey: ['intercom_devices'],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse>('/intercom/devices');
-      return (Array.isArray(response.data) ? response.data : []) as any[];
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: isAuthenticated,
   });
@@ -303,7 +310,7 @@ export function useIntercomCalls() {
     queryKey: ['intercom_calls'],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse>('/intercom/calls', { limit: '100' });
-      return (Array.isArray(response.data) ? response.data : []) as any[];
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: isAuthenticated,
   });
@@ -316,7 +323,7 @@ export function useDatabaseRecords() {
     queryKey: ['database_records'],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse>('/database-records');
-      return (Array.isArray(response.data) ? response.data : []) as any[];
+      return Array.isArray(response.data) ? response.data : [];
     },
     enabled: isAuthenticated,
   });
@@ -326,7 +333,7 @@ export function useDatabaseRecordMutations() {
   const qc = useQueryClient();
 
   const create = useMutation({
-    mutationFn: async (input: { title: string; category: string; section_id?: string; content?: any; tags?: string[] }) => {
+    mutationFn: async (input: { title: string; category: string; section_id?: string; content?: Record<string, unknown>; tags?: string[] }) => {
       await apiClient.post('/database-records', { ...input, content: input.content || {} });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['database_records'] }); toast.success('Record created'); },
@@ -334,7 +341,7 @@ export function useDatabaseRecordMutations() {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, ...input }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...input }: { id: string; [key: string]: unknown }) => {
       await apiClient.patch(`/database-records/${id}`, input);
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['database_records'] }); toast.success('Record updated'); },

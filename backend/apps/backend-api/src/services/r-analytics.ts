@@ -1,5 +1,8 @@
 import { spawn } from 'child_process';
 import path from 'path';
+import { createLogger } from '@aion/common-utils';
+
+const logger = createLogger({ name: 'r-analytics' });
 
 /**
  * AION VISION HUB: R-Analytics Neural Forecasting Service
@@ -22,7 +25,7 @@ export async function runPredictiveModel(historicalCrimeData: number[]): Promise
     });
 
     rmProcess.stderr.on('data', (data) => {
-      console.error(`[R-Analytics] STDERR: ${data}`);
+      logger.error({ data: data.toString() }, 'Rscript STDERR');
     });
 
     rmProcess.on('close', (code) => {

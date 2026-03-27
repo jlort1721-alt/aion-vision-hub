@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,11 @@ import {
 } from 'recharts';
 import {
   MonitorSpeaker, Bell, AlertTriangle, Activity, Video, ArrowRight,
-  CheckCircle2, XCircle, AlertCircle, MapPin, Clock, Shield, BellRing, BellOff
+  CheckCircle2, XCircle, AlertCircle, MapPin, Clock, Shield, BellRing, BellOff, DoorOpen, Globe2
 } from 'lucide-react';
+import QuickGateControl from '@/components/shared/QuickGateControl';
+import CrossSiteDashboard from '@/components/dashboard/CrossSiteDashboard';
+import AnomalyAlertBanner from '@/components/dashboard/AnomalyAlertBanner';
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: 'hsl(0, 84%, 60%)',
@@ -39,7 +42,15 @@ const statusIcon = (status: string) => {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState<'current' | 'all'>('current');
   const REFRESH_INTERVAL = 30000;
+
+  // Cross-site drill-down: select a site from the comparison table
+  const handleSelectSite = useCallback((siteId: string) => {
+    // Switch back to current-site view and navigate to the site detail
+    setViewMode('current');
+    navigate(`/sites/${siteId}`);
+  }, [navigate]);
   const { data: devices = [], isLoading: loadingDevices } = useDevices(REFRESH_INTERVAL);
   const { data: sites = [], isLoading: loadingSites } = useSites(REFRESH_INTERVAL);
   const { data: events = [], isLoading: loadingEvents } = useEventsLegacy(REFRESH_INTERVAL);
@@ -162,6 +173,27 @@ export default function DashboardPage() {
           <p className="text-sm text-muted-foreground">{t('dashboard.subtitle')}</p>
         </div>
         <div className="flex gap-2">
+          {/* Cross-site toggle */}
+          <div className="inline-flex rounded-md border border-input overflow-hidden">
+            <Button
+              variant={viewMode === 'current' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none border-0"
+              onClick={() => setViewMode('current')}
+            >
+              <MapPin className="mr-1.5 h-3.5 w-3.5" />
+              {t('dashboard.current_site') || 'Current Site'}
+            </Button>
+            <Button
+              variant={viewMode === 'all' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-none border-0"
+              onClick={() => setViewMode('all')}
+            >
+              <Globe2 className="mr-1.5 h-3.5 w-3.5" />
+              {t('dashboard.all_sites') || 'All Sites'}
+            </Button>
+          </div>
           {permission !== 'granted' ? (
             <Button variant="outline" size="sm" onClick={subscribe}>
               <BellRing className="mr-2 h-4 w-4" /> {t('dashboard.enable_notifications')}
@@ -177,10 +209,21 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Cross-site view — shown when "All Sites" is selected */}
+      {viewMode === 'all' && (
+        <CrossSiteDashboard onSelectSite={handleSelectSite} />
+      )}
+
+      {/* Per-site dashboard — hidden when "All Sites" is active */}
+      {viewMode === 'current' && <>
+
+      {/* Anomaly Detection Banner */}
+      <AnomalyAlertBanner />
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map(stat => (
-          <Card key={stat.label} className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate(stat.path)}>
+          <Card key={stat.label} className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate(stat.path)} aria-label={`${stat.label}: ${stat.value}`}>
             <CardContent className="p-4">
               {loading ? (
                 <div className="space-y-2"><Skeleton className="h-4 w-20" /><Skeleton className="h-8 w-12" /><Skeleton className="h-3 w-16" /></div>
@@ -201,7 +244,7 @@ export default function DashboardPage() {
 
       {/* Events per Hour + Device Status Donut */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2" aria-label="Events per hour chart">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Clock className="h-4 w-4" /> {t('dashboard.events_per_hour')}
@@ -223,7 +266,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card aria-label="Device status chart">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <MonitorSpeaker className="h-4 w-4" /> {t('dashboard.device_status')}
@@ -258,7 +301,7 @@ export default function DashboardPage() {
 
       {/* Event Timeline + Active Alerts by Site */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2" aria-label="Event timeline chart">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t('dashboard.event_timeline')}</CardTitle>
           </CardHeader>
@@ -281,7 +324,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card aria-label="Active alerts by site chart">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Shield className="h-4 w-4" /> {t('dashboard.active_alerts_by_site')}
@@ -310,7 +353,7 @@ export default function DashboardPage() {
 
       {/* Severity + Recent Events + System Health */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card>
+        <Card aria-label="Severity distribution chart">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t('dashboard.severity_distribution')}</CardTitle>
           </CardHeader>
@@ -331,7 +374,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Recent Events */}
-        <Card>
+        <Card aria-label="Recent events">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">{t('dashboard.recent_events')}</CardTitle>
@@ -359,7 +402,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* System Health */}
-        <Card>
+        <Card aria-label="System health status">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">{t('dashboard.system_health_card')}</CardTitle>
@@ -409,13 +452,15 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-base">{t('dashboard.quick_actions')}</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 gap-2">
-            <Button variant="outline" className="h-auto py-3 flex-col gap-1" onClick={() => navigate('/devices')}><MonitorSpeaker className="h-5 w-5" /><span className="text-xs">{t('dashboard.add_device')}</span></Button>
+            <QuickGateControl compact className="h-auto py-3 flex-col gap-1 w-full" />
             <Button variant="outline" className="h-auto py-3 flex-col gap-1" onClick={() => navigate('/live-view')}><Video className="h-5 w-5" /><span className="text-xs">{t('nav.live_view')}</span></Button>
             <Button variant="outline" className="h-auto py-3 flex-col gap-1" onClick={() => navigate('/incidents')}><AlertTriangle className="h-5 w-5" /><span className="text-xs">{t('dashboard.new_incident')}</span></Button>
             <Button variant="outline" className="h-auto py-3 flex-col gap-1" onClick={() => navigate('/ai-assistant')}><Activity className="h-5 w-5" /><span className="text-xs">{t('nav.ai_assistant')}</span></Button>
           </CardContent>
         </Card>
       </div>
+
+      </>}
     </div>
   );
 }

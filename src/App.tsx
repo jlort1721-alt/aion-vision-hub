@@ -1,5 +1,6 @@
 import { lazy, Suspense, Component } from "react";
 import type { ReactNode, ErrorInfo } from "react";
+import { Sentry } from "@/lib/sentry";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +9,7 @@ import { createQueryClient } from "@/lib/query-config";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { I18nProvider } from "@/contexts/I18nContext";
+import { BrandingProvider } from "@/contexts/BrandingContext";
 import { hasModuleAccess } from "@/lib/permissions";
 import AppLayout from "@/components/layout/AppLayout";
 
@@ -26,6 +28,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[ErrorBoundary]', error, info.componentStack);
+    Sentry.captureException(error, { extra: { componentStack: info.componentStack } });
   }
   render() {
     if (this.state.hasError) {
@@ -74,6 +77,7 @@ const IntercomPage = lazy(() => import("@/pages/IntercomPage"));
 const DatabasePage = lazy(() => import("@/pages/DatabasePage"));
 const WhatsAppPage = lazy(() => import("@/pages/WhatsAppPage"));
 const AlertsPage = lazy(() => import("@/pages/AlertsPage"));
+const NotificationTemplatesPage = lazy(() => import("@/pages/NotificationTemplatesPage"));
 const ShiftsPage = lazy(() => import("@/pages/ShiftsPage"));
 const SLAPage = lazy(() => import("@/pages/SLAPage"));
 const EmergencyPage = lazy(() => import("@/pages/EmergencyPage"));
@@ -95,6 +99,8 @@ const DocumentsPage = lazy(() => import("@/pages/DocumentsPage"));
 const MinutaPage = lazy(() => import("@/pages/MinutaPage"));
 const PhonePanelPage = lazy(() => import("@/pages/PhonePanelPage"));
 const NetworkPage = lazy(() => import("@/pages/NetworkPage"));
+const OperationsPanelPage = lazy(() => import("@/pages/OperationsPanelPage"));
+const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = createQueryClient();
@@ -133,6 +139,13 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function LandingRoute() {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  return <LandingPage />;
+}
+
 function ModuleGuard({ module, children }: { module: string; children: React.ReactNode }) {
   const { roles } = useAuth();
   if (!hasModuleAccess(roles, module)) return <Navigate to="/dashboard" replace />;
@@ -144,10 +157,10 @@ function AppRoutes() {
     <ErrorBoundary>
     <Suspense fallback={<PageLoader />}>
       <Routes>
+        <Route path="/" element={<LandingRoute />} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route path="dashboard" element={<ModuleGuard module="dashboard"><DashboardPage /></ModuleGuard>} />
           <Route path="live-view" element={<ModuleGuard module="live_view"><LiveViewPage /></ModuleGuard>} />
           <Route path="immersive" element={<ModuleGuard module="live_view"><Immersive3DPage /></ModuleGuard>} />
@@ -172,6 +185,7 @@ function AppRoutes() {
           <Route path="admin" element={<ModuleGuard module="admin"><AdminPage /></ModuleGuard>} />
           <Route path="whatsapp" element={<ModuleGuard module="integrations"><WhatsAppPage /></ModuleGuard>} />
           <Route path="alerts" element={<ModuleGuard module="alerts"><AlertsPage /></ModuleGuard>} />
+          <Route path="notification-templates" element={<ModuleGuard module="alerts"><NotificationTemplatesPage /></ModuleGuard>} />
           <Route path="shifts" element={<ModuleGuard module="shifts"><ShiftsPage /></ModuleGuard>} />
           <Route path="sla" element={<ModuleGuard module="sla"><SLAPage /></ModuleGuard>} />
           <Route path="emergency" element={<ModuleGuard module="emergency"><EmergencyPage /></ModuleGuard>} />
@@ -190,6 +204,7 @@ function AppRoutes() {
           <Route path="minuta" element={<ModuleGuard module="minuta"><MinutaPage /></ModuleGuard>} />
           <Route path="phone" element={<ModuleGuard module="phone"><PhonePanelPage /></ModuleGuard>} />
           <Route path="network" element={<ModuleGuard module="system"><NetworkPage /></ModuleGuard>} />
+          <Route path="operations" element={<ModuleGuard module="operations"><OperationsPanelPage /></ModuleGuard>} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -210,11 +225,13 @@ const App = () => (
         </Suspense>
         <BrowserRouter>
           <AuthProvider>
-            <ErrorBoundary>
-              <div className="dark">
-                <AppRoutes />
-              </div>
-            </ErrorBoundary>
+            <BrandingProvider>
+              <ErrorBoundary>
+                <div className="dark">
+                  <AppRoutes />
+                </div>
+              </ErrorBoundary>
+            </BrandingProvider>
           </AuthProvider>
         </BrowserRouter>
       </I18nProvider>

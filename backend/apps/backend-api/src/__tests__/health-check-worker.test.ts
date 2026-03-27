@@ -2,9 +2,24 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ── Hoisted mocks ─────────────────────────────────────────────────
 
-const { mockDispatch } = vi.hoisted(() => ({
+const { mockDispatch, mockLogger } = vi.hoisted(() => ({
   mockDispatch: vi.fn().mockResolvedValue(undefined),
+  mockLogger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+  },
 }));
+
+vi.mock('@aion/common-utils', async () => {
+  const actual = await vi.importActual('@aion/common-utils');
+  return {
+    ...actual,
+    createLogger: vi.fn(() => mockLogger),
+  };
+});
 
 vi.mock('../db/schema/index.js', () => ({
   sites: { id: 'id', name: 'name', wanIp: 'wan_ip' },
@@ -98,17 +113,15 @@ describe('Health Check Worker', () => {
     });
 
     it('prevents double-start (warns and returns cleanup)', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const db = buildDb([], []);
 
       startHealthCheckWorker(db as any, 60_000);
       const cleanup2 = startHealthCheckWorker(db as any, 60_000);
 
-      expect(warnSpy).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining('already running'),
       );
       expect(typeof cleanup2).toBe('function');
-      warnSpy.mockRestore();
     });
 
     it('runs an immediate check on start', async () => {
@@ -279,7 +292,6 @@ describe('Health Check Worker', () => {
       mockSocketBehavior.reachable = false;
       mockDispatch.mockRejectedValueOnce(new Error('dispatch boom'));
 
-      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const site = { id: 's1', name: 'HQ', wanIp: '10.0.0.1' };
       const devs = [
         { id: 'd1', name: 'Cam 1', port: 554, type: 'camera', status: 'online', tenantId: 't1' },
@@ -288,15 +300,13 @@ describe('Health Check Worker', () => {
       startHealthCheckWorker(db as any, 60_000);
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(errSpy).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ err: expect.any(Error) }),
         expect.stringContaining('Notification dispatch failed'),
-        expect.any(Error),
       );
-      errSpy.mockRestore();
     });
 
     it('handles per-device errors without stopping the sweep', async () => {
-      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const site = { id: 's1', name: 'HQ', wanIp: '10.0.0.1' };
       // Device with no port should cause an error path
       const devs = [
@@ -306,8 +316,7 @@ describe('Health Check Worker', () => {
       startHealthCheckWorker(db as any, 60_000);
       await vi.advanceTimersByTimeAsync(0);
 
-      // Worker should not crash
-      errSpy.mockRestore();
+      // Worker should not crash — errors are logged via logger.error
     });
   });
 });

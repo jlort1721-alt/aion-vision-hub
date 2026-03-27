@@ -68,6 +68,52 @@ export function useEWeLinkAuth() {
     [qc],
   );
 
+  const autoLogin = useCallback(
+    async (accountLabel?: string) => {
+      setIsLoggingIn(true);
+      try {
+        const result = await ewelink.autoLogin(accountLabel);
+
+        if (result.success) {
+          qc.invalidateQueries({ queryKey: QUERY_KEYS.status });
+          qc.invalidateQueries({ queryKey: QUERY_KEYS.devices });
+          qc.invalidateQueries({ queryKey: QUERY_KEYS.health });
+          toast.success('eWeLink: Conexión automática exitosa');
+        } else {
+          toast.error(`eWeLink: ${result.error}`);
+        }
+
+        return result;
+      } finally {
+        setIsLoggingIn(false);
+      }
+    },
+    [qc],
+  );
+
+  const switchAccount = useCallback(
+    async (accountLabel: string) => {
+      setIsLoggingIn(true);
+      try {
+        const result = await ewelink.switchAccount(accountLabel);
+
+        if (result.success) {
+          qc.invalidateQueries({ queryKey: QUERY_KEYS.status });
+          qc.invalidateQueries({ queryKey: QUERY_KEYS.devices });
+          qc.invalidateQueries({ queryKey: QUERY_KEYS.health });
+          toast.success(`eWeLink: Cambiado a ${accountLabel}`);
+        } else {
+          toast.error(`eWeLink: ${result.error}`);
+        }
+
+        return result;
+      } finally {
+        setIsLoggingIn(false);
+      }
+    },
+    [qc],
+  );
+
   const logout = useCallback(() => {
     ewelink.logout();
     qc.invalidateQueries({ queryKey: QUERY_KEYS.status });
@@ -78,12 +124,17 @@ export function useEWeLinkAuth() {
 
   return {
     login,
+    autoLogin,
+    switchAccount,
     logout,
     isLoggingIn,
     isAuthenticated: status?.authenticated ?? ewelink.isAuthenticated(),
     isConfigured: status?.configured ?? ewelink.isConfigured(),
     region: status?.region ?? 'unknown',
     encryptionEnabled: status?.encryptionEnabled ?? false,
+    activeAccount: status?.activeAccount ?? null,
+    storedAccounts: status?.storedAccounts ?? [],
+    hasStoredAccounts: status?.hasStoredAccounts ?? false,
   };
 }
 

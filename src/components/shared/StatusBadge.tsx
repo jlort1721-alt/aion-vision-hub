@@ -10,52 +10,52 @@ import { cn } from '@/lib/utils';
 type StatusVariant = 'severity' | 'device' | 'event' | 'health' | 'incident' | 'generic';
 
 const SEVERITY_COLORS: Record<string, string> = {
-  critical: 'bg-red-500/15 text-red-400 border-red-500/30',
+  critical: 'bg-destructive/15 text-destructive border-destructive/30',
   high: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-  medium: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
-  low: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+  medium: 'bg-warning/15 text-warning border-warning/30',
+  low: 'bg-primary/15 text-primary border-primary/30',
   info: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
 };
 
 const DEVICE_COLORS: Record<string, string> = {
-  online: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  offline: 'bg-red-500/15 text-red-400 border-red-500/30',
-  degraded: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+  online: 'bg-success/15 text-success border-success/30',
+  offline: 'bg-destructive/15 text-destructive border-destructive/30',
+  degraded: 'bg-warning/15 text-warning border-warning/30',
   unknown: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
   maintenance: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
 };
 
 const EVENT_COLORS: Record<string, string> = {
-  new: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  acknowledged: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
+  new: 'bg-primary/15 text-primary border-primary/30',
+  acknowledged: 'bg-warning/15 text-warning border-warning/30',
   investigating: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-  resolved: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  resolved: 'bg-success/15 text-success border-success/30',
   dismissed: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
 };
 
 const HEALTH_COLORS: Record<string, string> = {
-  healthy: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  degraded: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
-  down: 'bg-red-500/15 text-red-400 border-red-500/30',
+  healthy: 'bg-success/15 text-success border-success/30',
+  degraded: 'bg-warning/15 text-warning border-warning/30',
+  down: 'bg-destructive/15 text-destructive border-destructive/30',
   unknown: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
 };
 
 const INCIDENT_COLORS: Record<string, string> = {
-  open: 'bg-red-500/15 text-red-400 border-red-500/30',
+  open: 'bg-destructive/15 text-destructive border-destructive/30',
   investigating: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-  pending: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
-  resolved: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  pending: 'bg-warning/15 text-warning border-warning/30',
+  resolved: 'bg-success/15 text-success border-success/30',
   closed: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
 };
 
 const GENERIC_COLORS: Record<string, string> = {
-  active: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  active: 'bg-success/15 text-success border-success/30',
   inactive: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
-  error: 'bg-red-500/15 text-red-400 border-red-500/30',
-  pending: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
-  connected: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  disconnected: 'bg-red-500/15 text-red-400 border-red-500/30',
-  on: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  error: 'bg-destructive/15 text-destructive border-destructive/30',
+  pending: 'bg-warning/15 text-warning border-warning/30',
+  connected: 'bg-success/15 text-success border-success/30',
+  disconnected: 'bg-destructive/15 text-destructive border-destructive/30',
+  on: 'bg-success/15 text-success border-success/30',
   off: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
 };
 
@@ -100,6 +100,7 @@ export function StatusBadge({
         colorClasses,
         className
       )}
+      aria-label={`Status: ${displayLabel}`}
     >
       {pulse && (
         <span className="relative flex h-2 w-2 mr-1.5">

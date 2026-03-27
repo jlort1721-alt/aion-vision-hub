@@ -1,8 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <path d="M32 4L56 14V30C56 46 45.2 58 32 62C18.8 58 8 46 8 30V14L32 4Z" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
-  <circle cx="32" cy="25" r="7" stroke="#3b82f6" stroke-width="2.5" fill="none"/>
-  <circle cx="32" cy="25" r="3" fill="#3b82f6"/>
-  <rect x="30.5" y="32" width="3" height="14" rx="1" fill="#3b82f6"/>
-  <rect x="33.5" y="37" width="6" height="2.5" rx="1" fill="#3b82f6"/>
-  <rect x="33.5" y="42" width="4" height="2.5" rx="1" fill="#3b82f6"/>
+<svg width="64" height="64" viewBox="0 0 96 100" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="fA" x1="0" y1="0" x2="0.2" y2="1"><stop offset="0%" stop-color="#D91E25"/><stop offset="40%" stop-color="#A8141A"/><stop offset="78%" stop-color="#7A0D11"/><stop offset="100%" stop-color="#4A0709"/></linearGradient></defs>
+<path d="M48,5 L72,5 L81,14 L81,60 Q81,78 48,93 Q15,78 15,60 L15,14 Z" fill="#250407" opacity=".7" transform="translate(3,3)"/>
+<path d="M48,3 L74,3 L84,13 L84,60 Q84,80 48,96 Q12,80 12,60 L12,13 Z" fill="url(#fA)"/>
+<path d="M48,3 L74,3 L84,13 L84,60 Q84,80 48,96 Q12,80 12,60 L12,13 Z" fill="none" stroke="rgba(255,255,255,.22)" stroke-width=".9"/>
+<circle cx="48" cy="52" r="21" fill="none" stroke="rgba(255,255,255,.22)" stroke-width=".9"/>
+<circle cx="48" cy="52" r="3" fill="white" opacity=".95"/><circle cx="48" cy="52" r="1.8" fill="#C8232A"/>
+<line x1="48" y1="31" x2="48" y2="40" stroke="rgba(255,255,255,.55)" stroke-width="1.1" stroke-linecap="round"/>
+<line x1="48" y1="64" x2="48" y2="73" stroke="rgba(255,255,255,.55)" stroke-width="1.1" stroke-linecap="round"/>
+<line x1="27" y1="52" x2="36" y2="52" stroke="rgba(255,255,255,.55)" stroke-width="1.1" stroke-linecap="round"/>
+<line x1="60" y1="52" x2="69" y2="52" stroke="rgba(255,255,255,.55)" stroke-width="1.1" stroke-linecap="round"/>
+<path d="M72,3 L84,3 L84,15" fill="none" stroke="#D4A017" stroke-width="2.4" stroke-linecap="square"/>
 </svg>

@@ -7,18 +7,43 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Cog, PlayCircle, CheckCircle, XCircle, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Cog, PlayCircle, CheckCircle, XCircle, Plus, Loader2 } from "lucide-react";
 
 const executionStatusColors: Record<string, string> = {
-  success: "bg-green-500",
-  partial: "bg-yellow-500",
-  failed: "bg-red-500",
+  success: "bg-success",
+  partial: "bg-warning",
+  failed: "bg-destructive",
 };
+
+const defaultNewRule = { name: '', description: '', triggerType: 'event', conditions: '[]', actions: '[]', priority: 5, cooldownMinutes: 10, isActive: true };
 
 export default function AutomationPage() {
   const [activeTab, setActiveTab] = useState("rules");
+  const [showCreateRule, setShowCreateRule] = useState(false);
+  const [newRule, setNewRule] = useState(defaultNewRule);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const createRuleMutation = useMutation({
+    mutationFn: (data: typeof defaultNewRule) => {
+      let conditions, actions;
+      try { conditions = JSON.parse(data.conditions); } catch { conditions = []; }
+      try { actions = JSON.parse(data.actions); } catch { actions = []; }
+      return automationRulesApi.create({ ...data, conditions, actions });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['automation'] });
+      toast({ title: 'Automation rule created' });
+      setShowCreateRule(false);
+      setNewRule(defaultNewRule);
+    },
+    onError: (err: Error) => toast({ title: 'Error', description: err.message, variant: 'destructive' }),
+  });
 
   // ── Automation Rules ─────────────────────────────────────
   const { data: rulesData, isLoading: loadingRules } = useQuery({
@@ -76,7 +101,7 @@ export default function AutomationPage() {
                 <p className="text-sm text-muted-foreground">Total Rules</p>
                 <p className="text-3xl font-bold">{stats?.totalRules ?? 0}</p>
               </div>
-              <Cog className="h-8 w-8 text-blue-500" />
+              <Cog className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -85,9 +110,9 @@ export default function AutomationPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Active Rules</p>
-                <p className="text-3xl font-bold text-green-500">{stats?.activeRules ?? 0}</p>
+                <p className="text-3xl font-bold text-success">{stats?.activeRules ?? 0}</p>
               </div>
-              <PlayCircle className="h-8 w-8 text-green-500" />
+              <PlayCircle className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -98,7 +123,7 @@ export default function AutomationPage() {
                 <p className="text-sm text-muted-foreground">Executions (24h)</p>
                 <p className="text-3xl font-bold">{stats?.executions24h ?? 0}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-blue-500" />
+              <CheckCircle className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -107,11 +132,11 @@ export default function AutomationPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Success Rate</p>
-                <p className="text-3xl font-bold text-green-500">
+                <p className="text-3xl font-bold text-success">
                   {stats?.successRate != null ? `${Math.round(stats.successRate)}%` : '--'}
                 </p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -131,10 +156,46 @@ export default function AutomationPage() {
         {/* ── Rules Tab ───────────────────────────────────── */}
         <TabsContent value="rules" className="space-y-4">
           <div className="flex justify-end">
-            <Button className="gap-1">
+            <Button className="gap-1" onClick={() => setShowCreateRule(true)}>
               <Plus className="h-4 w-4" /> New Rule
             </Button>
           </div>
+
+          <Dialog open={showCreateRule} onOpenChange={setShowCreateRule}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader><DialogTitle>Create Automation Rule</DialogTitle></DialogHeader>
+              <div className="space-y-3 py-2">
+                <div className="space-y-1"><Label className="text-xs">Rule Name *</Label><Input value={newRule.name} onChange={e => setNewRule(r => ({ ...r, name: e.target.value }))} placeholder="e.g. Alert on camera offline" /></div>
+                <div className="space-y-1"><Label className="text-xs">Description</Label><Input value={newRule.description} onChange={e => setNewRule(r => ({ ...r, description: e.target.value }))} placeholder="What this rule does" /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1"><Label className="text-xs">Trigger Type</Label>
+                    <Select value={newRule.triggerType} onValueChange={v => setNewRule(r => ({ ...r, triggerType: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="event">Event</SelectItem>
+                        <SelectItem value="schedule">Schedule</SelectItem>
+                        <SelectItem value="device_status">Device Status</SelectItem>
+                        <SelectItem value="threshold">Threshold</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1"><Label className="text-xs">Priority (1-10)</Label><Input type="number" min={1} max={10} value={newRule.priority} onChange={e => setNewRule(r => ({ ...r, priority: parseInt(e.target.value) || 5 }))} /></div>
+                </div>
+                <div className="space-y-1"><Label className="text-xs">Conditions (JSON)</Label><Textarea className="font-mono text-xs h-20" value={newRule.conditions} onChange={e => setNewRule(r => ({ ...r, conditions: e.target.value }))} placeholder='[{"field":"severity","operator":"eq","value":"critical"}]' /></div>
+                <div className="space-y-1"><Label className="text-xs">Actions (JSON)</Label><Textarea className="font-mono text-xs h-20" value={newRule.actions} onChange={e => setNewRule(r => ({ ...r, actions: e.target.value }))} placeholder='[{"type":"send_alert","params":{"channels":["email"]}}]' /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1"><Label className="text-xs">Cooldown (min)</Label><Input type="number" min={0} value={newRule.cooldownMinutes} onChange={e => setNewRule(r => ({ ...r, cooldownMinutes: parseInt(e.target.value) || 0 }))} /></div>
+                  <div className="flex items-center gap-2 pt-5"><Switch checked={newRule.isActive} onCheckedChange={v => setNewRule(r => ({ ...r, isActive: v }))} /><Label className="text-xs">Active</Label></div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setShowCreateRule(false)}>Cancel</Button>
+                <Button onClick={() => createRuleMutation.mutate(newRule)} disabled={!newRule.name || createRuleMutation.isPending}>
+                  {createRuleMutation.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</> : 'Create Rule'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           {loadingRules ? (
             <div className="flex justify-center py-12">
               <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
@@ -153,7 +214,7 @@ export default function AutomationPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Cog className={`h-5 w-5 ${rule.isActive ? 'text-blue-500' : 'text-muted-foreground'}`} />
+                      <Cog className={`h-5 w-5 ${rule.isActive ? 'text-primary' : 'text-muted-foreground'}`} />
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold">{rule.name}</h3>
@@ -197,7 +258,7 @@ export default function AutomationPage() {
           ) : (
             executions.map((exec: any) => {
               const StatusIcon = exec.status === 'success' ? CheckCircle : exec.status === 'failed' ? XCircle : PlayCircle;
-              const statusColor = exec.status === 'success' ? 'text-green-500' : exec.status === 'failed' ? 'text-red-500' : 'text-yellow-500';
+              const statusColor = exec.status === 'success' ? 'text-success' : exec.status === 'failed' ? 'text-destructive' : 'text-warning';
               return (
                 <Card key={exec.id}>
                   <CardContent className="pt-6">

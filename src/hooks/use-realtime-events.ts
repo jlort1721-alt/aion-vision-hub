@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client'; // ALLOWED: Supabase Realtime channels (postgres_changes)
 import { apiClient } from '@/lib/api-client';
@@ -34,9 +34,9 @@ export function useRealtimeEvents() {
     staleTime: 60000,
   });
 
-  const prefs: NotificationPrefs = (tenant?.settings as any)?.notifications ?? {
+  const prefs: NotificationPrefs = useMemo(() => (tenant?.settings as any)?.notifications ?? {
     critical_events: true, high_severity: true, device_offline: true,
-  };
+  }, [tenant?.settings]);
 
   useEffect(() => {
     const channel = supabase

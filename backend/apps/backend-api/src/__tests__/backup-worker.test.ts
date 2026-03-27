@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ── Hoisted mocks ─────────────────────────────────────────────────
 
-const { mockFs, mockExecute } = vi.hoisted(() => ({
+const { mockFs, mockExecute, mockLogger } = vi.hoisted(() => ({
   mockFs: {
     existsSync: vi.fn().mockReturnValue(false),
     mkdirSync: vi.fn(),
@@ -13,7 +13,22 @@ const { mockFs, mockExecute } = vi.hoisted(() => ({
     rmSync: vi.fn(),
   },
   mockExecute: vi.fn().mockResolvedValue({ rows: [] }),
+  mockLogger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+  },
 }));
+
+vi.mock('@aion/common-utils', async () => {
+  const actual = await vi.importActual('@aion/common-utils');
+  return {
+    ...actual,
+    createLogger: vi.fn(() => mockLogger),
+  };
+});
 
 vi.mock('fs', () => ({
   default: mockFs,
@@ -118,13 +133,11 @@ describe('Backup Worker', () => {
         return Promise.resolve([]);
       });
 
-      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const db = { execute: mockExecute } as any;
       const manifest = await runBackupNow(db);
 
       const failedTables = Object.entries(manifest.table_counts).filter(([, v]) => v === -1);
       expect(failedTables.length).toBe(1);
-      errSpy.mockRestore();
     });
 
     it('handles db.execute returning array directly', async () => {
@@ -270,16 +283,14 @@ describe('Backup Worker', () => {
       const safeTime = new Date();
       safeTime.setHours(10, 0, 0, 0);
       vi.setSystemTime(safeTime);
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const db = { execute: mockExecute } as any;
 
       startBackupWorker(db);
       startBackupWorker(db);
 
-      expect(warnSpy).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining('already running'),
       );
-      warnSpy.mockRestore();
     });
 
     it('triggers backup when current hour matches BACKUP_HOUR and no backup today', async () => {

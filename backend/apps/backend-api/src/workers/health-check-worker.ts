@@ -1,8 +1,11 @@
 import * as net from 'net';
 import { eq, and, isNotNull } from 'drizzle-orm';
+import { createLogger } from '@aion/common-utils';
 import type { Database } from '../db/client.js';
 import { sites, devices } from '../db/schema/index.js';
 import { dispatchDeviceStateChange } from './notification-dispatcher.js';
+
+const logger = createLogger({ name: 'health-check-worker' });
 
 // ---------------------------------------------------------------------------
 // Types
@@ -134,9 +137,7 @@ async function runHealthCheck(db: Database): Promise<void> {
         // 4. Detect state changes and update DB
         const previousStatus = device.status;
         if (previousStatus !== newStatus) {
-          console.log(
-            `[health-check] Device "${device.name}" (${device.id}) changed: ${previousStatus} -> ${newStatus} | ${site.wanIp}:${device.port}`,
-          );
+          logger.info({ deviceName: device.name, deviceId: device.id, previousStatus, newStatus, address: `${site.wanIp}:${device.port}` }, 'Device status changed');
 
           const updateData: Record<string, unknown> = {
             status: newStatus,
@@ -169,10 +170,7 @@ async function runHealthCheck(db: Database): Promise<void> {
               port: device.port!,
             });
           } catch (dispatchErr) {
-            console.error(
-              `[health-check] Notification dispatch failed for "${device.name}":`,
-              dispatchErr,
-            );
+            logger.error({ err: dispatchErr, deviceName: device.name }, 'Notification dispatch failed');
           }
         } else if (reachable) {
           // Still online — just update lastSeen
@@ -185,19 +183,14 @@ async function runHealthCheck(db: Database): Promise<void> {
         }
       } catch (err) {
         // One failing device must not stop the whole sweep
-        console.error(
-          `[health-check] Error checking device "${device.name}" (${device.id}):`,
-          err,
-        );
+        logger.error({ err, deviceName: device.name, deviceId: device.id }, 'Error checking device');
         offlineCount++;
       }
     }
   }
 
   // 5. Summary log
-  console.log(
-    `[health-check] Health check complete: ${siteRows.length} sites, ${totalDevices} devices, ${onlineCount} online, ${offlineCount} offline`,
-  );
+  logger.info({ sites: siteRows.length, totalDevices, onlineCount, offlineCount }, 'Health check complete');
 }
 
 // ---------------------------------------------------------------------------
@@ -221,22 +214,20 @@ export function startHealthCheckWorker(
 ): () => void {
   // Prevent double-start
   if (timerHandle) {
-    console.warn('[health-check] Worker already running — skipping duplicate start');
+    logger.warn('Worker already running — skipping duplicate start');
     return () => stopHealthCheckWorker();
   }
 
-  console.log(
-    `[health-check] Starting health-check worker (interval: ${interval / 1000}s)`,
-  );
+  logger.info({ intervalSec: interval / 1000 }, 'Starting health-check worker');
 
   // Run immediately on start, then on interval
   runHealthCheck(db).catch((err) => {
-    console.error('[health-check] Initial run failed:', err);
+    logger.error({ err }, 'Initial run failed');
   });
 
   timerHandle = setInterval(() => {
     runHealthCheck(db).catch((err) => {
-      console.error('[health-check] Tick failed:', err);
+      logger.error({ err }, 'Tick failed');
     });
   }, interval);
 
@@ -250,6 +241,6 @@ export function stopHealthCheckWorker(): void {
   if (timerHandle) {
     clearInterval(timerHandle);
     timerHandle = null;
-    console.log('[health-check] Worker stopped');
+    logger.info('Worker stopped');
   }
 }

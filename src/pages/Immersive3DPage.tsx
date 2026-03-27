@@ -254,15 +254,18 @@ export default function Immersive3DPage() {
 
     initializeMediaPipe();
 
+    const videoEl = videoRef.current;
+    const recognizer = recognizerRef.current;
+
     return () => {
       unmounted = true;
       cancelAnimationFrame(animFrame);
-      if (videoRef.current?.srcObject) {
-        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+      if (videoEl?.srcObject) {
+        const tracks = (videoEl.srcObject as MediaStream).getTracks();
         tracks.forEach(t => t.stop());
       }
-      if (recognizerRef.current) {
-        recognizerRef.current.close();
+      if (recognizer) {
+        recognizer.close();
       }
     };
   }, []);

@@ -10,6 +10,7 @@ import { Eye, EyeOff, Shield, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { lovable } from '@/integrations/lovable/index';
 import { Separator } from '@/components/ui/separator';
+import Logo from '@/components/brand/Logo';
 
 export default function LoginPage() {
   const [tab, setTab] = useState('login');
@@ -72,8 +73,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo.svg" alt="Clave Seguridad" className="w-16 h-16 mb-4" />
-          <h1 className="text-2xl font-bold">Clave Seguridad</h1>
+          <Logo variant="icon" height={64} className="mb-4" />
+          <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Clave Seguridad</h1>
           <p className="text-sm text-muted-foreground mt-1">Centro de Monitoreo y Control</p>
         </div>
 
@@ -87,7 +88,7 @@ export default function LoginPage() {
             </CardHeader>
             <CardContent>
               <TabsContent value="login" className="mt-0">
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4" aria-label="Login form">
                   <div className="space-y-2">
                     <Label htmlFor="login-email">Correo Electrónico</Label>
                     <Input id="login-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="usuario@empresa.com" required />
@@ -96,7 +97,7 @@ export default function LoginPage() {
                     <Label htmlFor="login-password">Contraseña</Label>
                     <div className="relative">
                       <Input id="login-password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required />
-                      <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 hover:bg-transparent" onClick={() => setShowPassword(!showPassword)}>
+                      <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 hover:bg-transparent" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
@@ -122,7 +123,7 @@ export default function LoginPage() {
               </TabsContent>
 
               <TabsContent value="signup" className="mt-0">
-                <form onSubmit={handleSignup} className="space-y-4">
+                <form onSubmit={handleSignup} className="space-y-4" aria-label="Sign up form">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Nombre Completo</Label>
                     <Input id="signup-name" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Juan Pérez" required />
@@ -150,7 +151,7 @@ export default function LoginPage() {
                     </Button>
                   </div>
                 ) : (
-                  <form onSubmit={handleReset} className="space-y-4">
+                  <form onSubmit={handleReset} className="space-y-4" aria-label="Password reset form">
                     <p className="text-sm text-muted-foreground">Ingresa tu correo para recibir un enlace de recuperación de contraseña.</p>
                     <div className="space-y-2">
                       <Label htmlFor="reset-email">Correo Electrónico</Label>

@@ -5,6 +5,8 @@ import {
   ewelinkLoginSchema,
   ewelinkControlSchema,
   ewelinkBatchControlSchema,
+  ewelinkAutoLoginSchema,
+  ewelinkSwitchAccountSchema,
 } from './schemas.js';
 import type { ApiResponse } from '@aion/shared-contracts';
 
@@ -119,6 +121,56 @@ export async function registerEWeLinkRoutes(app: FastifyInstance) {
       });
 
       return { success: true, data: results } satisfies ApiResponse;
+    },
+  );
+
+  // ── GET /accounts — List stored eWeLink accounts (masked) ────
+  app.get(
+    '/accounts',
+    { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
+    async () => {
+      const accounts = ewelinkProxyService.getStoredAccountList();
+      return {
+        success: true,
+        data: {
+          accounts,
+          hasStoredAccounts: accounts.length > 0,
+        },
+      } satisfies ApiResponse;
+    },
+  );
+
+  // ── POST /auto-login — Auto-login with a stored account ──────
+  app.post(
+    '/auto-login',
+    { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
+    async (request) => {
+      const { accountLabel } = ewelinkAutoLoginSchema.parse(request.body ?? {});
+      const result = await ewelinkProxyService.autoLogin(request.tenantId, accountLabel);
+
+      await request.audit('ewelink.auto_login', 'ewelink', undefined, {
+        success: result.success,
+        account: result.account,
+      });
+
+      return { success: result.success, data: result } satisfies ApiResponse;
+    },
+  );
+
+  // ── POST /switch-account — Switch to a different stored account
+  app.post(
+    '/switch-account',
+    { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
+    async (request) => {
+      const { accountLabel } = ewelinkSwitchAccountSchema.parse(request.body);
+      const result = await ewelinkProxyService.switchAccount(request.tenantId, accountLabel);
+
+      await request.audit('ewelink.switch_account', 'ewelink', undefined, {
+        success: result.success,
+        account: result.account,
+      });
+
+      return { success: result.success, data: result } satisfies ApiResponse;
     },
   );
 }

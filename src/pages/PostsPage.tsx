@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
@@ -80,6 +84,7 @@ export default function PostsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Post | null>(null);
 
   // Form state
   const [formName, setFormName] = useState('');
@@ -189,6 +194,7 @@ export default function PostsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       toast({ title: 'Puesto eliminado' });
+      setDeleteTarget(null);
       if (selectedPost) {
         setSelectedPost(null);
         setSheetOpen(false);
@@ -266,22 +272,22 @@ export default function PostsPage() {
     setSheetOpen(true);
   }
 
-  function getPostStatus(post: Post): 'activo' | 'sin_operador' | 'fuera_de_servicio' {
+  const getPostStatus = useCallback((post: Post): 'activo' | 'sin_operador' | 'fuera_de_servicio' => {
     if (!post.is_active) return 'fuera_de_servicio';
     // Check if any shift assignment references this post's site
     const hasOperator = shiftAssignments.some(sa => sa.status === 'checked_in');
     // Simple heuristic: if post is active but no checked-in guard in the tenant, mark yellow
     return hasOperator ? 'activo' : 'sin_operador';
-  }
+  }, [shiftAssignments]);
 
   function getStatusBadge(status: string) {
     switch (status) {
       case 'activo':
-        return <Badge className="bg-green-600/20 text-green-400 border-green-600/30">Activo</Badge>;
+        return <Badge className="bg-success/20 text-success border-success/30">Activo</Badge>;
       case 'sin_operador':
-        return <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-600/30">Sin Operador</Badge>;
+        return <Badge className="bg-warning/20 text-warning border-warning/30">Sin Operador</Badge>;
       case 'fuera_de_servicio':
-        return <Badge className="bg-red-600/20 text-red-400 border-red-600/30">Fuera de Servicio</Badge>;
+        return <Badge className="bg-destructive/20 text-destructive border-destructive/30">Fuera de Servicio</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -324,7 +330,7 @@ export default function PostsPage() {
       const matchStatus = statusFilter === 'all' || getPostStatus(post) === statusFilter;
       return matchSearch && matchSite && matchStatus;
     });
-  }, [posts, search, siteFilter, statusFilter, shiftAssignments]);
+  }, [posts, search, siteFilter, statusFilter, getPostStatus]);
 
   const totalPosts = posts.length;
   const activePosts = posts.filter(p => p.is_active).length;
@@ -378,7 +384,7 @@ export default function PostsPage() {
                   <p className="text-2xl font-bold mt-1">{mannedPosts}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{t('posts.with_operator')}</p>
                 </div>
-                <Shield className="h-5 w-5 text-green-500" />
+                <Shield className="h-5 w-5 text-success" />
               </div>
             )}
           </CardContent>
@@ -394,7 +400,7 @@ export default function PostsPage() {
                   <p className="text-2xl font-bold mt-1">{unmannedPosts}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{t('posts.need_operator')}</p>
                 </div>
-                <UserX className="h-5 w-5 text-yellow-500" />
+                <UserX className="h-5 w-5 text-warning" />
               </div>
             )}
           </CardContent>
@@ -410,7 +416,7 @@ export default function PostsPage() {
                   <p className="text-2xl font-bold mt-1">{outOfServicePosts}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{t('posts.inactive_posts')}</p>
                 </div>
-                <AlertTriangle className="h-5 w-5 text-red-500" />
+                <AlertTriangle className="h-5 w-5 text-destructive" />
               </div>
             )}
           </CardContent>
@@ -510,7 +516,7 @@ export default function PostsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
-                            onClick={e => { e.stopPropagation(); deleteMutation.mutate(post.id); }}
+                            onClick={e => { e.stopPropagation(); setDeleteTarget(post); }}
                           >
                             <Trash2 className="mr-2 h-4 w-4" /> {t('common.delete')}
                           </DropdownMenuItem>
@@ -614,7 +620,7 @@ export default function PostsPage() {
                   {shiftAssignments.filter(sa => sa.status === 'checked_in').length > 0 ? (
                     shiftAssignments.filter(sa => sa.status === 'checked_in').slice(0, 3).map(sa => (
                       <div key={sa.id} className="flex items-center gap-3 p-2 rounded-md bg-muted/50">
-                        <User className="h-4 w-4 text-green-500" />
+                        <User className="h-4 w-4 text-success" />
                         <div className="flex-1">
                           <p className="text-sm font-medium">{getGuardName(sa.user_id)}</p>
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -626,9 +632,9 @@ export default function PostsPage() {
                       </div>
                     ))
                   ) : (
-                    <div className="flex items-center gap-3 p-3 rounded-md bg-yellow-500/10 border border-yellow-500/20">
-                      <UserX className="h-4 w-4 text-yellow-500" />
-                      <p className="text-sm text-yellow-400">{t('posts.no_operator_assigned')}</p>
+                    <div className="flex items-center gap-3 p-3 rounded-md bg-warning/10 border border-warning/20">
+                      <UserX className="h-4 w-4 text-warning" />
+                      <p className="text-sm text-warning">{t('posts.no_operator_assigned')}</p>
                     </div>
                   )}
                 </div>
@@ -640,7 +646,7 @@ export default function PostsPage() {
                     <div className="space-y-2">
                       {getPostDevices(selectedPost).map((device: any) => (
                         <div key={device.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50">
-                          {device.type === 'camera' || device.type === 'lpr' ? <Camera className="h-4 w-4 text-blue-400" /> :
+                          {device.type === 'camera' || device.type === 'lpr' ? <Camera className="h-4 w-4 text-primary" /> :
                            device.type === 'intercom' ? <Phone className="h-4 w-4 text-purple-400" /> :
                            device.type === 'access_panel' || device.type === 'access_control' ? <DoorOpen className="h-4 w-4 text-orange-400" /> :
                            <Cpu className="h-4 w-4 text-muted-foreground" />}
@@ -649,9 +655,9 @@ export default function PostsPage() {
                             <p className="text-xs text-muted-foreground">{device.type} {device.ip_address ? `| ${device.ip_address}` : ''}</p>
                           </div>
                           {device.status === 'online' ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            <CheckCircle2 className="h-4 w-4 text-success" />
                           ) : (
-                            <XCircle className="h-4 w-4 text-red-500" />
+                            <XCircle className="h-4 w-4 text-destructive" />
                           )}
                         </div>
                       ))}
@@ -725,7 +731,7 @@ export default function PostsPage() {
                   <Button variant="outline" className="flex-1" onClick={() => { openEdit(selectedPost); setSheetOpen(false); }}>
                     <Pencil className="mr-2 h-4 w-4" /> {t('common.edit')}
                   </Button>
-                  <Button variant="destructive" size="icon" onClick={() => { deleteMutation.mutate(selectedPost.id); }}>
+                  <Button variant="destructive" size="icon" onClick={() => { setDeleteTarget(selectedPost); }}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -734,6 +740,27 @@ export default function PostsPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* ── Delete Confirmation ── */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar Puesto</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de eliminar el puesto <strong>"{deleteTarget?.name}"</strong>? Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+            >
+              {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── Create/Edit Dialog ── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

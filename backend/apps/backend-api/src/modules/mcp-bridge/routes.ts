@@ -41,7 +41,7 @@ export async function registerMCPBridgeRoutes(app: FastifyInstance) {
     { preHandler: [requireRole('tenant_admin', 'operator')] },
     async (request) => {
       const input = executeToolSchema.parse(request.body);
-      const result = await mcpBridgeService.execute(request.tenantId, input);
+      const result = await mcpBridgeService.execute(request.tenantId, input, request.userId);
 
       await request.audit('mcp.execute', 'mcp-tool', input.toolName, {
         success: result.success,

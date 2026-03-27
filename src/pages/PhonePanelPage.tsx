@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,26 +7,28 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import {
   Phone, PhoneCall, PhoneOff, Search, User, Shield, Clock, Star, Hash,
+  Users, ArrowRightLeft, PhoneIncoming,
 } from 'lucide-react';
 
 // ── Contact categories ─────────────────────────────
 const CONTACT_CATEGORIES = [
-  { value: 'emergencia', label: 'Emergencia', color: 'bg-red-500/20 text-red-400 border-red-500/30' },
-  { value: 'administracion', label: 'Administracion', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
-  { value: 'propietarios', label: 'Propietarios', color: 'bg-green-500/20 text-green-400 border-green-500/30' },
+  { value: 'emergencia', label: 'Emergencia', color: 'bg-destructive/20 text-destructive border-destructive/30' },
+  { value: 'administracion', label: 'Administracion', color: 'bg-primary/20 text-primary border-primary/30' },
+  { value: 'propietarios', label: 'Propietarios', color: 'bg-success/20 text-success border-success/30' },
   { value: 'proveedores', label: 'Proveedores', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
 ];
 
 // ── Emergency speed dial ─────────────────────────────
 const EMERGENCY_CONTACTS = [
-  { name: 'Policia', number: '123', icon: Shield, color: 'bg-blue-600 hover:bg-blue-700 text-white' },
-  { name: 'Bomberos', number: '119', icon: PhoneCall, color: 'bg-red-600 hover:bg-red-700 text-white' },
-  { name: 'Ambulancia', number: '125', icon: PhoneCall, color: 'bg-green-600 hover:bg-green-700 text-white' },
-  { name: 'Supervisor', number: '', icon: Star, color: 'bg-purple-600 hover:bg-purple-700 text-white' },
+  { name: 'Policia', number: '123', icon: Shield, color: 'bg-primary hover:bg-primary/90 text-white' },
+  { name: 'Bomberos', number: '119', icon: PhoneCall, color: 'bg-destructive hover:bg-destructive/90 text-white' },
+  { name: 'Ambulancia', number: '125', icon: PhoneCall, color: 'bg-success hover:bg-success/90 text-white' },
+  { name: 'Supervisor', number: '', icon: Star, color: 'bg-info hover:bg-info/90 text-white' },
 ];
 
 const KEYPAD = [
@@ -77,6 +79,7 @@ export default function PhonePanelPage() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [recentCalls, setRecentCalls] = useState<RecentCall[]>([]);
   const [calling, setCalling] = useState(false);
+  const [queueTimers, setQueueTimers] = useState<Record<string, number>>({});
 
   // ── Load contacts from access_people ─────────────────────────────
   const { data: contacts = [], isLoading } = useQuery({
@@ -118,6 +121,58 @@ export default function PhonePanelPage() {
   const allRecentCalls = useMemo(() => {
     return [...recentCalls, ...intercomCalls].slice(0, 20);
   }, [recentCalls, intercomCalls]);
+
+  // ── Queue: derive waiting callers from intercom_calls where status is 'queued' or 'ringing' ──
+  // In a real SIP integration, these would come from a websocket/polling endpoint.
+  const { data: sipQueueCalls = [] } = useQuery({
+    queryKey: ['sip_queue', profile?.tenant_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('intercom_calls')
+        .select('*')
+        .eq('tenant_id', profile!.tenant_id)
+        .in('status', ['queued', 'ringing'])
+        .order('created_at', { ascending: true })
+        .limit(10);
+      if (error) throw error;
+      return (data || []).map((c: any) => ({
+        id: c.id,
+        callerName: c.caller_name || '',
+        callerNumber: c.caller_id || c.sip_uri || 'Unknown',
+        waitingSince: c.created_at,
+        priority: c.priority || 'normal',
+      }));
+    },
+    enabled: !!profile?.tenant_id,
+    refetchInterval: 5000,
+  });
+
+  // Auto-counting wait timers for queue items
+  useEffect(() => {
+    if (sipQueueCalls.length === 0) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const timers: Record<string, number> = {};
+      sipQueueCalls.forEach((call: { id: string; waitingSince: string }) => {
+        timers[call.id] = Math.floor((now - new Date(call.waitingSince).getTime()) / 1000);
+      });
+      setQueueTimers(timers);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [sipQueueCalls]);
+
+  const formatWaitTime = useCallback((seconds: number): string => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    if (m > 0) return `${m}m ${s.toString().padStart(2, '0')}s`;
+    return `${s}s`;
+  }, []);
+
+  const handleAnswerQueue = useCallback((_callId: string, callerNumber: string) => {
+    // In production, this would signal the SIP backend to bridge the call
+    setPhoneNumber(callerNumber.replace(/\D/g, ''));
+    toast({ title: 'Answering call', description: `Connecting to ${callerNumber}` });
+  }, [toast]);
 
   // ── Filtered contacts ─────────────────────────────
   const filteredContacts = useMemo(() => {
@@ -208,6 +263,89 @@ export default function PhonePanelPage() {
         ))}
       </div>
 
+      {/* ── Call Queue ────────────────────── */}
+      <Card className="border-border/50 bg-card/80" aria-label="Call queue">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            Cola de Llamadas
+            {sipQueueCalls.length > 0 && (
+              <Badge variant="destructive" className="text-xs ml-1">{sipQueueCalls.length}</Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {sipQueueCalls.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              <PhoneIncoming className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No calls waiting</p>
+              <p className="text-xs mt-0.5">Incoming queued calls will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {sipQueueCalls.map((qCall: { id: string; callerName: string; callerNumber: string; waitingSince: string; priority: string }) => (
+                <div
+                  key={qCall.id}
+                  className={cn(
+                    "flex items-center justify-between p-3 rounded-lg border transition-colors",
+                    qCall.priority === 'high' ? 'border-destructive/40 bg-destructive/5' : 'border-border/50 hover:bg-muted/30'
+                  )}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <PhoneIncoming className={cn(
+                      "h-4 w-4 shrink-0 animate-pulse",
+                      qCall.priority === 'high' ? 'text-destructive' : 'text-primary'
+                    )} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {qCall.callerName || qCall.callerNumber}
+                      </p>
+                      {qCall.callerName && (
+                        <p className="text-xs text-muted-foreground font-mono">{qCall.callerNumber}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right mr-2">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span className="font-mono">{formatWaitTime(queueTimers[qCall.id] || 0)}</span>
+                      </div>
+                      {qCall.priority === 'high' && (
+                        <Badge variant="destructive" className="text-[10px] mt-0.5">Priority</Badge>
+                      )}
+                    </div>
+                    <Select onValueChange={(ext) => {
+                      toast({ title: 'Transferring', description: `Forwarding to ext. ${ext}` });
+                    }}>
+                      <SelectTrigger className="w-[100px] h-8 text-xs" aria-label="Transfer call">
+                        <ArrowRightLeft className="h-3 w-3 mr-1" />
+                        <SelectValue placeholder="Transfer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="100">Ext. 100</SelectItem>
+                        <SelectItem value="101">Ext. 101</SelectItem>
+                        <SelectItem value="102">Ext. 102</SelectItem>
+                        <SelectItem value="200">Ext. 200</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      className="h-8 bg-success hover:bg-success/90 text-white gap-1"
+                      onClick={() => handleAnswerQueue(qCall.id, qCall.callerNumber)}
+                      aria-label={`Answer call from ${qCall.callerName || qCall.callerNumber}`}
+                    >
+                      <PhoneCall className="h-3.5 w-3.5" />
+                      Answer
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ── Dialer ────────────────────── */}
         <div className="space-y-4">
@@ -254,7 +392,7 @@ export default function PhonePanelPage() {
               {/* Call / Hangup buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <Button
-                  className="h-14 bg-green-600 hover:bg-green-700 text-white text-lg gap-2"
+                  className="h-14 bg-success hover:bg-success/90 text-white text-lg gap-2"
                   onClick={() => handleDial(phoneNumber)}
                   disabled={calling || !phoneNumber.trim()}
                 >
@@ -297,8 +435,8 @@ export default function PhonePanelPage() {
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <PhoneCall className={`h-3.5 w-3.5 shrink-0 ${
-                          call.status === 'completada' ? 'text-green-400' :
-                          call.status === 'perdida' ? 'text-red-400' : 'text-amber-400'
+                          call.status === 'completada' ? 'text-success' :
+                          call.status === 'perdida' ? 'text-destructive' : 'text-amber-400'
                         }`} />
                         <div className="min-w-0">
                           <p className="text-sm font-medium truncate">
@@ -378,7 +516,7 @@ export default function PhonePanelPage() {
                       </div>
                       <Button
                         size="icon"
-                        className="h-9 w-9 bg-green-600 hover:bg-green-700 text-white shrink-0 ml-2"
+                        className="h-9 w-9 bg-success hover:bg-success/90 text-white shrink-0 ml-2"
                         onClick={() => handleDial(contact.phone)}
                       >
                         <PhoneCall className="h-4 w-4" />

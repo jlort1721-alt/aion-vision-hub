@@ -1,4 +1,5 @@
 import { eq, and, sql } from 'drizzle-orm';
+import { createLogger } from '@aion/common-utils';
 import type { Database } from '../db/client.js';
 import {
   events,
@@ -47,6 +48,8 @@ interface AlertConditions {
   [key: string]: unknown;
 }
 
+const logger = createLogger({ name: 'notification-dispatcher' });
+
 // System user ID used when the dispatcher creates incidents automatically
 const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -92,9 +95,9 @@ export async function dispatchDeviceStateChange(
       .returning({ id: events.id });
 
     eventId = inserted?.id;
-    console.log(`[notification-dispatcher] Event created: ${eventId} (${eventType})`);
+    logger.info({ eventId, eventType }, 'Event created');
   } catch (err) {
-    console.error('[notification-dispatcher] Failed to insert event:', err);
+    logger.error({ err }, 'Failed to insert event');
     // Continue anyway — we still want to try alert rules
   }
 
@@ -130,7 +133,7 @@ export async function dispatchDeviceStateChange(
         ),
       );
   } catch (err) {
-    console.error('[notification-dispatcher] Failed to query alert rules:', err);
+    logger.error({ err }, 'Failed to query alert rules');
     return;
   }
 
@@ -161,14 +164,12 @@ export async function dispatchDeviceStateChange(
         const cooldownMs = rule.cooldownMinutes * 60 * 1000;
         const elapsed = now.getTime() - new Date(rule.lastTriggeredAt).getTime();
         if (elapsed < cooldownMs) {
-          console.log(
-            `[notification-dispatcher] Rule "${rule.name}" skipped (cooldown: ${Math.round((cooldownMs - elapsed) / 1000)}s remaining)`,
-          );
+          logger.info({ ruleName: rule.name, cooldownRemainingSec: Math.round((cooldownMs - elapsed) / 1000) }, 'Rule skipped (cooldown)');
           continue;
         }
       }
 
-      console.log(`[notification-dispatcher] Rule "${rule.name}" matched — dispatching actions`);
+      logger.info({ ruleName: rule.name }, 'Rule matched — dispatching actions');
 
       // 4. Create alert instance
       let alertInstanceId: string | undefined;
@@ -189,7 +190,7 @@ export async function dispatchDeviceStateChange(
 
         alertInstanceId = instance?.id;
       } catch (err) {
-        console.error('[notification-dispatcher] Failed to create alert instance:', err);
+        logger.error({ err }, 'Failed to create alert instance');
       }
 
       // 5. Dispatch each action
@@ -230,7 +231,7 @@ export async function dispatchDeviceStateChange(
           })
           .where(eq(alertRules.id, rule.id));
       } catch (err) {
-        console.error(`[notification-dispatcher] Failed to update rule "${rule.name}":`, err);
+        logger.error({ err, ruleName: rule.name }, 'Failed to update rule');
       }
 
       // 7. Update alert instance with actions log
@@ -241,11 +242,11 @@ export async function dispatchDeviceStateChange(
             .set({ actionsLog, updatedAt: now })
             .where(eq(alertInstances.id, alertInstanceId));
         } catch (err) {
-          console.error('[notification-dispatcher] Failed to update alert instance actions log:', err);
+          logger.error({ err }, 'Failed to update alert instance actions log');
         }
       }
     } catch (err) {
-      console.error(`[notification-dispatcher] Error processing rule "${rule.name}":`, err);
+      logger.error({ err, ruleName: rule.name }, 'Error processing rule');
       // Continue to next rule
     }
   }
@@ -261,7 +262,7 @@ export async function dispatchDeviceStateChange(
       metadata: { deviceName, siteName, previousStatus, newStatus, wanIp, port },
     });
   } catch (err) {
-    console.error('[notification-dispatcher] Automation engine evaluation failed:', err);
+    logger.error({ err }, 'Automation engine evaluation failed');
   }
 }
 
@@ -296,7 +297,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
     case 'email': {
       const recipients = action.recipients ?? [];
       if (recipients.length === 0) {
-        console.warn('[notification-dispatcher] Email action has no recipients, skipping');
+        logger.warn('Email action has no recipients, skipping');
         break;
       }
 
@@ -330,7 +331,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
           error: result.error,
         });
       } catch (err) {
-        console.error('[notification-dispatcher] Email dispatch failed:', err);
+        logger.error({ err }, 'Email dispatch failed');
         actionsLog.push({
           action: 'email',
           target: recipients.join(', '),
@@ -368,7 +369,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
           status: result.sent > 0 ? 'sent' : 'failed',
         });
       } catch (err) {
-        console.error('[notification-dispatcher] Push dispatch failed:', err);
+        logger.error({ err }, 'Push dispatch failed');
         actionsLog.push({
           action: 'push',
           target: `tenant:${tenantId}`,
@@ -384,7 +385,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
     case 'whatsapp': {
       const phones = action.phones ?? [];
       if (phones.length === 0) {
-        console.warn('[notification-dispatcher] WhatsApp action has no phone numbers, skipping');
+        logger.warn('WhatsApp action has no phone numbers, skipping');
         break;
       }
 
@@ -413,7 +414,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
             status: 'sent',
           });
         } catch (err) {
-          console.error(`[notification-dispatcher] WhatsApp dispatch to ${phone} failed:`, err);
+          logger.error({ err, phone }, 'WhatsApp dispatch failed');
           actionsLog.push({
             action: 'whatsapp',
             target: phone,
@@ -443,7 +444,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
           })
           .returning({ id: incidents.id });
 
-        console.log(`[notification-dispatcher] Incident created: ${incident?.id}`);
+        logger.info({ incidentId: incident?.id }, 'Incident created');
         actionsLog.push({
           action: 'create_incident',
           target: incident?.id ?? 'unknown',
@@ -451,7 +452,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
           status: 'created',
         });
       } catch (err) {
-        console.error('[notification-dispatcher] Incident creation failed:', err);
+        logger.error({ err }, 'Incident creation failed');
         actionsLog.push({
           action: 'create_incident',
           target: 'n/a',
@@ -467,7 +468,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
     case 'escalation': {
       const policyId = action.escalationPolicyId as string | undefined;
       if (!policyId) {
-        console.warn('[notification-dispatcher] Escalation action missing escalationPolicyId, skipping');
+        logger.warn('Escalation action missing escalationPolicyId, skipping');
         actionsLog.push({
           action: 'escalation',
           target: 'none',
@@ -493,7 +494,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
           .limit(1);
 
         if (!policy) {
-          console.warn(`[notification-dispatcher] Escalation policy ${policyId} not found or inactive`);
+          logger.warn({ policyId }, 'Escalation policy not found or inactive');
           actionsLog.push({
             action: 'escalation',
             target: policyId,
@@ -528,9 +529,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
         const levelDef = levels.find((l) => l.level === currentLevel);
 
         if (!levelDef) {
-          console.log(
-            `[notification-dispatcher] Maximum escalation level reached (level=${currentLevel}) for policy "${policy.name}"`,
-          );
+          logger.info({ level: currentLevel, policyName: policy.name }, 'Maximum escalation level reached');
           actionsLog.push({
             action: 'escalation',
             target: policyId,
@@ -540,9 +539,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
           break;
         }
 
-        console.log(
-          `[notification-dispatcher] Escalating to level ${currentLevel} via policy "${policy.name}"`,
-        );
+        logger.info({ level: currentLevel, policyName: policy.name }, 'Escalating via policy');
 
         // Send email notifications to escalation contacts
         const escalationEmails = levelDef.emails ?? [];
@@ -569,7 +566,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
               error: emailResult.error,
             });
           } catch (err) {
-            console.error('[notification-dispatcher] Escalation email failed:', err);
+            logger.error({ err }, 'Escalation email failed');
           }
         }
 
@@ -591,7 +588,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
             status: pushResult.sent > 0 ? 'sent' : 'failed',
           });
         } catch (err) {
-          console.error('[notification-dispatcher] Escalation push failed:', err);
+          logger.error({ err }, 'Escalation push failed');
         }
 
         // Advance the alert instance to the next escalation level
@@ -613,7 +610,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
               })
               .where(eq(alertInstances.id, ctx.alertInstanceId));
           } catch (err) {
-            console.error('[notification-dispatcher] Failed to update alert instance escalation level:', err);
+            logger.error({ err }, 'Failed to update alert instance escalation level');
           }
         }
 
@@ -624,7 +621,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
           status: 'escalated',
         });
       } catch (err) {
-        console.error('[notification-dispatcher] Escalation dispatch failed:', err);
+        logger.error({ err }, 'Escalation dispatch failed');
         actionsLog.push({
           action: 'escalation',
           target: policyId,
@@ -657,9 +654,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
           .limit(1);
 
         if (!protocol) {
-          console.warn(
-            `[notification-dispatcher] No active emergency protocol found for type="${protocolType ?? 'any'}", tenant=${tenantId}`,
-          );
+          logger.warn({ protocolType: protocolType ?? 'any', tenantId }, 'No active emergency protocol found');
           actionsLog.push({
             action: 'activate_protocol',
             target: protocolType ?? 'unknown',
@@ -693,9 +688,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
           })
           .returning({ id: emergencyActivations.id });
 
-        console.log(
-          `[notification-dispatcher] Emergency protocol "${protocol.name}" activated (activation=${activation?.id})`,
-        );
+        logger.info({ protocolName: protocol.name, activationId: activation?.id }, 'Emergency protocol activated');
 
         await logNotification(db, {
           tenantId,
@@ -746,7 +739,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
                 error: emailResult.error,
               });
             } catch (err) {
-              console.error(`[notification-dispatcher] Emergency email to ${contact.email} failed:`, err);
+              logger.error({ err, email: contact.email }, 'Emergency email failed');
             }
           }
 
@@ -758,7 +751,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
               url: `/emergency?activation=${activation?.id}`,
             });
           } catch (err) {
-            console.error(`[notification-dispatcher] Emergency push for contact ${contact.name} failed:`, err);
+            logger.error({ err, contactName: contact.name }, 'Emergency push failed');
           }
         }
 
@@ -769,7 +762,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
           status: 'activated',
         });
       } catch (err) {
-        console.error('[notification-dispatcher] Protocol activation failed:', err);
+        logger.error({ err }, 'Protocol activation failed');
         actionsLog.push({
           action: 'activate_protocol',
           target: protocolType ?? 'unknown',
@@ -782,7 +775,7 @@ async function dispatchAction(db: Database, ctx: DispatchActionContext): Promise
     }
 
     default:
-      console.warn(`[notification-dispatcher] Unknown action type: ${action.type}`);
+      logger.warn({ actionType: action.type }, 'Unknown action type');
   }
 }
 
@@ -816,6 +809,6 @@ async function logNotification(
       sentAt: entry.status === 'sent' ? new Date() : null,
     });
   } catch (err) {
-    console.error('[notification-dispatcher] Failed to write notification log:', err);
+    logger.error({ err }, 'Failed to write notification log');
   }
 }

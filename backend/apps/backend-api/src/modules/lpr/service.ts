@@ -1,6 +1,9 @@
 import { eq, and } from 'drizzle-orm';
+import { createLogger } from '@aion/common-utils';
 import { db } from '../../db/client.js';
 import { accessVehicles, accessPeople, accessLogs, devices } from '../../db/schema/index.js';
+
+const logger = createLogger({ name: 'lpr-service' });
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -275,7 +278,7 @@ class LprService {
       });
     } catch (err) {
       // Log persistence failure but don't block detection flow
-      console.error('[LPR] Failed to persist access log:', err);
+      logger.error({ err }, 'Failed to persist access log');
     }
 
     // Notify SSE subscribers
@@ -295,7 +298,7 @@ class LprService {
         record.action = 'auto_open';
         record.status = 'action_taken';
       } catch (err) {
-        console.error('[LPR] Auto-open gate failed:', err);
+        logger.error({ err }, 'Auto-open gate failed');
       }
     }
 
@@ -406,7 +409,7 @@ class LprService {
             body: JSON.stringify({ deviceId, action: 'off' }),
           });
         } catch (err) {
-          console.error('[LPR] Failed to turn relay OFF:', err);
+          logger.error({ err }, 'Failed to turn relay OFF');
         }
       }, 3000);
 

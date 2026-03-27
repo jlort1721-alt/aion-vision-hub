@@ -60,6 +60,7 @@ function CameraCell({
         className={`bg-muted/20 rounded-md border border-dashed flex items-center justify-center transition-all ${isDragOver ? 'border-primary bg-primary/20 scale-[1.02] shadow-primary/20 shadow-lg' : 'border-border'}`}
         onDragOver={handleDragOver}
         onDrop={(e) => { e.preventDefault(); onDrop(index); }}
+        aria-label={`Empty camera slot ${index + 1}, drop a camera here`}
       >
         <div className="text-center text-muted-foreground delay-75 duration-300">
           <Camera className="h-8 w-8 mx-auto mb-2 opacity-20" />
@@ -78,6 +79,7 @@ function CameraCell({
       onDrop={(e) => { e.preventDefault(); onDrop(index); }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      aria-label={`Camera: ${device.name}, status: ${device.status}`}
     >
       <div className="absolute inset-0 z-0 bg-zinc-950 flex items-center justify-center">
         <WebRTCPlayer 
@@ -91,7 +93,7 @@ function CameraCell({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <GripVertical className="h-3.5 w-3.5 text-white/40 group-hover:text-white/80 transition-colors" />
-            <div className={`w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.8)] ${device.status === 'online' ? 'bg-emerald-500 shadow-emerald-500/50' : 'bg-red-500 shadow-red-500/50'}`} />
+            <div className={`w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.8)] ${device.status === 'online' ? 'bg-success shadow-success/50' : 'bg-destructive shadow-destructive/50'}`} />
             <span className="text-xs font-semibold text-white tracking-wide truncate max-w-[120px] drop-shadow-md">{device.name}</span>
           </div>
           <Badge variant="outline" className="text-[9px] font-mono px-1.5 py-0 h-4 text-white/90 border-white/20 bg-black/50 backdrop-blur-sm uppercase tracking-wider">{device.brand}</Badge>
@@ -100,12 +102,12 @@ function CameraCell({
 
       {hovered && (
         <div className="absolute bottom-0 left-0 right-0 flex items-center gap-1.5 p-2 bg-gradient-to-t from-black/95 via-black/80 to-transparent animate-in slide-in-from-bottom-2 duration-200">
-          <Button variant="secondary" size="icon" className="h-7 w-7 rounded-sm bg-white/10 hover:bg-white/25 text-white border-none shadow-none"><Maximize className="h-3.5 w-3.5" /></Button>
-          <Button variant="secondary" size="icon" className="h-7 w-7 rounded-sm bg-white/10 hover:bg-white/25 text-white border-none shadow-none"><Volume2 className="h-3.5 w-3.5" /></Button>
-          <Button variant="secondary" size="icon" className="h-7 w-7 rounded-sm bg-white/10 hover:bg-white/25 text-white border-none shadow-none" onClick={handleCapture}><Frame className="h-3.5 w-3.5" /></Button>
-          <Button variant="secondary" size="icon" className="h-7 w-7 rounded-sm bg-white/10 hover:bg-white/25 text-white border-none shadow-none"><RotateCcw className="h-3.5 w-3.5" /></Button>
+          <Button variant="secondary" size="icon" className="h-7 w-7 rounded-sm bg-white/10 hover:bg-white/25 text-white border-none shadow-none" aria-label="Fullscreen"><Maximize className="h-3.5 w-3.5" /></Button>
+          <Button variant="secondary" size="icon" className="h-7 w-7 rounded-sm bg-white/10 hover:bg-white/25 text-white border-none shadow-none" aria-label="Toggle audio"><Volume2 className="h-3.5 w-3.5" /></Button>
+          <Button variant="secondary" size="icon" className="h-7 w-7 rounded-sm bg-white/10 hover:bg-white/25 text-white border-none shadow-none" onClick={handleCapture} aria-label="Capture snapshot"><Frame className="h-3.5 w-3.5" /></Button>
+          <Button variant="secondary" size="icon" className="h-7 w-7 rounded-sm bg-white/10 hover:bg-white/25 text-white border-none shadow-none" aria-label="Refresh stream"><RotateCcw className="h-3.5 w-3.5" /></Button>
           <div className="ml-auto">
-            <Button variant="destructive" size="icon" className="h-7 w-7 rounded-sm shadow-none opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); onRemove(index); }}>
+            <Button variant="destructive" size="icon" className="h-7 w-7 rounded-sm shadow-none opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); onRemove(index); }} aria-label="Remove camera from slot">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -114,7 +116,7 @@ function CameraCell({
 
       {device.status === 'online' && (
         <div className="absolute top-2 right-2 flex items-center gap-1.5 px-1.5 py-0.5 rounded-sm bg-black/60 backdrop-blur-md border border-white/10 shadow-lg">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-[pulse_1.5s_ease-in-out_infinite]" />
+          <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-[pulse_1.5s_ease-in-out_infinite]" />
           <span className="text-[9px] text-white/90 font-mono font-medium tracking-widest">LIVE</span>
         </div>
       )}
@@ -299,14 +301,14 @@ export default function LiveViewPage() {
       <div className="flex-1 flex flex-col min-w-0">
         <div className="flex items-center gap-2 px-4 py-2 border-b bg-card">
           <Select value={selectedSite} onValueChange={setSelectedSite}>
-            <SelectTrigger className="w-48 h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-48 h-8 text-xs" aria-label="Filter by site"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Sites</SelectItem>
               {sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
             </SelectContent>
           </Select>
 
-          <div className="flex items-center border rounded-md">
+          <div className="flex items-center border rounded-md" role="group" aria-label="Grid layout options">
             {GRID_OPTIONS.map(opt => (
               <Button
                 key={opt.grid}
@@ -314,6 +316,8 @@ export default function LiveViewPage() {
                 size="sm"
                 className="h-8 px-2 rounded-none first:rounded-l-md last:rounded-r-md"
                 onClick={() => setGrid(opt.grid)}
+                aria-label={`${opt.label} grid layout`}
+                aria-pressed={grid === opt.grid}
               >
                 {opt.icon}
                 <span className="ml-1 text-xs">{opt.label}</span>

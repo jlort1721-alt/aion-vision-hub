@@ -43,12 +43,20 @@ interface TenantTokens {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
+  accountLabel?: string; // which stored account was used
 }
 
 interface EncryptedTokenPayload {
   at: string; // encrypted accessToken
   rt: string; // encrypted refreshToken
   exp: number;
+  accountLabel?: string;
+}
+
+interface StoredAccount {
+  label: string;
+  email: string;
+  password: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -137,9 +145,111 @@ class EWeLinkProxyService {
     return this.appId.length > 0 && this.appSecret.length > 0;
   }
 
+  /** Returns stored eWeLink accounts from env vars (up to 2). */
+  getStoredAccounts(): StoredAccount[] {
+    const accounts: StoredAccount[] = [];
+    if (config.EWELINK_EMAIL_1 && config.EWELINK_PASSWORD_1) {
+      accounts.push({ label: 'account_1', email: config.EWELINK_EMAIL_1, password: config.EWELINK_PASSWORD_1 });
+    }
+    if (config.EWELINK_EMAIL_2 && config.EWELINK_PASSWORD_2) {
+      accounts.push({ label: 'account_2', email: config.EWELINK_EMAIL_2, password: config.EWELINK_PASSWORD_2 });
+    }
+    return accounts;
+  }
+
+  /** Returns stored account labels for the frontend (emails masked). */
+  getStoredAccountList(): Array<{ label: string; email: string }> {
+    return this.getStoredAccounts().map((a) => ({
+      label: a.label,
+      email: maskEmail(a.email),
+    }));
+  }
+
+  hasStoredAccounts(): boolean {
+    return this.getStoredAccounts().length > 0;
+  }
+
   async isAuthenticated(tenantId: string): Promise<boolean> {
     const tokens = await this.tenantTokens.get(tenantId);
     return tokens !== null && Date.now() < tokens.expiresAt;
+  }
+
+  /**
+   * Auto-login using a stored account from env vars.
+   * Called on server startup or when a tenant needs automatic authentication.
+   */
+  async autoLogin(tenantId: string, accountLabel?: string): Promise<{ success: boolean; error?: string; account?: string }> {
+    if (!this.isConfigured()) {
+      return { success: false, error: 'eWeLink not configured (missing APP_ID/APP_SECRET).' };
+    }
+
+    // Check if already authenticated
+    const alreadyAuth = await this.isAuthenticated(tenantId);
+    if (alreadyAuth) {
+      logger.debug({ tenantId }, 'eWeLink auto-login skipped — already authenticated');
+      return { success: true, account: 'existing_session' };
+    }
+
+    const accounts = this.getStoredAccounts();
+    if (accounts.length === 0) {
+      return { success: false, error: 'No stored eWeLink accounts configured in env vars.' };
+    }
+
+    // Pick the requested account or default to account_1
+    const account = accountLabel
+      ? accounts.find((a) => a.label === accountLabel)
+      : accounts[0];
+
+    if (!account) {
+      return { success: false, error: `Account "${accountLabel}" not found in stored accounts.` };
+    }
+
+    logger.info({ tenantId, account: account.label }, 'eWeLink auto-login attempt for %s', maskEmail(account.email));
+
+    const result = await this.login(tenantId, account.email, account.password, '+1');
+
+    if (result.success) {
+      // Tag the token with the account label for tracking
+      const tokens = await this.tenantTokens.get(tenantId);
+      if (tokens) {
+        tokens.accountLabel = account.label;
+        await this.tenantTokens.set(tenantId, tokens);
+      }
+      return { success: true, account: account.label };
+    }
+
+    return { success: false, error: result.error, account: account.label };
+  }
+
+  /**
+   * Login with a specific stored account (switch accounts).
+   * Logs out first, then re-authenticates with the requested account.
+   */
+  async switchAccount(tenantId: string, accountLabel: string): Promise<{ success: boolean; error?: string; account?: string }> {
+    const accounts = this.getStoredAccounts();
+    const account = accounts.find((a) => a.label === accountLabel);
+
+    if (!account) {
+      return { success: false, error: `Account "${accountLabel}" not found.` };
+    }
+
+    // Clear existing session first
+    await this.logout(tenantId);
+
+    logger.info({ tenantId, account: accountLabel }, 'eWeLink account switch to %s', maskEmail(account.email));
+
+    const result = await this.login(tenantId, account.email, account.password, '+1');
+
+    if (result.success) {
+      const tokens = await this.tenantTokens.get(tenantId);
+      if (tokens) {
+        tokens.accountLabel = accountLabel;
+        await this.tenantTokens.set(tenantId, tokens);
+      }
+      return { success: true, account: accountLabel };
+    }
+
+    return { success: false, error: result.error, account: accountLabel };
   }
 
   // ── Token Persistence (encrypted in DB) ───────────────────
@@ -149,6 +259,7 @@ class EWeLinkProxyService {
       at: encryptToken(tokens.accessToken),
       rt: encryptToken(tokens.refreshToken),
       exp: tokens.expiresAt,
+      accountLabel: tokens.accountLabel,
     };
 
     try {
@@ -209,6 +320,7 @@ class EWeLinkProxyService {
         accessToken: decryptToken(tokensPayload.at),
         refreshToken: decryptToken(tokensPayload.rt),
         expiresAt: tokensPayload.exp,
+        accountLabel: tokensPayload.accountLabel,
       };
 
       // Populate Redis/memory cache
@@ -598,6 +710,9 @@ class EWeLinkProxyService {
       region: config.EWELINK_REGION,
       encryptionEnabled: !!getEncryptionKey(),
       tokenExpiresAt: tokens ? new Date(tokens.expiresAt).toISOString() : null,
+      activeAccount: tokens?.accountLabel || null,
+      storedAccounts: this.getStoredAccountList(),
+      hasStoredAccounts: this.hasStoredAccounts(),
     };
   }
 }

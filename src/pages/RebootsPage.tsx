@@ -139,7 +139,7 @@ export default function RebootsPage() {
           </div>
           <div className="grid grid-cols-4 gap-2">
             <Card className="p-2"><div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-destructive" /><div><p className="text-xs text-muted-foreground">{t('reboots.devices_needing_attention')}</p><p className="text-lg font-bold">{offlineDevices.length}</p></div></div></Card>
-            <Card className="p-2"><div className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-500" /><div><p className="text-xs text-muted-foreground">{t('reboots.successful_today')}</p><p className="text-lg font-bold">{successCount}</p></div></div></Card>
+            <Card className="p-2"><div className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-success" /><div><p className="text-xs text-muted-foreground">{t('reboots.successful_today')}</p><p className="text-lg font-bold">{successCount}</p></div></div></Card>
             <Card className="p-2"><div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-warning" /><div><p className="text-xs text-muted-foreground">{t('reboots.failed')}</p><p className="text-lg font-bold">{failedCount}</p></div></div></Card>
             <Card className="p-2"><div className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('reboots.total_reboots')}</p><p className="text-lg font-bold">{rebootTasks.length}</p></div></div></Card>
           </div>

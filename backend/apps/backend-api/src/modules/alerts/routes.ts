@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth.js';
 import { alertService } from './service.js';
+import { broadcast } from '../../plugins/websocket.js';
 import {
   createAlertRuleSchema,
   updateAlertRuleSchema,
@@ -54,6 +55,9 @@ export async function registerAlertRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const body = createAlertRuleSchema.parse(request.body);
       const data = await alertService.createRule(body, request.tenantId, request.userId);
+
+      broadcast(request.tenantId, 'alerts', { type: 'alert.rule_created', rule: data });
+
       await request.audit('alert_rule.create', 'alert_rules', data.id, { name: data.name, severity: data.severity });
       return reply.code(201).send({ success: true, data });
     },
@@ -115,6 +119,9 @@ export async function registerAlertRoutes(app: FastifyInstance) {
     async (request, reply) => {
       acknowledgeAlertSchema.parse(request.body ?? {});
       const data = await alertService.acknowledgeInstance(request.params.id, request.tenantId, request.userId);
+
+      broadcast(request.tenantId, 'alerts', { type: 'alert.acknowledged', instance: data });
+
       await request.audit('alert.acknowledge', 'alert_instances', data.id);
       return reply.send({ success: true, data });
     },
@@ -125,6 +132,9 @@ export async function registerAlertRoutes(app: FastifyInstance) {
     { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await alertService.resolveInstance(request.params.id, request.tenantId, request.userId);
+
+      broadcast(request.tenantId, 'alerts', { type: 'alert.resolved', instance: data });
+
       await request.audit('alert.resolve', 'alert_instances', data.id);
       return reply.send({ success: true, data });
     },

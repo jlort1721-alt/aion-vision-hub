@@ -11,12 +11,13 @@ import {
   Bell, BellRing, CheckCircle, AlertTriangle, AlertCircle, Shield, Plus,
   Clock, ArrowUpCircle, Mail, MessageSquare, Globe, Settings
 } from "lucide-react";
+import EscalationConfigPanel from "@/components/alerts/EscalationConfigPanel";
 
 const severityColors: Record<string, string> = {
-  critical: "bg-red-500",
-  high: "bg-orange-500",
-  medium: "bg-yellow-500",
-  low: "bg-blue-500",
+  critical: "bg-destructive",
+  high: "bg-warning",
+  medium: "bg-warning",
+  low: "bg-primary",
   info: "bg-gray-500",
 };
 
@@ -112,47 +113,47 @@ export default function AlertsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card aria-label="Active alerts count">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Active Alerts</p>
                 <p className="text-3xl font-bold">{stats?.byStatus?.firing ?? 0}</p>
               </div>
-              <BellRing className="h-8 w-8 text-red-500" />
+              <BellRing className="h-8 w-8 text-destructive" />
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card aria-label="Critical alerts count">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Critical</p>
-                <p className="text-3xl font-bold text-red-500">{stats?.activeCritical ?? 0}</p>
+                <p className="text-3xl font-bold text-destructive">{stats?.activeCritical ?? 0}</p>
               </div>
-              <AlertCircle className="h-8 w-8 text-red-500" />
+              <AlertCircle className="h-8 w-8 text-destructive" />
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card aria-label="Acknowledged alerts count">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Acknowledged</p>
-                <p className="text-3xl font-bold text-yellow-500">{stats?.byStatus?.acknowledged ?? 0}</p>
+                <p className="text-3xl font-bold text-warning">{stats?.byStatus?.acknowledged ?? 0}</p>
               </div>
-              <Clock className="h-8 w-8 text-yellow-500" />
+              <Clock className="h-8 w-8 text-warning" />
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card aria-label="Resolved today count">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Resolved Today</p>
-                <p className="text-3xl font-bold text-green-500">{stats?.byStatus?.resolved ?? 0}</p>
+                <p className="text-3xl font-bold text-success">{stats?.byStatus?.resolved ?? 0}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -168,7 +169,7 @@ export default function AlertsPage() {
             <Shield className="h-4 w-4" /> Rules
           </TabsTrigger>
           <TabsTrigger value="escalation" className="gap-1">
-            <ArrowUpCircle className="h-4 w-4" /> Escalation
+            <ArrowUpCircle className="h-4 w-4" /> Escalation Policies
           </TabsTrigger>
           <TabsTrigger value="channels" className="gap-1">
             <Settings className="h-4 w-4" /> Channels
@@ -184,7 +185,7 @@ export default function AlertsPage() {
           ) : instances.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-success" />
                 <p className="text-lg font-medium">No active alerts</p>
                 <p className="text-sm text-muted-foreground mt-1">All systems operational</p>
               </CardContent>
@@ -193,11 +194,11 @@ export default function AlertsPage() {
             instances.map((alert: any) => {
               const StatusIcon = statusIcons[alert.status] ?? Bell;
               return (
-                <Card key={alert.id} className={alert.status === 'firing' ? 'border-red-500/50' : ''}>
+                <Card key={alert.id} className={alert.status === 'firing' ? 'border-destructive/50' : ''} aria-label={`Alert: ${alert.title}, severity ${alert.severity}, status ${alert.status}`}>
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3">
-                        <StatusIcon className={`h-5 w-5 mt-0.5 ${alert.status === 'firing' ? 'text-red-500 animate-pulse' : 'text-muted-foreground'}`} />
+                        <StatusIcon className={`h-5 w-5 mt-0.5 ${alert.status === 'firing' ? 'text-destructive animate-pulse' : 'text-muted-foreground'}`} />
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{alert.title}</h3>
@@ -213,12 +214,12 @@ export default function AlertsPage() {
                       </div>
                       <div className="flex gap-2 shrink-0">
                         {alert.status === 'firing' && (
-                          <Button size="sm" variant="outline" onClick={() => acknowledgeMutation.mutate(alert.id)}>
+                          <Button size="sm" variant="outline" onClick={() => acknowledgeMutation.mutate(alert.id)} aria-label={`Acknowledge alert: ${alert.title}`}>
                             Acknowledge
                           </Button>
                         )}
                         {alert.status !== 'resolved' && (
-                          <Button size="sm" variant="default" onClick={() => resolveMutation.mutate(alert.id)}>
+                          <Button size="sm" variant="default" onClick={() => resolveMutation.mutate(alert.id)} aria-label={`Resolve alert: ${alert.title}`}>
                             Resolve
                           </Button>
                         )}
@@ -256,7 +257,7 @@ export default function AlertsPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <AlertTriangle className={`h-5 w-5 ${rule.isActive ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                      <AlertTriangle className={`h-5 w-5 ${rule.isActive ? 'text-warning' : 'text-muted-foreground'}`} />
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold">{rule.name}</h3>
@@ -282,41 +283,7 @@ export default function AlertsPage() {
 
         {/* ── Escalation Policies ──────────────────────────── */}
         <TabsContent value="escalation" className="space-y-4">
-          <div className="flex justify-end">
-            <Button className="gap-1">
-              <Plus className="h-4 w-4" /> New Policy
-            </Button>
-          </div>
-          {policies.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <ArrowUpCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium">No escalation policies</p>
-                <p className="text-sm text-muted-foreground mt-1">Define how unacknowledged alerts should escalate</p>
-              </CardContent>
-            </Card>
-          ) : (
-            policies.map((policy: any) => (
-              <Card key={policy.id}>
-                <CardHeader>
-                  <CardTitle className="text-lg">{policy.name}</CardTitle>
-                  <CardDescription>{policy.description || 'No description'}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    {(policy.levels as any[])?.map((level: any, i: number) => (
-                      <div key={i} className="flex items-center gap-1">
-                        {i > 0 && <span className="text-muted-foreground mx-1">→</span>}
-                        <Badge variant="outline">
-                          L{level.level}: {level.notifyRoles?.join(', ') || 'Users'} ({level.timeoutMinutes}m)
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
+          <EscalationConfigPanel />
         </TabsContent>
 
         {/* ── Notification Channels ────────────────────────── */}

@@ -135,6 +135,7 @@ jobs:
       - name: Build with production env
         run: npm run build
         env:
+          VITE_API_URL: ${{ vars.PRODUCTION_API_URL || 'https://app.yourdomain.com/api' }}
           VITE_SUPABASE_URL: ${{ secrets.PRODUCTION_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.PRODUCTION_SUPABASE_ANON_KEY }}
 

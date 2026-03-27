@@ -139,6 +139,20 @@ export interface SipProvider {
   /** Inject audio stream into active call (for AI TTS) */
   injectAudio(callId: string, audioBuffer: Buffer, format: string): Promise<void>;
 
+  /** Start recording on an active call channel */
+  startRecording(callId: string, options?: {
+    name?: string;
+    format?: string;
+    maxDurationSeconds?: number;
+    beep?: boolean;
+  }): Promise<{ recordingName: string }>;
+
+  /** Stop an active recording */
+  stopRecording(recordingName: string): Promise<void>;
+
+  /** Get the download URL for a stored recording */
+  getRecordingUrl(recordingName: string): Promise<string | null>;
+
   /** Health check */
   healthCheck(): Promise<SipHealthCheck>;
 

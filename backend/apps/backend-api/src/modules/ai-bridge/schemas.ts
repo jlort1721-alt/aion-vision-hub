@@ -21,9 +21,13 @@ export const chatRequestSchema = z.object({
   provider: z.enum(aiProviders).optional(),
   temperature: z.number().min(0).max(2).optional().default(0.7),
   maxTokens: z.number().int().min(1).max(16384).optional().default(2048),
+  enableTools: z.boolean().optional().default(false),
 });
 
+/** Parsed (output) type — defaults are resolved, all fields present */
 export type ChatRequestInput = z.infer<typeof chatRequestSchema>;
+/** Raw (input) type — callers may omit fields that have defaults */
+export type ChatRequestRawInput = z.input<typeof chatRequestSchema>;
 
 // ── Chat Stream Request ───────────────────────────────────────
 export const chatStreamRequestSchema = chatRequestSchema.extend({

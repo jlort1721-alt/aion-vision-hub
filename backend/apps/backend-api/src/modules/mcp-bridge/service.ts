@@ -4,6 +4,11 @@ import { mcpConnectors } from '../../db/schema/index.js';
 import { AppError, ErrorCodes } from '@aion/shared-contracts';
 import type { MCPTool, MCPToolResult } from '@aion/shared-contracts';
 import type { ExecuteToolInput } from './schemas.js';
+import {
+  hasTool,
+  executeTool,
+  getToolDescriptors,
+} from './tools/index.js';
 
 /**
  * Extended MCPTool type that includes optional requiredScopes.
@@ -16,11 +21,22 @@ interface MCPToolWithScopes extends MCPTool {
 
 export class MCPBridgeService {
   /**
-   * List all available MCP tools across active connectors for a tenant.
-   * Aggregates the tools array from each connector's config, tagging each tool
-   * with its source connector ID.
+   * List all available MCP tools for a tenant.
+   * Includes both:
+   *   1. Built-in server tools (from tools/ directory)
+   *   2. External connector tools (from mcp_connectors table)
    */
   async listTools(tenantId: string): Promise<MCPTool[]> {
+    // ── Built-in server tools ──────────────────────────────────
+    const serverToolDescriptors = getToolDescriptors();
+    const builtInTools: MCPTool[] = serverToolDescriptors.map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.parameters as Record<string, unknown>,
+      connectorId: 'built-in',
+    }));
+
+    // ── External connector tools ───────────────────────────────
     const connectors = await db
       .select()
       .from(mcpConnectors)
@@ -28,20 +44,20 @@ export class MCPBridgeService {
         and(eq(mcpConnectors.tenantId, tenantId), eq(mcpConnectors.health, 'healthy')),
       );
 
-    const tools: MCPTool[] = [];
+    const externalTools: MCPTool[] = [];
 
     for (const connector of connectors) {
       const cfg = connector.config as Record<string, unknown>;
       const connectorTools = (cfg?.tools ?? []) as MCPTool[];
       for (const tool of connectorTools) {
-        tools.push({
+        externalTools.push({
           ...tool,
           connectorId: connector.id,
         });
       }
     }
 
-    return tools;
+    return [...builtInTools, ...externalTools];
   }
 
   /**
@@ -56,13 +72,37 @@ export class MCPBridgeService {
 
   /**
    * Execute an MCP tool by name.
-   * Finds the connector that provides the tool, then proxies the execution
-   * request to the connector's endpoint.
+   *
+   * Execution priority:
+   *   1. Check if it's a built-in server tool (from tools/ directory)
+   *   2. Fall back to external connector proxy
+   *
+   * Built-in tools run in-process with full audit logging.
+   * External tools are proxied to the connector's endpoint.
    */
-  async execute(tenantId: string, input: ExecuteToolInput): Promise<MCPToolResult> {
+  async execute(
+    tenantId: string,
+    input: ExecuteToolInput,
+    userId?: string,
+  ): Promise<MCPToolResult> {
     const { toolName, params } = input;
 
-    // Find the connector that provides this tool
+    // ── 1. Try built-in server tools first ─────────────────────
+    if (hasTool(toolName)) {
+      const result = await executeTool(toolName, params, {
+        tenantId,
+        userId: userId ?? 'system',
+      });
+
+      return {
+        success: result.success,
+        data: result.data,
+        error: result.error,
+        executionMs: result.executionMs,
+      };
+    }
+
+    // ── 2. Fall back to external connector proxy ───────────────
     const connectors = await db
       .select()
       .from(mcpConnectors)
@@ -87,7 +127,7 @@ export class MCPBridgeService {
     if (!targetConnector || !matchedTool) {
       throw new AppError(
         ErrorCodes.MCP_TOOL_NOT_FOUND,
-        `Tool '${toolName}' not found in any active connector`,
+        `Tool '${toolName}' not found in any active connector or built-in server tools`,
         404,
       );
     }

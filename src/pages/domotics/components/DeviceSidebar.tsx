@@ -67,7 +67,7 @@ export function DeviceSidebar({
             
             <div className="grid grid-cols-2 gap-2 pt-2 border-t">
               <Button variant="outline" size="sm" onClick={() => onDirectAction(device, 'on')} disabled={ewelinkControlPending}>
-                <Power className="mr-1 h-3 w-3 text-emerald-500" /> {t('domotics.activate')}
+                <Power className="mr-1 h-3 w-3 text-success" /> {t('domotics.activate')}
               </Button>
               <Button variant="outline" size="sm" onClick={() => onDirectAction(device, 'off')} disabled={ewelinkControlPending}>
                 <PowerOff className="mr-1 h-3 w-3 text-muted-foreground" /> {t('domotics.deactivate')}

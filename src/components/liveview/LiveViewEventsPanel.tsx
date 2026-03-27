@@ -15,7 +15,7 @@ const severityColors: Record<string, string> = {
   critical: 'text-destructive',
   high: 'text-orange-500',
   medium: 'text-warning',
-  low: 'text-blue-500',
+  low: 'text-primary',
   info: 'text-muted-foreground',
 };
 

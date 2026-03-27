@@ -300,29 +300,29 @@ function NetworkScannerTab({ toast }: { toast: any }) {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-green-500/30">
+          <Card className="border-success/30">
             <CardContent className="p-4 flex items-center gap-3">
-              <Wifi className="h-8 w-8 text-green-500" />
+              <Wifi className="h-8 w-8 text-success" />
               <div>
-                <p className="text-2xl font-bold text-green-500">{onlineCount}</p>
+                <p className="text-2xl font-bold text-success">{onlineCount}</p>
                 <p className="text-xs text-muted-foreground">En línea</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-red-500/30">
+          <Card className="border-destructive/30">
             <CardContent className="p-4 flex items-center gap-3">
-              <WifiOff className="h-8 w-8 text-red-500" />
+              <WifiOff className="h-8 w-8 text-destructive" />
               <div>
-                <p className="text-2xl font-bold text-red-500">{hosts.length - onlineCount}</p>
+                <p className="text-2xl font-bold text-destructive">{hosts.length - onlineCount}</p>
                 <p className="text-xs text-muted-foreground">Sin respuesta</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-blue-500/30">
+          <Card className="border-primary/30">
             <CardContent className="p-4 flex items-center gap-3">
-              <Monitor className="h-8 w-8 text-blue-500" />
+              <Monitor className="h-8 w-8 text-primary" />
               <div>
-                <p className="text-2xl font-bold text-blue-500">{brandedCount}</p>
+                <p className="text-2xl font-bold text-primary">{brandedCount}</p>
                 <p className="text-xs text-muted-foreground">Dispositivos identificados</p>
               </div>
             </CardContent>
@@ -369,7 +369,7 @@ function NetworkScannerTab({ toast }: { toast: any }) {
                   <TableRow key={host.ip}>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className={cn('font-mono text-sm', host.status === 'online' ? 'text-green-400' : 'text-muted-foreground')}>
+                        <span className={cn('font-mono text-sm', host.status === 'online' ? 'text-success' : 'text-muted-foreground')}>
                           {host.ip}
                         </span>
                         {host.hostname && (
@@ -402,14 +402,14 @@ function NetworkScannerTab({ toast }: { toast: any }) {
                     </TableCell>
                     <TableCell>
                       {host.responseTime !== undefined ? (
-                        <span className={cn('text-sm font-mono', host.responseTime < 50 ? 'text-green-400' : host.responseTime < 200 ? 'text-yellow-400' : 'text-red-400')}>
+                        <span className={cn('text-sm font-mono', host.responseTime < 50 ? 'text-success' : host.responseTime < 200 ? 'text-warning' : 'text-destructive')}>
                           {host.responseTime}ms
                         </span>
                       ) : '—'}
                     </TableCell>
                     <TableCell>
                       {host.status === 'online' ? (
-                        <Badge className="bg-green-600/20 text-green-400 border-green-500/30 border gap-1">
+                        <Badge className="bg-success/20 text-success border-success/30 border gap-1">
                           <CheckCircle2 className="h-3 w-3" /> En línea
                         </Badge>
                       ) : (
@@ -627,14 +627,14 @@ PersistentKeepalive = 25
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {profiles.map(profile => (
-            <Card key={profile.id} className={cn('border', profile.status === 'connected' ? 'border-green-500/30' : 'border-muted')}>
+            <Card key={profile.id} className={cn('border', profile.status === 'connected' ? 'border-success/30' : 'border-muted')}>
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Shield className={cn('h-5 w-5', profile.status === 'connected' ? 'text-green-500' : 'text-muted-foreground')} />
+                    <Shield className={cn('h-5 w-5', profile.status === 'connected' ? 'text-success' : 'text-muted-foreground')} />
                     <span className="font-semibold">{profile.name}</span>
                   </div>
-                  <Badge className={cn('border', profile.status === 'connected' ? 'bg-green-600/20 text-green-400 border-green-500/30' : 'bg-muted text-muted-foreground')}>
+                  <Badge className={cn('border', profile.status === 'connected' ? 'bg-success/20 text-success border-success/30' : 'bg-muted text-muted-foreground')}>
                     {profile.status === 'connected' ? 'Conectado' : profile.status === 'testing' ? 'Probando...' : 'Desconectado'}
                   </Badge>
                 </div>
@@ -708,7 +708,7 @@ function DeviceControlTab({ devices, sites, devicesLoading, toast }: { devices: 
   const toggleSelect = (id: string) => {
     setSelectedDevices(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
       return next;
     });
   };
@@ -796,7 +796,7 @@ function DeviceControlTab({ devices, sites, devicesLoading, toast }: { devices: 
       case ['door', 'gate', 'puerta', 'portón'].some(t => type.includes(t)):
         return (
           <div className="flex items-center gap-2">
-            <Button variant="default" size="sm" onClick={() => handleDeviceAction(device, `open-${pulseDuration}s`)} className="gap-1 text-xs bg-green-600 hover:bg-green-700">
+            <Button variant="default" size="sm" onClick={() => handleDeviceAction(device, `open-${pulseDuration}s`)} className="gap-1 text-xs bg-success hover:bg-success/90">
               <Unlock className="h-3 w-3" /> Abrir
             </Button>
             <Select value={String(pulseDuration)} onValueChange={v => setPulseDuration(Number(v))}>
@@ -815,10 +815,10 @@ function DeviceControlTab({ devices, sites, devicesLoading, toast }: { devices: 
         return (
           <div className="flex gap-1">
             <Button variant="outline" size="sm" onClick={() => handleDeviceAction(device, 'relay-on')} className="gap-1 text-xs">
-              <Power className="h-3 w-3 text-green-500" /> ON
+              <Power className="h-3 w-3 text-success" /> ON
             </Button>
             <Button variant="outline" size="sm" onClick={() => handleDeviceAction(device, 'relay-off')} className="gap-1 text-xs">
-              <Square className="h-3 w-3 text-red-500" /> OFF
+              <Square className="h-3 w-3 text-destructive" /> OFF
             </Button>
           </div>
         );
@@ -955,7 +955,7 @@ function DeviceControlTab({ devices, sites, devicesLoading, toast }: { devices: 
               className={cn(
                 'border cursor-pointer transition-colors',
                 selectedDevices.has(device.id) && 'border-primary bg-primary/5',
-                device.status === 'online' ? 'border-green-500/20' : 'border-muted',
+                device.status === 'online' ? 'border-success/20' : 'border-muted',
               )}
             >
               <CardContent className="p-4 space-y-3">
@@ -967,7 +967,7 @@ function DeviceControlTab({ devices, sites, devicesLoading, toast }: { devices: 
                       onChange={() => toggleSelect(device.id)}
                       className="rounded border-muted-foreground/50"
                     />
-                    <div className={cn('flex h-7 w-7 items-center justify-center rounded-md', device.status === 'online' ? 'bg-green-600/20 text-green-400' : 'bg-muted text-muted-foreground')}>
+                    <div className={cn('flex h-7 w-7 items-center justify-center rounded-md', device.status === 'online' ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground')}>
                       {getDeviceIcon(device.type)}
                     </div>
                     <div className="min-w-0">
@@ -977,7 +977,7 @@ function DeviceControlTab({ devices, sites, devicesLoading, toast }: { devices: 
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     {device.status === 'online' ? (
-                      <Badge className="bg-green-600/20 text-green-400 border-green-500/30 border text-[10px] px-1.5">
+                      <Badge className="bg-success/20 text-success border-success/30 border text-[10px] px-1.5">
                         <Wifi className="h-2.5 w-2.5 mr-0.5" /> En línea
                       </Badge>
                     ) : (
@@ -1166,9 +1166,9 @@ function DiagnosticsTab({ toast }: { toast: any }) {
               {pinging ? 'Probando...' : 'Ejecutar Ping'}
             </Button>
             {pingResult && (
-              <div className={cn('rounded-lg border p-3', pingResult.reachable ? 'border-green-500/30 bg-green-600/10' : 'border-red-500/30 bg-red-600/10')}>
+              <div className={cn('rounded-lg border p-3', pingResult.reachable ? 'border-success/30 bg-success/10' : 'border-destructive/30 bg-destructive/10')}>
                 <div className="flex items-center gap-2">
-                  {pingResult.reachable ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-red-500" />}
+                  {pingResult.reachable ? <CheckCircle2 className="h-5 w-5 text-success" /> : <XCircle className="h-5 w-5 text-destructive" />}
                   <div>
                     <p className="text-sm font-semibold">
                       {pingResult.reachable ? 'Alcanzable' : 'No alcanzable'}
@@ -1177,7 +1177,7 @@ function DiagnosticsTab({ toast }: { toast: any }) {
                       {pingResult.host}:{pingPort}
                       {pingResult.latency !== undefined && ` - ${pingResult.latency}ms`}
                     </p>
-                    {pingResult.error && <p className="text-xs text-red-400 mt-1">{pingResult.error}</p>}
+                    {pingResult.error && <p className="text-xs text-destructive mt-1">{pingResult.error}</p>}
                   </div>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 import { eq, and, sql } from 'drizzle-orm';
+import { createLogger } from '@aion/common-utils';
 import type { Database } from '../db/client.js';
 import {
   automationRules,
@@ -13,6 +14,8 @@ import {
 import { emailService } from '../modules/email/service.js';
 import { pushService } from '../modules/push/service.js';
 import { whatsappService } from '../modules/whatsapp/service.js';
+
+const logger = createLogger({ name: 'automation-engine' });
 
 // ---------------------------------------------------------------------------
 // Types
@@ -179,9 +182,7 @@ async function executeAction(
       const body = (action.config?.body as string) ??
         `Automation alert triggered.\nEvent: ${event.eventType}\nSeverity: ${event.severity}\nSite: ${event.siteId}\nDevice: ${event.deviceId}\nMetadata: ${JSON.stringify(event.metadata)}`;
 
-      console.log(
-        `[automation-engine] send_alert: tenant=${event.tenantId}, eventType=${event.eventType}, severity=${event.severity}, channel=${target}`,
-      );
+      logger.info({ tenantId: event.tenantId, eventType: event.eventType, severity: event.severity, channel: target }, 'send_alert dispatched');
 
       const details: string[] = [];
 
@@ -200,10 +201,10 @@ async function executeAction(
 
           if (emailResult.success) {
             details.push(`Email sent to ${recipients.length} recipient(s)`);
-            console.log(`[automation-engine] send_alert email: sent to ${recipients.join(', ')}`);
+            logger.info({ recipients: recipients.join(', ') }, 'send_alert email sent');
           } else {
             details.push(`Email failed: ${emailResult.error ?? 'unknown error'}`);
-            console.error(`[automation-engine] send_alert email failed:`, emailResult.error);
+            logger.error({ err: emailResult.error }, 'send_alert email failed');
           }
 
           // Log the notification
@@ -220,12 +221,12 @@ async function executeAction(
               sentAt: emailResult.success ? new Date() : null,
             });
           } catch (logErr) {
-            console.error('[automation-engine] Failed to write notification log:', logErr);
+            logger.error({ err: logErr }, 'Failed to write notification log');
           }
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Unknown error';
           details.push(`Email error: ${msg}`);
-          console.error('[automation-engine] send_alert email error:', msg);
+          logger.error({ err: msg }, 'send_alert email error');
         }
       } else {
         details.push('No email recipients configured');
@@ -241,14 +242,14 @@ async function executeAction(
 
         if (pushResult.sent > 0) {
           details.push(`Push sent to ${pushResult.sent} subscriber(s)`);
-          console.log(`[automation-engine] send_alert push: sent to ${pushResult.sent} subscribers`);
+          logger.info({ sent: pushResult.sent }, 'send_alert push sent');
         } else {
           details.push('Push: no subscribers');
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
         details.push(`Push error: ${msg}`);
-        console.error('[automation-engine] send_alert push error:', msg);
+        logger.error({ err: msg }, 'send_alert push error');
       }
 
       const allOk = details.every((d) => !d.toLowerCase().includes('error') && !d.toLowerCase().includes('failed'));
@@ -277,11 +278,11 @@ async function executeAction(
           })
           .returning({ id: incidents.id });
 
-        console.log(`[automation-engine] create_incident: ${incident?.id}`);
+        logger.info({ incidentId: incident?.id }, 'Incident created');
         return { action: 'create_incident', status: 'success', detail: `Incident created: ${incident?.id}` };
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
-        console.error('[automation-engine] create_incident failed:', msg);
+        logger.error({ err: msg }, 'create_incident failed');
         return { action: 'create_incident', status: 'failed', detail: msg };
       }
     }
@@ -291,9 +292,7 @@ async function executeAction(
       const message = (action.config?.message as string) ??
         `[AION] Automation alert\nEvent: ${event.eventType}\nSeverity: ${event.severity}\nDevice: ${(event.metadata.deviceName as string) ?? event.deviceId}\nSite: ${(event.metadata.siteName as string) ?? event.siteId}`;
 
-      console.log(
-        `[automation-engine] send_whatsapp: tenant=${event.tenantId}, phones=${phones.join(',')}`,
-      );
+      logger.info({ tenantId: event.tenantId, phones: phones.join(',') }, 'send_whatsapp dispatched');
 
       if (phones.length === 0) {
         return {
@@ -318,17 +317,17 @@ async function executeAction(
 
           if (result.success) {
             sent++;
-            console.log(`[automation-engine] send_whatsapp: sent to ${phone}`);
+            logger.info({ phone }, 'send_whatsapp sent');
           } else {
             failed++;
             errors.push(`${phone}: ${result.error ?? 'send failed'}`);
-            console.error(`[automation-engine] send_whatsapp to ${phone} failed:`, result.error);
+            logger.error({ err: result.error, phone }, 'send_whatsapp failed');
           }
         } catch (err) {
           failed++;
           const msg = err instanceof Error ? err.message : 'Unknown error';
           errors.push(`${phone}: ${msg}`);
-          console.error(`[automation-engine] send_whatsapp to ${phone} error:`, msg);
+          logger.error({ err: msg, phone }, 'send_whatsapp error');
         }
       }
 
@@ -361,7 +360,7 @@ async function executeAction(
           signal: AbortSignal.timeout(10_000),
         });
         const statusCode = response.status;
-        console.log(`[automation-engine] webhook: POST ${url} -> ${statusCode}`);
+        logger.info({ url, statusCode }, 'Webhook POST completed');
         return {
           action: 'webhook',
           status: statusCode >= 200 && statusCode < 300 ? 'success' : 'failed',
@@ -369,7 +368,7 @@ async function executeAction(
         };
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
-        console.error(`[automation-engine] webhook to ${url} failed:`, msg);
+        logger.error({ err: msg, url }, 'Webhook failed');
         return { action: 'webhook', status: 'failed', detail: msg };
       }
     }
@@ -378,9 +377,7 @@ async function executeAction(
       const targetDeviceId = (action.config?.deviceId as string) ?? event.deviceId;
       const targetState = (action.config?.state as string) ?? 'toggle';
 
-      console.log(
-        `[automation-engine] toggle_device: device=${targetDeviceId}, state=${targetState}`,
-      );
+      logger.info({ deviceId: targetDeviceId, state: targetState }, 'toggle_device dispatched');
 
       // Device control requires the edge gateway (ONVIF/IoT protocol); there is no
       // direct HTTP toggle in the backend. We record an event so operators and
@@ -406,7 +403,7 @@ async function executeAction(
           })
           .returning({ id: events.id });
 
-        console.log(`[automation-engine] toggle_device event created: ${evt?.id}`);
+        logger.info({ eventId: evt?.id }, 'toggle_device event created');
 
         // Send a push notification so operators can action the toggle manually
         try {
@@ -416,7 +413,7 @@ async function executeAction(
             url: `/devices?highlight=${targetDeviceId}`,
           });
         } catch (pushErr) {
-          console.error('[automation-engine] toggle_device push notification failed:', pushErr);
+          logger.error({ err: pushErr }, 'toggle_device push notification failed');
         }
 
         return {
@@ -426,7 +423,7 @@ async function executeAction(
         };
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
-        console.error('[automation-engine] toggle_device event creation failed:', msg);
+        logger.error({ err: msg }, 'toggle_device event creation failed');
         return {
           action: 'toggle_device',
           status: 'failed',
@@ -439,9 +436,7 @@ async function executeAction(
       const protocolId = (action.config?.protocolId as string) ?? null;
       const protocolType = (action.config?.protocolType as string) ?? null;
 
-      console.log(
-        `[automation-engine] activate_protocol: tenant=${event.tenantId}, protocolId=${protocolId ?? 'auto'}, type=${protocolType ?? 'any'}`,
-      );
+      logger.info({ tenantId: event.tenantId, protocolId: protocolId ?? 'auto', protocolType: protocolType ?? 'any' }, 'activate_protocol dispatched');
 
       try {
         // Find the matching emergency protocol for this tenant
@@ -463,9 +458,7 @@ async function executeAction(
           .limit(1);
 
         if (!protocol) {
-          console.warn(
-            `[automation-engine] No active emergency protocol found for protocolId=${protocolId ?? 'any'}, type=${protocolType ?? 'any'}, tenant=${event.tenantId}`,
-          );
+          logger.warn({ protocolId: protocolId ?? 'any', protocolType: protocolType ?? 'any', tenantId: event.tenantId }, 'No active emergency protocol found');
           return {
             action: 'activate_protocol',
             status: 'failed',
@@ -496,9 +489,7 @@ async function executeAction(
           })
           .returning({ id: emergencyActivations.id });
 
-        console.log(
-          `[automation-engine] Emergency protocol "${protocol.name}" activated (activation=${activation?.id})`,
-        );
+        logger.info({ protocolName: protocol.name, activationId: activation?.id }, 'Emergency protocol activated');
 
         // Log the activation as a notification
         try {
@@ -514,7 +505,7 @@ async function executeAction(
             sentAt: now,
           });
         } catch (logErr) {
-          console.error('[automation-engine] Failed to write notification log:', logErr);
+          logger.error({ err: logErr }, 'Failed to write notification log');
         }
 
         // Notify emergency contacts for the site (if any)
@@ -548,7 +539,7 @@ async function executeAction(
                 });
                 contactsNotified++;
               } catch (emailErr) {
-                console.error(`[automation-engine] Emergency email to ${contact.email} failed:`, emailErr);
+                logger.error({ err: emailErr, email: contact.email }, 'Emergency email failed');
               }
             }
 
@@ -567,12 +558,12 @@ async function executeAction(
                 );
                 contactsNotified++;
               } catch (waErr) {
-                console.error(`[automation-engine] Emergency WhatsApp to ${contact.phone} failed:`, waErr);
+                logger.error({ err: waErr, phone: contact.phone }, 'Emergency WhatsApp failed');
               }
             }
           }
         } catch (contactErr) {
-          console.error('[automation-engine] Failed to query/notify emergency contacts:', contactErr);
+          logger.error({ err: contactErr }, 'Failed to query/notify emergency contacts');
         }
 
         // Send push notification to the tenant
@@ -583,7 +574,7 @@ async function executeAction(
             url: `/emergency?activation=${activation?.id}`,
           });
         } catch (pushErr) {
-          console.error('[automation-engine] Emergency push notification failed:', pushErr);
+          logger.error({ err: pushErr }, 'Emergency push notification failed');
         }
 
         return {
@@ -593,7 +584,7 @@ async function executeAction(
         };
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
-        console.error('[automation-engine] activate_protocol failed:', msg);
+        logger.error({ err: msg }, 'activate_protocol failed');
         return {
           action: 'activate_protocol',
           status: 'failed',
@@ -665,13 +656,13 @@ export async function evaluateAutomationRules(
         ),
       );
   } catch (err) {
-    console.error('[automation-engine] Failed to query automation rules:', err);
+    logger.error({ err }, 'Failed to query automation rules');
     return;
   }
 
   if (rules.length === 0) return;
 
-  console.log(`[automation-engine] Evaluating ${rules.length} active rule(s) for tenant=${event.tenantId}, event=${event.eventType}`);
+  logger.info({ ruleCount: rules.length, tenantId: event.tenantId, eventType: event.eventType }, 'Evaluating active rules');
 
   for (const rule of rules) {
     const startMs = Date.now();
@@ -693,11 +684,11 @@ export async function evaluateAutomationRules(
 
       // 3. Check cooldown
       if (isCooldownActive(rule.lastTriggeredAt, rule.cooldownMinutes)) {
-        console.log(`[automation-engine] Rule "${rule.name}" skipped (cooldown active)`);
+        logger.info({ ruleName: rule.name }, 'Rule skipped (cooldown active)');
         continue;
       }
 
-      console.log(`[automation-engine] Rule "${rule.name}" matched — executing ${actions.length} action(s)`);
+      logger.info({ ruleName: rule.name, actionCount: actions.length }, 'Rule matched — executing actions');
 
       // 4. Execute actions
       const results: ActionResult[] = [];
@@ -725,7 +716,7 @@ export async function evaluateAutomationRules(
           error: allSuccess ? null : results.filter((r) => r.status === 'failed').map((r) => r.detail).join('; '),
         });
       } catch (err) {
-        console.error(`[automation-engine] Failed to insert execution record for rule "${rule.name}":`, err);
+        logger.error({ err, ruleName: rule.name }, 'Failed to insert execution record');
       }
 
       // 7. Update rule trigger count and lastTriggeredAt
@@ -739,13 +730,13 @@ export async function evaluateAutomationRules(
           })
           .where(eq(automationRules.id, rule.id));
       } catch (err) {
-        console.error(`[automation-engine] Failed to update rule "${rule.name}":`, err);
+        logger.error({ err, ruleName: rule.name }, 'Failed to update rule');
       }
     } catch (err) {
       // Per-rule error isolation: log and continue to next rule
       const executionTimeMs = Date.now() - startMs;
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      console.error(`[automation-engine] Error processing rule "${rule.name}":`, errorMsg);
+      logger.error({ err: errorMsg, ruleName: rule.name }, 'Error processing rule');
 
       try {
         await db.insert(automationExecutions).values({
@@ -772,7 +763,6 @@ export async function evaluateAutomationRules(
 // Public API — start / stop (periodic scheduled-rule evaluation)
 // ---------------------------------------------------------------------------
 
-const WORKER_TAG = '[automation-engine]';
 const DEFAULT_INTERVAL_MS = 60_000; // 1 minute
 
 let timerHandle: ReturnType<typeof setInterval> | null = null;
@@ -787,20 +777,20 @@ export function startAutomationEngine(
   interval: number = DEFAULT_INTERVAL_MS,
 ): () => void {
   if (timerHandle) {
-    console.warn(`${WORKER_TAG} Worker already running — skipping duplicate start`);
+    logger.warn('Worker already running — skipping duplicate start');
     return () => stopAutomationEngine();
   }
 
-  console.log(`${WORKER_TAG} Starting automation engine worker (interval: ${interval / 1000}s)`);
+  logger.info({ intervalSec: interval / 1000 }, 'Starting automation engine worker');
 
   // Run once on start
   processScheduledRules(db).catch((err) => {
-    console.error(`${WORKER_TAG} Initial tick failed:`, err);
+    logger.error({ err }, 'Initial tick failed');
   });
 
   timerHandle = setInterval(() => {
     processScheduledRules(db).catch((err) => {
-      console.error(`${WORKER_TAG} Tick failed:`, err);
+      logger.error({ err }, 'Tick failed');
     });
   }, interval);
 
@@ -814,7 +804,7 @@ export function stopAutomationEngine(): void {
   if (timerHandle) {
     clearInterval(timerHandle);
     timerHandle = null;
-    console.log(`${WORKER_TAG} Worker stopped`);
+    logger.info('Worker stopped');
   }
 }
 
@@ -851,7 +841,7 @@ export async function processScheduledRules(db: Database): Promise<void> {
       .from(automationRules)
       .where(eq(automationRules.isActive, true));
   } catch (err) {
-    console.error('[automation-engine] Failed to query scheduled rules:', err);
+    logger.error({ err }, 'Failed to query scheduled rules');
     return;
   }
 
@@ -882,7 +872,7 @@ export async function processScheduledRules(db: Database): Promise<void> {
         continue;
       }
 
-      console.log(`[automation-engine] Scheduled rule "${rule.name}" triggered (hour=${currentHour}, day=${currentDayOfWeek})`);
+      logger.info({ ruleName: rule.name, hour: currentHour, dayOfWeek: currentDayOfWeek }, 'Scheduled rule triggered');
 
       const startMs = Date.now();
       const actions = (Array.isArray(rule.actions) ? rule.actions : [rule.actions]) as RuleAction[];
@@ -919,7 +909,7 @@ export async function processScheduledRules(db: Database): Promise<void> {
           error: allSuccess ? null : results.filter((r) => r.status === 'failed').map((r) => r.detail).join('; '),
         });
       } catch (err) {
-        console.error(`[automation-engine] Failed to insert execution record for scheduled rule "${rule.name}":`, err);
+        logger.error({ err, ruleName: rule.name }, 'Failed to insert execution record for scheduled rule');
       }
 
       try {
@@ -932,10 +922,10 @@ export async function processScheduledRules(db: Database): Promise<void> {
           })
           .where(eq(automationRules.id, rule.id));
       } catch (err) {
-        console.error(`[automation-engine] Failed to update scheduled rule "${rule.name}":`, err);
+        logger.error({ err, ruleName: rule.name }, 'Failed to update scheduled rule');
       }
     } catch (err) {
-      console.error(`[automation-engine] Error processing scheduled rule "${rule.name}":`, err);
+      logger.error({ err, ruleName: rule.name }, 'Error processing scheduled rule');
     }
   }
 }

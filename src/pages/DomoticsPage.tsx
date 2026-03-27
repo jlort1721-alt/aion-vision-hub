@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
 import { PageShell } from '@/components/shared/PageShell';
 import { DataTable } from '@/components/shared/DataTable';
@@ -7,13 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Zap, MoreHorizontal, Power, RefreshCw, Settings, Search, Plus } from 'lucide-react';
+import { Zap, MoreHorizontal, Power, RefreshCw, Settings, Search, Plus, DoorOpen, Shield, Siren, Lightbulb, CircuitBoard, Activity, ToggleLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useSections, useDomoticDevices, useDomoticMutations, useDomoticActions } from '@/hooks/use-module-data';
 import { useEWeLinkAuth, useEWeLinkControl, useEWeLinkSync, useEWeLinkHealth, useEWeLinkLogs } from '@/hooks/use-ewelink';
 
 import { TYPE_ICONS, TYPE_LABELS } from './domotics/types';
+
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  DoorOpen, Shield, Siren, Lightbulb, CircuitBoard, Activity, ToggleLeft,
+};
 import { DomoticsHeader } from './domotics/components/DomoticsHeader';
 import { DeviceSidebar } from './domotics/components/DeviceSidebar';
 
@@ -52,7 +56,7 @@ export default function DomoticsPage() {
   const activeCount = devices.filter((d: any) => d.state === 'on').length;
 
   // Actions
-  const handleTestConnection = async (device: any) => {
+  const handleTestConnection = useCallback(async (device: any) => {
     if (!device.config?.ewelink_id) {
       toast.info(`Test de conexión para "${device.name}" — sin eWeLink ID asociado`);
       return;
@@ -68,14 +72,14 @@ export default function DomoticsPage() {
     } else {
       toast.error(`Fallo de conexión: ${state.error}`);
     }
-  };
+  }, [ewelinkAuth.isAuthenticated]);
 
-  const handleToggle = (device: any) => {
+  const handleToggle = useCallback((device: any) => {
     if (ewelinkAuth.isAuthenticated && device.config?.ewelink_id) {
       ewelinkControl.mutate({ deviceId: device.config.ewelink_id, action: 'toggle' });
     }
     toggleState.mutate({ id: device.id, currentState: device.state });
-  };
+  }, [ewelinkAuth.isAuthenticated, ewelinkControl, toggleState]);
 
   const handleDirectAction = (device: any, action: 'on' | 'off') => {
     if (ewelinkAuth.isAuthenticated && device.config?.ewelink_id) {
@@ -85,7 +89,7 @@ export default function DomoticsPage() {
   };
 
   // DataTable Columns
-  const getSectionName = (id: string) => sections.find((s: any) => s.id === id)?.name || '—';
+  const getSectionName = useCallback((id: string) => sections.find((s: any) => s.id === id)?.name || '—', [sections]);
 
   const columns = useMemo(() => [
     {
@@ -93,7 +97,8 @@ export default function DomoticsPage() {
       header: '',
       width: 'w-10 text-center',
       cell: (row: any) => {
-        const Icon = require('lucide-react')[TYPE_ICONS[row.type as keyof typeof TYPE_ICONS]] || Zap;
+        const iconName = TYPE_ICONS[row.type as keyof typeof TYPE_ICONS];
+        const Icon = (iconName && ICON_MAP[iconName]) || Zap;
         return <Icon className="h-4 w-4 text-muted-foreground mx-auto" />;
       }
     },
@@ -137,7 +142,7 @@ export default function DomoticsPage() {
         </DropdownMenu>
       )
     }
-  ], [t, sections, ewelinkAuth.isAuthenticated, remove]);
+  ], [t, remove, getSectionName, handleTestConnection, handleToggle]);
 
   const searchFilterLine = (row: any, searchStr: string) => {
     if (sectionFilter !== 'all' && row.section_id !== sectionFilter) return false;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Activity, ShieldCheck, Database, Server, Fingerprint } from 'lucide-react';
 
 /**
@@ -8,6 +8,8 @@ import { Activity, ShieldCheck, Database, Server, Fingerprint } from 'lucide-rea
 export default function TacticalBootloader() {
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState('ESTABLISHING SECURE CONNECTION...');
+  const statusTextRef = useRef(statusText);
+  statusTextRef.current = statusText;
 
   useEffect(() => {
     const sequence = [
@@ -20,8 +22,6 @@ export default function TacticalBootloader() {
       { t: 100, text: 'AION C4ISR SYSTEM ONLINE.' }
     ];
 
-    let currentInterval = 0;
-    
     // Smooth random progress chunking
     const ticker = setInterval(() => {
       setProgress(p => {
@@ -30,7 +30,7 @@ export default function TacticalBootloader() {
 
         // Find nearest text log threshold
         const stage = sequence.find(s => nextP < s.t);
-        if (stage && stage.text !== statusText) {
+        if (stage && stage.text !== statusTextRef.current) {
            setStatusText(stage.text);
         } else if (nextP >= 100) {
            setStatusText('AION C4ISR SYSTEM ONLINE.');

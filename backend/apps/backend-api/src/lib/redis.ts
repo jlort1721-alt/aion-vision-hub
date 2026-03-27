@@ -10,7 +10,10 @@
  */
 
 import { Redis } from 'ioredis';
+import { createLogger } from '@aion/common-utils';
 import { config } from '../config/env.js';
+
+const logger = createLogger({ name: 'redis' });
 
 function createRedisClient(purpose: string): Redis | null {
   if (!config.REDIS_URL) return null;
@@ -24,9 +27,9 @@ function createRedisClient(purpose: string): Redis | null {
     lazyConnect: true,
   });
 
-  client.on('connect', () => console.log(`[redis] ${purpose} connected`));
-  client.on('error', (err: Error) => console.error(`[redis] ${purpose} error:`, err.message));
-  client.on('close', () => console.warn(`[redis] ${purpose} connection closed`));
+  client.on('connect', () => logger.info({ purpose }, 'Connected'));
+  client.on('error', (err: Error) => logger.error({ err, purpose }, 'Connection error'));
+  client.on('close', () => logger.warn({ purpose }, 'Connection closed'));
 
   return client;
 }
@@ -44,7 +47,7 @@ export const redisSubscriber = createRedisClient('subscriber');
 export async function connectRedis(): Promise<void> {
   const clients = [redis, redisPublisher, redisSubscriber].filter(Boolean) as Redis[];
   if (!clients.length) {
-    console.log('[redis] REDIS_URL not configured — using in-memory state (single instance only)');
+    logger.info('REDIS_URL not configured — using in-memory state (single instance only)');
     return;
   }
   await Promise.all(clients.map((c) => c.connect()));

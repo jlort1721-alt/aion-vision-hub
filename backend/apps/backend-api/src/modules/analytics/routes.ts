@@ -1,9 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import { eq, and, sql, gte } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { requireRole } from '../../plugins/auth.js';
 import { analyticsService } from './service.js';
 import { db } from '../../db/client.js';
-import { sites, devices, events, incidents } from '../../db/schema/index.js';
+import { sites } from '../../db/schema/index.js';
 import {
   dashboardFiltersSchema,
   kpiSnapshotFiltersSchema,
@@ -119,13 +119,12 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
   );
 
   // ── GET /risk-score — Per-site risk score calculation ──────
+  // Uses 3 aggregated queries + Map lookups instead of N+1 per-site queries
   app.get(
     '/risk-score',
     { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin', 'auditor')] },
     async (request, reply) => {
       const tenantId = request.tenantId;
-      const now = new Date();
-      const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
       // Fetch all sites for this tenant
       const tenantSites = await db
@@ -137,58 +136,79 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
         .from(sites)
         .where(eq(sites.tenantId, tenantId));
 
+      // ── Aggregated query 1: Events by site + severity in last 24h ──
+      const eventRows = await db.execute<{
+        site_id: string;
+        severity: string;
+        count: number;
+      }>(sql`
+        SELECT site_id, severity, COUNT(*)::int AS count
+        FROM events
+        WHERE tenant_id = ${tenantId}
+          AND created_at > now() - interval '24 hours'
+        GROUP BY site_id, severity
+      `);
+
+      // Build lookup: siteId -> { critical: N, high: N }
+      const eventsBySite = new Map<string, { critical: number; high: number }>();
+      for (const row of eventRows) {
+        if (!eventsBySite.has(row.site_id)) {
+          eventsBySite.set(row.site_id, { critical: 0, high: 0 });
+        }
+        const entry = eventsBySite.get(row.site_id)!;
+        if (row.severity === 'critical') entry.critical = row.count;
+        if (row.severity === 'high') entry.high = row.count;
+      }
+
+      // ── Aggregated query 2: Devices by site (total + offline) ──
+      const deviceRows = await db.execute<{
+        site_id: string;
+        total: number;
+        offline: number;
+      }>(sql`
+        SELECT site_id,
+               COUNT(*)::int AS total,
+               COUNT(*) FILTER (WHERE status = 'offline')::int AS offline
+        FROM devices
+        WHERE tenant_id = ${tenantId}
+        GROUP BY site_id
+      `);
+
+      // Build lookup: siteId -> { total, offline }
+      const devicesBySite = new Map<string, { total: number; offline: number }>();
+      for (const row of deviceRows) {
+        devicesBySite.set(row.site_id, { total: row.total, offline: row.offline });
+      }
+
+      // ── Aggregated query 3: Open incidents by site ──
+      const incidentRows = await db.execute<{
+        site_id: string;
+        count: number;
+      }>(sql`
+        SELECT site_id, COUNT(*)::int AS count
+        FROM incidents
+        WHERE tenant_id = ${tenantId}
+          AND status IN ('open', 'investigating')
+        GROUP BY site_id
+      `);
+
+      // Build lookup: siteId -> count
+      const incidentsBySite = new Map<string, number>();
+      for (const row of incidentRows) {
+        incidentsBySite.set(row.site_id, row.count);
+      }
+
+      // ── Compute risk scores with O(1) lookups per site ──
       const results = [];
 
       for (const site of tenantSites) {
-        // Critical events in last 24h
-        const [criticalResult] = await db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(events)
-          .where(and(
-            eq(events.tenantId, tenantId),
-            eq(events.siteId, site.id),
-            eq(events.severity, 'critical'),
-            gte(events.createdAt, last24h),
-          ));
-
-        // High severity events in last 24h
-        const [highResult] = await db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(events)
-          .where(and(
-            eq(events.tenantId, tenantId),
-            eq(events.siteId, site.id),
-            eq(events.severity, 'high'),
-            gte(events.createdAt, last24h),
-          ));
-
-        // Device status for this site
-        const [deviceResult] = await db
-          .select({
-            total: sql<number>`count(*)::int`,
-            offline: sql<number>`count(*) filter (where ${devices.status} = 'offline')::int`,
-          })
-          .from(devices)
-          .where(and(
-            eq(devices.tenantId, tenantId),
-            eq(devices.siteId, site.id),
-          ));
-
-        // Open incidents for this site
-        const [incidentResult] = await db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(incidents)
-          .where(and(
-            eq(incidents.tenantId, tenantId),
-            eq(incidents.siteId, site.id),
-            sql`${incidents.status} in ('open', 'investigating')`,
-          ));
-
-        const criticalCount = criticalResult?.count ?? 0;
-        const highCount = highResult?.count ?? 0;
-        const totalDevices = deviceResult?.total ?? 0;
-        const offlineDevices = deviceResult?.offline ?? 0;
-        const openIncidents = incidentResult?.count ?? 0;
+        const evts = eventsBySite.get(site.id) ?? { critical: 0, high: 0 };
+        const devs = devicesBySite.get(site.id) ?? { total: 0, offline: 0 };
+        const criticalCount = evts.critical;
+        const highCount = evts.high;
+        const totalDevices = devs.total;
+        const offlineDevices = devs.offline;
+        const openIncidents = incidentsBySite.get(site.id) ?? 0;
         const hasWanIp = !!site.wanIp;
 
         // Normalize each factor to 0-100 range

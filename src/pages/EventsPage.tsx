@@ -1,17 +1,20 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useEvents, useDevices, useSites, type EventFilters } from '@/hooks/use-supabase-data';
 import { useRealtimeEvents } from '@/hooks/use-realtime-events';
+import { useAudioAlerts } from '@/hooks/use-audio-alerts';
 import { eventsApi, incidentsApi } from '@/services/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';
 import {
   XCircle, AlertTriangle, AlertCircle, Info,
-  CheckCircle2, Bot, MoreHorizontal, ChevronLeft, ChevronRight
+  CheckCircle2, Bot, MoreHorizontal, ChevronLeft, ChevronRight,
+  Volume2, VolumeX, Loader2,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -41,6 +44,14 @@ export default function EventsPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Audio alerts
+  const { playAlert, isMuted, toggleMute } = useAudioAlerts();
+  const prevEventCountRef = useRef<number | null>(null);
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState<{ action: string; done: number; total: number } | null>(null);
+
   const { data: result, isLoading } = useEvents(filters);
   const events = result?.data ?? [];
   const totalCount = result?.count ?? 0;
@@ -50,6 +61,62 @@ export default function EventsPage() {
   const { data: sites = [] } = useSites();
   const queryClient = useQueryClient();
   useRealtimeEvents();
+
+  // Play audio alert when new events arrive
+  useEffect(() => {
+    if (prevEventCountRef.current !== null && events.length > 0) {
+      const prevCount = prevEventCountRef.current;
+      if (totalCount > prevCount && events[0]) {
+        const severity = (events[0] as any).severity as 'critical' | 'high' | 'medium' | 'low' | 'info';
+        playAlert(severity);
+      }
+    }
+    prevEventCountRef.current = totalCount;
+  }, [totalCount, events, playAlert]);
+
+  // Toggle single row selection
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // Select all / deselect all on current page
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds(prev => {
+      const allOnPage = events.map(e => e.id);
+      const allSelected = allOnPage.every(id => prev.has(id));
+      if (allSelected) return new Set();
+      return new Set(allOnPage);
+    });
+  }, [events]);
+
+  // Bulk action handler
+  const handleBulkAction = useCallback(async (action: 'acknowledge' | 'resolve' | 'dismiss') => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkLoading({ action, done: 0, total: ids.length });
+
+    let successCount = 0;
+    for (let i = 0; i < ids.length; i++) {
+      try {
+        switch (action) {
+          case 'acknowledge': await eventsApi.acknowledge(ids[i]); break;
+          case 'resolve': await eventsApi.resolve(ids[i]); break;
+          case 'dismiss': await eventsApi.dismiss(ids[i]); break;
+        }
+        successCount++;
+      } catch { /* continue with remaining */ }
+      setBulkLoading({ action, done: i + 1, total: ids.length });
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['events'] });
+    setSelectedIds(new Set());
+    setBulkLoading(null);
+    toast.success(`${action}: ${successCount}/${ids.length} events processed`);
+  }, [selectedIds, queryClient]);
 
   const updateFilters = useCallback((partial: Partial<EventFilters>) => {
     setFilters(prev => ({ ...prev, ...partial }));
@@ -89,15 +156,62 @@ export default function EventsPage() {
     <div className="flex flex-col lg:flex-row h-[calc(100vh-3.5rem)]">
       <div className={cn("flex-1 flex flex-col", selectedEvent && "lg:max-w-[60%] hidden lg:flex")}>
         <EventFiltersBar filters={filters} onChange={updateFilters} onReset={resetFilters} devices={devices} sites={sites} newCount={totalCount} />
+
+        {/* Sound toggle + Bulk actions bar */}
+        <div className="px-4 py-1.5 border-b flex items-center gap-2">
+          <Button
+            variant={isMuted ? 'outline' : 'default'}
+            size="sm"
+            className="h-7 text-xs gap-1.5"
+            onClick={toggleMute}
+            aria-label={isMuted ? 'Enable sound alerts' : 'Mute sound alerts'}
+          >
+            {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+            {isMuted ? 'Sound Off' : 'Sound On'}
+          </Button>
+
+          {selectedIds.size > 0 && (
+            <>
+              <div className="w-px h-5 bg-border mx-1" />
+              <span className="text-xs text-muted-foreground">{selectedIds.size} selected</span>
+
+              {bulkLoading ? (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground ml-2">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Processing {bulkLoading.done}/{bulkLoading.total}...
+                </div>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleBulkAction('acknowledge')}>
+                    Acknowledge Selected
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleBulkAction('resolve')}>
+                    Resolve Selected
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleBulkAction('dismiss')}>
+                    Dismiss Selected
+                  </Button>
+                </>
+              )}
+            </>
+          )}
+        </div>
         <div className="flex-1 overflow-auto">
           {isLoading ? (
             <div className="p-4 space-y-3">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
           ) : events.length === 0 ? (
             <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">{t('events.no_match')}</div>
           ) : (
-            <Table>
+            <Table aria-label="Events list">
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8 px-2">
+                    <Checkbox
+                      checked={events.length > 0 && events.every(e => selectedIds.has(e.id))}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Select all"
+                    />
+                  </TableHead>
                   <TableHead className="w-8"></TableHead>
                   <TableHead>{t('events.event')}</TableHead>
                   <TableHead className="hidden sm:table-cell">{t('events.device')}</TableHead>
@@ -113,7 +227,14 @@ export default function EventsPage() {
                   const device = devices.find(d => d.id === event.device_id);
                   const site = sites.find(s => s.id === event.site_id);
                   return (
-                    <TableRow key={event.id} className={cn("cursor-pointer", selected === event.id && "bg-muted/50")} onClick={() => setSelected(event.id)}>
+                    <TableRow key={event.id} className={cn("cursor-pointer", selected === event.id && "bg-muted/50", selectedIds.has(event.id) && "bg-primary/5")} onClick={() => setSelected(event.id)}>
+                      <TableCell className="px-2" onClick={e => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(event.id)}
+                          onCheckedChange={() => toggleSelect(event.id)}
+                          aria-label={`Select ${event.title}`}
+                        />
+                      </TableCell>
                       <TableCell><span className={sev.color}>{sev.icon}</span></TableCell>
                       <TableCell>
                         <div>
@@ -130,7 +251,7 @@ export default function EventsPage() {
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => e.stopPropagation()} aria-label="Event actions"><MoreHorizontal className="h-4 w-4" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleAction(event.id, 'acknowledge')} disabled={event.status !== 'new'}>
@@ -160,7 +281,7 @@ export default function EventsPage() {
             {totalCount} {t('events.count')} · {t('events.page')} {filters.page} {t('events.of')} {totalPages}
           </span>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-7 w-7" disabled={(filters.page ?? 1) <= 1} onClick={() => updateFilters({ page: (filters.page ?? 1) - 1 })}><ChevronLeft className="h-4 w-4" /></Button>
+            <Button variant="outline" size="icon" className="h-7 w-7" disabled={(filters.page ?? 1) <= 1} onClick={() => updateFilters({ page: (filters.page ?? 1) - 1 })} aria-label="Previous page"><ChevronLeft className="h-4 w-4" /></Button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               const current = filters.page ?? 1;
               let pageNum: number;
@@ -172,7 +293,7 @@ export default function EventsPage() {
                 <Button key={pageNum} variant={pageNum === current ? 'default' : 'outline'} size="icon" className="h-7 w-7 text-xs" onClick={() => updateFilters({ page: pageNum })}>{pageNum}</Button>
               );
             })}
-            <Button variant="outline" size="icon" className="h-7 w-7" disabled={(filters.page ?? 1) >= totalPages} onClick={() => updateFilters({ page: (filters.page ?? 1) + 1 })}><ChevronRight className="h-4 w-4" /></Button>
+            <Button variant="outline" size="icon" className="h-7 w-7" disabled={(filters.page ?? 1) >= totalPages} onClick={() => updateFilters({ page: (filters.page ?? 1) + 1 })} aria-label="Next page"><ChevronRight className="h-4 w-4" /></Button>
           </div>
         </div>
       </div>

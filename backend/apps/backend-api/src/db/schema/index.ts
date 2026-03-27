@@ -35,10 +35,32 @@ export {
 export { reports } from './reports.js';
 export { biomarkers } from './biomarkers.js';
 export { apiKeys } from '../../modules/api-keys/schema.js';
+export { evidence } from './evidence.js';
 
-import { pgTable, uuid, text, boolean, integer, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, boolean, integer, timestamp, jsonb, varchar, index } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenants } from './tenants.js';
+
+// ── Notification Templates ───────────────────────────────────
+// Unified templates for email, WhatsApp, push notifications
+export const notificationTemplates = pgTable('notification_templates', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  category: varchar('category', { length: 32 }).notNull(), // alert, incident, shift, visitor, access, system, automation
+  channel: varchar('channel', { length: 16 }).notNull(), // email, whatsapp, push, all
+  subject: varchar('subject', { length: 255 }), // for email
+  bodyTemplate: text('body_template').notNull(),
+  variables: jsonb('variables').notNull().default([]),
+  isSystem: boolean('is_system').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index('idx_notification_templates_tenant').on(table.tenantId),
+  index('idx_notification_templates_category').on(table.tenantId, table.category),
+  index('idx_notification_templates_channel').on(table.tenantId, table.channel),
+]);
 
 export const auditLogs = pgTable('audit_logs', {
   id: uuid('id').defaultRandom().primaryKey(),

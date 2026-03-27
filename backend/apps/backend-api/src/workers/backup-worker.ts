@@ -1,6 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { createLogger } from '@aion/common-utils';
 import type { Database } from '../db/client.js';
+
+const logger = createLogger({ name: 'backup-worker' });
 
 // ---------------------------------------------------------------------------
 // Types
@@ -107,7 +110,7 @@ export async function runBackupNow(db: Database): Promise<BackupManifest> {
   const backupsRoot = getBackupsRoot();
   const backupDir = path.join(backupsRoot, formatBackupDir(now));
 
-  console.log(`[backup] Starting backup to ${backupDir}`);
+  logger.info({ backupDir }, 'Starting backup');
 
   // Ensure directory exists
   fs.mkdirSync(backupDir, { recursive: true });
@@ -117,7 +120,7 @@ export async function runBackupNow(db: Database): Promise<BackupManifest> {
 
   for (const table of BACKUP_TABLES) {
     try {
-      console.log(`[backup] Exporting table: ${table.name}`);
+      logger.info({ table: table.name }, 'Exporting table');
       const rows = await db.execute(/* sql */ table.query as any);
 
       // drizzle execute returns an array of row objects
@@ -129,9 +132,9 @@ export async function runBackupNow(db: Database): Promise<BackupManifest> {
       const filePath = path.join(backupDir, `${table.name}.json`);
       fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
 
-      console.log(`[backup]   ${table.name}: ${count} rows`);
+      logger.info({ table: table.name, count }, 'Table exported');
     } catch (err) {
-      console.error(`[backup] Failed to export table ${table.name}:`, err);
+      logger.error({ err, table: table.name }, 'Failed to export table');
       tableCounts[table.name] = -1; // mark as failed
     }
   }
@@ -154,9 +157,7 @@ export async function runBackupNow(db: Database): Promise<BackupManifest> {
     'utf-8',
   );
 
-  console.log(
-    `[backup] Backup complete: ${totalRows} total rows, ${(backupSizeBytes / 1024).toFixed(1)} KB, ${durationMs}ms`,
-  );
+  logger.info({ totalRows, backupSizeKB: (backupSizeBytes / 1024).toFixed(1), durationMs }, 'Backup complete');
 
   // Enforce retention policy
   enforceRetention();
@@ -183,7 +184,7 @@ function enforceRetention(): void {
   const toDelete = entries.slice(0, entries.length - MAX_RETENTION);
   for (const dir of toDelete) {
     const fullPath = path.join(backupsRoot, dir);
-    console.log(`[backup] Retention: deleting old backup ${dir}`);
+    logger.info({ dir }, 'Retention: deleting old backup');
     fs.rmSync(fullPath, { recursive: true, force: true });
   }
 }
@@ -287,7 +288,7 @@ let lastBackupDate: string | null = null;
  */
 export function startBackupWorker(db: Database): () => void {
   if (timerHandle) {
-    console.warn('[backup] Worker already running — skipping duplicate start');
+    logger.warn('Worker already running — skipping duplicate start');
     return () => stopBackupWorker();
   }
 
@@ -297,9 +298,7 @@ export function startBackupWorker(db: Database): () => void {
     lastBackupDate = dateKey(new Date(status.last_backup_date));
   }
 
-  console.log(
-    `[backup] Starting backup worker (check every ${CHECK_INTERVAL_MS / 60_000} min, backup at ${BACKUP_HOUR}:00)`,
-  );
+  logger.info({ checkIntervalMin: CHECK_INTERVAL_MS / 60_000, backupHour: BACKUP_HOUR }, 'Starting backup worker');
 
   const tick = () => {
     const now = new Date();
@@ -307,9 +306,9 @@ export function startBackupWorker(db: Database): () => void {
 
     if (now.getHours() === BACKUP_HOUR && lastBackupDate !== todayKey) {
       lastBackupDate = todayKey;
-      console.log('[backup] Scheduled backup triggered');
+      logger.info('Scheduled backup triggered');
       runBackupNow(db).catch((err) => {
-        console.error('[backup] Scheduled backup failed:', err);
+        logger.error({ err }, 'Scheduled backup failed');
         // Reset so it can retry next tick
         lastBackupDate = null;
       });
@@ -331,6 +330,6 @@ export function stopBackupWorker(): void {
   if (timerHandle) {
     clearInterval(timerHandle);
     timerHandle = null;
-    console.log('[backup] Worker stopped');
+    logger.info('Worker stopped');
   }
 }

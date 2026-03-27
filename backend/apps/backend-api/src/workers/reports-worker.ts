@@ -1,4 +1,5 @@
 import { eq, and, lte, sql, count, gte } from 'drizzle-orm';
+import { createLogger } from '@aion/common-utils';
 import type { Database } from '../db/client.js';
 import { scheduledReports } from '../db/schema/index.js';
 import { events } from '../db/schema/events.js';
@@ -11,7 +12,7 @@ import { emailService } from '../modules/email/service.js';
 // Constants
 // ---------------------------------------------------------------------------
 
-const WORKER_TAG = '[reports-worker]';
+const logger = createLogger({ name: 'reports-worker' });
 const DEFAULT_INTERVAL_MS = 900_000; // 15 minutes
 
 // ---------------------------------------------------------------------------
@@ -392,7 +393,7 @@ async function processReport(db: Database, report: ScheduledReport): Promise<voi
   const frequency = getFrequencyFromType(report.type);
   const { start, end, label } = getPeriodRange(frequency);
 
-  console.log(`${WORKER_TAG} Processing report "${report.name}" (${report.id}) for period ${label}`);
+  logger.info({ reportName: report.name, reportId: report.id, period: label }, 'Processing report');
 
   // Gather data
   const [eventSummary, incidentSummary, deviceHealth, topSites] = await Promise.all([
@@ -421,7 +422,7 @@ async function processReport(db: Database, report: ScheduledReport): Promise<voi
   }
 
   if (recipientEmails.length === 0) {
-    console.warn(`${WORKER_TAG} Report "${report.name}" has no email recipients — skipping send`);
+    logger.warn({ reportName: report.name }, 'Report has no email recipients — skipping send');
     return;
   }
 
@@ -436,7 +437,7 @@ async function processReport(db: Database, report: ScheduledReport): Promise<voi
     throw new Error(`Email send failed: ${result.error}`);
   }
 
-  console.log(`${WORKER_TAG} Report "${report.name}" sent to ${recipientEmails.join(', ')}`);
+  logger.info({ reportName: report.name, recipients: recipientEmails.join(', ') }, 'Report sent');
 
   // Update next_run_at and last_run_at
   const nextRunAt = computeNextRun(frequency);
@@ -474,14 +475,14 @@ async function runReportsTick(db: Database): Promise<void> {
     return; // Nothing due — silent return
   }
 
-  console.log(`${WORKER_TAG} Found ${dueReports.length} report(s) due for processing`);
+  logger.info({ count: dueReports.length }, 'Found report(s) due for processing');
 
   for (const report of dueReports) {
     try {
       await processReport(db, report as unknown as ScheduledReport);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(`${WORKER_TAG} Failed to process report "${report.name}" (${report.id}):`, errorMsg);
+      logger.error({ err: errorMsg, reportName: report.name, reportId: report.id }, 'Failed to process report');
 
       // Persist error but don't crash — move next_run_at forward to avoid retry-storm
       const frequency = getFrequencyFromType(report.type);
@@ -496,7 +497,7 @@ async function runReportsTick(db: Database): Promise<void> {
           })
           .where(eq(scheduledReports.id, report.id));
       } catch (updateErr) {
-        console.error(`${WORKER_TAG} Failed to update error state for report ${report.id}:`, updateErr);
+        logger.error({ err: updateErr, reportId: report.id }, 'Failed to update error state for report');
       }
     }
   }
@@ -518,20 +519,20 @@ export function startReportsWorker(
   interval: number = DEFAULT_INTERVAL_MS,
 ): () => void {
   if (timerHandle) {
-    console.warn(`${WORKER_TAG} Worker already running — skipping duplicate start`);
+    logger.warn('Worker already running — skipping duplicate start');
     return () => stopReportsWorker();
   }
 
-  console.log(`${WORKER_TAG} Starting reports worker (interval: ${interval / 1000}s)`);
+  logger.info({ intervalSec: interval / 1000 }, 'Starting reports worker');
 
   // Run once on start
   runReportsTick(db).catch((err) => {
-    console.error(`${WORKER_TAG} Initial tick failed:`, err);
+    logger.error({ err }, 'Initial tick failed');
   });
 
   timerHandle = setInterval(() => {
     runReportsTick(db).catch((err) => {
-      console.error(`${WORKER_TAG} Tick failed:`, err);
+      logger.error({ err }, 'Tick failed');
     });
   }, interval);
 
@@ -545,6 +546,6 @@ export function stopReportsWorker(): void {
   if (timerHandle) {
     clearInterval(timerHandle);
     timerHandle = null;
-    console.log(`${WORKER_TAG} Worker stopped`);
+    logger.info('Worker stopped');
   }
 }

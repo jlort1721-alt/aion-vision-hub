@@ -7,13 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Timer, CheckCircle, AlertTriangle, Target, Plus } from "lucide-react";
 
 const severityColors: Record<string, string> = {
-  critical: "bg-red-500",
-  high: "bg-orange-500",
-  medium: "bg-yellow-500",
-  low: "bg-blue-500",
+  critical: "bg-destructive",
+  high: "bg-warning",
+  medium: "bg-warning",
+  low: "bg-primary",
 };
 
 function formatMinutes(minutes: number): string {
@@ -40,6 +44,7 @@ function getDeadlineInfo(deadline: string): { text: string; isUrgent: boolean; i
 
 export default function SLAPage() {
   const [activeTab, setActiveTab] = useState("definitions");
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -53,6 +58,7 @@ export default function SLAPage() {
     mutationFn: (id: string) => slaDefinitionsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sla", "definitions"] });
+      setDeleteTarget(null);
       toast({ title: "SLA definition deleted" });
     },
   });
@@ -98,7 +104,7 @@ export default function SLAPage() {
                 <p className="text-sm text-muted-foreground">Active SLAs</p>
                 <p className="text-3xl font-bold">{stats?.activeSlas ?? 0}</p>
               </div>
-              <Timer className="h-8 w-8 text-blue-500" />
+              <Timer className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -107,9 +113,9 @@ export default function SLAPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Met</p>
-                <p className="text-3xl font-bold text-green-500">{stats?.met ?? 0}</p>
+                <p className="text-3xl font-bold text-success">{stats?.met ?? 0}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -118,9 +124,9 @@ export default function SLAPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Breached</p>
-                <p className="text-3xl font-bold text-red-500">{stats?.breached ?? 0}</p>
+                <p className="text-3xl font-bold text-destructive">{stats?.breached ?? 0}</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-red-500" />
+              <AlertTriangle className="h-8 w-8 text-destructive" />
             </div>
           </CardContent>
         </Card>
@@ -129,9 +135,9 @@ export default function SLAPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Response Breach Rate</p>
-                <p className="text-3xl font-bold text-orange-500">{stats?.responseBreachRate ?? 0}%</p>
+                <p className="text-3xl font-bold text-warning">{stats?.responseBreachRate ?? 0}%</p>
               </div>
-              <Target className="h-8 w-8 text-orange-500" />
+              <Target className="h-8 w-8 text-warning" />
             </div>
           </CardContent>
         </Card>
@@ -190,8 +196,8 @@ export default function SLAPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-red-500 hover:text-red-700"
-                      onClick={() => deleteDefinitionMutation.mutate(def.id)}
+                      className="text-destructive hover:text-destructive/70"
+                      onClick={() => setDeleteTarget(def)}
                     >
                       Delete
                     </Button>
@@ -220,11 +226,11 @@ export default function SLAPage() {
             tracking.map((item: any) => {
               const deadlineInfo = item.deadline ? getDeadlineInfo(item.deadline) : null;
               return (
-                <Card key={item.id} className={deadlineInfo?.isBreached ? 'border-red-500/50' : ''}>
+                <Card key={item.id} className={deadlineInfo?.isBreached ? 'border-destructive/50' : ''}>
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3">
-                        <Timer className={`h-5 w-5 mt-0.5 ${deadlineInfo?.isBreached ? 'text-red-500' : deadlineInfo?.isUrgent ? 'text-orange-500 animate-pulse' : 'text-muted-foreground'}`} />
+                        <Timer className={`h-5 w-5 mt-0.5 ${deadlineInfo?.isBreached ? 'text-destructive' : deadlineInfo?.isUrgent ? 'text-warning animate-pulse' : 'text-muted-foreground'}`} />
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{item.title || item.incidentTitle || 'SLA Item'}</h3>
@@ -240,7 +246,7 @@ export default function SLAPage() {
                             SLA: {item.slaName || 'Unknown'} | Created: {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'N/A'}
                           </p>
                           {deadlineInfo && (
-                            <p className={`text-sm mt-1 font-medium ${deadlineInfo.isBreached ? 'text-red-500' : deadlineInfo.isUrgent ? 'text-orange-500' : 'text-green-500'}`}>
+                            <p className={`text-sm mt-1 font-medium ${deadlineInfo.isBreached ? 'text-destructive' : deadlineInfo.isUrgent ? 'text-warning' : 'text-success'}`}>
                               {deadlineInfo.text}
                             </p>
                           )}
@@ -260,6 +266,27 @@ export default function SLAPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete SLA Definition</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>"{deleteTarget?.name}"</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && deleteDefinitionMutation.mutate(deleteTarget.id)}
+            >
+              {deleteDefinitionMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

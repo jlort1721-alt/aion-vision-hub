@@ -82,6 +82,9 @@ export const voipConfig = pgTable('voip_config', {
   operatorExtension: text('operator_extension'),
   recordingEnabled: boolean('recording_enabled').default(false),
 
+  // After-hours schedule: "HH:MM-HH:MM" or "HH:MM-HH:MM|1-5" (Mon-Fri)
+  afterHoursSchedule: text('after_hours_schedule'),
+
   // Fanvil-specific — no factory defaults; must be explicitly configured per tenant
   fanvilAdminUser: text('fanvil_admin_user'),
   fanvilAdminPassword: text('fanvil_admin_password'),

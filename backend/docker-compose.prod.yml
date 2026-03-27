@@ -115,6 +115,9 @@ services:
       HOST: "0.0.0.0"
       NODE_ENV: production
       DATABASE_URL: postgres://aion:${POSTGRES_PASSWORD}@pgbouncer:6432/aion_vision_hub
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
+      SUPABASE_URL: ${SUPABASE_URL:?SUPABASE_URL is required}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:?SUPABASE_ANON_KEY is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_ISSUER: aion-vision-hub
       JWT_EXPIRATION: "24h"
@@ -269,8 +272,80 @@ services:
         reservations:
           memory: 256m
 
+  # ── Redis 7 (Cache + PubSub + Jobs) ──
+  redis:
+    image: redis:7-alpine
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+      --save 900 1
+      --save 300 10
+      --requirepass ${REDIS_PASSWORD:-}
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aion-net
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+        reservations:
+          memory: 128m
+
+  # ── Caddy (Reverse Proxy + Auto SSL) ──
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - /opt/aion/app/frontend/dist:/srv/frontend:ro
+    depends_on:
+      backend-api:
+        condition: service_healthy
+    networks:
+      - aion-net
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.5'
+
 volumes:
   pgdata:
+    driver: local
+  redis_data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
     driver: local
 
 networks:

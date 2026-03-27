@@ -1,0 +1,111 @@
+# ═══════════════════════════════════════════════════════════
+# AION Vision Hub — Production Caddy Reverse Proxy
+# Handles TLS, routing, WebSocket, security headers
+# ═══════════════════════════════════════════════════════════
+#
+# Replace {$DOMAIN} with your actual domain or set it as env var
+# e.g. DOMAIN=app.claveseguridad.com
+#
+# Caddy auto-obtains and renews Let's Encrypt certificates
+# ═══════════════════════════════════════════════════════════
+
+{
+	email {$ACME_EMAIL:admin@example.com}
+	# Uncomment for Cloudflare DNS challenge (if behind Cloudflare proxy)
+	# acme_dns cloudflare {$CLOUDFLARE_API_TOKEN}
+}
+
+# ── Main application domain ──────────────────────────────
+{$DOMAIN:localhost} {
+	# ── Security Headers ──
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(self), microphone=(self), geolocation=()"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		-Server
+	}
+
+	# ── Backend API ──
+	handle /api/* {
+		reverse_proxy backend-api:3000
+	}
+
+	# ── Health endpoints (no auth needed) ──
+	handle /health {
+		reverse_proxy backend-api:3000
+	}
+
+	# ── WebSocket ──
+	handle /ws {
+		reverse_proxy backend-api:3000 {
+			header_up Connection {http.request.header.Connection}
+			header_up Upgrade {http.request.header.Upgrade}
+		}
+	}
+
+	# ── Edge Gateway API ──
+	handle /gateway/* {
+		uri strip_prefix /gateway
+		reverse_proxy edge-gateway:3100
+	}
+
+	# ── MediaMTX WebRTC (for live view) ──
+	handle /webrtc/* {
+		reverse_proxy mediamtx:8889
+	}
+
+	# ── MediaMTX HLS (for playback) ──
+	handle /hls/* {
+		reverse_proxy mediamtx:8888
+	}
+
+	# ── Static frontend (SPA) ──
+	handle {
+		root * /srv/frontend
+		try_files {path} /index.html
+		file_server
+
+		# Cache static assets aggressively
+		@static path *.js *.css *.png *.jpg *.jpeg *.gif *.svg *.ico *.woff *.woff2 *.ttf
+		header @static Cache-Control "public, max-age=2592000, immutable"
+
+		# Gzip compression
+		encode gzip zstd
+	}
+
+	# ── Logging ──
+	log {
+		output file /data/access.log {
+			roll_size 50MiB
+			roll_keep 5
+			roll_keep_for 168h
+		}
+		format json
+	}
+}
+
+# ── API subdomain (optional, if you prefer api.domain.com) ──
+api.{$DOMAIN:localhost} {
+	reverse_proxy backend-api:3000 {
+		header_up Connection {http.request.header.Connection}
+		header_up Upgrade {http.request.header.Upgrade}
+	}
+	header {
+		X-Content-Type-Options "nosniff"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}
+
+# ── Gateway subdomain (optional) ──
+gw.{$DOMAIN:localhost} {
+	reverse_proxy edge-gateway:3100
+	header {
+		X-Content-Type-Options "nosniff"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}

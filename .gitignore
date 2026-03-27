@@ -15,12 +15,16 @@ dist-ssr
 # Environment variables (NEVER commit credentials)
 .env
 .env.local
+.env.production
 .env.*.local
 .env.docker
 backend/.env
 backend/**/.env
 gateway/.env
 gateway/**/.env
+
+# Private keys
+*.pem
 
 # Editor directories and files
 .vscode/*
@@ -35,3 +39,14 @@ gateway/**/.env
 *.tar.gz
 *.tsbuildinfo
 supabase/.temp/
+
+# Data import — CSV files with real credentials MUST NOT be committed
+# Only the README, script, and .env template are safe to commit
+data-import/templates/*.csv
+data-import/.env.production.template
+!data-import/README_IMPORTACION.md
+!data-import/import-all.ts
+
+# Deploy secrets
+deploy/backend.env.production
+deploy/*.env*

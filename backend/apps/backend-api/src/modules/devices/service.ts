@@ -1,11 +1,14 @@
 import { eq, and, sql } from 'drizzle-orm';
 import net from 'net';
 import { db } from '../../db/client.js';
-import { devices, sites } from '../../db/schema/index.js';
+import { devices, sites, streams } from '../../db/schema/index.js';
 import { config } from '../../config/env.js';
-import { encrypt, decrypt } from '@aion/common-utils';
+import { encrypt, decrypt, createLogger } from '@aion/common-utils';
 import { NotFoundError } from '@aion/shared-contracts';
+import type { StreamProfile } from '@aion/shared-contracts';
 import type { CreateDeviceInput, UpdateDeviceInput, DeviceFilters } from './schemas.js';
+
+const logger = createLogger({ name: 'device-service' });
 
 /**
  * Encrypt a credential value. Returns original if no encryption key configured.
@@ -404,6 +407,179 @@ export class DeviceService {
       devices: checks,
       checkedAt: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Get all channels/streams for a device, scoped by tenant.
+   */
+  async getChannels(deviceId: string, tenantId: string) {
+    // Verify device belongs to tenant
+    const [device] = await db
+      .select({ id: devices.id })
+      .from(devices)
+      .where(and(eq(devices.id, deviceId), eq(devices.tenantId, tenantId)))
+      .limit(1);
+
+    if (!device) throw new NotFoundError('Device', deviceId);
+
+    const rows = await db
+      .select()
+      .from(streams)
+      .where(and(eq(streams.deviceId, deviceId), eq(streams.tenantId, tenantId)));
+
+    return rows;
+  }
+
+  /**
+   * Sync channels/streams from a device adapter into the streams table.
+   *
+   * 1. Uses adapter (via provided stream profiles) to query device for channels.
+   *    If no profiles are provided, generates default profiles based on device.channels.
+   * 2. Compares with existing stream records in DB.
+   * 3. Creates new, updates existing, disables removed stream records.
+   * 4. Returns a sync result summary.
+   */
+  async syncChannels(
+    deviceId: string,
+    tenantId: string,
+    adapterProfiles?: StreamProfile[],
+  ) {
+    // Verify device belongs to tenant and get device info
+    const [row] = await db
+      .select({ device: devices })
+      .from(devices)
+      .where(and(eq(devices.id, deviceId), eq(devices.tenantId, tenantId)))
+      .limit(1);
+
+    if (!row) throw new NotFoundError('Device', deviceId);
+    const device = row.device;
+
+    // Get existing streams from DB
+    const existingStreams = await db
+      .select()
+      .from(streams)
+      .where(and(eq(streams.deviceId, deviceId), eq(streams.tenantId, tenantId)));
+
+    // Build profiles list: use adapter profiles if provided, otherwise generate defaults
+    const profiles: StreamProfile[] = adapterProfiles ?? this.generateDefaultProfiles(device);
+
+    // Build a key for matching: channel + type
+    const profileKey = (channel: number, type: string) => `${channel}:${type}`;
+
+    const existingMap = new Map(
+      existingStreams.map((s) => [profileKey(s.channel, s.type), s]),
+    );
+
+    const profileMap = new Map(
+      profiles.map((p) => [profileKey(p.channel ?? 1, p.type), p]),
+    );
+
+    let created = 0;
+    let updated = 0;
+    let disabled = 0;
+
+    // Create or update streams from adapter profiles
+    for (const profile of profiles) {
+      const key = profileKey(profile.channel ?? 1, profile.type);
+      const existing = existingMap.get(key);
+
+      if (existing) {
+        // Update existing stream if any property changed
+        const needsUpdate =
+          existing.codec !== profile.codec ||
+          existing.resolution !== profile.resolution ||
+          existing.fps !== profile.fps ||
+          existing.bitrate !== (profile.bitrate ?? null) ||
+          existing.urlTemplate !== profile.url ||
+          !existing.isActive;
+
+        if (needsUpdate) {
+          await db
+            .update(streams)
+            .set({
+              codec: profile.codec,
+              resolution: profile.resolution,
+              fps: profile.fps,
+              bitrate: profile.bitrate ?? null,
+              urlTemplate: profile.url,
+              isActive: true,
+            })
+            .where(eq(streams.id, existing.id));
+          updated++;
+        }
+      } else {
+        // Create new stream record
+        await db.insert(streams).values({
+          deviceId,
+          tenantId,
+          channel: profile.channel ?? 1,
+          type: profile.type,
+          codec: profile.codec,
+          resolution: profile.resolution,
+          fps: profile.fps,
+          bitrate: profile.bitrate ?? null,
+          urlTemplate: profile.url,
+          protocol: 'rtsp',
+          isActive: true,
+        });
+        created++;
+      }
+    }
+
+    // Disable streams that no longer exist in the adapter profiles
+    for (const [key, existing] of existingMap) {
+      if (!profileMap.has(key) && existing.isActive) {
+        await db
+          .update(streams)
+          .set({ isActive: false })
+          .where(eq(streams.id, existing.id));
+        disabled++;
+      }
+    }
+
+    const result = {
+      deviceId,
+      channels: profiles.length,
+      created,
+      updated,
+      disabled,
+      total: existingStreams.length + created,
+      syncedAt: new Date().toISOString(),
+    };
+
+    logger.info({ syncResult: result }, 'Channel sync completed');
+
+    return result;
+  }
+
+  /**
+   * Generate default stream profiles for a device based on its channel count.
+   * Used as a fallback when the adapter doesn't provide profiles.
+   */
+  private generateDefaultProfiles(device: Record<string, unknown>): StreamProfile[] {
+    const channelCount = (device.channels as number) ?? 1;
+    const profiles: StreamProfile[] = [];
+
+    for (let ch = 1; ch <= channelCount; ch++) {
+      profiles.push({
+        type: 'main',
+        url: '',
+        codec: 'H.264',
+        resolution: '1920x1080',
+        fps: 25,
+        channel: ch,
+      });
+      profiles.push({
+        type: 'sub',
+        url: '',
+        codec: 'H.264',
+        resolution: '640x480',
+        fps: 15,
+        channel: ch,
+      });
+    }
+
+    return profiles;
   }
 }
 

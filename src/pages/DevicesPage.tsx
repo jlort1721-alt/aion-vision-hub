@@ -152,12 +152,12 @@ export default function DevicesPage() {
                       <TableCell>
                         {device.status === 'online' || device.status === 'active' ? <Wifi className="h-3.5 w-3.5 text-success" /> :
                          device.status === 'offline' ? <WifiOff className="h-3.5 w-3.5 text-destructive" /> :
-                         device.status === 'pending_configuration' ? <AlertCircle className="h-3.5 w-3.5 text-yellow-500" /> :
+                         device.status === 'pending_configuration' ? <AlertCircle className="h-3.5 w-3.5 text-warning" /> :
                          <AlertCircle className="h-3.5 w-3.5 text-warning" />}
                       </TableCell>
                       <TableCell className="font-medium text-sm">{device.name}</TableCell>
                       <TableCell className="hidden md:table-cell"><div className="text-xs"><span className="capitalize">{device.brand}</span><span className="text-muted-foreground ml-1">{device.model}</span></div></TableCell>
-                      <TableCell className="hidden lg:table-cell font-mono text-xs">{device.remote_address ? <span className="text-green-400">{device.remote_address}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
+                      <TableCell className="hidden lg:table-cell font-mono text-xs">{device.remote_address ? <span className="text-success">{device.remote_address}</span> : <span className="text-muted-foreground">—</span>}</TableCell>
                       <TableCell className="hidden xl:table-cell font-mono text-xs text-muted-foreground">{device.ip_address || '—'}</TableCell>
                       <TableCell className="hidden sm:table-cell text-xs">{device.site_name || site?.name?.split('—')[0]?.trim()}</TableCell>
                       <TableCell className="hidden md:table-cell"><Badge variant="outline" className="text-[10px] capitalize">{device.type}</Badge></TableCell>
@@ -201,7 +201,7 @@ export default function DevicesPage() {
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('devices.connection')}</CardTitle></CardHeader>
             <CardContent className="space-y-1 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">IP Pública (Remota)</span><span className="font-mono text-green-400">{selected.remote_address || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">IP Pública (Remota)</span><span className="font-mono text-success">{selected.remote_address || '—'}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">WAN Site</span><span className="font-mono">{selected.site_wan_ip || '—'}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">IP LAN</span><span className="font-mono">{selected.ip_address || '—'}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Puerto Mapeado</span><span>{selected.port || '—'}</span></div>

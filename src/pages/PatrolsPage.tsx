@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { patrolRoutesApi, patrolCheckpointsApi, patrolLogsApi } from "@/services/patrols-api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,14 +6,138 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { Map, MapPin, Navigation, CheckCircle, Plus, Radar, ShieldAlert, Timer, Crosshair } from "lucide-react";
+import { Map, MapPin, Navigation, CheckCircle, Plus, Radar, ShieldAlert, Timer, Crosshair, ChevronDown, MapPinOff } from "lucide-react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// ── Types for patrol map ───────────────────────────────────
+interface PatrolRoute {
+  id: string;
+  name: string;
+  siteName?: string;
+  isActive: boolean;
+  estimatedMinutes?: number;
+  frequency?: string;
+}
+
+interface PatrolCheckpoint {
+  id: string;
+  name: string;
+  description?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  lastStatus?: string;
+}
+
+// Fix default marker icons for leaflet in bundled apps
+delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+});
+
+const checkpointStatusColors: Record<string, string> = {
+  completed: "#22c55e",
+  pending: "#eab308",
+  missed: "#ef4444",
+};
+
+function createCheckpointIcon(status: string) {
+  const color = checkpointStatusColors[status] || checkpointStatusColors.pending;
+  return L.divIcon({
+    className: "",
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+  });
+}
+
+// ── Patrol Route Map (pure Leaflet, same pattern as SitesPage) ──
+function PatrolRouteMap({ routes, allCheckpoints }: {
+  routes: PatrolRoute[];
+  allCheckpoints: Record<string, PatrolCheckpoint[]>;
+}) {
+  const mapRef = useRef<L.Map | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const layersRef = useRef<L.LayerGroup | null>(null);
+
+  // Initialize map once
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+    const map = L.map(containerRef.current, { center: [20, 0], zoom: 3 });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+    }).addTo(map);
+    mapRef.current = map;
+    return () => { map.remove(); mapRef.current = null; };
+  }, []);
+
+  // Update markers/polylines when data changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (layersRef.current) { map.removeLayer(layersRef.current); }
+    const group = L.layerGroup();
+    const allPositions: L.LatLng[] = [];
+
+    const routeColors = ["#3b82f6", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#6366f1"];
+
+    routes.forEach((route, rIdx) => {
+      const cps = allCheckpoints[route.id] || [];
+      const geoPoints = cps.filter((cp) => cp.latitude != null && cp.longitude != null);
+      if (geoPoints.length === 0) return;
+
+      const polylineCoords: L.LatLng[] = [];
+      const lineColor = routeColors[rIdx % routeColors.length];
+
+      geoPoints.forEach((cp) => {
+        const pos = L.latLng(cp.latitude, cp.longitude);
+        allPositions.push(pos);
+        polylineCoords.push(pos);
+
+        const status = cp.lastStatus || "pending";
+        const marker = L.marker(pos, { icon: createCheckpointIcon(status) });
+        marker.bindPopup(`
+          <div style="font-size:12px;font-family:sans-serif;">
+            <strong>${cp.name}</strong><br/>
+            Route: ${route.name}<br/>
+            Status: <span style="color:${checkpointStatusColors[status] || '#eab308'};font-weight:bold;">${status}</span>
+          </div>
+        `);
+        group.addLayer(marker);
+      });
+
+      if (polylineCoords.length >= 2) {
+        const polyline = L.polyline(polylineCoords, {
+          color: lineColor,
+          weight: 3,
+          opacity: 0.7,
+          dashArray: "8, 6",
+        });
+        polyline.bindPopup(`<strong>${route.name}</strong>`);
+        group.addLayer(polyline);
+      }
+    });
+
+    group.addTo(map);
+    layersRef.current = group;
+
+    if (allPositions.length > 0) {
+      map.fitBounds(L.latLngBounds(allPositions), { padding: [40, 40], maxZoom: 15 });
+    }
+  }, [routes, allCheckpoints]);
+
+  return <div ref={containerRef} className="h-full w-full" />;
+}
 
 const logStatusColors: Record<string, string> = {
-  completed: "bg-green-500",
-  in_progress: "bg-blue-500",
-  missed: "bg-red-500",
-  partial: "bg-yellow-500",
+  completed: "bg-success",
+  in_progress: "bg-primary",
+  missed: "bg-destructive",
+  partial: "bg-warning",
 };
 
 export default function PatrolsPage() {
@@ -85,7 +209,7 @@ export default function PatrolsPage() {
                 <p className="text-sm text-muted-foreground">Total Routes</p>
                 <p className="text-3xl font-bold">{stats?.totalRoutes ?? 0}</p>
               </div>
-              <Navigation className="h-8 w-8 text-blue-500" />
+              <Navigation className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -94,9 +218,9 @@ export default function PatrolsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Compliance Rate</p>
-                <p className="text-3xl font-bold text-green-500">{stats?.complianceRate ?? 0}%</p>
+                <p className="text-3xl font-bold text-success">{stats?.complianceRate ?? 0}%</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -105,9 +229,9 @@ export default function PatrolsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Completed Today</p>
-                <p className="text-3xl font-bold text-green-500">{stats?.completedToday ?? 0}</p>
+                <p className="text-3xl font-bold text-success">{stats?.completedToday ?? 0}</p>
               </div>
-              <Map className="h-8 w-8 text-green-500" />
+              <Map className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
@@ -116,9 +240,9 @@ export default function PatrolsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Missed Today</p>
-                <p className="text-3xl font-bold text-red-500">{stats?.missedToday ?? 0}</p>
+                <p className="text-3xl font-bold text-destructive">{stats?.missedToday ?? 0}</p>
               </div>
-              <MapPin className="h-8 w-8 text-red-500" />
+              <MapPin className="h-8 w-8 text-destructive" />
             </div>
           </CardContent>
         </Card>
@@ -151,7 +275,7 @@ export default function PatrolsPage() {
                  <CardTitle className="text-sm tracking-widest font-bold flex items-center gap-2 text-primary">
                     <Map className="h-4 w-4" /> SITE GRID TOPOGRAPHY
                  </CardTitle>
-                 <Badge variant="outline" className="border-green-500 text-green-500 bg-green-500/10 animate-pulse">
+                 <Badge variant="outline" className="border-success text-success bg-success/10 animate-pulse">
                    GPS LINK ACTIVE
                  </Badge>
                </CardHeader>
@@ -163,10 +287,10 @@ export default function PatrolsPage() {
                  
                  {/* Guard Marker 1 */}
                  <div className="absolute top-[30%] left-[40%] flex flex-col items-center">
-                   <div className="h-8 w-8 rounded-full border border-green-500 bg-green-500/20 flex items-center justify-center animate-bounce">
-                      <Crosshair className="h-5 w-5 text-green-500" />
+                   <div className="h-8 w-8 rounded-full border border-success bg-success/20 flex items-center justify-center animate-bounce">
+                      <Crosshair className="h-5 w-5 text-success" />
                    </div>
-                   <div className="mt-1 bg-black/80 px-2 py-1 rounded text-[10px] text-green-400 font-mono border border-green-500/50">
+                   <div className="mt-1 bg-black/80 px-2 py-1 rounded text-[10px] text-success font-mono border border-success/50">
                      UNIT-01 (Bravo)
                    </div>
                    {/* Target Path line simulated */}
@@ -177,19 +301,19 @@ export default function PatrolsPage() {
 
                  {/* Guard Marker 2 (SLA Breached) */}
                  <div className="absolute bottom-[20%] right-[30%] flex flex-col items-center">
-                   <span className="animate-ping absolute h-12 w-12 rounded-full bg-red-400 opacity-20"></span>
-                   <div className="h-8 w-8 rounded-full border-2 border-red-500 bg-red-500/40 flex items-center justify-center drop-shadow-[0_0_10px_#ff0000]">
+                   <span className="animate-ping absolute h-12 w-12 rounded-full bg-destructive opacity-20"></span>
+                   <div className="h-8 w-8 rounded-full border-2 border-destructive bg-destructive/40 flex items-center justify-center drop-shadow-[0_0_10px_#ff0000]">
                       <ShieldAlert className="h-5 w-5 text-red-100" />
                    </div>
-                   <div className="mt-1 bg-red-950 px-2 py-1 rounded text-[10px] text-red-500 font-mono border border-red-500 font-bold whitespace-nowrap">
+                   <div className="mt-1 bg-red-950 px-2 py-1 rounded text-[10px] text-destructive font-mono border border-destructive font-bold whitespace-nowrap">
                      UNIT-04 (Echo) - OFF ROUTE
                    </div>
                  </div>
 
                  {/* Checkpoint Nodes */}
                  <div className="absolute top-[60%] left-[60%] flex items-center gap-1 opacity-60">
-                    <MapPin className="h-4 w-4 text-blue-400" />
-                    <span className="text-[10px] font-mono text-blue-400">CP-05</span>
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <span className="text-[10px] font-mono text-primary">CP-05</span>
                  </div>
                </CardContent>
              </Card>
@@ -199,11 +323,11 @@ export default function PatrolsPage() {
                <h3 className="uppercase text-xs font-bold text-muted-foreground mb-2 flex items-center gap-2"><Timer className="h-4 w-4" /> Service Level Agreements</h3>
                
                {/* SLA Block 1 */}
-               <Card className="border-green-500/30 bg-green-500/5">
+               <Card className="border-success/30 bg-success/5">
                  <CardContent className="p-4 flex flex-col gap-2">
                    <div className="flex justify-between items-center">
-                     <Badge variant="outline" className="text-green-500 border-green-500/50 bg-green-500/10 font-mono">ON SCHEDULE</Badge>
-                     <span className="text-2xl font-mono font-bold text-green-400">04:12</span>
+                     <Badge variant="outline" className="text-success border-success/50 bg-success/10 font-mono">ON SCHEDULE</Badge>
+                     <span className="text-2xl font-mono font-bold text-success">04:12</span>
                    </div>
                    <div>
                      <p className="font-bold text-sm">Unit: Carlos B. (Bravo-1)</p>
@@ -213,17 +337,17 @@ export default function PatrolsPage() {
                      </p>
                    </div>
                    <div className="w-full bg-black/50 rounded-full h-1 mt-1">
-                     <div className="bg-green-500 h-1 rounded-full w-[70%]"></div>
+                     <div className="bg-success h-1 rounded-full w-[70%]"></div>
                    </div>
                  </CardContent>
                </Card>
 
                {/* SLA Block 2 (Warning) */}
-               <Card className="border-yellow-500/30 bg-yellow-500/5">
+               <Card className="border-warning/30 bg-warning/5">
                  <CardContent className="p-4 flex flex-col gap-2">
                    <div className="flex justify-between items-center">
-                     <Badge variant="outline" className="text-yellow-500 border-yellow-500/50 bg-yellow-500/10 font-mono animate-pulse">AT RISK</Badge>
-                     <span className="text-2xl font-mono font-bold text-yellow-400">00:45</span>
+                     <Badge variant="outline" className="text-warning border-warning/50 bg-warning/10 font-mono animate-pulse">AT RISK</Badge>
+                     <span className="text-2xl font-mono font-bold text-warning">00:45</span>
                    </div>
                    <div>
                      <p className="font-bold text-sm">Unit: Maria S. (Alpha-2)</p>
@@ -233,17 +357,17 @@ export default function PatrolsPage() {
                      </p>
                    </div>
                    <div className="w-full bg-black/50 rounded-full h-1 mt-1">
-                     <div className="bg-yellow-500 h-1 rounded-full w-[90%]"></div>
+                     <div className="bg-warning h-1 rounded-full w-[90%]"></div>
                    </div>
                  </CardContent>
                </Card>
 
                {/* SLA Block 3 (Breached) */}
-               <Card className="border-red-500 shadow-[0_0_15px_rgba(255,0,0,0.15)] bg-red-950/20">
+               <Card className="border-destructive shadow-[0_0_15px_rgba(255,0,0,0.15)] bg-red-950/20">
                  <CardContent className="p-4 flex flex-col gap-2">
                    <div className="flex justify-between items-center">
                      <Badge variant="destructive" className="font-mono animate-pulse">SLA BREACHED</Badge>
-                     <span className="text-2xl font-mono font-bold text-red-500">-05:22</span>
+                     <span className="text-2xl font-mono font-bold text-destructive">-05:22</span>
                    </div>
                    <div>
                      <p className="font-bold text-sm text-red-200">Unit: John D. (Echo-4)</p>
@@ -253,8 +377,8 @@ export default function PatrolsPage() {
                      </p>
                    </div>
                    <div className="w-full bg-black/50 rounded-full h-1 mt-1 overflow-hidden relative">
-                     <div className="absolute w-full h-full bg-red-500/20"></div>
-                     <div className="bg-red-500 h-1 rounded-full w-[100%] animate-pulse"></div>
+                     <div className="absolute w-full h-full bg-destructive/20"></div>
+                     <div className="bg-destructive h-1 rounded-full w-[100%] animate-pulse"></div>
                    </div>
                    <Button size="sm" variant="destructive" className="w-full mt-2 text-xs h-7">Dispatch Backup</Button>
                  </CardContent>
@@ -288,7 +412,7 @@ export default function PatrolsPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Navigation className={`h-5 w-5 ${route.isActive ? 'text-blue-500' : 'text-muted-foreground'}`} />
+                      <Navigation className={`h-5 w-5 ${route.isActive ? 'text-primary' : 'text-muted-foreground'}`} />
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold">{route.name}</h3>
@@ -405,7 +529,7 @@ export default function PatrolsPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
-                      <CheckCircle className={`h-5 w-5 mt-0.5 ${log.status === 'completed' ? 'text-green-500' : 'text-muted-foreground'}`} />
+                      <CheckCircle className={`h-5 w-5 mt-0.5 ${log.status === 'completed' ? 'text-success' : 'text-muted-foreground'}`} />
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold">{log.routeName || 'Patrol'}</h3>

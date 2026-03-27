@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,12 +13,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/contexts/I18nContext';
 import { useSections, useDatabaseRecords, useDatabaseRecordMutations } from '@/hooks/use-module-data';
 import {
-  Database, Search, Plus, Download, Upload, Users, Car,
+  Database, Search, Plus, Download, Users, Car,
   Building2, Home, MapPin, Eye, Pencil, Trash2,
-  MoreHorizontal, FileText, Phone, Mail
+  MoreHorizontal, FileText, Phone, Mail,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+
+// ── Constants ────────────────────────────────────────────────
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const DEFAULT_PAGE_SIZE = 25;
+
+// ── Component ────────────────────────────────────────────────
+
 export default function DatabasePage() {
   const { t } = useI18n();
   const { data: sections = [] } = useSections();
@@ -34,14 +43,52 @@ export default function DatabasePage() {
   const [form, setForm] = useState({ title: '', category: 'residente', section_id: '', unit: '', phone: '', email: '', notes: '' });
   const [editForm, setEditForm] = useState({ id: '', title: '', category: 'residente', section_id: '', unit: '', phone: '', email: '', notes: '' });
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+
   const getSectionName = (id: string) => sections.find((s: any) => s.id === id)?.name || '—';
 
-  const filtered = records.filter((r: any) => {
-    if (search && !r.title?.toLowerCase().includes(search.toLowerCase())) return false;
-    if (sectionFilter !== 'all' && r.section_id !== sectionFilter) return false;
-    if (activeTab !== 'all' && r.category !== activeTab) return false;
-    return true;
-  });
+  // Filtered records
+  const filtered = useMemo(() => {
+    return records.filter((r: any) => {
+      if (search && !r.title?.toLowerCase().includes(search.toLowerCase())) return false;
+      if (sectionFilter !== 'all' && r.section_id !== sectionFilter) return false;
+      if (activeTab !== 'all' && r.category !== activeTab) return false;
+      return true;
+    });
+  }, [records, search, sectionFilter, activeTab]);
+
+  // Pagination derived values
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedRecords = filtered.slice(
+    (safeCurrentPage - 1) * pageSize,
+    safeCurrentPage * pageSize,
+  );
+  const startIndex = (safeCurrentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(safeCurrentPage * pageSize, filtered.length);
+
+  // Reset to page 1 when filters change
+  const handleTabChange = (val: string) => {
+    setActiveTab(val);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    setCurrentPage(1);
+  };
+
+  const handleSectionFilterChange = (val: string) => {
+    setSectionFilter(val);
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (val: string) => {
+    setPageSize(Number(val));
+    setCurrentPage(1);
+  };
 
   const selected = selectedRecord ? records.find((r: any) => r.id === selectedRecord) : null;
 
@@ -91,9 +138,9 @@ export default function DatabasePage() {
       `"${(r.content?.phone || '').replace(/"/g, '""')}"`,
       `"${(r.content?.email || '').replace(/"/g, '""')}"`,
       `"${(r.status || '').replace(/"/g, '""')}"`,
-      `"${new Date(r.created_at).toLocaleDateString()}"`
+      `"${new Date(r.created_at).toLocaleDateString()}"`,
     ]);
-    
+
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -119,13 +166,13 @@ export default function DatabasePage() {
 
           <div className="grid grid-cols-4 gap-2">
             <Card className="p-2"><div className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('database.total_records')}</p><p className="text-lg font-bold">{records.length}</p></div></div></Card>
-            <Card className="p-2"><div className="flex items-center gap-2"><Home className="h-4 w-4 text-green-500" /><div><p className="text-xs text-muted-foreground">{t('database.residents')}</p><p className="text-lg font-bold">{records.filter((r: any) => r.category === 'residente').length}</p></div></div></Card>
-            <Card className="p-2"><div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-blue-500" /><div><p className="text-xs text-muted-foreground">{t('database.commercial')}</p><p className="text-lg font-bold">{records.filter((r: any) => r.category === 'comercio').length}</p></div></div></Card>
+            <Card className="p-2"><div className="flex items-center gap-2"><Home className="h-4 w-4 text-success" /><div><p className="text-xs text-muted-foreground">{t('database.residents')}</p><p className="text-lg font-bold">{records.filter((r: any) => r.category === 'residente').length}</p></div></div></Card>
+            <Card className="p-2"><div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('database.commercial')}</p><p className="text-lg font-bold">{records.filter((r: any) => r.category === 'comercio').length}</p></div></div></Card>
             <Card className="p-2"><div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-warning" /><div><p className="text-xs text-muted-foreground">{t('database.sections')}</p><p className="text-lg font-bold">{sections.length}</p></div></div></Card>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col">
           <div className="px-4 pt-2 border-b">
             <TabsList className="h-8">
               <TabsTrigger value="all" className="text-xs">{t('common.all')}</TabsTrigger>
@@ -139,9 +186,9 @@ export default function DatabasePage() {
           <div className="px-4 py-2 border-b flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder={t('database.search')} value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
+              <Input placeholder={t('database.search')} value={search} onChange={e => handleSearchChange(e.target.value)} className="pl-8 h-8 text-sm" />
             </div>
-            <Select value={sectionFilter} onValueChange={setSectionFilter}>
+            <Select value={sectionFilter} onValueChange={handleSectionFilterChange}>
               <SelectTrigger className="w-44 h-8 text-xs"><SelectValue placeholder={t('database.all_sections')} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('database.all_sections')}</SelectItem>
@@ -172,7 +219,7 @@ export default function DatabasePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((record: any) => (
+                  {paginatedRecords.map((record: any) => (
                     <TableRow key={record.id} className={cn("cursor-pointer", selectedRecord === record.id && "bg-muted/50")} onClick={() => setSelectedRecord(record.id)}>
                       <TableCell className="font-medium text-sm">{record.title}</TableCell>
                       <TableCell className="text-xs">{getSectionName(record.section_id)}</TableCell>
@@ -196,9 +243,83 @@ export default function DatabasePage() {
               </Table>
             )}
           </div>
-          <div className="px-4 py-2 border-t text-xs text-muted-foreground">
-            {filtered.length} {t('common.records')} • {sections.length} {t('database.sections').toLowerCase()}
-          </div>
+
+          {/* Pagination Controls */}
+          {filtered.length > 0 && (
+            <div className="px-4 py-2 border-t flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>
+                  {startIndex}-{endIndex} of {filtered.length} records
+                </span>
+                <span className="text-border">|</span>
+                <span>{sections.length} {t('database.sections').toLowerCase()}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Page size selector */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">Rows:</span>
+                  <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
+                    <SelectTrigger className="h-7 w-[65px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAGE_SIZE_OPTIONS.map((size) => (
+                        <SelectItem key={size} value={String(size)}>
+                          {size}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Page indicator */}
+                <span className="text-xs text-muted-foreground mx-1">
+                  Page {safeCurrentPage} of {totalPages}
+                </span>
+
+                {/* Navigation buttons */}
+                <div className="flex items-center gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={safeCurrentPage <= 1}
+                  >
+                    <ChevronsLeft className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={safeCurrentPage <= 1}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safeCurrentPage >= totalPages}
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={safeCurrentPage >= totalPages}
+                  >
+                    <ChevronsRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </Tabs>
       </div>
 

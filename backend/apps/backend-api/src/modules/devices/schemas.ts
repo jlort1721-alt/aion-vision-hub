@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+// ── Device Onboarding Modes (DSS Pro / iVMS compatible) ──
+export const addModes = ['ip', 'domain', 'serial', 'auto_register', 'p2p'] as const;
+
 // ── Device Brands & Types (extended for monitoring station) ──
 const deviceBrands = ['hikvision', 'dahua', 'axis', 'hanwha', 'uniview', 'generic_onvif', 'onvif', 'generic', 'linksys', 'mikrotik', 'fanvil', 'grandstream', 'ezviz', 'sonoff', 'cisco', 'other'] as const;
 const deviceTypes = [
@@ -40,9 +43,24 @@ export const createDeviceSchema = z.object({
   outboundCall: z.string().max(32).optional().nullable(),
   connectionType: z.string().max(64).optional().nullable(),
   status: z.enum(deviceStatuses).optional(),
+  // DSS Pro / iVMS onboarding fields
+  addMode: z.enum(addModes).optional(),
+  domain: z.string().max(255).optional().nullable(),
+  cloudAccountRef: z.string().max(128).optional().nullable(),
+  autoRegisterId: z.string().max(128).optional().nullable(),
+  httpPort: z.coerce.number().int().min(1).max(65535).optional().nullable(),
+  httpsPort: z.coerce.number().int().min(1).max(65535).optional().nullable(),
+  rtspPort: z.coerce.number().int().min(1).max(65535).optional().nullable(),
+  sdkPort: z.coerce.number().int().min(1).max(65535).optional().nullable(),
 });
 
 export type CreateDeviceInput = z.infer<typeof createDeviceSchema>;
+
+// ── Bulk Import ──────────────────────────────────────────────
+export const bulkImportDeviceSchema = z.object({
+  devices: z.array(createDeviceSchema).min(1).max(500),
+});
+export type BulkImportDeviceInput = z.infer<typeof bulkImportDeviceSchema>;
 
 // ── Update Device ───────────────────────────────────────────
 export const updateDeviceSchema = z.object({
