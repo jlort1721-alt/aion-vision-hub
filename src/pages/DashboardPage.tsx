@@ -22,6 +22,7 @@ import {
 import QuickGateControl from '@/components/shared/QuickGateControl';
 import CrossSiteDashboard from '@/components/dashboard/CrossSiteDashboard';
 import AnomalyAlertBanner from '@/components/dashboard/AnomalyAlertBanner';
+import ClaveAssistantWidget from '@/components/dashboard/ClaveAssistantWidget';
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: 'hsl(0, 84%, 60%)',
@@ -427,7 +428,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Bottom row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-base">{t('dashboard.devices_by_site')}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
@@ -458,6 +459,8 @@ export default function DashboardPage() {
             <Button variant="outline" className="h-auto py-3 flex-col gap-1" onClick={() => navigate('/ai-assistant')}><Activity className="h-5 w-5" /><span className="text-xs">{t('nav.ai_assistant')}</span></Button>
           </CardContent>
         </Card>
+
+        <ClaveAssistantWidget />
       </div>
 
       </>}
