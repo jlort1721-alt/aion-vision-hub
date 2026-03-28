@@ -271,6 +271,27 @@ export class DeviceService {
       })
       .returning();
 
+    // Auto-register stream in go2rtc
+    if (device.ipAddress) {
+      try {
+        const { buildRtspUrl } = await import('../../services/stream-bridge.js');
+        const { go2rtcManager } = await import('../../services/go2rtc-manager.js');
+        const rtspUrl = buildRtspUrl({
+          brand: device.brand || 'generic_onvif',
+          ip: device.ipAddress,
+          port: device.rtspPort || 554,
+          username: data.username || undefined,
+          password: data.password || undefined,
+          channel: 1,
+          substream: false,
+        });
+        const slug = device.deviceSlug || device.id;
+        await go2rtcManager.registerDevice(slug, rtspUrl);
+      } catch (err) {
+        logger.warn({ deviceId: device.id, error: (err as Error).message }, 'Auto stream registration failed');
+      }
+    }
+
     return device;
   }
 
@@ -309,6 +330,30 @@ export class DeviceService {
       .returning();
 
     if (!device) throw new NotFoundError('Device', id);
+
+    // Auto-register stream in go2rtc
+    if (device.ipAddress) {
+      try {
+        const { buildRtspUrl } = await import('../../services/stream-bridge.js');
+        const { go2rtcManager } = await import('../../services/go2rtc-manager.js');
+        const decryptedUsername = decryptCredential(device.username);
+        const decryptedPassword = decryptCredential(device.password);
+        const rtspUrl = buildRtspUrl({
+          brand: device.brand || 'generic_onvif',
+          ip: device.ipAddress,
+          port: device.rtspPort || 554,
+          username: decryptedUsername || undefined,
+          password: decryptedPassword || undefined,
+          channel: 1,
+          substream: false,
+        });
+        const slug = device.deviceSlug || device.id;
+        await go2rtcManager.registerDevice(slug, rtspUrl);
+      } catch (err) {
+        logger.warn({ deviceId: device.id, error: (err as Error).message }, 'Auto stream registration failed');
+      }
+    }
+
     return device;
   }
 
