@@ -58,7 +58,7 @@ jobs:
             dockerfile: gateway/Dockerfile
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -99,7 +99,7 @@ jobs:
     needs: gate
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -136,7 +136,7 @@ jobs:
       url: ${{ vars.STAGING_URL }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download frontend artifact
         uses: actions/download-artifact@v4
