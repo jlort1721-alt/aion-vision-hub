@@ -28,6 +28,7 @@ interface DashboardEvent {
   status: string;
   site_id: string;
   description: string;
+  title?: string;
   [key: string]: unknown;
 }
 
@@ -87,7 +88,7 @@ export default function DashboardPage() {
   const devices = rawDevices as unknown as DashboardDevice[];
   const sites = rawSites as unknown as DashboardSite[];
   const events = rawEvents as unknown as DashboardEvent[];
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { data: healthData } = useQuery({
     queryKey: ['system-health'],
     queryFn: () => healthApi.check(),
@@ -243,6 +244,9 @@ export default function DashboardPage() {
       }
     >
     <div className="p-6 space-y-6">
+      <div className="text-sm text-muted-foreground mb-4">
+        {t('dashboard.welcome_back') || 'Welcome back'}, {user?.email?.split('@')[0] || 'User'}. {t('dashboard.last_login') || 'Last login'}: {new Date().toLocaleDateString('es-CO')}.
+      </div>
 
       {/* Cross-site view — shown when "All Sites" is selected */}
       {viewMode === 'all' && (

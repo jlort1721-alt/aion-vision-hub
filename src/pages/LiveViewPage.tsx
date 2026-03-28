@@ -52,7 +52,25 @@ function CameraCell({
 
   const handleCapture = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    toast.success('Snapshot captured securely', { description: `Frame embedded from ${device?.name}` });
+    if (!device) return;
+    const video = document.querySelector(`[data-camera-id="${device.id}"] video`) as HTMLVideoElement;
+    if (!video) { toast.error('No video stream available'); return; }
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    canvas.getContext('2d')?.drawImage(video, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) { toast.error('Failed to capture frame'); return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const ts = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      const fileName = `snapshot_${device.name}_${ts}.jpg`;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Snapshot saved', { description: fileName });
+    }, 'image/jpeg', 0.95);
   }, [device]);
 
   if (!device) {
@@ -82,9 +100,9 @@ function CameraCell({
       onMouseLeave={() => setHovered(false)}
       aria-label={`Camera: ${device.name}, status: ${device.status}`}
     >
-      <div className="absolute inset-0 z-0 bg-zinc-950 flex items-center justify-center">
+      <div className="absolute inset-0 z-0 bg-zinc-950 flex items-center justify-center" data-camera-id={device.id}>
         <Go2RTCPlayer
-          streamName={device.device_slug || device.id}
+          streamName={(device as unknown as Record<string, unknown>).device_slug as string || device.id}
           cameraName={device.name}
           controls={false}
         />

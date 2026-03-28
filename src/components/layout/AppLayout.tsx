@@ -1,19 +1,20 @@
-import React, { lazy, Suspense, useState, useMemo } from 'react';
+import React, { lazy, Suspense, useState, useMemo, useCallback } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
 const CommandPalette = lazy(() => import('@/components/CommandPalette'));
+const AlarmVideoPopup = lazy(() => import('@/components/alarms/AlarmVideoPopup'));
 import { useI18n } from '@/contexts/I18nContext';
 import { useBranding } from '@/contexts/BrandingContext';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   LayoutDashboard, Video, Play, Bell, MonitorSpeaker, MapPin, Puzzle, Bot,
   Settings, ScrollText, FileBarChart, Activity, ChevronLeft, Search,
@@ -27,6 +28,7 @@ import { hasModuleAccess, ALL_MODULES, DEFAULT_ROLE_PERMISSIONS } from '@/lib/pe
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useWebSocket } from '@/hooks/use-websocket';
+import { apiClient } from '@/lib/api-client';
 import Logo from '@/components/brand/Logo';
 
 // ── Navigation with categories ─────────────────────────────
@@ -128,11 +130,69 @@ export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile, logout, roles } = useAuth();
+  const { user, profile, logout, roles, isAuthenticated } = useAuth();
   const { t, lang, setLang } = useI18n();
   const { branding } = useBranding();
   const { isOnline, isSlowConnection } = useNetworkStatus();
   const { status: wsStatus } = useWebSocket(); // Establish real-time connection
+
+  // ── Badge counts for sidebar nav ──────────────────────────
+  interface PaginatedEnvelope { meta?: { total?: number }; items?: unknown[]; data?: unknown[]; count?: number }
+  interface NotificationEvent { id: string; title?: string; description?: string; severity?: string; created_at?: string }
+
+  const { data: eventCount = 0 } = useQuery({
+    queryKey: ['sidebar-event-count'],
+    queryFn: async () => {
+      const resp = await apiClient.get<PaginatedEnvelope>('/events', { status: 'new', limit: '1' });
+      return resp?.meta?.total ?? (Array.isArray(resp) ? (resp as unknown[]).length : 0);
+    },
+    refetchInterval: 30000,
+    enabled: isAuthenticated,
+  });
+
+  const { data: alertCount = 0 } = useQuery({
+    queryKey: ['sidebar-alert-count'],
+    queryFn: async () => {
+      const resp = await apiClient.get<PaginatedEnvelope>('/alerts', { status: 'active', limit: '1' });
+      return resp?.meta?.total ?? (Array.isArray(resp) ? (resp as unknown[]).length : 0);
+    },
+    refetchInterval: 30000,
+    enabled: isAuthenticated,
+  });
+
+  const { data: incidentCount = 0 } = useQuery({
+    queryKey: ['sidebar-incident-count'],
+    queryFn: async () => {
+      const resp = await apiClient.get<PaginatedEnvelope>('/incidents', { status: 'open', limit: '1' });
+      return resp?.meta?.total ?? (Array.isArray(resp) ? (resp as unknown[]).length : 0);
+    },
+    refetchInterval: 30000,
+    enabled: isAuthenticated,
+  });
+
+  const badgeCounts: Record<string, number> = useMemo(() => ({
+    events: eventCount as number,
+    alerts: alertCount as number,
+    incidents: incidentCount as number,
+  }), [eventCount, alertCount, incidentCount]);
+
+  // ── Recent events for notification bell ───────────────────
+  const { data: recentNotifications = [] } = useQuery({
+    queryKey: ['header-notifications'],
+    queryFn: async () => {
+      const resp = await apiClient.get<PaginatedEnvelope>('/events', { limit: '5', status: 'new' });
+      const items = Array.isArray(resp) ? resp : (resp?.items ?? resp?.data ?? []);
+      return items as NotificationEvent[];
+    },
+    refetchInterval: 30000,
+    enabled: isAuthenticated,
+  });
+
+  const totalUnread = eventCount as number;
+
+  const openCommandPalette = useCallback(() => {
+    document.dispatchEvent(new CustomEvent('open-command-palette'));
+  }, []);
 
   const { data: dbPerms } = useQuery({
     queryKey: ['role-module-permissions', profile?.tenant_id],
@@ -241,9 +301,9 @@ export default function AppLayout() {
                     {!collapsed && (
                       <>
                         <span className="truncate">{label}</span>
-                        {item.badgeKey && (
+                        {item.badgeKey && badgeCounts[item.badgeKey] > 0 && (
                           <span className="ml-auto flex items-center justify-center h-5 min-w-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-medium px-1.5">
-                            •
+                            {badgeCounts[item.badgeKey]}
                           </span>
                         )}
                       </>
@@ -290,10 +350,16 @@ export default function AppLayout() {
           <Button variant="ghost" size="icon" className="lg:hidden mr-2" onClick={() => setMobileOpen(true)} aria-label="Open menu">
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder={t('search.placeholder')} className="pl-9 h-9 bg-muted/50 border-0 focus-visible:ring-1" />
-          </div>
+          <button
+            onClick={openCommandPalette}
+            className="relative flex-1 max-w-md flex items-center gap-2 h-9 px-3 rounded-md bg-muted/50 text-sm text-muted-foreground hover:bg-muted transition-colors"
+          >
+            <Search className="h-4 w-4 shrink-0" />
+            <span className="truncate">{t('search.placeholder')}</span>
+            <kbd className="ml-auto hidden sm:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </button>
           <div className="ml-auto flex items-center gap-2">
             {/* Network status indicator */}
             {!isOnline ? (
@@ -334,10 +400,56 @@ export default function AppLayout() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="icon" className="relative" onClick={() => navigate('/events')}>
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
-            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-4 w-4" />
+                  {totalUnread > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center h-4 min-w-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1">
+                      {totalUnread > 99 ? '99+' : totalUnread}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-0">
+                <div className="flex items-center justify-between px-4 py-3 border-b">
+                  <p className="text-sm font-semibold">{t('common.notifications') || 'Notifications'}</p>
+                  {totalUnread > 0 && (
+                    <Badge variant="destructive" className="text-[10px]">{totalUnread} {t('common.new') || 'new'}</Badge>
+                  )}
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  {recentNotifications.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">{t('common.no_notifications') || 'No new notifications'}</p>
+                  ) : (
+                    recentNotifications.map((evt) => (
+                      <button
+                        key={evt.id}
+                        className="flex items-start gap-3 w-full px-4 py-2.5 text-left hover:bg-muted/50 transition-colors border-b last:border-b-0"
+                        onClick={() => navigate('/events')}
+                      >
+                        <span className="mt-0.5 shrink-0">
+                          {evt.severity === 'critical' ? <AlertTriangle className="h-4 w-4 text-destructive" /> :
+                           evt.severity === 'high' ? <AlertTriangle className="h-4 w-4 text-warning" /> :
+                           <Bell className="h-4 w-4 text-muted-foreground" />}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{evt.title || evt.description || 'Event'}</p>
+                          {evt.created_at && (
+                            <p className="text-[11px] text-muted-foreground">{new Date(evt.created_at).toLocaleString()}</p>
+                          )}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+                <div className="border-t px-4 py-2">
+                  <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => navigate('/events')}>
+                    {t('dashboard.view_all') || 'View all'} &rarr;
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </header>
 
@@ -347,6 +459,9 @@ export default function AppLayout() {
       </div>
       <Suspense fallback={null}>
         <CommandPalette />
+      </Suspense>
+      <Suspense fallback={null}>
+        <AlarmVideoPopup />
       </Suspense>
     </div>
   );
