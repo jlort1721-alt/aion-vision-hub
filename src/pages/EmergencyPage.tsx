@@ -139,9 +139,44 @@ const CURRENT_OPERATOR = 'Operator';
 
 function EmergencyChecklist({ protocolType, activationId }: { protocolType: string; activationId: string }) {
   const items = PROTOCOL_CHECKLISTS[protocolType] ?? [];
-  const [checks, setChecks] = useState<ChecklistItemState[]>(() =>
-    items.map(() => ({ checked: false, operator: '', timestamp: null })),
-  );
+  const storageKey = `emergency-checklist-${activationId}`;
+
+  const [checks, setChecks] = useState<ChecklistItemState[]>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as ChecklistItemState[];
+        if (Array.isArray(parsed) && parsed.length === items.length) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore corrupt data
+    }
+    return items.map(() => ({ checked: false, operator: '', timestamp: null }));
+  });
+
+  // Persist checklist state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify(checks));
+  }, [checks, storageKey]);
+
+  // Reset state when the activationId or protocolType changes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as ChecklistItemState[];
+        if (Array.isArray(parsed) && parsed.length === items.length) {
+          setChecks(parsed);
+          return;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    setChecks(items.map(() => ({ checked: false, operator: '', timestamp: null })));
+  }, [activationId, storageKey, items.length]);
 
   const completedCount = checks.filter((c) => c.checked).length;
   const totalCount = items.length;

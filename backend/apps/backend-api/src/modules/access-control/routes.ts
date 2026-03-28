@@ -3,9 +3,10 @@ import { requireRole } from '../../plugins/auth.js';
 import { accessControlService } from './service.js';
 import {
   createPersonSchema, updatePersonSchema, personFiltersSchema,
-  createVehicleSchema, createAccessLogSchema, accessLogFiltersSchema,
+  createVehicleSchema, updateVehicleSchema, vehicleFiltersSchema,
+  createAccessLogSchema, accessLogFiltersSchema,
 } from './schemas.js';
-import type { CreatePersonInput, UpdatePersonInput, PersonFilters, CreateVehicleInput, CreateAccessLogInput, AccessLogFilters } from './schemas.js';
+import type { CreatePersonInput, UpdatePersonInput, PersonFilters, CreateVehicleInput, UpdateVehicleInput, VehicleFilters, CreateAccessLogInput, AccessLogFilters } from './schemas.js';
 
 export async function registerAccessControlRoutes(app: FastifyInstance) {
   // ── People ──
@@ -56,10 +57,11 @@ export async function registerAccessControlRoutes(app: FastifyInstance) {
   );
 
   // ── Vehicles ──
-  app.get<{ Querystring: { personId?: string } }>(
+  app.get<{ Querystring: VehicleFilters }>(
     '/vehicles', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
-      const data = await accessControlService.listVehicles(request.tenantId, request.query.personId);
+      const filters = vehicleFiltersSchema.parse(request.query);
+      const data = await accessControlService.listVehicles(request.tenantId, filters);
       return reply.send({ success: true, data });
     },
   );
@@ -71,6 +73,16 @@ export async function registerAccessControlRoutes(app: FastifyInstance) {
       const data = await accessControlService.createVehicle(body, request.tenantId);
       await request.audit('access.vehicle.create', 'access_vehicles', data.id, { plate: data.plate });
       return reply.code(201).send({ success: true, data });
+    },
+  );
+
+  app.patch<{ Params: { id: string }; Body: UpdateVehicleInput }>(
+    '/vehicles/:id', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
+    async (request, reply) => {
+      const body = updateVehicleSchema.parse(request.body);
+      const data = await accessControlService.updateVehicle(request.params.id, body, request.tenantId);
+      await request.audit('access.vehicle.update', 'access_vehicles', data.id, body);
+      return reply.send({ success: true, data });
     },
   );
 

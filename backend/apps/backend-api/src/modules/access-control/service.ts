@@ -1,18 +1,39 @@
-import { eq, and, ilike } from 'drizzle-orm';
+import { eq, and, or, ilike, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { accessPeople, accessVehicles, accessLogs } from '../../db/schema/index.js';
 import { NotFoundError } from '@aion/shared-contracts';
-import type { CreatePersonInput, UpdatePersonInput, PersonFilters, CreateVehicleInput, CreateAccessLogInput, AccessLogFilters } from './schemas.js';
+import type { CreatePersonInput, UpdatePersonInput, PersonFilters, CreateVehicleInput, UpdateVehicleInput, VehicleFilters, CreateAccessLogInput, AccessLogFilters } from './schemas.js';
 
 class AccessControlService {
   // ── People ──
-  async listPeople(tenantId: string, filters?: PersonFilters) {
+  async listPeople(tenantId: string, filters: PersonFilters = {}) {
+    const page = filters.page || 1;
+    const perPage = Math.min(filters.perPage || 50, 500);
+    const offset = (page - 1) * perPage;
+
     const conditions = [eq(accessPeople.tenantId, tenantId)];
-    if (filters?.sectionId) conditions.push(eq(accessPeople.sectionId, filters.sectionId));
-    if (filters?.type) conditions.push(eq(accessPeople.type, filters.type));
-    if (filters?.status) conditions.push(eq(accessPeople.status, filters.status));
-    if (filters?.search) conditions.push(ilike(accessPeople.fullName, `%${filters.search}%`));
-    return db.select().from(accessPeople).where(and(...conditions)).orderBy(accessPeople.fullName);
+    if (filters.sectionId) conditions.push(eq(accessPeople.sectionId, filters.sectionId));
+    if (filters.type) conditions.push(eq(accessPeople.type, filters.type));
+    if (filters.status) conditions.push(eq(accessPeople.status, filters.status));
+    if (filters.search) {
+      const searchTerm = `%${filters.search}%`;
+      conditions.push(or(
+        ilike(accessPeople.fullName, searchTerm),
+        ilike(accessPeople.phone, searchTerm),
+        ilike(accessPeople.documentId, searchTerm),
+        ilike(accessPeople.unit, searchTerm),
+        ilike(accessPeople.email, searchTerm),
+      )!);
+    }
+
+    const where = and(...conditions);
+    const [items, countResult] = await Promise.all([
+      db.select().from(accessPeople).where(where).orderBy(accessPeople.fullName).limit(perPage).offset(offset),
+      db.select({ count: sql`count(*)` }).from(accessPeople).where(where),
+    ]);
+
+    const total = Number(countResult[0]?.count || 0);
+    return { items, meta: { page, perPage, total, totalPages: Math.ceil(total / perPage) } };
   }
 
   async getPersonById(id: string, tenantId: string) {
@@ -41,14 +62,44 @@ class AccessControlService {
   }
 
   // ── Vehicles ──
-  async listVehicles(tenantId: string, personId?: string) {
+  async listVehicles(tenantId: string, filters: VehicleFilters = {}) {
+    const page = filters.page || 1;
+    const perPage = Math.min(filters.perPage || 50, 500);
+    const offset = (page - 1) * perPage;
+
     const conditions = [eq(accessVehicles.tenantId, tenantId)];
-    if (personId) conditions.push(eq(accessVehicles.personId, personId));
-    return db.select().from(accessVehicles).where(and(...conditions)).orderBy(accessVehicles.plate);
+    if (filters.personId) conditions.push(eq(accessVehicles.personId, filters.personId));
+    if (filters.type) conditions.push(eq(accessVehicles.type, filters.type));
+    if (filters.status) conditions.push(eq(accessVehicles.status, filters.status));
+    if (filters.search) {
+      const searchTerm = `%${filters.search}%`;
+      conditions.push(or(
+        ilike(accessVehicles.plate, searchTerm),
+        ilike(accessVehicles.brand, searchTerm),
+        ilike(accessVehicles.model, searchTerm),
+        ilike(accessVehicles.color, searchTerm),
+      )!);
+    }
+
+    const where = and(...conditions);
+    const [items, countResult] = await Promise.all([
+      db.select().from(accessVehicles).where(where).orderBy(accessVehicles.plate).limit(perPage).offset(offset),
+      db.select({ count: sql`count(*)` }).from(accessVehicles).where(where),
+    ]);
+
+    const total = Number(countResult[0]?.count || 0);
+    return { items, meta: { page, perPage, total, totalPages: Math.ceil(total / perPage) } };
   }
 
   async createVehicle(data: CreateVehicleInput, tenantId: string) {
     const [vehicle] = await db.insert(accessVehicles).values({ tenantId, ...data }).returning();
+    return vehicle;
+  }
+
+  async updateVehicle(id: string, data: UpdateVehicleInput, tenantId: string) {
+    const [vehicle] = await db.update(accessVehicles).set({ ...data })
+      .where(and(eq(accessVehicles.id, id), eq(accessVehicles.tenantId, tenantId))).returning();
+    if (!vehicle) throw new NotFoundError('Vehicle', id);
     return vehicle;
   }
 

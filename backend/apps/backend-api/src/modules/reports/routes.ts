@@ -63,4 +63,18 @@ export async function registerReportRoutes(app: FastifyInstance) {
       return { success: true, data: exportData } satisfies ApiResponse;
     },
   );
+
+  // ── POST /:id/generate — Generate report content ─────────
+  app.post<{ Params: { id: string } }>(
+    '/:id/generate',
+    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    async (request) => {
+      const report = await reportService.generate(
+        request.params.id,
+        request.tenantId,
+      );
+
+      return { success: true, data: report } satisfies ApiResponse;
+    },
+  );
 }

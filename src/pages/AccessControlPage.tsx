@@ -16,7 +16,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/contexts/I18nContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useSections, useAccessPeople, useAccessPeopleMutations, useAccessVehicles, useAccessLogs } from '@/hooks/use-module-data';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
 import {
   UserCheck, Users, Car, Search, Plus, FileText, Download, FileUp,
   Shield, Clock, Pencil, Trash2, MoreHorizontal, Eye, Key, Camera, ScanLine, CarFront, CheckCircle2, AlertCircle, CalendarClock
@@ -64,11 +67,22 @@ function persistSchedules(schedules: AccessSchedule[]) {
 
 export default function AccessControlPage() {
   const { t } = useI18n();
+  const { isAuthenticated } = useAuth();
   const { data: sections = [] } = useSections();
   const { data: people = [], isLoading } = useAccessPeople();
   const { data: vehicles = [] } = useAccessVehicles();
   const { data: logs = [] } = useAccessLogs();
-  const { create, remove } = useAccessPeopleMutations();
+  const { create, update, remove } = useAccessPeopleMutations();
+
+  const { data: lprDetections = [] } = useQuery({
+    queryKey: ['lpr-detections'],
+    queryFn: async () => {
+      const resp = await apiClient.get<any>('/lpr/detections', { limit: '20' });
+      return Array.isArray(resp) ? resp : (resp?.items ?? resp?.data ?? []);
+    },
+    enabled: isAuthenticated,
+    refetchInterval: 10000,
+  });
 
   const [activeTab, setActiveTab] = useState('residents');
   const [search, setSearch] = useState('');
@@ -78,8 +92,9 @@ export default function AccessControlPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importType, setImportType] = useState<ImportEntityType>('residents');
-  const [form, setForm] = useState({ full_name: '', type: 'resident', section_id: '', unit: '', phone: '', document_id: '', notes: '' });
+  const [form, setForm] = useState({ full_name: '', type: 'resident', section_id: '', unit: '', phone: '', email: '', document_id: '', notes: '' });
   const [deletePersonId, setDeletePersonId] = useState<string | null>(null);
+  const [editingPerson, setEditingPerson] = useState<string | null>(null);
 
   // Schedule rules state
   const [schedules, setSchedules] = useState<AccessSchedule[]>(() => loadSchedules());
@@ -145,14 +160,30 @@ export default function AccessControlPage() {
 
   const handleAdd = () => {
     if (!form.full_name.trim()) return;
-    create.mutate({
+    const payload = {
       full_name: form.full_name, type: form.type,
       section_id: form.section_id || undefined, unit: form.unit || undefined,
-      phone: form.phone || undefined, document_id: form.document_id || undefined,
+      phone: form.phone || undefined, email: form.email || undefined,
+      document_id: form.document_id || undefined,
       notes: form.notes || undefined,
-    });
+    };
+    if (editingPerson) {
+      update.mutate({ id: editingPerson, ...payload });
+    } else {
+      create.mutate(payload);
+    }
     setAddOpen(false);
-    setForm({ full_name: '', type: 'resident', section_id: '', unit: '', phone: '', document_id: '', notes: '' });
+    setEditingPerson(null);
+    setForm({ full_name: '', type: 'resident', section_id: '', unit: '', phone: '', email: '', document_id: '', notes: '' });
+  };
+
+  const handleOpenGate = async (detectionId: string) => {
+    try {
+      await apiClient.post('/lpr/gate-action', { detectionId, action: 'open' });
+      toast.success('Gate opened');
+    } catch {
+      toast.error('Failed to open gate');
+    }
   };
 
   return (
@@ -249,7 +280,7 @@ export default function AccessControlPage() {
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setSelectedPerson(person.id)}><Eye className="mr-2 h-3 w-3" /> {t('common.view')}</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => toast.info('Edit functionality — select the person and use the Edit button in the detail panel')}><Pencil className="mr-2 h-3 w-3" /> {t('common.edit')}</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setEditingPerson(person.id); setForm({ full_name: person.full_name, type: person.type, section_id: person.section_id || '', unit: person.unit || '', phone: person.phone || '', email: person.email || '', document_id: person.document_id || '', notes: person.notes || '' }); setAddOpen(true); }}><Pencil className="mr-2 h-3 w-3" /> {t('common.edit')}</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-destructive" onClick={() => setDeletePersonId(person.id)}><Trash2 className="mr-2 h-3 w-3" /> {t('common.delete')}</DropdownMenuItem>
                           </DropdownMenuContent>
@@ -343,46 +374,56 @@ export default function AccessControlPage() {
                     </CardTitle>
                  </CardHeader>
                  <CardContent className="p-4 overflow-y-auto space-y-3">
-                   {/* MOCK PLATE 1 */}
-                   <div className="flex items-center justify-between p-3 rounded-lg border border-success/30 bg-success/5">
-                     <div className="flex gap-4 items-center">
-                       <div className="h-10 w-24 bg-white rounded border-2 border-black flex items-center justify-center">
-                         <span className="text-black font-extrabold font-mono tracking-widest">AZE-891</span>
-                       </div>
-                       <div>
-                         <p className="text-sm font-bold text-success flex items-center gap-1"><CheckCircle2 className="h-4 w-4" /> AUTHORIZED</p>
-                         <p className="text-[10px] text-muted-foreground">Resident: Carlos Mendoza • Tower B</p>
-                       </div>
+                   {lprDetections.length === 0 ? (
+                     <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+                       <ScanLine className="h-12 w-12 mb-2 opacity-20" />
+                       <p className="text-sm text-center">No plate detections yet. Configure LPR cameras to start receiving detections.</p>
                      </div>
-                     <span className="text-xs text-muted-foreground font-mono">14 sec ago</span>
-                   </div>
-                   {/* MOCK PLATE 2 */}
-                   <div className="flex items-center justify-between p-3 rounded-lg border border-destructive/30 bg-destructive/5 relative overflow-hidden">
-                     <div className="absolute top-0 left-0 w-1 h-full bg-destructive animate-pulse" />
-                     <div className="flex gap-4 items-center">
-                       <div className="h-10 w-24 bg-yellow-400 rounded border-2 border-black flex items-center justify-center">
-                         <span className="text-black font-extrabold font-mono tracking-widest">KTR-92F</span>
-                       </div>
-                       <div>
-                         <p className="text-sm font-bold text-destructive flex items-center gap-1"><AlertCircle className="h-4 w-4" /> UNKNOWN</p>
-                         <p className="text-[10px] text-muted-foreground">No records in DB</p>
-                       </div>
-                     </div>
-                     <Button size="sm" variant="destructive" className="h-7 text-[10px]">Open Gate</Button>
-                   </div>
-                   {/* MOCK PLATE 3 */}
-                   <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/10 opacity-60">
-                     <div className="flex gap-4 items-center">
-                       <div className="h-10 w-24 bg-white rounded border-2 border-black flex items-center justify-center">
-                         <span className="text-black font-extrabold font-mono tracking-widest">GZP-019</span>
-                       </div>
-                       <div>
-                         <p className="text-sm font-bold text-muted-foreground">AUTHORIZED</p>
-                         <p className="text-[10px] text-muted-foreground">Staff: Maintenance</p>
-                       </div>
-                     </div>
-                     <span className="text-xs text-muted-foreground font-mono">5 mins ago</span>
-                   </div>
+                   ) : (
+                     lprDetections.map((det: any) => {
+                       const isAuthorized = det.status === 'authorized' || det.authorized;
+                       const isUnknown = det.status === 'unknown' || (!det.authorized && !det.person_name);
+                       const elapsed = det.detected_at
+                         ? `${Math.round((Date.now() - new Date(det.detected_at).getTime()) / 1000)}s ago`
+                         : '';
+                       return (
+                         <div
+                           key={det.id}
+                           className={cn(
+                             'flex items-center justify-between p-3 rounded-lg border relative overflow-hidden',
+                             isAuthorized && 'border-success/30 bg-success/5',
+                             isUnknown && 'border-destructive/30 bg-destructive/5',
+                             !isAuthorized && !isUnknown && 'bg-muted/10 opacity-60',
+                           )}
+                         >
+                           {isUnknown && <div className="absolute top-0 left-0 w-1 h-full bg-destructive animate-pulse" />}
+                           <div className="flex gap-4 items-center">
+                             <div className={cn('h-10 w-24 rounded border-2 border-black flex items-center justify-center', isUnknown ? 'bg-yellow-400' : 'bg-white')}>
+                               <span className="text-black font-extrabold font-mono tracking-widest">{det.plate}</span>
+                             </div>
+                             <div>
+                               {isAuthorized ? (
+                                 <p className="text-sm font-bold text-success flex items-center gap-1"><CheckCircle2 className="h-4 w-4" /> AUTHORIZED</p>
+                               ) : isUnknown ? (
+                                 <p className="text-sm font-bold text-destructive flex items-center gap-1"><AlertCircle className="h-4 w-4" /> UNKNOWN</p>
+                               ) : (
+                                 <p className="text-sm font-bold text-muted-foreground">{(det.status || 'detected').toUpperCase()}</p>
+                               )}
+                               <p className="text-[10px] text-muted-foreground">
+                                 {det.person_name ? `${det.person_type || 'Resident'}: ${det.person_name}` : 'No records in DB'}
+                                 {det.zone ? ` \u2022 ${det.zone}` : ''}
+                               </p>
+                             </div>
+                           </div>
+                           {isUnknown ? (
+                             <Button size="sm" variant="destructive" className="h-7 text-[10px]" onClick={() => handleOpenGate(det.id)}>Open Gate</Button>
+                           ) : (
+                             <span className="text-xs text-muted-foreground font-mono">{elapsed}</span>
+                           )}
+                         </div>
+                       );
+                     })
+                   )}
                  </CardContent>
                </Card>
              </div>
@@ -543,15 +584,15 @@ export default function AccessControlPage() {
             </Card>
           )}
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => { setForm({ full_name: selected.full_name, type: selected.type, section_id: selected.section_id || '', unit: selected.unit || '', phone: selected.phone || '', document_id: selected.document_id || '', notes: selected.notes || '' }); setAddOpen(true); }}><Pencil className="mr-1 h-3 w-3" /> {t('common.edit')}</Button>
+            <Button variant="outline" className="flex-1" onClick={() => { setEditingPerson(selected.id); setForm({ full_name: selected.full_name, type: selected.type, section_id: selected.section_id || '', unit: selected.unit || '', phone: selected.phone || '', email: selected.email || '', document_id: selected.document_id || '', notes: selected.notes || '' }); setAddOpen(true); }}><Pencil className="mr-1 h-3 w-3" /> {t('common.edit')}</Button>
             <Button variant="outline" className="text-destructive" onClick={() => setDeletePersonId(selected.id)}><Trash2 className="h-3 w-3" /></Button>
           </div>
         </div>
       )}
 
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+      <Dialog open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (!open) { setEditingPerson(null); setForm({ full_name: '', type: 'resident', section_id: '', unit: '', phone: '', email: '', document_id: '', notes: '' }); } }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{t('access.add_person')}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingPerson ? t('common.edit') : t('access.add_person')}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1"><Label>{t('common.name')} *</Label><Input value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} placeholder="Full name" /></div>
             <div className="grid grid-cols-2 gap-2">
@@ -574,9 +615,10 @@ export default function AccessControlPage() {
                 </Select>
               </div>
             </div>
+            <div className="space-y-1"><Label>Email</Label><Input value={form.email || ''} onChange={e => setForm({...form, email: e.target.value})} placeholder="email@ejemplo.com" type="email" /></div>
             <div className="space-y-1"><Label>Document ID</Label><Input value={form.document_id} onChange={e => setForm(p => ({ ...p, document_id: e.target.value }))} /></div>
             <div className="space-y-1"><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} /></div>
-            <Button className="w-full" onClick={handleAdd} disabled={!form.full_name.trim() || create.isPending}>{t('common.save')}</Button>
+            <Button className="w-full" onClick={handleAdd} disabled={!form.full_name.trim() || create.isPending || update.isPending}>{editingPerson ? t('common.save') : t('access.add_person')}</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -29,6 +29,8 @@ export const personFiltersSchema = z.object({
   type: z.enum(personTypes).optional(),
   status: z.enum(personStatuses).optional(),
   search: z.string().max(128).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  perPage: z.coerce.number().int().min(1).max(500).optional(),
 });
 export type PersonFilters = z.infer<typeof personFiltersSchema>;
 
@@ -41,6 +43,21 @@ export const createVehicleSchema = z.object({
   type: z.enum(vehicleTypes).default('car'),
 });
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
+
+export const updateVehicleSchema = createVehicleSchema.partial().extend({
+  status: z.enum(['active', 'inactive'] as const).optional(),
+});
+export type UpdateVehicleInput = z.infer<typeof updateVehicleSchema>;
+
+export const vehicleFiltersSchema = z.object({
+  personId: z.string().uuid().optional(),
+  type: z.enum(vehicleTypes).optional(),
+  status: z.enum(['active', 'inactive'] as const).optional(),
+  search: z.string().max(128).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  perPage: z.coerce.number().int().min(1).max(500).optional(),
+});
+export type VehicleFilters = z.infer<typeof vehicleFiltersSchema>;
 
 export const createAccessLogSchema = z.object({
   sectionId: z.string().uuid().optional(),
