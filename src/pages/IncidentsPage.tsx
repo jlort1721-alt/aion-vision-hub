@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { sanitizeText } from '@/lib/sanitize';
 import EvidencePanel from '@/components/incidents/EvidencePanel';
 import { PageShell } from '@/components/shared/PageShell';
+import ErrorState from '@/components/ui/ErrorState';
 
 const priorityColors: Record<string, string> = {
   critical: 'text-destructive', high: 'text-warning', medium: 'text-info', low: 'text-muted-foreground',
@@ -36,7 +37,7 @@ export default function IncidentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [newIncident, setNewIncident] = useState({ title: '', description: '', priority: 'medium', site_id: '' });
 
-  const { data: incidents = [], isLoading } = useIncidents();
+  const { data: incidents = [], isLoading, isError, error, refetch } = useIncidents();
   const { data: sites = [] } = useSites();
   const queryClient = useQueryClient();
 
@@ -99,6 +100,8 @@ export default function IncidentsPage() {
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed'); } finally { setActionLoading(null); }
   };
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <PageShell

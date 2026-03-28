@@ -20,6 +20,7 @@ export async function registerEventRoutes(app: FastifyInstance) {
   // ── GET / — List events with filters + pagination ─────────
   app.get<{ Querystring: EventFilters }>(
     '/',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const filters = eventFiltersSchema.parse(request.query);
       const result = await eventService.list(request.tenantId, filters);
@@ -36,6 +37,7 @@ export async function registerEventRoutes(app: FastifyInstance) {
   // NOTE: Defined before /:id to avoid route collision.
   app.get(
     '/stats',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const { from, to } = request.query as { from?: string; to?: string };
       const data = await eventService.getStats(request.tenantId, from, to);

@@ -25,6 +25,7 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { PageShell } from '@/components/shared/PageShell';
+import ErrorState from '@/components/ui/ErrorState';
 
 export default function DevicesPage() {
   const { t } = useI18n();
@@ -37,7 +38,7 @@ export default function DevicesPage() {
   const [deleteDevice, setDeleteDevice] = useState<any>(null);
   const [importOpen, setImportOpen] = useState(false);
 
-  const { data: devices = [], isLoading } = useDevices();
+  const { data: devices = [], isLoading, isError, error, refetch } = useDevices();
   const { data: sites = [] } = useSites();
 
   const filtered = devices.filter((d: any) => {
@@ -59,6 +60,8 @@ export default function DevicesPage() {
   const openAdd = () => { setEditDevice(null); setFormOpen(true); };
 
   const [pageTab, setPageTab] = useState('inventory');
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <PageShell

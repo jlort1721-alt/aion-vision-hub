@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import EventFiltersBar from '@/components/events/EventFiltersBar';
 import EventDetailPanel from '@/components/events/EventDetailPanel';
 import { PageShell } from '@/components/shared/PageShell';
+import ErrorState from '@/components/ui/ErrorState';
 
 const severityConfig: Record<string, { icon: React.ReactNode; color: string }> = {
   critical: { icon: <XCircle className="h-4 w-4" />, color: 'text-destructive' },
@@ -53,7 +54,7 @@ export default function EventsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState<{ action: string; done: number; total: number } | null>(null);
 
-  const { data: result, isLoading } = useEvents(filters);
+  const { data: result, isLoading, isError, error, refetch } = useEvents(filters);
   const events = result?.data ?? [];
   const totalCount = result?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -152,6 +153,8 @@ export default function EventsPage() {
       toast.error(err instanceof Error ? err.message : 'Action failed');
     } finally { setActionLoading(null); }
   };
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <PageShell

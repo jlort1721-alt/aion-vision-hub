@@ -239,6 +239,9 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded">
+        Saltar al contenido principal
+      </a>
       {mobileOpen && (
         <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)} />
       )}
@@ -272,7 +275,7 @@ export default function AppLayout() {
           </Button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto scrollbar-thin py-2 px-2">
+        <nav aria-label="Menu principal" className="flex-1 overflow-y-auto scrollbar-thin py-2 px-2">
           {visibleCategories.map((cat) => (
             <div key={cat.key} className="mb-1" role="group" aria-label={t(cat.labelKey) || cat.key}>
               {!collapsed && (
@@ -411,7 +414,7 @@ export default function AppLayout() {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-80 p-0">
+              <PopoverContent align="end" className="w-80 p-0" {...(totalUnread > 0 ? { role: 'alert' as const } : {})}>
                 <div className="flex items-center justify-between px-4 py-3 border-b">
                   <p className="text-sm font-semibold">{t('common.notifications') || 'Notifications'}</p>
                   {totalUnread > 0 && (
@@ -453,7 +456,7 @@ export default function AppLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto scrollbar-thin">
+        <main id="main-content" className="flex-1 overflow-auto scrollbar-thin">
           <Outlet />
         </main>
       </div>

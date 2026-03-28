@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { apiClient } from '@/lib/api-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -24,6 +25,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const { permission, isSubscribed, subscribe, unsubscribe } = usePushNotifications();
   const { t, lang, setLang } = useI18n();
+  const { setTheme } = useTheme();
 
   // Notification history
   const notifHistory = useSyncExternalStore(
@@ -221,7 +223,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div><p className="text-sm font-medium">{t('settings.dark_mode')}</p><p className="text-xs text-muted-foreground">{t('settings.dark_mode_desc')}</p></div>
-                <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+                <Switch checked={darkMode} onCheckedChange={(v) => { setDarkMode(v); setTheme(v ? 'dark' : 'light'); }} />
               </div>
               <div className="flex items-center justify-between">
                 <div><p className="text-sm font-medium">{t('settings.compact_mode')}</p><p className="text-xs text-muted-foreground">{t('settings.compact_mode_desc')}</p></div>

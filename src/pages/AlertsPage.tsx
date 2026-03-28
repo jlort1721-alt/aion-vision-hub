@@ -16,8 +16,10 @@ import {
   Bell, BellRing, CheckCircle, AlertTriangle, AlertCircle, Shield, Plus,
   Clock, ArrowUpCircle, Mail, MessageSquare, Globe, Settings, Loader2
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import EscalationConfigPanel from "@/components/alerts/EscalationConfigPanel";
 import { PageShell } from "@/components/shared/PageShell";
+import ErrorState from "@/components/ui/ErrorState";
 
 const severityColors: Record<string, string> = {
   critical: "bg-destructive",
@@ -39,7 +41,7 @@ export default function AlertsPage() {
   const { toast } = useToast();
 
   // ── Alert Instances ────────────────────────────────────────
-  const { data: instancesData, isLoading: loadingInstances } = useQuery({
+  const { data: instancesData, isLoading: loadingInstances, isError: instancesError, error: instancesErrorObj, refetch: refetchInstances } = useQuery({
     queryKey: ["alerts", "instances"],
     queryFn: () => alertInstancesApi.list({ perPage: 50 }),
     refetchInterval: 15000,
@@ -145,6 +147,8 @@ export default function AlertsPage() {
   const policies = policiesData?.data ?? [];
   const channels = channelsData?.data ?? [];
 
+  if (instancesError) return <ErrorState error={instancesErrorObj as Error} onRetry={refetchInstances} />;
+
   return (
     <PageShell
       title="Alert Center"
@@ -220,8 +224,8 @@ export default function AlertsPage() {
         {/* ── Active Alerts ────────────────────────────────── */}
         <TabsContent value="instances" className="space-y-4">
           {loadingInstances ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            <div className="space-y-4">
+              {[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
             </div>
           ) : instances.length === 0 ? (
             <Card>
@@ -281,8 +285,8 @@ export default function AlertsPage() {
             </Button>
           </div>
           {loadingRules ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            <div className="space-y-4">
+              {[1,2,3].map(i => <Skeleton key={i} className="h-20 rounded-lg" />)}
             </div>
           ) : rules.length === 0 ? (
             <Card>

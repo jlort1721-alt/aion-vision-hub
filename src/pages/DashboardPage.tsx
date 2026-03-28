@@ -53,6 +53,7 @@ import CrossSiteDashboard from '@/components/dashboard/CrossSiteDashboard';
 import AnomalyAlertBanner from '@/components/dashboard/AnomalyAlertBanner';
 import ClaveAssistantWidget from '@/components/dashboard/ClaveAssistantWidget';
 import { PageShell } from '@/components/shared/PageShell';
+import ErrorState from '@/components/ui/ErrorState';
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: 'hsl(0, 84%, 60%)',
@@ -82,9 +83,9 @@ export default function DashboardPage() {
     setViewMode('current');
     navigate(`/sites/${siteId}`);
   }, [navigate]);
-  const { data: rawDevices = [], isLoading: loadingDevices } = useDevices(REFRESH_INTERVAL);
-  const { data: rawSites = [], isLoading: loadingSites } = useSites(REFRESH_INTERVAL);
-  const { data: rawEvents = [], isLoading: loadingEvents } = useEventsLegacy(REFRESH_INTERVAL);
+  const { data: rawDevices = [], isLoading: loadingDevices, isError: devicesError, refetch: refetchDevices } = useDevices(REFRESH_INTERVAL);
+  const { data: rawSites = [], isLoading: loadingSites, isError: sitesError, refetch: refetchSites } = useSites(REFRESH_INTERVAL);
+  const { data: rawEvents = [], isLoading: loadingEvents, isError: eventsError, refetch: refetchEvents } = useEventsLegacy(REFRESH_INTERVAL);
   const devices = rawDevices as unknown as DashboardDevice[];
   const sites = rawSites as unknown as DashboardSite[];
   const events = rawEvents as unknown as DashboardEvent[];
@@ -200,6 +201,16 @@ export default function DashboardPage() {
       </div>
     );
   };
+
+  const hasError = devicesError || sitesError || eventsError;
+  if (hasError) {
+    return (
+      <ErrorState
+        error={new Error('Failed to load dashboard data')}
+        onRetry={() => { refetchDevices(); refetchSites(); refetchEvents(); }}
+      />
+    );
+  }
 
   return (
     <PageShell

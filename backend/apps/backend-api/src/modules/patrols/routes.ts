@@ -27,6 +27,7 @@ export async function registerPatrolRoutes(app: FastifyInstance) {
 
   app.get<{ Querystring: RouteFilters }>(
     '/routes',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const filters = routeFiltersSchema.parse(request.query);
       const result = await patrolService.listRoutes(request.tenantId, filters);
@@ -36,6 +37,7 @@ export async function registerPatrolRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>(
     '/routes/:id',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await patrolService.getRouteById(request.params.id, request.tenantId);
       return reply.send({ success: true, data });
@@ -81,6 +83,7 @@ export async function registerPatrolRoutes(app: FastifyInstance) {
   // List all checkpoints for the tenant
   app.get(
     '/checkpoints',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await patrolService.listCheckpoints(request.tenantId);
       return reply.send({ success: true, data });
@@ -89,6 +92,7 @@ export async function registerPatrolRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { routeId: string } }>(
     '/routes/:routeId/checkpoints',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await patrolService.listCheckpointsByRoute(request.params.routeId, request.tenantId);
       return reply.send({ success: true, data });
@@ -158,6 +162,7 @@ export async function registerPatrolRoutes(app: FastifyInstance) {
 
   app.get(
     '/stats',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await patrolService.getPatrolStats(request.tenantId);
       return reply.send({ success: true, data });

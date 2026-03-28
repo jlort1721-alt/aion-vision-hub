@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { I18nProvider } from "@/contexts/I18nContext";
 import { BrandingProvider } from "@/contexts/BrandingContext";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { hasModuleAccess } from "@/lib/permissions";
 import AppLayout from "@/components/layout/AppLayout";
 
@@ -212,6 +213,11 @@ function AppRoutes() {
   );
 }
 
+function ThemeWrapper({ children }: { children: ReactNode }) {
+  const { theme } = useTheme();
+  return <div className={theme === 'dark' ? 'dark' : 'light'}>{children}</div>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -224,11 +230,13 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <BrandingProvider>
-              <ErrorBoundary>
-                <div className="dark">
-                  <AppRoutes />
-                </div>
-              </ErrorBoundary>
+              <ThemeProvider>
+                <ErrorBoundary>
+                  <ThemeWrapper>
+                    <AppRoutes />
+                  </ThemeWrapper>
+                </ErrorBoundary>
+              </ThemeProvider>
             </BrandingProvider>
           </AuthProvider>
         </BrowserRouter>

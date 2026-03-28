@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { Map, MapPin, Navigation, CheckCircle, Plus, Radar, ShieldAlert, Timer, Crosshair, ChevronDown, MapPinOff, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -438,8 +439,13 @@ export default function PatrolsPage() {
             </Button>
           </div>
           {loadingRoutes ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-1 space-y-3">
+                  {[1,2,3].map(i => <Skeleton key={i} className="h-20 rounded-lg" />)}
+                </div>
+                <Skeleton className="lg:col-span-2 h-64 rounded-lg" />
+              </div>
             </div>
           ) : routes.length === 0 ? (
             <Card>
@@ -514,8 +520,8 @@ export default function PatrolsPage() {
                 </Button>
               </div>
               {loadingCheckpoints ? (
-                <div className="flex justify-center py-12">
-                  <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+                <div className="space-y-4">
+                  {[1,2,3,4].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}
                 </div>
               ) : checkpoints.length === 0 ? (
                 <Card>
@@ -555,8 +561,8 @@ export default function PatrolsPage() {
         {/* ── Logs Tab ────────────────────────────────────── */}
         <TabsContent value="logs" className="space-y-4">
           {loadingLogs ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            <div className="space-y-4">
+              {[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
             </div>
           ) : logs.length === 0 ? (
             <Card>

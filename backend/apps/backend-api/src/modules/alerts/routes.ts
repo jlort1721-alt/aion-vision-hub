@@ -34,6 +34,7 @@ export async function registerAlertRoutes(app: FastifyInstance) {
 
   app.get<{ Querystring: AlertRuleFilters }>(
     '/rules',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const filters = alertRuleFiltersSchema.parse(request.query);
       const result = await alertService.listRules(request.tenantId, filters);
@@ -43,6 +44,7 @@ export async function registerAlertRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>(
     '/rules/:id',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await alertService.getRuleById(request.params.id, request.tenantId);
       return reply.send({ success: true, data });
@@ -90,6 +92,7 @@ export async function registerAlertRoutes(app: FastifyInstance) {
 
   app.get<{ Querystring: AlertInstanceFilters }>(
     '/instances',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const filters = alertInstanceFiltersSchema.parse(request.query);
       const result = await alertService.listInstances(request.tenantId, filters);
@@ -99,6 +102,7 @@ export async function registerAlertRoutes(app: FastifyInstance) {
 
   app.get(
     '/instances/stats',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await alertService.getInstanceStats(request.tenantId);
       return reply.send({ success: true, data });
@@ -107,6 +111,7 @@ export async function registerAlertRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>(
     '/instances/:id',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await alertService.getInstanceById(request.params.id, request.tenantId);
       return reply.send({ success: true, data });
@@ -146,6 +151,7 @@ export async function registerAlertRoutes(app: FastifyInstance) {
 
   app.get(
     '/escalation-policies',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await alertService.listPolicies(request.tenantId);
       return reply.send({ success: true, data });
@@ -190,6 +196,7 @@ export async function registerAlertRoutes(app: FastifyInstance) {
 
   app.get(
     '/channels',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await alertService.listChannels(request.tenantId);
       return reply.send({ success: true, data });
@@ -199,6 +206,7 @@ export async function registerAlertRoutes(app: FastifyInstance) {
   // Alias: /notification-channels maps to the same handler as /channels
   app.get(
     '/notification-channels',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await alertService.listChannels(request.tenantId);
       return reply.send({ success: true, data });
@@ -243,6 +251,7 @@ export async function registerAlertRoutes(app: FastifyInstance) {
 
   app.get<{ Querystring: NotificationLogFilters }>(
     '/notifications',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const filters = notificationLogFiltersSchema.parse(request.query);
       const result = await alertService.listNotificationLogs(request.tenantId, filters);

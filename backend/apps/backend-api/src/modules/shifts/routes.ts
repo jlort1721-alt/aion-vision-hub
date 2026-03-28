@@ -25,6 +25,7 @@ export async function registerShiftRoutes(app: FastifyInstance) {
 
   app.get<{ Querystring: ShiftFilters }>(
     '/',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const filters = shiftFiltersSchema.parse(request.query);
       const result = await shiftService.listShifts(request.tenantId, filters);
@@ -34,6 +35,7 @@ export async function registerShiftRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>(
     '/:id',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await shiftService.getShiftById(request.params.id, request.tenantId);
       return reply.send({ success: true, data });
@@ -78,6 +80,7 @@ export async function registerShiftRoutes(app: FastifyInstance) {
 
   app.get<{ Querystring: ShiftAssignmentFilters }>(
     '/assignments',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const filters = shiftAssignmentFiltersSchema.parse(request.query);
       const result = await shiftService.listAssignments(request.tenantId, filters);
@@ -87,6 +90,7 @@ export async function registerShiftRoutes(app: FastifyInstance) {
 
   app.get(
     '/assignments/stats',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await shiftService.getAssignmentStats(request.tenantId);
       return reply.send({ success: true, data });

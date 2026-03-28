@@ -19,6 +19,8 @@ import {
   ClipboardCheck, Send, CheckCircle2, XCircle, Loader2,
   ChevronDown, ChevronUp, RotateCcw,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import ErrorState from "@/components/ui/ErrorState";
 
 // ═══════════════════════════════════════════════════════════
 // Protocol Checklists — step-by-step operator procedures
@@ -472,7 +474,7 @@ export default function EmergencyPage() {
   const { toast } = useToast();
 
   // ── Protocols ───────────────────────────────────────────
-  const { data: protocolsData, isLoading: loadingProtocols } = useQuery({
+  const { data: protocolsData, isLoading: loadingProtocols, isError: protocolsError, error: protocolsErrorObj, refetch: refetchProtocols } = useQuery({
     queryKey: ["emergency", "protocols"],
     queryFn: () => emergencyProtocolsApi.list(),
   });
@@ -584,6 +586,8 @@ export default function EmergencyPage() {
     [protocols],
   );
 
+  if (protocolsError) return <ErrorState error={protocolsErrorObj as Error} onRetry={refetchProtocols} />;
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -669,8 +673,8 @@ export default function EmergencyPage() {
             </Button>
           </div>
           {loadingProtocols ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            <div className="space-y-4">
+              {[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
             </div>
           ) : protocols.length === 0 ? (
             <Card>
@@ -718,8 +722,8 @@ export default function EmergencyPage() {
             </Button>
           </div>
           {loadingContacts ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            <div className="space-y-4">
+              {[1,2,3].map(i => <Skeleton key={i} className="h-20 rounded-lg" />)}
             </div>
           ) : contacts.length === 0 ? (
             <Card>
@@ -768,8 +772,8 @@ export default function EmergencyPage() {
             </Button>
           </div>
           {loadingActivations ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            <div className="space-y-4">
+              {[1,2,3].map(i => <Skeleton key={i} className="h-28 rounded-lg" />)}
             </div>
           ) : activations.length === 0 ? (
             <Card>

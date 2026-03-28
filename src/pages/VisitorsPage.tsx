@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Loader2, UserCheck, ScanLine, Ticket, Ban, Plus, CheckCircle, XCircle, Camera, X, Bell } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/components/shared/PageShell";
 
 const passStatusColors: Record<string, string> = {
@@ -308,8 +309,10 @@ export default function VisitorsPage() {
             </DialogContent>
           </Dialog>
           {loadingVisitors ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            <div className="space-y-4">
+              {[1,2,3,4,5].map(i => (
+                <Skeleton key={i} className="h-16 rounded-lg" />
+              ))}
             </div>
           ) : visitors.length === 0 ? (
             <Card>
@@ -378,8 +381,10 @@ export default function VisitorsPage() {
             </Button>
           </div>
           {loadingPasses ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            <div className="space-y-4">
+              {[1,2,3,4,5].map(i => (
+                <Skeleton key={i} className="h-16 rounded-lg" />
+              ))}
             </div>
           ) : passes.length === 0 ? (
             <Card>

@@ -21,6 +21,7 @@ export async function registerIncidentRoutes(app: FastifyInstance) {
   // ── GET / — List incidents with filters + pagination ──────
   app.get<{ Querystring: IncidentFilters }>(
     '/',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const filters = incidentFiltersSchema.parse(request.query);
       const result = await incidentService.list(request.tenantId, filters);
@@ -36,6 +37,7 @@ export async function registerIncidentRoutes(app: FastifyInstance) {
   // ── GET /:id — Get incident by ID ────────────────────────
   app.get<{ Params: { id: string } }>(
     '/:id',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await incidentService.getById(request.params.id, request.tenantId);
       return reply.send({ success: true, data });

@@ -12,7 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Clock, Users, CalendarCheck, UserCheck, Plus, Loader2, CalendarDays, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/components/shared/PageShell";
+import ErrorState from "@/components/ui/ErrorState";
 
 const assignmentStatusColors: Record<string, string> = {
   scheduled: "bg-primary",
@@ -89,7 +91,7 @@ export default function ShiftsPage() {
   });
 
   // ── Shifts ──────────────────────────────────────────────
-  const { data: shiftsData, isLoading: loadingShifts } = useQuery({
+  const { data: shiftsData, isLoading: loadingShifts, isError: shiftsError, error: shiftsErrorObj, refetch: refetchShifts } = useQuery({
     queryKey: ["shifts", "list"],
     queryFn: () => shiftsApi.list(),
   });
@@ -212,6 +214,8 @@ export default function ShiftsPage() {
     ? `${weekDates[0].toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })} - ${weekDates[6].toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}`
     : '';
 
+  if (shiftsError) return <ErrorState error={shiftsErrorObj as Error} onRetry={refetchShifts} />;
+
   return (
     <PageShell
       title="Shift Management"
@@ -314,8 +318,11 @@ export default function ShiftsPage() {
             </DialogContent>
           </Dialog>
           {loadingShifts ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            <div className="space-y-4">
+              <div className="grid grid-cols-7 gap-2">
+                {[1,2,3,4,5,6,7].map(i => <Skeleton key={i} className="h-8 rounded-lg" />)}
+              </div>
+              <Skeleton className="h-64 rounded-lg" />
             </div>
           ) : shifts.length === 0 ? (
             <Card>
@@ -523,8 +530,8 @@ export default function ShiftsPage() {
             </DialogContent>
           </Dialog>
           {loadingAssignments ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            <div className="space-y-4">
+              {[1,2,3,4].map(i => <Skeleton key={i} className="h-20 rounded-lg" />)}
             </div>
           ) : assignments.length === 0 ? (
             <Card>

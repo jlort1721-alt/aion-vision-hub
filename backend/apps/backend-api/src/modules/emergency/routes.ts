@@ -31,6 +31,7 @@ export async function registerEmergencyRoutes(app: FastifyInstance) {
 
   app.get<{ Querystring: ProtocolFilters }>(
     '/protocols',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const filters = protocolFiltersSchema.parse(request.query);
       const result = await emergencyService.listProtocols(request.tenantId, filters);
@@ -40,6 +41,7 @@ export async function registerEmergencyRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>(
     '/protocols/:id',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await emergencyService.getProtocolById(request.params.id, request.tenantId);
       return reply.send({ success: true, data });
@@ -84,6 +86,7 @@ export async function registerEmergencyRoutes(app: FastifyInstance) {
 
   app.get<{ Querystring: ContactFilters }>(
     '/contacts',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const filters = contactFiltersSchema.parse(request.query);
       const result = await emergencyService.listContacts(request.tenantId, filters);
@@ -129,6 +132,7 @@ export async function registerEmergencyRoutes(app: FastifyInstance) {
 
   app.get<{ Querystring: ActivationFilters }>(
     '/activations',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const filters = activationFiltersSchema.parse(request.query);
       const result = await emergencyService.listActivations(request.tenantId, filters);
@@ -175,6 +179,7 @@ export async function registerEmergencyRoutes(app: FastifyInstance) {
 
   app.get(
     '/stats',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await emergencyService.getActivationStats(request.tenantId);
       return reply.send({ success: true, data });

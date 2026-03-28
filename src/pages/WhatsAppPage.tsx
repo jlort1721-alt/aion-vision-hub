@@ -1,5 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare, Settings, FileText } from 'lucide-react';
 
 const WhatsAppConfig = lazy(() => import('@/components/whatsapp/WhatsAppConfig'));
@@ -8,8 +9,11 @@ const WhatsAppTemplates = lazy(() => import('@/components/whatsapp/WhatsAppTempl
 
 function TabLoader() {
   return (
-    <div className="flex items-center justify-center py-12">
-      <div className="animate-spin w-5 h-5 border-2 border-primary border-t-transparent rounded-full" />
+    <div className="space-y-4">
+      <div className="grid grid-cols-4 gap-4">
+        {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
+      </div>
+      <Skeleton className="h-96 rounded-lg" />
     </div>
   );
 }

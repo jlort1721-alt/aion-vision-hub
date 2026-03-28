@@ -10,6 +10,7 @@ export async function registerSiteRoutes(app: FastifyInstance) {
   // ── GET / — List sites for tenant ─────────────────────────
   app.get(
     '/',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await siteService.list(request.tenantId);
       return reply.send({ success: true, data });
@@ -19,6 +20,7 @@ export async function registerSiteRoutes(app: FastifyInstance) {
   // ── GET /:id — Get site by ID ────────────────────────────
   app.get<{ Params: { id: string } }>(
     '/:id',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await siteService.getById(request.params.id, request.tenantId);
       return reply.send({ success: true, data });
@@ -69,6 +71,7 @@ export async function registerSiteRoutes(app: FastifyInstance) {
   // ── GET /:id/devices — List devices for this site ────────
   app.get<{ Params: { id: string } }>(
     '/:id/devices',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await siteService.listDevices(request.params.id, request.tenantId);
       return reply.send({ success: true, data });
@@ -78,6 +81,7 @@ export async function registerSiteRoutes(app: FastifyInstance) {
   // ── GET /:id/health — Batch health check all devices in site via WAN IP ──
   app.get<{ Params: { id: string } }>(
     '/:id/health',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await deviceService.siteHealthCheck(request.params.id, request.tenantId);
       return reply.send({ success: true, data });

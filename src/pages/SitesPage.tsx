@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageShell } from '@/components/shared/PageShell';
+import ErrorState from '@/components/ui/ErrorState';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster';
@@ -158,7 +159,7 @@ const defaultForm: SiteForm = {
 };
 
 export default function SitesPage() {
-  const { data: sites = [], isLoading } = useSites();
+  const { data: sites = [], isLoading, isError, error, refetch } = useSites();
   const { data: devices = [] } = useDevices();
   const { profile, hasAnyRole } = useAuth();
   const queryClient = useQueryClient();
@@ -219,6 +220,8 @@ export default function SitesPage() {
 
   const selected = sites.find(s => s.id === selectedSite);
   const selectedDevices = devices.filter(d => d.site_id === selectedSite);
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <PageShell

@@ -20,6 +20,7 @@ export async function registerDeviceRoutes(app: FastifyInstance) {
   app.get(
     '/',
     {
+      preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')],
       schema: {
         tags: ['Devices'],
         summary: 'List devices',
@@ -36,6 +37,7 @@ export async function registerDeviceRoutes(app: FastifyInstance) {
   server.get<{ Params: { id: string } }>(
     '/:id',
     {
+      preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')],
       schema: {
         tags: ['Devices'],
         summary: 'Get device details',
@@ -155,6 +157,7 @@ export async function registerDeviceRoutes(app: FastifyInstance) {
   server.get<{ Params: { id: string } }>(
     '/:id/health',
     {
+      preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')],
       schema: {
         tags: ['Devices'],
         summary: 'Get health report for device over TCP',
@@ -264,6 +267,7 @@ export async function registerDeviceRoutes(app: FastifyInstance) {
   server.get(
     '/streams/active',
     {
+      preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')],
       schema: {
         tags: ['Devices'],
         summary: 'List all active streams in MediaMTX',
@@ -400,6 +404,7 @@ export async function registerDeviceRoutes(app: FastifyInstance) {
   server.get<{ Params: { id: string } }>(
     '/:id/channels',
     {
+      preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')],
       schema: {
         tags: ['Devices'],
         summary: 'List all channels/streams for a device',

@@ -23,6 +23,7 @@ import {
   FileText, Clock, CheckCircle2, XCircle, FileSpreadsheet, AlertTriangle,
 } from 'lucide-react';
 import { PageShell } from '@/components/shared/PageShell';
+import ErrorState from '@/components/ui/ErrorState';
 
 // ── Constants ─────────────────────────────────────────────
 
@@ -126,7 +127,7 @@ export default function ReportsPage() {
   if (filters.date_from) queryFilters.date_from = filters.date_from;
   if (filters.date_to) queryFilters.date_to = filters.date_to;
 
-  const { data: result, isLoading } = useQuery({
+  const { data: result, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['reports', queryFilters],
     queryFn: () => reportsApi.list(queryFilters),
     enabled: isAuthenticated,
@@ -225,6 +226,8 @@ export default function ReportsPage() {
   }, []);
 
   // ── Render ────────────────────────────────────────────
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <PageShell

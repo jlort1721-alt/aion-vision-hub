@@ -24,13 +24,13 @@ export async function registerIntercomRoutes(app: FastifyInstance) {
   // ── Devices (existing) ──
   // ══════════════════════════════════════════════════════════
 
-  app.get<{ Querystring: IntercomFilters }>('/devices', async (request, reply) => {
+  app.get<{ Querystring: IntercomFilters }>('/devices', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const filters = intercomFiltersSchema.parse(request.query);
     const data = await intercomService.listDevices(request.tenantId, filters);
     return reply.send({ success: true, data });
   });
 
-  app.get<{ Params: { id: string } }>('/devices/:id', async (request, reply) => {
+  app.get<{ Params: { id: string } }>('/devices/:id', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const data = await intercomService.getDeviceById(request.params.id, request.tenantId);
     return reply.send({ success: true, data });
   });
@@ -68,7 +68,7 @@ export async function registerIntercomRoutes(app: FastifyInstance) {
   // ── Legacy Call Logs (existing) ──
   // ══════════════════════════════════════════════════════════
 
-  app.get<{ Querystring: CallLogFilters }>('/calls', async (request, reply) => {
+  app.get<{ Querystring: CallLogFilters }>('/calls', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const filters = callLogFiltersSchema.parse(request.query);
     const data = await intercomService.listCalls(request.tenantId, filters);
     return reply.send({ success: true, data });
@@ -89,14 +89,14 @@ export async function registerIntercomRoutes(app: FastifyInstance) {
   // ══════════════════════════════════════════════════════════
 
   /** List call sessions with filters */
-  app.get<{ Querystring: CallSessionFilters }>('/sessions', async (request, reply) => {
+  app.get<{ Querystring: CallSessionFilters }>('/sessions', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const filters = callSessionFiltersSchema.parse(request.query);
     const data = await orchestrationService.listSessions(request.tenantId, filters);
     return reply.send({ success: true, data });
   });
 
   /** Get single call session */
-  app.get<{ Params: { id: string } }>('/sessions/:id', async (request, reply) => {
+  app.get<{ Params: { id: string } }>('/sessions/:id', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const data = await orchestrationService.getSession(request.params.id, request.tenantId);
     return reply.send({ success: true, data });
   });
@@ -181,7 +181,7 @@ export async function registerIntercomRoutes(app: FastifyInstance) {
   );
 
   /** Call statistics */
-  app.get('/sessions/stats', async (request, reply) => {
+  app.get('/sessions/stats', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const { from, to } = request.query as any;
     const data = await orchestrationService.getCallStats(request.tenantId, from, to);
     return reply.send({ success: true, data });
@@ -259,7 +259,7 @@ export async function registerIntercomRoutes(app: FastifyInstance) {
   );
 
   /** List supported intercom brands/connectors */
-  app.get('/connectors', async (_request, reply) => {
+  app.get('/connectors', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (_request, reply) => {
     return reply.send({ success: true, data: listConnectors() });
   });
 
@@ -268,7 +268,7 @@ export async function registerIntercomRoutes(app: FastifyInstance) {
   // ══════════════════════════════════════════════════════════
 
   /** Get VoIP config for tenant — credentials stripped from response */
-  app.get('/voip/config', async (request, reply) => {
+  app.get('/voip/config', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const data = await orchestrationService.getTenantVoipConfig(request.tenantId);
     if (!data) return reply.send({ success: true, data: { configured: false } });
     return reply.send({ success: true, data: stripSensitiveFields(data as Record<string, unknown>) });
@@ -291,7 +291,7 @@ export async function registerIntercomRoutes(app: FastifyInstance) {
   // ══════════════════════════════════════════════════════════
 
   /** SIP/PBX health check */
-  app.get('/voip/health', async (request, reply) => {
+  app.get('/voip/health', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const sipHealth = await orchestrationService.getSipHealth(request.tenantId);
     const voiceHealth = await import('../voice/service.js').then(m => m.voiceService.healthCheck());
     return reply.send({

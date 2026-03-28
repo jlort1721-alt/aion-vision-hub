@@ -8,24 +8,24 @@ import {
 import type { CreateDomoticDeviceInput, UpdateDomoticDeviceInput, DomoticFilters, DomoticActionInput } from './schemas.js';
 
 export async function registerDomoticRoutes(app: FastifyInstance) {
-  app.get<{ Querystring: DomoticFilters }>('/', async (request, reply) => {
+  app.get<{ Querystring: DomoticFilters }>('/', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const filters = domoticFiltersSchema.parse(request.query);
     const data = await domoticService.list(request.tenantId, filters);
     return reply.send({ success: true, data });
   });
 
   // /devices sub-path (frontend calls /domotics/devices)
-  app.get('/devices', async (request, reply) => {
+  app.get('/devices', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const data = await domoticService.list(request.tenantId, {});
     return reply.send({ success: true, data });
   });
 
   // /actions list (frontend calls /domotics/actions)
-  app.get('/actions', async (_request, reply) => {
+  app.get('/actions', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (_request, reply) => {
     return reply.send({ success: true, data: [] });
   });
 
-  app.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
+  app.get<{ Params: { id: string } }>('/:id', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     // Validate UUID format to prevent "invalid input syntax" errors
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.params.id)) {
       return reply.code(400).send({ success: false, error: 'Invalid ID format' });
@@ -73,7 +73,7 @@ export async function registerDomoticRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get<{ Params: { id: string } }>('/:id/actions', async (request, reply) => {
+  app.get<{ Params: { id: string } }>('/:id/actions', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const data = await domoticService.getActions(request.params.id, request.tenantId);
     return reply.send({ success: true, data });
   });

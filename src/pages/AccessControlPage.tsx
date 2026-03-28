@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import DataImportDialog from '@/components/shared/DataImportDialog';
 import type { ImportEntityType } from '@/services/data-import-api';
 import { PageShell } from '@/components/shared/PageShell';
+import ErrorState from '@/components/ui/ErrorState';
 
 // ── Access Schedule Types & Helpers ──────────────────────────
 
@@ -69,7 +70,7 @@ export default function AccessControlPage() {
   const { t } = useI18n();
   const { isAuthenticated } = useAuth();
   const { data: sections = [] } = useSections();
-  const { data: people = [], isLoading } = useAccessPeople();
+  const { data: people = [], isLoading, isError, error, refetch } = useAccessPeople();
   const { data: vehicles = [] } = useAccessVehicles();
   const { data: logs = [] } = useAccessLogs();
   const { create, update, remove } = useAccessPeopleMutations();
@@ -185,6 +186,8 @@ export default function AccessControlPage() {
       toast.error('Failed to open gate');
     }
   };
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <PageShell

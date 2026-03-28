@@ -25,6 +25,7 @@ export async function registerSLARoutes(app: FastifyInstance) {
 
   app.get<{ Querystring: SLADefinitionFilters }>(
     '/definitions',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const filters = slaDefinitionFiltersSchema.parse(request.query);
       const result = await slaService.listDefinitions(request.tenantId, filters);
@@ -34,6 +35,7 @@ export async function registerSLARoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>(
     '/definitions/:id',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await slaService.getDefinitionById(request.params.id, request.tenantId);
       return reply.send({ success: true, data });
@@ -78,6 +80,7 @@ export async function registerSLARoutes(app: FastifyInstance) {
 
   app.get<{ Querystring: SLATrackingFilters }>(
     '/tracking',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const filters = slaTrackingFiltersSchema.parse(request.query);
       const result = await slaService.listTracking(request.tenantId, filters);
@@ -113,6 +116,7 @@ export async function registerSLARoutes(app: FastifyInstance) {
 
   app.get(
     '/stats',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await slaService.getSLAStats(request.tenantId);
       return reply.send({ success: true, data });
