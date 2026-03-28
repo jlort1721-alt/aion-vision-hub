@@ -26,6 +26,7 @@ import LiveViewEventsPanel from '@/components/liveview/LiveViewEventsPanel';
 import TourEngine from '@/components/liveview/TourEngine';
 
 import { WebRTCPlayer } from '@/components/video/WebRTCPlayer';
+import { Go2RTCPlayer } from '@/components/video/Go2RTCPlayer';
 
 const GRID_OPTIONS: { grid: GridLayout; label: string; icon: React.ReactNode }[] = [
   { grid: 1, label: '1×1', icon: <Maximize className="h-4 w-4" /> },
@@ -82,10 +83,10 @@ function CameraCell({
       aria-label={`Camera: ${device.name}, status: ${device.status}`}
     >
       <div className="absolute inset-0 z-0 bg-zinc-950 flex items-center justify-center">
-        <WebRTCPlayer 
-          streamId={device.id} 
+        <Go2RTCPlayer
+          streamName={device.device_slug || device.id}
           cameraName={device.name}
-          controls={false} // Hidden natively, customized via VMS Grid Overlay
+          controls={false}
         />
       </div>
 

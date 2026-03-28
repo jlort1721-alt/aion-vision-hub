@@ -14,7 +14,22 @@ export async function registerDomoticRoutes(app: FastifyInstance) {
     return reply.send({ success: true, data });
   });
 
+  // /devices sub-path (frontend calls /domotics/devices)
+  app.get('/devices', async (request, reply) => {
+    const data = await domoticService.list(request.tenantId, {});
+    return reply.send({ success: true, data });
+  });
+
+  // /actions list (frontend calls /domotics/actions)
+  app.get('/actions', async (_request, reply) => {
+    return reply.send({ success: true, data: [] });
+  });
+
   app.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
+    // Validate UUID format to prevent "invalid input syntax" errors
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request.params.id)) {
+      return reply.code(400).send({ success: false, error: 'Invalid ID format' });
+    }
     const data = await domoticService.getById(request.params.id, request.tenantId);
     return reply.send({ success: true, data });
   });

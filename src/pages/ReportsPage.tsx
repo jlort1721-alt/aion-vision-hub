@@ -22,6 +22,7 @@ import {
   FileBarChart, Download, Trash2, Loader2, ChevronLeft, ChevronRight,
   FileText, Clock, CheckCircle2, XCircle, FileSpreadsheet, AlertTriangle,
 } from 'lucide-react';
+import { PageShell } from '@/components/shared/PageShell';
 
 // ── Constants ─────────────────────────────────────────────
 
@@ -226,13 +227,12 @@ export default function ReportsPage() {
   // ── Render ────────────────────────────────────────────
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">{t('reports.title')}</h1>
-        <p className="text-sm text-muted-foreground">{t('reports.subtitle')}</p>
-      </div>
-
+    <PageShell
+      title={t('reports.title')}
+      description={t('reports.subtitle')}
+      icon={<FileBarChart className="h-5 w-5" />}
+    >
+      <div className="p-6 space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
@@ -546,5 +546,6 @@ export default function ReportsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </PageShell>
   );
 }

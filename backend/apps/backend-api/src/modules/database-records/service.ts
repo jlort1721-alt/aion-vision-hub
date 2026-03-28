@@ -1,6 +1,7 @@
 import { eq, and, ilike } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { databaseRecords } from '../../db/schema/index.js';
+import { NotFoundError } from '@aion/shared-contracts';
 import type { CreateRecordInput, UpdateRecordInput, RecordFilters } from './schemas.js';
 
 class DatabaseRecordService {
@@ -17,7 +18,7 @@ class DatabaseRecordService {
   async getById(id: string, tenantId: string) {
     const [item] = await db.select().from(databaseRecords)
       .where(and(eq(databaseRecords.id, id), eq(databaseRecords.tenantId, tenantId))).limit(1);
-    if (!item) throw new Error(`Record ${id} not found`);
+    if (!item) throw new NotFoundError('Record', id);
     return item;
   }
 
@@ -30,14 +31,14 @@ class DatabaseRecordService {
   async update(id: string, data: UpdateRecordInput, tenantId: string) {
     const [record] = await db.update(databaseRecords).set({ ...data, updatedAt: new Date() })
       .where(and(eq(databaseRecords.id, id), eq(databaseRecords.tenantId, tenantId))).returning();
-    if (!record) throw new Error(`Record ${id} not found`);
+    if (!record) throw new NotFoundError('Record', id);
     return record;
   }
 
   async delete(id: string, tenantId: string) {
     const [record] = await db.delete(databaseRecords)
       .where(and(eq(databaseRecords.id, id), eq(databaseRecords.tenantId, tenantId))).returning();
-    if (!record) throw new Error(`Record ${id} not found`);
+    if (!record) throw new NotFoundError('Record', id);
   }
 }
 

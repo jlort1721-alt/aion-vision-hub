@@ -16,7 +16,18 @@ interface ApiResponseMeta {
   hasMore?: boolean;
 }
 
-interface ApiResponse<T = Record<string, unknown>> { data: T[] | T; meta?: ApiResponseMeta }
+interface ApiResponse<T = Record<string, unknown>> { data?: T[] | T; items?: T[]; meta?: ApiResponseMeta }
+
+/** Extract array from API response (handles both { items: [] } and [] formats) */
+function extractArray(response: unknown): Record<string, unknown>[] {
+  if (Array.isArray(response)) return response;
+  if (response && typeof response === 'object') {
+    const r = response as Record<string, unknown>;
+    if (Array.isArray(r.items)) return r.items as Record<string, unknown>[];
+    if (Array.isArray(r.data)) return r.data as Record<string, unknown>[];
+  }
+  return [];
+}
 
 // ── Sections ──
 export function useSections() {
@@ -24,8 +35,8 @@ export function useSections() {
   return useQuery({
     queryKey: ['sections'],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse>('/database-records', { category: 'section' });
-      return Array.isArray(response.data) ? response.data : [];
+      const response = await apiClient.get<unknown>('/database-records', { category: 'section' });
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
@@ -67,8 +78,8 @@ export function useDomoticDevices() {
   return useQuery({
     queryKey: ['domotic_devices'],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse>('/domotics/devices');
-      return Array.isArray(response.data) ? response.data : [];
+      const response = await apiClient.get<unknown>('/domotics/devices');
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
@@ -125,8 +136,8 @@ export function useDomoticActions(deviceId?: string) {
     queryFn: async () => {
       const params: Record<string, string> = { limit: '50' };
       if (deviceId) params.deviceId = deviceId;
-      const response = await apiClient.get<ApiResponse>('/domotics/actions', params);
-      return Array.isArray(response.data) ? response.data : [];
+      const response = await apiClient.get<unknown>('/domotics/actions', params);
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
@@ -138,8 +149,8 @@ export function useAccessPeople() {
   return useQuery({
     queryKey: ['access_people'],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse>('/access-control/people');
-      return Array.isArray(response.data) ? response.data : [];
+      const response = await apiClient.get<unknown>('/access-control/people');
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
@@ -181,8 +192,8 @@ export function useAccessVehicles() {
   return useQuery({
     queryKey: ['access_vehicles'],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse>('/access-control/vehicles');
-      return Array.isArray(response.data) ? response.data : [];
+      const response = await apiClient.get<unknown>('/access-control/vehicles');
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
@@ -216,8 +227,8 @@ export function useAccessLogs() {
   return useQuery({
     queryKey: ['access_logs'],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse>('/access-control/logs', { limit: '200' });
-      return Array.isArray(response.data) ? response.data : [];
+      const response = await apiClient.get<unknown>('/access-control/logs', { limit: '200' });
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
@@ -243,8 +254,8 @@ export function useRebootTasks() {
   return useQuery({
     queryKey: ['reboot_tasks'],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse>('/reboots', { limit: '100' });
-      return Array.isArray(response.data) ? response.data : [];
+      const response = await apiClient.get<unknown>('/reboots', { limit: '100' });
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
@@ -282,8 +293,8 @@ export function useIntercomDevices() {
   return useQuery({
     queryKey: ['intercom_devices'],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse>('/intercom/devices');
-      return Array.isArray(response.data) ? response.data : [];
+      const response = await apiClient.get<unknown>('/intercom/devices');
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
@@ -309,8 +320,8 @@ export function useIntercomCalls() {
   return useQuery({
     queryKey: ['intercom_calls'],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse>('/intercom/calls', { limit: '100' });
-      return Array.isArray(response.data) ? response.data : [];
+      const response = await apiClient.get<unknown>('/intercom/calls', { limit: '100' });
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
@@ -322,8 +333,8 @@ export function useDatabaseRecords() {
   return useQuery({
     queryKey: ['database_records'],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse>('/database-records');
-      return Array.isArray(response.data) ? response.data : [];
+      const response = await apiClient.get<unknown>('/database-records');
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });

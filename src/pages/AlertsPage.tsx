@@ -12,6 +12,7 @@ import {
   Clock, ArrowUpCircle, Mail, MessageSquare, Globe, Settings
 } from "lucide-react";
 import EscalationConfigPanel from "@/components/alerts/EscalationConfigPanel";
+import { PageShell } from "@/components/shared/PageShell";
 
 const severityColors: Record<string, string> = {
   critical: "bg-destructive",
@@ -97,20 +98,12 @@ export default function AlertsPage() {
   const channels = channelsData?.data ?? [];
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Bell className="h-6 w-6" />
-            Alert Center
-          </h1>
-          <p className="text-muted-foreground">
-            Manage alert rules, monitor active alerts, and configure notifications
-          </p>
-        </div>
-      </div>
-
+    <PageShell
+      title="Alert Center"
+      description="Manage alert rules, monitor active alerts, and configure notifications"
+      icon={<Bell className="h-5 w-5" />}
+    >
+      <div className="space-y-6 p-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card aria-label="Active alerts count">
@@ -333,5 +326,6 @@ export default function AlertsPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </PageShell>
   );
 }

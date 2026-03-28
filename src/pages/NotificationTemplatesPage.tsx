@@ -42,7 +42,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import {
   FileText,
   Plus,
@@ -181,7 +185,6 @@ function formatDate(iso: string): string {
 
 export default function NotificationTemplatesPage() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   // Filters
   const [filterCategory, setFilterCategory] = useState<string>("__all__");
@@ -194,6 +197,7 @@ export default function NotificationTemplatesPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<{ subject: string | null; body: string } | null>(null);
   const [sendTestOpen, setSendTestOpen] = useState(false);
+  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
   const [testTemplateId, setTestTemplateId] = useState("");
   const [testChannel, setTestChannel] = useState<"email" | "whatsapp" | "push">("email");
   const [testRecipient, setTestRecipient] = useState("");
@@ -234,11 +238,11 @@ export default function NotificationTemplatesPage() {
       notificationTemplatesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notification-templates"] });
-      toast({ title: "Template created" });
+      toast.success("Template created");
       closeDialog();
     },
     onError: (err: Error) => {
-      toast({ title: "Error creating template", description: err.message, variant: "destructive" });
+      toast.error("Error creating template", { description: err.message });
     },
   });
 
@@ -247,11 +251,11 @@ export default function NotificationTemplatesPage() {
       notificationTemplatesApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notification-templates"] });
-      toast({ title: "Template updated" });
+      toast.success("Template updated");
       closeDialog();
     },
     onError: (err: Error) => {
-      toast({ title: "Error updating template", description: err.message, variant: "destructive" });
+      toast.error("Error updating template", { description: err.message });
     },
   });
 
@@ -259,10 +263,10 @@ export default function NotificationTemplatesPage() {
     mutationFn: (id: string) => notificationTemplatesApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notification-templates"] });
-      toast({ title: "Template deleted" });
+      toast.success("Template deleted");
     },
     onError: (err: Error) => {
-      toast({ title: "Error deleting template", description: err.message, variant: "destructive" });
+      toast.error("Error deleting template", { description: err.message });
     },
   });
 
@@ -273,7 +277,7 @@ export default function NotificationTemplatesPage() {
       setPreviewOpen(true);
     },
     onError: (err: Error) => {
-      toast({ title: "Preview failed", description: err.message, variant: "destructive" });
+      toast.error("Preview failed", { description: err.message });
     },
   });
 
@@ -282,14 +286,14 @@ export default function NotificationTemplatesPage() {
       notificationTemplatesApi.sendTest(params),
     onSuccess: (res) => {
       if (res.data.success) {
-        toast({ title: "Test notification sent", description: `Sent via ${res.data.channel} to ${res.data.recipient}` });
+        toast.success("Test notification sent", { description: `Sent via ${res.data.channel} to ${res.data.recipient}` });
       } else {
-        toast({ title: "Test failed", description: res.data.error ?? "Unknown error", variant: "destructive" });
+        toast.error("Test failed", { description: res.data.error ?? "Unknown error" });
       }
       setSendTestOpen(false);
     },
     onError: (err: Error) => {
-      toast({ title: "Send test failed", description: err.message, variant: "destructive" });
+      toast.error("Send test failed", { description: err.message });
     },
   });
 
@@ -297,10 +301,10 @@ export default function NotificationTemplatesPage() {
     mutationFn: () => notificationTemplatesApi.seed(),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["notification-templates"] });
-      toast({ title: "Default templates seeded", description: `${res.data.seeded} created, ${res.data.skipped} already existed` });
+      toast.success("Default templates seeded", { description: `${res.data.seeded} created, ${res.data.skipped} already existed` });
     },
     onError: (err: Error) => {
-      toast({ title: "Seed failed", description: err.message, variant: "destructive" });
+      toast.error("Seed failed", { description: err.message });
     },
   });
 
@@ -552,11 +556,7 @@ export default function NotificationTemplatesPage() {
                               <DropdownMenuItem
                                 disabled={tpl.isSystem}
                                 className="text-destructive focus:text-destructive"
-                                onClick={() => {
-                                  if (confirm(`Delete template "${tpl.name}"?`)) {
-                                    deleteMutation.mutate(tpl.id);
-                                  }
-                                }}
+                                onClick={() => setDeleteTemplateId(tpl.id)}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 {tpl.isSystem ? "System (locked)" : "Delete"}
@@ -841,6 +841,32 @@ export default function NotificationTemplatesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Delete Template Confirmation ─── */}
+      <AlertDialog open={!!deleteTemplateId} onOpenChange={open => { if (!open) setDeleteTemplateId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this template? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteTemplateId) {
+                  deleteMutation.mutate(deleteTemplateId);
+                  setDeleteTemplateId(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,16 +13,45 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, AreaChart, Area, CartesianGrid, LineChart, Line,
+  PieChart, Pie, Cell, AreaChart, Area, CartesianGrid,
 } from 'recharts';
 import {
   MonitorSpeaker, Bell, AlertTriangle, Activity, Video, ArrowRight,
-  CheckCircle2, XCircle, AlertCircle, MapPin, Clock, Shield, BellRing, BellOff, DoorOpen, Globe2
+  CheckCircle2, XCircle, AlertCircle, MapPin, Clock, Shield, BellRing, BellOff, Globe2
 } from 'lucide-react';
+
+/** Typed event for dashboard use */
+interface DashboardEvent {
+  id: string;
+  created_at: string;
+  severity: string;
+  status: string;
+  site_id: string;
+  description: string;
+  [key: string]: unknown;
+}
+
+/** Typed device for dashboard use */
+interface DashboardDevice {
+  id: string;
+  status: string;
+  site_id: string;
+  name: string;
+  [key: string]: unknown;
+}
+
+/** Typed site for dashboard use */
+interface DashboardSite {
+  id: string;
+  name: string;
+  status: string;
+  [key: string]: unknown;
+}
 import QuickGateControl from '@/components/shared/QuickGateControl';
 import CrossSiteDashboard from '@/components/dashboard/CrossSiteDashboard';
 import AnomalyAlertBanner from '@/components/dashboard/AnomalyAlertBanner';
 import ClaveAssistantWidget from '@/components/dashboard/ClaveAssistantWidget';
+import { PageShell } from '@/components/shared/PageShell';
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: 'hsl(0, 84%, 60%)',
@@ -52,9 +81,12 @@ export default function DashboardPage() {
     setViewMode('current');
     navigate(`/sites/${siteId}`);
   }, [navigate]);
-  const { data: devices = [], isLoading: loadingDevices } = useDevices(REFRESH_INTERVAL);
-  const { data: sites = [], isLoading: loadingSites } = useSites(REFRESH_INTERVAL);
-  const { data: events = [], isLoading: loadingEvents } = useEventsLegacy(REFRESH_INTERVAL);
+  const { data: rawDevices = [], isLoading: loadingDevices } = useDevices(REFRESH_INTERVAL);
+  const { data: rawSites = [], isLoading: loadingSites } = useSites(REFRESH_INTERVAL);
+  const { data: rawEvents = [], isLoading: loadingEvents } = useEventsLegacy(REFRESH_INTERVAL);
+  const devices = rawDevices as unknown as DashboardDevice[];
+  const sites = rawSites as unknown as DashboardSite[];
+  const events = rawEvents as unknown as DashboardEvent[];
   const { isAuthenticated } = useAuth();
   const { data: healthData } = useQuery({
     queryKey: ['system-health'],
@@ -83,6 +115,7 @@ export default function DashboardPage() {
       const nextH = new Date(h);
       nextH.setHours(nextH.getHours() + 1);
       const hourEvents = events.filter(e => {
+        if (!e.created_at) return false;
         const t = new Date(e.created_at);
         return t >= h && t < nextH;
       });
@@ -113,9 +146,10 @@ export default function DashboardPage() {
       days[key] = { date: d.toLocaleDateString('en', { weekday: 'short' }), critical: 0, high: 0, medium: 0, low: 0, info: 0 };
     }
     events.forEach(e => {
+      if (!e.created_at) return;
       const key = e.created_at.slice(0, 10);
-      if (days[key] && (e.severity as string) in days[key]) {
-        (days[key] as any)[e.severity]++;
+      if (days[key] && e.severity in days[key]) {
+        (days[key] as unknown as Record<string, number>)[e.severity]++;
       }
     });
     return Object.values(days);
@@ -167,14 +201,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('dashboard.title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('dashboard.subtitle')}</p>
-        </div>
-        <div className="flex gap-2">
-          {/* Cross-site toggle */}
+    <PageShell
+      title={t('dashboard.title')}
+      description={t('dashboard.subtitle')}
+      icon={<Activity className="h-5 w-5" />}
+      actions={
+        <>
           <div className="inline-flex rounded-md border border-input overflow-hidden">
             <Button
               variant={viewMode === 'current' ? 'default' : 'ghost'}
@@ -207,8 +239,10 @@ export default function DashboardPage() {
           <Button onClick={() => navigate('/live-view')}>
             <Video className="mr-2 h-4 w-4" /> {t('dashboard.open_live_view')}
           </Button>
-        </div>
-      </div>
+        </>
+      }
+    >
+    <div className="p-6 space-y-6">
 
       {/* Cross-site view — shown when "All Sites" is selected */}
       {viewMode === 'all' && (
@@ -465,5 +499,6 @@ export default function DashboardPage() {
 
       </>}
     </div>
+    </PageShell>
   );
 }

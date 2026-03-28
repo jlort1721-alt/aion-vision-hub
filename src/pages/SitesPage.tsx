@@ -6,6 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSites, useDevices } from '@/hooks/use-supabase-data';
 import { apiClient } from '@/lib/api-client';
@@ -17,6 +21,7 @@ import {
   Loader2, Pencil, Trash2, Navigation
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PageShell } from '@/components/shared/PageShell';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster';
@@ -164,6 +169,7 @@ export default function SitesPage() {
   const [form, setForm] = useState<SiteForm>(defaultForm);
   const [saving, setSaving] = useState(false);
   const [selectedSite, setSelectedSite] = useState<string | null>(null);
+  const [deleteSiteId, setDeleteSiteId] = useState<string | null>(null);
 
   const geoSites = useMemo(
     () => sites.filter(s => s.latitude != null && s.longitude != null),
@@ -203,7 +209,6 @@ export default function SitesPage() {
   };
 
   const handleDelete = async (siteId: string) => {
-    if (!confirm('Delete this site?')) return;
     try {
       await apiClient.delete(`/sites/${siteId}`);
       toast.success('Site deleted');
@@ -216,19 +221,14 @@ export default function SitesPage() {
   const selectedDevices = devices.filter(d => d.site_id === selectedSite);
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)]">
+    <PageShell
+      title="Sites"
+      description={`${sites.length} locations`}
+      icon={<MapPin className="h-5 w-5" />}
+      actions={canManage ? <Button size="sm" onClick={openCreate}><Plus className="mr-1 h-4 w-4" /> Add Site</Button> : undefined}
+    >
+    <div className="flex h-full">
       <div className={cn("flex-1 flex flex-col", selected && "max-w-[60%]")}>
-        <div className="px-4 py-3 border-b">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-lg font-bold flex items-center gap-2"><MapPin className="h-5 w-5" /> Sites</h1>
-              <p className="text-xs text-muted-foreground">{sites.length} locations</p>
-            </div>
-            {canManage && (
-              <Button size="sm" onClick={openCreate}><Plus className="mr-1 h-4 w-4" /> Add Site</Button>
-            )}
-          </div>
-        </div>
 
         <div className="h-64 border-b relative z-0">
           <SitesMap
@@ -291,7 +291,7 @@ export default function SitesPage() {
             {canManage && (
               <div className="flex gap-1">
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(selected)}><Pencil className="h-3 w-3" /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(selected.id)}><Trash2 className="h-3 w-3" /></Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteSiteId(selected.id)}><Trash2 className="h-3 w-3" /></Button>
               </div>
             )}
           </div>
@@ -368,6 +368,33 @@ export default function SitesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Delete Site Confirmation ─── */}
+      <AlertDialog open={!!deleteSiteId} onOpenChange={open => { if (!open) setDeleteSiteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Site</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this site? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteSiteId) {
+                  handleDelete(deleteSiteId);
+                  setDeleteSiteId(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+    </PageShell>
   );
 }

@@ -9,13 +9,6 @@ import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { operationsApi, cloudAccountsApi, analyticsApi } from '@/services/api';
 
-// ── Response types ────────────────────────────────────────
-
-interface PaginatedResponse<T> {
-  data: T[];
-  meta?: { total?: number; page?: number; pageSize?: number };
-}
-
 // ── Devices ───────────────────────────────────────────────
 
 export function useDevices(refetchInterval?: number) {
@@ -23,8 +16,10 @@ export function useDevices(refetchInterval?: number) {
   return useQuery({
     queryKey: ['devices'],
     queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>('/devices', { limit: '500' });
-      return (response.data ?? []).map((d) => {
+      const response = await apiClient.get<any>('/devices', { limit: '500' });
+      // After apiClient unwraps envelope, response is either [...] or { items: [...], meta: {...} }
+      const items: Record<string, unknown>[] = Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
+      return items.map((d) => {
         const sites = (d as Record<string, unknown>).sites as Record<string, unknown> | undefined;
         const siteWanIp = (d.site_wan_ip ?? sites?.wan_ip ?? null) as string | null;
         const siteName = (d.site_name ?? sites?.name ?? null) as string | null;
@@ -48,8 +43,8 @@ export function useSites(refetchInterval?: number) {
   return useQuery({
     queryKey: ['sites'],
     queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>('/sites');
-      return response.data ?? [];
+      const response = await apiClient.get<any>('/sites');
+      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
     },
     enabled: isAuthenticated,
     refetchInterval,
@@ -90,10 +85,13 @@ export function useEvents(filters?: EventFilters) {
       if (filters?.date_from) params.from = filters.date_from;
       if (filters?.date_to) params.to = filters.date_to;
 
-      const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>('/events', params);
+      const response = await apiClient.get<any>('/events', params);
+      // After unwrap: either [...] or { items: [...], meta: {...} }
+      const items = Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
+      const total = response?.meta?.total ?? items.length;
       return {
-        data: response.data ?? [],
-        count: response.meta?.total ?? (response.data?.length ?? 0),
+        data: items,
+        count: total,
       };
     },
     enabled: isAuthenticated,
@@ -106,8 +104,8 @@ export function useEventsLegacy(refetchInterval?: number) {
   return useQuery({
     queryKey: ['events-legacy'],
     queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>('/events', { limit: '100' });
-      return response.data ?? [];
+      const response = await apiClient.get<any>('/events', { limit: '100' });
+      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
     },
     enabled: isAuthenticated,
     refetchInterval,
@@ -121,8 +119,8 @@ export function useIncidents() {
   return useQuery({
     queryKey: ['incidents'],
     queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>('/incidents', { limit: '100' });
-      return response.data ?? [];
+      const response = await apiClient.get<any>('/incidents', { limit: '100' });
+      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
     },
     enabled: isAuthenticated,
   });
@@ -135,8 +133,8 @@ export function useIntegrations() {
   return useQuery({
     queryKey: ['integrations'],
     queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>('/integrations');
-      return response.data ?? [];
+      const response = await apiClient.get<any>('/integrations');
+      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
     },
     enabled: isAuthenticated,
   });
@@ -147,8 +145,8 @@ export function useMcpConnectors() {
   return useQuery({
     queryKey: ['mcp_connectors'],
     queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>('/mcp/connectors');
-      return response.data ?? [];
+      const response = await apiClient.get<any>('/mcp/connectors');
+      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
     },
     enabled: isAuthenticated,
   });
@@ -161,8 +159,8 @@ export function useAuditLogs() {
   return useQuery({
     queryKey: ['audit_logs'],
     queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>('/audit/logs', { limit: '500' });
-      return response.data ?? [];
+      const response = await apiClient.get<any>('/audit/logs', { limit: '500' });
+      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
     },
     enabled: isAuthenticated,
   });
@@ -175,8 +173,8 @@ export function useAiSessions() {
   return useQuery({
     queryKey: ['ai_sessions'],
     queryFn: async () => {
-      const response = await apiClient.get<PaginatedResponse<Record<string, unknown>>>('/ai/sessions', { limit: '100' });
-      return response.data ?? [];
+      const response = await apiClient.get<any>('/ai/sessions', { limit: '100' });
+      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
     },
     enabled: isAuthenticated,
   });

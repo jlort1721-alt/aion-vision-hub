@@ -21,6 +21,7 @@ import {
 import { cn } from '@/lib/utils';
 import { sanitizeText } from '@/lib/sanitize';
 import EvidencePanel from '@/components/incidents/EvidencePanel';
+import { PageShell } from '@/components/shared/PageShell';
 
 const priorityColors: Record<string, string> = {
   critical: 'text-destructive', high: 'text-warning', medium: 'text-info', low: 'text-muted-foreground',
@@ -100,57 +101,61 @@ export default function IncidentsPage() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-[calc(100vh-3.5rem)]">
+    <PageShell
+      title={t('incidents.title')}
+      description="Track and resolve security incidents"
+      icon={<AlertTriangle className="h-5 w-5" />}
+      actions={
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm"><Plus className="mr-1 h-3 w-3" /> {t('common.new')}</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{t('incidents.create_incident')}</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>{t('incidents.title_label')}</Label>
+                <Input value={newIncident.title} onChange={e => setNewIncident(p => ({ ...p, title: e.target.value }))} placeholder={t('incidents.title_label')} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('incidents.description_label')}</Label>
+                <Textarea value={newIncident.description} onChange={e => setNewIncident(p => ({ ...p, description: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{t('incidents.priority')}</Label>
+                  <Select value={newIncident.priority} onValueChange={v => setNewIncident(p => ({ ...p, priority: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="critical">{t('events.critical')}</SelectItem>
+                      <SelectItem value="high">{t('events.high')}</SelectItem>
+                      <SelectItem value="medium">{t('events.medium')}</SelectItem>
+                      <SelectItem value="low">{t('events.low')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('events.site')}</Label>
+                  <Select value={newIncident.site_id} onValueChange={v => setNewIncident(p => ({ ...p, site_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder={t('events.site')} /></SelectTrigger>
+                    <SelectContent>
+                      {sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button className="w-full" onClick={handleCreate} disabled={actionLoading === 'create'}>
+                {actionLoading === 'create' ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Plus className="mr-1 h-4 w-4" />}
+                {t('incidents.create_incident')}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      }
+    >
+    <div className="flex flex-col md:flex-row h-full">
       <div className={cn("w-full md:w-80 border-r flex flex-col", selected && "hidden md:flex")}>
         <div className="px-3 py-3 border-b space-y-2">
-          <div className="flex items-center justify-between">
-            <h1 className="text-base font-bold">{t('incidents.title')}</h1>
-            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm"><Plus className="mr-1 h-3 w-3" /> {t('common.new')}</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>{t('incidents.create_incident')}</DialogTitle></DialogHeader>
-                <div className="space-y-4 py-2">
-                  <div className="space-y-2">
-                    <Label>{t('incidents.title_label')}</Label>
-                    <Input value={newIncident.title} onChange={e => setNewIncident(p => ({ ...p, title: e.target.value }))} placeholder={t('incidents.title_label')} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('incidents.description_label')}</Label>
-                    <Textarea value={newIncident.description} onChange={e => setNewIncident(p => ({ ...p, description: e.target.value }))} />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>{t('incidents.priority')}</Label>
-                      <Select value={newIncident.priority} onValueChange={v => setNewIncident(p => ({ ...p, priority: v }))}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="critical">{t('events.critical')}</SelectItem>
-                          <SelectItem value="high">{t('events.high')}</SelectItem>
-                          <SelectItem value="medium">{t('events.medium')}</SelectItem>
-                          <SelectItem value="low">{t('events.low')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t('events.site')}</Label>
-                      <Select value={newIncident.site_id} onValueChange={v => setNewIncident(p => ({ ...p, site_id: v }))}>
-                        <SelectTrigger><SelectValue placeholder={t('events.site')} /></SelectTrigger>
-                        <SelectContent>
-                          {sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <Button className="w-full" onClick={handleCreate} disabled={actionLoading === 'create'}>
-                    {actionLoading === 'create' ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Plus className="mr-1 h-4 w-4" />}
-                    {t('incidents.create_incident')}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
             <Input placeholder={t('incidents.search')} className="pl-7 h-7 text-xs" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
@@ -273,5 +278,6 @@ export default function IncidentsPage() {
         </div>
       )}
     </div>
+    </PageShell>
   );
 }

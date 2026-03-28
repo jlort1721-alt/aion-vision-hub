@@ -122,9 +122,9 @@ export default function CommandPalette() {
 
   // Filter devices
   const filteredDevices = useMemo(() => {
-    if (!search) return devices.slice(0, 8);
+    if (!search) return (devices || []).slice(0, 8);
     const q = search.toLowerCase();
-    return devices
+    return (devices || [])
       .filter(d =>
         d.name?.toLowerCase().includes(q) ||
         d.ip_address?.toLowerCase().includes(q) ||

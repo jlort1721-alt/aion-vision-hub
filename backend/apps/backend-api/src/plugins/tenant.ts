@@ -3,6 +3,7 @@ import fp from 'fastify-plugin';
 import { eq } from 'drizzle-orm';
 import { db } from '../db/client.js';
 import { tenants } from '../db/schema/index.js';
+import { RedisCache } from '../lib/cache.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -10,9 +11,18 @@ declare module 'fastify' {
   }
 }
 
+const tenantCache = new RedisCache<{ id: string }>('tenant', 300_000);
+
 async function tenantPlugin(app: FastifyInstance) {
   app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.tenantId) return;
+
+    // Check Redis cache first
+    const cached = await tenantCache.get(request.tenantId);
+    if (cached) {
+      request.tenantActive = true;
+      return;
+    }
 
     const [tenant] = await db
       .select({ id: tenants.id })
@@ -28,6 +38,8 @@ async function tenantPlugin(app: FastifyInstance) {
       return;
     }
 
+    // Cache tenant existence for 5 minutes
+    await tenantCache.set(request.tenantId, tenant);
     request.tenantActive = true;
   });
 }

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Clock, Users, CalendarCheck, UserCheck, Plus, Loader2, CalendarDays, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { PageShell } from "@/components/shared/PageShell";
 
 const assignmentStatusColors: Record<string, string> = {
   scheduled: "bg-primary",
@@ -212,20 +213,12 @@ export default function ShiftsPage() {
     : '';
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Clock className="h-6 w-6" />
-            Shift Management
-          </h1>
-          <p className="text-muted-foreground">
-            Manage guard shifts and track attendance
-          </p>
-        </div>
-      </div>
-
+    <PageShell
+      title="Shift Management"
+      description="Manage guard shifts and track attendance"
+      icon={<Clock className="h-5 w-5" />}
+    >
+      <div className="space-y-6 p-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -585,5 +578,6 @@ export default function ShiftsPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </PageShell>
   );
 }

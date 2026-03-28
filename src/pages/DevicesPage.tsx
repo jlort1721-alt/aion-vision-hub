@@ -22,6 +22,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { PageShell } from '@/components/shared/PageShell';
 
 export default function DevicesPage() {
   const { t } = useI18n();
@@ -57,7 +59,20 @@ export default function DevicesPage() {
   const [pageTab, setPageTab] = useState('inventory');
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+    <PageShell
+      title={t('devices.title')}
+      description="Manage device inventory, cloud accounts, and integrations"
+      icon={<Video className="h-5 w-5" />}
+      actions={
+        pageTab === 'inventory' ? (
+          <>
+            <Button variant="outline" size="sm"><Upload className="mr-1 h-3 w-3" /> {t('common.import')}</Button>
+            <Button size="sm" onClick={openAdd}><Plus className="mr-1 h-3 w-3" /> {t('devices.add_device')}</Button>
+          </>
+        ) : undefined
+      }
+    >
+    <div className="flex flex-col h-full">
       <div className="px-4 pt-3 border-b">
         <Tabs value={pageTab} onValueChange={setPageTab}>
           <TabsList>
@@ -86,13 +101,6 @@ export default function DevicesPage() {
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
       <div className={cn("flex-1 flex flex-col border-r", selected && "lg:max-w-[60%] hidden lg:flex")}>
         <div className="px-4 py-3 border-b space-y-3">
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold">{t('devices.title')}</h1>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm"><Upload className="mr-1 h-3 w-3" /> {t('common.import')}</Button>
-              <Button size="sm" onClick={openAdd}><Plus className="mr-1 h-3 w-3" /> {t('devices.add_device')}</Button>
-            </div>
-          </div>
           <div className="flex flex-wrap gap-2">
             <div className="relative flex-1 min-w-[150px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -241,10 +249,10 @@ export default function DevicesPage() {
                 fetch(`${backendUrl}/api/v1/devices/${selected.id}/test`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
                   .then(r => r.json())
                   .then(d => {
-                    if (d.data?.reachable) alert(`Conectado — Latencia: ${d.data.latencyMs}ms`);
-                    else alert(`No alcanzable: ${d.data?.error || 'Sin respuesta'}`);
+                    if (d.data?.reachable) toast.success(`Conectado — Latencia: ${d.data.latencyMs}ms`);
+                    else toast.error(`No alcanzable: ${d.data?.error || 'Sin respuesta'}`);
                   })
-                  .catch(() => alert('Error al probar conexión'));
+                  .catch(() => toast.error('Error al probar conexión'));
               }}>
                 <RefreshCw className="mr-1 h-3 w-3" /> {t('common.test')}
               </Button>
@@ -256,10 +264,10 @@ export default function DevicesPage() {
               fetch(`${backendUrl}/api/v1/devices/${selected.id}/register-stream`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
                 .then(r => r.json())
                 .then(d => {
-                  if (d.data?.registered > 0) alert(`Stream registrado: ${d.data.registered} canal(es) en MediaMTX`);
-                  else alert(`Error: ${d.data?.errors?.join(', ') || 'No se pudo registrar'}`);
+                  if (d.data?.registered > 0) toast.success(`Stream registrado: ${d.data.registered} canal(es) en MediaMTX`);
+                  else toast.error(`${d.data?.errors?.join(', ') || 'No se pudo registrar'}`);
                 })
-                .catch(() => alert('Error al registrar stream — Verificar que MediaMTX esté activo'));
+                .catch(() => toast.error('Error al registrar stream — Verificar que MediaMTX esté activo'));
             }}>
               <PlayCircle className="mr-1.5 h-4 w-4" /> Registrar Stream en Vista en Vivo
             </Button>
@@ -270,10 +278,10 @@ export default function DevicesPage() {
                 .then(d => {
                   if (d.data?.rtspUrl) {
                     navigator.clipboard.writeText(d.data.rtspUrl);
-                    alert(`URL RTSP copiada:\n${d.data.rtspUrl}\n\nStream ID: ${d.data.streamId}`);
+                    toast.success(`URL RTSP copiada — Stream ID: ${d.data.streamId}`);
                   }
                 })
-                .catch(() => alert('Error al obtener URL RTSP'));
+                .catch(() => toast.error('Error al obtener URL RTSP'));
             }}>
               <Video className="mr-1.5 h-4 w-4" /> Ver URL RTSP
             </Button>
@@ -286,5 +294,6 @@ export default function DevicesPage() {
     </div>
       )}
     </div>
+    </PageShell>
   );
 }

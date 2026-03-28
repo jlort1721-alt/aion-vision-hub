@@ -22,6 +22,7 @@ import {
 import { cn } from '@/lib/utils';
 import EventFiltersBar from '@/components/events/EventFiltersBar';
 import EventDetailPanel from '@/components/events/EventDetailPanel';
+import { PageShell } from '@/components/shared/PageShell';
 
 const severityConfig: Record<string, { icon: React.ReactNode; color: string }> = {
   critical: { icon: <XCircle className="h-4 w-4" />, color: 'text-destructive' },
@@ -153,7 +154,13 @@ export default function EventsPage() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-3.5rem)]">
+    <PageShell
+      title="Events & Alarms"
+      description="Real-time event monitoring and alarm management"
+      icon={<AlertTriangle className="h-5 w-5" />}
+      badge={<Badge variant="destructive" className="text-xs">{totalCount} new</Badge>}
+    >
+    <div className="flex flex-col lg:flex-row h-full">
       <div className={cn("flex-1 flex flex-col", selectedEvent && "lg:max-w-[60%] hidden lg:flex")}>
         <EventFiltersBar filters={filters} onChange={updateFilters} onReset={resetFilters} devices={devices} sites={sites} newCount={totalCount} />
 
@@ -304,5 +311,6 @@ export default function EventsPage() {
         </div>
       )}
     </div>
+    </PageShell>
   );
 }

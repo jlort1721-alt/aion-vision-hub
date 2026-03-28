@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Loader2, UserCheck, ScanLine, Ticket, Ban, Plus, CheckCircle, XCircle, Camera, X, Bell } from "lucide-react";
+import { PageShell } from "@/components/shared/PageShell";
 
 const passStatusColors: Record<string, string> = {
   active: "bg-success",
@@ -163,20 +164,12 @@ export default function VisitorsPage() {
   const stats = statsData?.data;
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <UserCheck className="h-6 w-6" />
-            Visitor Management
-          </h1>
-          <p className="text-muted-foreground">
-            Manage visitors, passes, and QR code validation
-          </p>
-        </div>
-      </div>
-
+    <PageShell
+      title="Visitor Management"
+      description="Manage visitors, passes, and QR code validation"
+      icon={<UserCheck className="h-5 w-5" />}
+    >
+      <div className="space-y-6 p-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -569,5 +562,6 @@ export default function VisitorsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </PageShell>
   );
 }

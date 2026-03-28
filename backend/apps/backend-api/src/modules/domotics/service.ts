@@ -1,6 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { domoticDevices, domoticActions } from '../../db/schema/index.js';
+import { NotFoundError } from '@aion/shared-contracts';
 import type { CreateDomoticDeviceInput, UpdateDomoticDeviceInput, DomoticFilters } from './schemas.js';
 
 class DomoticService {
@@ -15,7 +16,7 @@ class DomoticService {
   async getById(id: string, tenantId: string) {
     const [item] = await db.select().from(domoticDevices)
       .where(and(eq(domoticDevices.id, id), eq(domoticDevices.tenantId, tenantId))).limit(1);
-    if (!item) throw new Error(`Domotic device ${id} not found`);
+    if (!item) throw new NotFoundError('Domotic device', id);
     return item;
   }
 
@@ -29,14 +30,14 @@ class DomoticService {
     const [device] = await db.update(domoticDevices)
       .set({ ...data, updatedAt: new Date() })
       .where(and(eq(domoticDevices.id, id), eq(domoticDevices.tenantId, tenantId))).returning();
-    if (!device) throw new Error(`Domotic device ${id} not found`);
+    if (!device) throw new NotFoundError('Domotic device', id);
     return device;
   }
 
   async delete(id: string, tenantId: string) {
     const [device] = await db.delete(domoticDevices)
       .where(and(eq(domoticDevices.id, id), eq(domoticDevices.tenantId, tenantId))).returning();
-    if (!device) throw new Error(`Domotic device ${id} not found`);
+    if (!device) throw new NotFoundError('Domotic device', id);
   }
 
   async executeAction(deviceId: string, action: string, userId: string, tenantId: string) {

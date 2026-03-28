@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,6 +46,7 @@ export default function DatabasePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [form, setForm] = useState({ title: '', category: 'residente', section_id: '', unit: '', phone: '', email: '', notes: '' });
   const [editForm, setEditForm] = useState({ id: '', title: '', category: 'residente', section_id: '', unit: '', phone: '', email: '', notes: '' });
+  const [deleteRecordId, setDeleteRecordId] = useState<string | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -233,7 +238,7 @@ export default function DatabasePage() {
                             <DropdownMenuItem onClick={() => setSelectedRecord(record.id)}><Eye className="mr-2 h-3 w-3" /> {t('common.view')}</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => openEdit(record)}><Pencil className="mr-2 h-3 w-3" /> {t('common.edit')}</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={() => { if (confirm('Delete?')) remove.mutate(record.id); }}><Trash2 className="mr-2 h-3 w-3" /> {t('common.delete')}</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => setDeleteRecordId(record.id)}><Trash2 className="mr-2 h-3 w-3" /> {t('common.delete')}</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -354,7 +359,7 @@ export default function DatabasePage() {
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => openEdit(selected)}><Pencil className="mr-1 h-3 w-3" /> {t('common.edit')}</Button>
             <Button variant="outline" className="flex-1" onClick={handleExport}><Download className="mr-1 h-3 w-3" /> {t('common.export')}</Button>
-            <Button variant="outline" className="text-destructive" onClick={() => { if (confirm('Delete?')) { remove.mutate(selected.id); setSelectedRecord(null); } }}><Trash2 className="h-3 w-3" /></Button>
+            <Button variant="outline" className="text-destructive" onClick={() => setDeleteRecordId(selected.id)}><Trash2 className="h-3 w-3" /></Button>
           </div>
         </div>
       )}
@@ -424,6 +429,33 @@ export default function DatabasePage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ── Delete Record Confirmation ─── */}
+      <AlertDialog open={!!deleteRecordId} onOpenChange={open => { if (!open) setDeleteRecordId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('common.delete')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this record? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteRecordId) {
+                  remove.mutate(deleteRecordId);
+                  if (selectedRecord === deleteRecordId) setSelectedRecord(null);
+                  setDeleteRecordId(null);
+                }
+              }}
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

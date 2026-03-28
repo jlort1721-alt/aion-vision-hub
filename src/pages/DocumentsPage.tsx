@@ -9,7 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { apiClient } from '@/lib/api-client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -97,7 +101,6 @@ function fileToBase64(file: globalThis.File): Promise<string> {
 
 const DocumentsPage = () => {
   const { user, profile } = useAuth();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -119,6 +122,9 @@ const DocumentsPage = () => {
   // Preview dialog
   const [previewDoc, setPreviewDoc] = useState<DocumentRow | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Delete confirmation state
+  const [deleteDoc, setDeleteDoc] = useState<DocumentRow | null>(null);
 
   // Drag state
   const [dragOver, setDragOver] = useState(false);
@@ -181,11 +187,11 @@ const DocumentsPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
-      toast({ title: 'Documento subido', description: 'El archivo se ha guardado correctamente.' });
+      toast.success('Documento subido', { description: 'El archivo se ha guardado correctamente.' });
       resetUploadForm();
     },
     onError: (err: any) => {
-      toast({ title: 'Error al subir', description: err.message, variant: 'destructive' });
+      toast.error('Error al subir', { description: err.message });
       setUploading(false);
       setUploadProgress(0);
     },
@@ -198,10 +204,10 @@ const DocumentsPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
-      toast({ title: 'Eliminado', description: 'El documento fue eliminado.' });
+      toast.success('Eliminado', { description: 'El documento fue eliminado.' });
     },
     onError: (err: any) => {
-      toast({ title: 'Error al eliminar', description: err.message, variant: 'destructive' });
+      toast.error('Error al eliminar', { description: err.message });
     },
   });
 
@@ -218,11 +224,11 @@ const DocumentsPage = () => {
   function handleFileSelect(file: globalThis.File | null) {
     if (!file) return;
     if (file.size > MAX_FILE_SIZE) {
-      toast({ title: 'Archivo demasiado grande', description: 'El tamaño máximo es 10 MB.', variant: 'destructive' });
+      toast.error('Archivo demasiado grande', { description: 'El tamaño maximo es 10 MB.' });
       return;
     }
     if (!ACCEPTED_TYPES.includes(file.type) && !file.name.match(/\.(pdf|docx|xlsx|csv|jpg|jpeg|png|txt)$/i)) {
-      toast({ title: 'Tipo no soportado', description: 'Seleccione un archivo PDF, Word, Excel, imagen o texto.', variant: 'destructive' });
+      toast.error('Tipo no soportado', { description: 'Seleccione un archivo PDF, Word, Excel, imagen o texto.' });
       return;
     }
     setSelectedFile(file);
@@ -255,7 +261,7 @@ const DocumentsPage = () => {
         a.click();
       }
     } catch (err: any) {
-      toast({ title: 'Error al descargar', description: err.message, variant: 'destructive' });
+      toast.error('Error al descargar', { description: err.message });
     }
   }
 
@@ -453,11 +459,7 @@ const DocumentsPage = () => {
                       size="icon"
                       title="Eliminar"
                       className="text-destructive hover:text-destructive"
-                      onClick={() => {
-                        if (window.confirm('¿Eliminar este documento? Esta acción no se puede deshacer.')) {
-                          deleteMutation.mutate(doc);
-                        }
-                      }}
+                      onClick={() => setDeleteDoc(doc)}
                     >
                       <Trash2 size={16} />
                     </Button>
@@ -603,6 +605,32 @@ const DocumentsPage = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ── Delete Document Confirmation ─── */}
+      <AlertDialog open={!!deleteDoc} onOpenChange={open => { if (!open) setDeleteDoc(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar documento</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Eliminar este documento? Esta accion no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteDoc) {
+                  deleteMutation.mutate(deleteDoc);
+                  setDeleteDoc(null);
+                }
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -8,7 +8,6 @@ import '@fastify/swagger';
 import {
   createDeviceSchema,
   updateDeviceSchema,
-  deviceFiltersSchema,
   bulkImportDeviceSchema,
 } from './schemas.js';
 import type { CreateDeviceInput, UpdateDeviceInput, DeviceFilters, BulkImportDeviceInput } from './schemas.js';
@@ -17,18 +16,18 @@ export async function registerDeviceRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>();
 
   // ── GET / — List devices for tenant ───────────────────────
-  server.get<{ Querystring: DeviceFilters }>(
+  // Note: uses app (not server with ZodTypeProvider) to avoid Zod v4 compat issue
+  app.get(
     '/',
     {
       schema: {
         tags: ['Devices'],
         summary: 'List devices',
         description: 'Returns a paginated list of all devices registered to the tenant.',
-        querystring: deviceFiltersSchema,
       },
     },
     async (request, reply) => {
-      const data = await deviceService.list(request.tenantId, request.query);
+      const data = await deviceService.list(request.tenantId, request.query as DeviceFilters);
       return reply.send({ success: true, data });
     },
   );
@@ -114,6 +113,27 @@ export async function registerDeviceRoutes(app: FastifyInstance) {
     },
   );
 
+  // ── GET /:id/credentials — Get device credentials (admin only) ──
+  server.get<{ Params: { id: string } }>(
+    '/:id/credentials',
+    {
+      preHandler: [requireRole('tenant_admin', 'super_admin')],
+      schema: {
+        tags: ['Devices'],
+        summary: 'Get device credentials (admin only)',
+        description: 'Returns decrypted username and password for a device. Requires admin role.',
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+      const data = await deviceService.getCredentials(id, request.tenantId);
+
+      await request.audit('device.credentials.read', 'devices', id);
+
+      return reply.send({ success: true, data });
+    },
+  );
+
   // ── POST /:id/test — Test device connection via public IP ─
   server.post<{ Params: { id: string } }>(
     '/:id/test',
@@ -159,7 +179,7 @@ export async function registerDeviceRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params;
-      const device = await deviceService.getById(id, request.tenantId) as Record<string, unknown>;
+      const device = await deviceService.getByIdWithCredentials(id, request.tenantId) as Record<string, unknown>;
 
       const result = await registerDeviceStreams({
         id: String(device.id),
@@ -214,7 +234,7 @@ export async function registerDeviceRoutes(app: FastifyInstance) {
       const { id } = request.params;
       const channel = parseInt(request.query.channel || '1', 10);
       const substream = request.query.substream === 'true';
-      const device = await deviceService.getById(id, request.tenantId) as Record<string, unknown>;
+      const device = await deviceService.getByIdWithCredentials(id, request.tenantId) as Record<string, unknown>;
 
       const rtspUrl = buildRtspUrl({
         brand: String(device.brand || 'generic_onvif'),
@@ -307,7 +327,7 @@ export async function registerDeviceRoutes(app: FastifyInstance) {
       schema: { tags: ['Devices'], summary: 'Run full validation on a device (TCP + auth + snapshot)' },
     },
     async (request, reply) => {
-      const device = await deviceService.getById(request.params.id, request.tenantId) as Record<string, unknown>;
+      const device = await deviceService.getByIdWithCredentials(request.params.id, request.tenantId) as Record<string, unknown>;
       if (!device) return reply.code(404).send({ success: false, error: 'Device not found' });
 
       const ip = device.ipAddress as string || device.ip as string || '';

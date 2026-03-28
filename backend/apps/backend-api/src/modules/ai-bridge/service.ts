@@ -9,6 +9,7 @@ import {
   executeTool,
   type MCPServerTool,
 } from '../mcp-bridge/tools/index.js';
+import { knowledgeBase } from '../knowledge-base/service.js';
 
 // ── Constants ─────────────────────────────────────────────────
 
@@ -121,6 +122,49 @@ export type ToolStreamEvent = StreamContentChunk | StreamToolCallEvent | StreamT
 // ── AI Bridge Service ─────────────────────────────────────────
 
 export class AIBridgeService {
+
+  // ── RAG Helpers ──────────────────────────────────────────────
+
+  /**
+   * Extract the last user message text from the conversation for RAG lookup.
+   */
+  private extractLastUserMessage(messages: Array<{ role: string; content: string }>): string {
+    const userMessages = messages.filter((m) => m.role === 'user');
+    return userMessages.length > 0 ? userMessages[userMessages.length - 1].content : '';
+  }
+
+  /**
+   * Enrich chat params with RAG context from the knowledge base.
+   * Injects relevant knowledge as a system message prepended to the conversation.
+   */
+  private async enrichWithRAG(params: ChatRequestRawInput): Promise<ChatRequestRawInput> {
+    const userMessage = this.extractLastUserMessage(params.messages);
+    if (!userMessage) return params;
+
+    const ragContext = await knowledgeBase.buildContext(userMessage);
+    if (!ragContext) return params;
+
+    // Find existing system message or create one
+    const existingSystem = params.messages.find((m) => m.role === 'system');
+    if (existingSystem) {
+      return {
+        ...params,
+        messages: params.messages.map((m) =>
+          m.role === 'system'
+            ? { ...m, content: m.content + ragContext }
+            : m,
+        ),
+      };
+    }
+
+    return {
+      ...params,
+      messages: [{ role: 'system' as const, content: ragContext.trim() }, ...params.messages],
+    };
+  }
+
+  // ── Provider Resolution ────────────────────────────────────
+
   /**
    * Resolve which provider and model to use.
    * Priority: explicit request -> available keys -> error.
@@ -171,16 +215,20 @@ export class AIBridgeService {
 
   /**
    * Send a chat message to the configured AI provider and return the response.
+   * Injects relevant knowledge base context (RAG) into the conversation.
    */
   async chat(params: ChatRequestRawInput, tenantId: string, userId: string): Promise<ChatCompletionResult> {
     const { provider, model, apiKey } = this.resolveProvider(params.provider, params.model);
 
+    // RAG: retrieve relevant knowledge and inject into messages
+    const enrichedParams = await this.enrichWithRAG(params);
+
     let result: ChatCompletionResult;
 
     if (provider === 'openai') {
-      result = await this.chatOpenAI(params, model, apiKey);
+      result = await this.chatOpenAI(enrichedParams, model, apiKey);
     } else {
-      result = await this.chatAnthropic(params, model, apiKey);
+      result = await this.chatAnthropic(enrichedParams, model, apiKey);
     }
 
     // Persist session record for usage tracking
@@ -366,8 +414,9 @@ export class AIBridgeService {
 
   /**
    * Build the AION security-context system prompt with available tools.
+   * Optionally appends RAG context from the knowledge base.
    */
-  private buildSystemPrompt(tools: MCPServerTool[]): string {
+  private buildSystemPrompt(tools: MCPServerTool[], ragContext = ''): string {
     const toolList = tools.map((t) => `- ${t.name}: ${t.description}`).join('\n');
     return `Eres AION, el agente de inteligencia artificial de la plataforma de seguridad Clave Seguridad.
 Tienes acceso a herramientas reales para consultar datos y ejecutar acciones en el sistema.
@@ -379,7 +428,7 @@ siempre confirma con el operador antes de ejecutar.
 Herramientas disponibles:
 ${toolList}
 
-Hora actual: ${new Date().toISOString()}`;
+Hora actual: ${new Date().toISOString()}${ragContext}`;
   }
 
   // ── Tool-Calling Chat (non-streaming) ───────────────────────
@@ -396,7 +445,12 @@ Hora actual: ${new Date().toISOString()}`;
   ): Promise<ChatCompletionResult> {
     const { provider, model, apiKey } = this.resolveProvider(params.provider, params.model);
     const tools = getAllTools();
-    const systemPrompt = this.buildSystemPrompt(tools);
+
+    // RAG: retrieve relevant knowledge for the tool-calling path
+    const userMessage = this.extractLastUserMessage(params.messages);
+    const ragContext = userMessage ? await knowledgeBase.buildContext(userMessage) : '';
+    const systemPrompt = this.buildSystemPrompt(tools, ragContext);
+
     const context = { tenantId, userId };
 
     let result: ChatCompletionResult;
@@ -693,7 +747,12 @@ Hora actual: ${new Date().toISOString()}`;
   ): AsyncGenerator<ToolStreamEvent> {
     const { provider, model, apiKey } = this.resolveProvider(params.provider, params.model);
     const tools = getAllTools();
-    const systemPrompt = this.buildSystemPrompt(tools);
+
+    // RAG: retrieve relevant knowledge for the streaming tool-calling path
+    const userMessage = this.extractLastUserMessage(params.messages);
+    const ragContext = userMessage ? await knowledgeBase.buildContext(userMessage) : '';
+    const systemPrompt = this.buildSystemPrompt(tools, ragContext);
+
     const context = { tenantId, userId };
 
     let totalContent = '';

@@ -142,8 +142,8 @@ export default defineConfig(({ mode }) => ({
         ],
 
         navigateFallback: "/index.html",
-        navigateFallbackAllowlist: [/^\/(?!api\/).*$/],
-        navigateFallbackDenylist: [/^\/api\//, /^\/rest\//],
+        navigateFallbackAllowlist: [/^\/(?!api\/|go2rtc\/|provisioning\/).*$/],
+        navigateFallbackDenylist: [/^\/api\//, /^\/rest\//, /^\/go2rtc\//, /^\/provisioning\//],
 
         runtimeCaching: [
           // Supabase: never cache

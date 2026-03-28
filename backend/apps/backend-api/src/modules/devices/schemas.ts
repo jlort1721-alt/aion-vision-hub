@@ -102,7 +102,9 @@ export const deviceFiltersSchema = z.object({
   type: z.enum(deviceTypes).optional(),
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(500).default(100),
-});
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+  search: z.string().optional(),
+}).passthrough();
 
 export type DeviceFilters = z.infer<typeof deviceFiltersSchema>;
 

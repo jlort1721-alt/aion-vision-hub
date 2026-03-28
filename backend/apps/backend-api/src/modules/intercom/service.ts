@@ -1,6 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { intercomDevices, intercomCalls } from '../../db/schema/index.js';
+import { NotFoundError } from '@aion/shared-contracts';
 import type { CreateIntercomDeviceInput, UpdateIntercomDeviceInput, IntercomFilters, CreateCallLogInput, CallLogFilters } from './schemas.js';
 
 class IntercomService {
@@ -14,7 +15,7 @@ class IntercomService {
   async getDeviceById(id: string, tenantId: string) {
     const [item] = await db.select().from(intercomDevices)
       .where(and(eq(intercomDevices.id, id), eq(intercomDevices.tenantId, tenantId))).limit(1);
-    if (!item) throw new Error(`Intercom device ${id} not found`);
+    if (!item) throw new NotFoundError('Intercom device', id);
     return item;
   }
 
@@ -26,14 +27,14 @@ class IntercomService {
   async updateDevice(id: string, data: UpdateIntercomDeviceInput, tenantId: string) {
     const [device] = await db.update(intercomDevices).set({ ...data, updatedAt: new Date() })
       .where(and(eq(intercomDevices.id, id), eq(intercomDevices.tenantId, tenantId))).returning();
-    if (!device) throw new Error(`Intercom device ${id} not found`);
+    if (!device) throw new NotFoundError('Intercom device', id);
     return device;
   }
 
   async deleteDevice(id: string, tenantId: string) {
     const [device] = await db.delete(intercomDevices)
       .where(and(eq(intercomDevices.id, id), eq(intercomDevices.tenantId, tenantId))).returning();
-    if (!device) throw new Error(`Intercom device ${id} not found`);
+    if (!device) throw new NotFoundError('Intercom device', id);
   }
 
   async listCalls(tenantId: string, filters?: CallLogFilters) {

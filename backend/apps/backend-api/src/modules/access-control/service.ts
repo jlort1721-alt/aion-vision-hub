@@ -1,6 +1,7 @@
 import { eq, and, ilike } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { accessPeople, accessVehicles, accessLogs } from '../../db/schema/index.js';
+import { NotFoundError } from '@aion/shared-contracts';
 import type { CreatePersonInput, UpdatePersonInput, PersonFilters, CreateVehicleInput, CreateAccessLogInput, AccessLogFilters } from './schemas.js';
 
 class AccessControlService {
@@ -17,7 +18,7 @@ class AccessControlService {
   async getPersonById(id: string, tenantId: string) {
     const [item] = await db.select().from(accessPeople)
       .where(and(eq(accessPeople.id, id), eq(accessPeople.tenantId, tenantId))).limit(1);
-    if (!item) throw new Error(`Person ${id} not found`);
+    if (!item) throw new NotFoundError('Person', id);
     return item;
   }
 
@@ -29,14 +30,14 @@ class AccessControlService {
   async updatePerson(id: string, data: UpdatePersonInput, tenantId: string) {
     const [person] = await db.update(accessPeople).set({ ...data, updatedAt: new Date() })
       .where(and(eq(accessPeople.id, id), eq(accessPeople.tenantId, tenantId))).returning();
-    if (!person) throw new Error(`Person ${id} not found`);
+    if (!person) throw new NotFoundError('Person', id);
     return person;
   }
 
   async deletePerson(id: string, tenantId: string) {
     const [person] = await db.delete(accessPeople)
       .where(and(eq(accessPeople.id, id), eq(accessPeople.tenantId, tenantId))).returning();
-    if (!person) throw new Error(`Person ${id} not found`);
+    if (!person) throw new NotFoundError('Person', id);
   }
 
   // ── Vehicles ──
@@ -54,7 +55,7 @@ class AccessControlService {
   async deleteVehicle(id: string, tenantId: string) {
     const [vehicle] = await db.delete(accessVehicles)
       .where(and(eq(accessVehicles.id, id), eq(accessVehicles.tenantId, tenantId))).returning();
-    if (!vehicle) throw new Error(`Vehicle ${id} not found`);
+    if (!vehicle) throw new NotFoundError('Vehicle', id);
   }
 
   // ── Access Logs ──

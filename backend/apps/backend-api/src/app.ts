@@ -72,6 +72,10 @@ import { registerEvidenceRoutes } from './modules/evidence/routes.js';
 import { registerDataImportRoutes } from './modules/data-import/routes.js';
 import { registerGdprRoutes } from './modules/gdpr/routes.js';
 import { registerAnomalyDetectionRoutes } from './modules/anomaly-detection/routes.js';
+import { registerKnowledgeBaseRoutes } from './modules/knowledge-base/routes.js';
+import { registerInternalAgentRoutes } from './modules/internal-agent/routes.js';
+import { internalAgent } from './modules/internal-agent/service.js';
+import { registerClaveBridgeRoutes } from './modules/clave-bridge/routes.js';
 import websocketPlugin from './plugins/websocket.js';
 
 const loggerOpts = { name: 'aion-api', level: config.LOG_LEVEL };
@@ -235,12 +239,28 @@ export async function buildApp() {
   await app.register(registerGdprRoutes, { prefix: '/gdpr' });
   // Anomaly detection (AI-powered pattern analysis)
   await app.register(registerAnomalyDetectionRoutes, { prefix: '/anomalies' });
+  // Knowledge base (RAG pipeline for AION AI agent)
+  await app.register(registerKnowledgeBaseRoutes, { prefix: '/knowledge' });
+
+  // Internal monitoring agent (background health checks)
+  await app.register(registerInternalAgentRoutes, { prefix: '/internal-agent' });
+
+  // CLAVE bidirectional bridge (voice commands, event push, status)
+  await app.register(registerClaveBridgeRoutes, { prefix: '/clave' });
 
   // Public webhook routes (no JWT — Meta sends requests without auth)
   await app.register(registerWebhookRoutes, { prefix: '/webhooks/whatsapp' });
 
   // WebSocket for real-time updates (JWT via query param)
   await app.register(websocketPlugin);
+
+  // Start internal monitoring agent (5 min interval)
+  internalAgent.start(300000);
+
+  // Graceful shutdown
+  app.addHook('onClose', async () => {
+    internalAgent.stop();
+  });
 
   return app;
 }

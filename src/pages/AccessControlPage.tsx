@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import DataImportDialog from '@/components/shared/DataImportDialog';
 import type { ImportEntityType } from '@/services/data-import-api';
+import { PageShell } from '@/components/shared/PageShell';
 
 // ── Access Schedule Types & Helpers ──────────────────────────
 
@@ -78,6 +79,7 @@ export default function AccessControlPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [importType, setImportType] = useState<ImportEntityType>('residents');
   const [form, setForm] = useState({ full_name: '', type: 'resident', section_id: '', unit: '', phone: '', document_id: '', notes: '' });
+  const [deletePersonId, setDeletePersonId] = useState<string | null>(null);
 
   // Schedule rules state
   const [schedules, setSchedules] = useState<AccessSchedule[]>(() => loadSchedules());
@@ -154,20 +156,21 @@ export default function AccessControlPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)]">
+    <PageShell
+      title={t('access.title')}
+      description={t('access.subtitle')}
+      icon={<Shield className="h-5 w-5" />}
+      actions={
+        <>
+          <Button variant="outline" size="sm" onClick={() => { setImportType('residents'); setImportOpen(true); }}><FileUp className="mr-1 h-3 w-3" /> Import</Button>
+          <Button variant="outline" size="sm" onClick={() => toast.info('Export requires selecting a report type in the Reports tab')}><Download className="mr-1 h-3 w-3" /> {t('common.export')}</Button>
+          <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="mr-1 h-3 w-3" /> {t('access.add_person')}</Button>
+        </>
+      }
+    >
+    <div className="flex h-full">
       <div className={cn("flex-1 flex flex-col border-r", selected && "max-w-[60%]")}>
         <div className="px-4 py-3 border-b space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-lg font-bold flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /> {t('access.title')}</h1>
-              <p className="text-xs text-muted-foreground">{t('access.subtitle')}</p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => { setImportType('residents'); setImportOpen(true); }}><FileUp className="mr-1 h-3 w-3" /> Import</Button>
-              <Button variant="outline" size="sm" onClick={() => toast.info('Export requires selecting a report type in the Reports tab')}><Download className="mr-1 h-3 w-3" /> {t('common.export')}</Button>
-              <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="mr-1 h-3 w-3" /> {t('access.add_person')}</Button>
-            </div>
-          </div>
           <div className="grid grid-cols-4 gap-2">
             <Card className="p-2"><div className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('access.total_people')}</p><p className="text-lg font-bold">{people.length}</p></div></div></Card>
             <Card className="p-2"><div className="flex items-center gap-2"><UserCheck className="h-4 w-4 text-success" /><div><p className="text-xs text-muted-foreground">{t('access.residents')}</p><p className="text-lg font-bold">{people.filter((p: any) => p.type === 'resident').length}</p></div></div></Card>
@@ -248,7 +251,7 @@ export default function AccessControlPage() {
                             <DropdownMenuItem onClick={() => setSelectedPerson(person.id)}><Eye className="mr-2 h-3 w-3" /> {t('common.view')}</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => toast.info('Edit functionality — select the person and use the Edit button in the detail panel')}><Pencil className="mr-2 h-3 w-3" /> {t('common.edit')}</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={() => { if (confirm('Delete?')) remove.mutate(person.id); }}><Trash2 className="mr-2 h-3 w-3" /> {t('common.delete')}</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => setDeletePersonId(person.id)}><Trash2 className="mr-2 h-3 w-3" /> {t('common.delete')}</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -541,7 +544,7 @@ export default function AccessControlPage() {
           )}
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => { setForm({ full_name: selected.full_name, type: selected.type, section_id: selected.section_id || '', unit: selected.unit || '', phone: selected.phone || '', document_id: selected.document_id || '', notes: selected.notes || '' }); setAddOpen(true); }}><Pencil className="mr-1 h-3 w-3" /> {t('common.edit')}</Button>
-            <Button variant="outline" className="text-destructive" onClick={() => { if (confirm('Delete?')) { remove.mutate(selected.id); setSelectedPerson(null); } }}><Trash2 className="h-3 w-3" /></Button>
+            <Button variant="outline" className="text-destructive" onClick={() => setDeletePersonId(selected.id)}><Trash2 className="h-3 w-3" /></Button>
           </div>
         </div>
       )}
@@ -717,6 +720,34 @@ export default function AccessControlPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Delete Person Confirmation ─── */}
+      <AlertDialog open={!!deletePersonId} onOpenChange={open => { if (!open) setDeletePersonId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Person</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this person? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deletePersonId) {
+                  remove.mutate(deletePersonId);
+                  if (selectedPerson === deletePersonId) setSelectedPerson(null);
+                  setDeletePersonId(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+    </PageShell>
   );
 }

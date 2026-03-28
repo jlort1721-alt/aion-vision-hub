@@ -216,7 +216,14 @@ class ApiClient {
       return undefined as T;
     }
 
-    return response.json();
+    const json = await response.json();
+
+    // Unwrap backend envelope: { success: true, data: ... }
+    if (json && typeof json === 'object' && 'success' in json && 'data' in json) {
+      return json.data as T;
+    }
+
+    return json as T;
   }
 
   // ── Public API Methods ─────────────────────────────────

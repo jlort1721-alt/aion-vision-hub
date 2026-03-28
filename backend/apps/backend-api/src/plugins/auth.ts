@@ -6,8 +6,10 @@ import { db } from '../db/client.js';
 import { profiles, userRoles } from '../db/schema/index.js';
 import { verifySupabaseToken } from '../lib/supabase.js';
 import { ApiKeyService } from '../modules/api-keys/service.js';
+import { RedisCache } from '../lib/cache.js';
 
 const apiKeyService = new ApiKeyService();
+const userContextCache = new RedisCache<{ tenantId: string; role: UserRole }>('user', 300_000);
 
 export interface JWTPayload {
   sub: string;
@@ -44,6 +46,10 @@ function isPublicRoute(url: string): boolean {
  * Look up user profile and role from the database by auth user ID.
  */
 async function getUserContext(authUserId: string): Promise<{ tenantId: string; role: UserRole } | null> {
+  // Check Redis cache first
+  const cached = await userContextCache.get(authUserId);
+  if (cached) return cached;
+
   const [profile] = await db
     .select({ id: profiles.id, userId: profiles.userId, tenantId: profiles.tenantId })
     .from(profiles)
@@ -58,10 +64,15 @@ async function getUserContext(authUserId: string): Promise<{ tenantId: string; r
     .where(eq(userRoles.userId, authUserId))
     .limit(1);
 
-  return {
+  const result = {
     tenantId: profile.tenantId,
     role: (roleRecord?.role || 'viewer') as UserRole,
   };
+
+  // Cache user context for 5 minutes
+  await userContextCache.set(authUserId, result);
+
+  return result;
 }
 
 async function authPlugin(app: FastifyInstance) {

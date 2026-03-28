@@ -21,11 +21,6 @@ interface DeviceFilters {
   search?: string;
 }
 
-interface DeviceListResponse {
-  data: Device[];
-  meta?: { total: number };
-}
-
 interface TestConnectionParams {
   ip_address: string;
   brand: string;
@@ -53,8 +48,10 @@ export function useDevices(filters?: DeviceFilters) {
       if (filters?.type) params.type = filters.type;
       if (filters?.search) params.search = filters.search;
 
-      const response = await apiClient.get<DeviceListResponse>('/devices', params);
-      return response.data;
+      const response = await apiClient.get<Device[] | { items?: Device[]; data?: Device[] }>('/devices', params);
+      // After apiClient unwraps envelope, response is either [...] or { items: [...], meta: {...} }
+      const items: Device[] = Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
+      return items;
     },
     staleTime: STALE_TIMES.DYNAMIC,
     enabled: isAuthenticated,

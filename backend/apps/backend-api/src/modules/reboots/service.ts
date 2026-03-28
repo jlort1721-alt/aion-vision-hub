@@ -1,6 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { rebootTasks } from '../../db/schema/index.js';
+import { NotFoundError } from '@aion/shared-contracts';
 import type { CreateRebootTaskInput, CompleteRebootInput, RebootFilters } from './schemas.js';
 
 class RebootService {
@@ -16,7 +17,7 @@ class RebootService {
   async getById(id: string, tenantId: string) {
     const [item] = await db.select().from(rebootTasks)
       .where(and(eq(rebootTasks.id, id), eq(rebootTasks.tenantId, tenantId))).limit(1);
-    if (!item) throw new Error(`Reboot task ${id} not found`);
+    if (!item) throw new NotFoundError('Reboot task', id);
     return item;
   }
 
@@ -32,7 +33,7 @@ class RebootService {
       recoveryTimeSeconds: data.recoveryTimeSeconds,
       completedAt: new Date(),
     }).where(and(eq(rebootTasks.id, id), eq(rebootTasks.tenantId, tenantId))).returning();
-    if (!task) throw new Error(`Reboot task ${id} not found`);
+    if (!task) throw new NotFoundError('Reboot task', id);
     return task;
   }
 }

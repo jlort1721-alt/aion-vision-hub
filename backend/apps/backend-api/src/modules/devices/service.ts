@@ -37,7 +37,7 @@ function decryptCredential(value: string | null | undefined): string | null {
 }
 
 /**
- * Decrypt username and password on a device record for API responses.
+ * Decrypt username and password on a device record (internal use only).
  */
 function decryptDeviceCredentials(device: Record<string, unknown>): Record<string, unknown> {
   const result = { ...device };
@@ -48,6 +48,18 @@ function decryptDeviceCredentials(device: Record<string, unknown>): Record<strin
     result.password = decryptCredential(result.password);
   }
   return result;
+}
+
+/**
+ * Strip sensitive credentials from a device record for public API responses.
+ * Replaces username/password with a `credentials_available` boolean flag.
+ */
+function stripCredentials(device: Record<string, unknown>): Record<string, unknown> {
+  const { username, password, ...safe } = device;
+  return {
+    ...safe,
+    credentials_available: Boolean(username || password),
+  };
 }
 
 /**
@@ -145,7 +157,7 @@ export class DeviceService {
       .limit(perPage)
       .offset(offset);
 
-    const items = rows.map(r => enrichDevice(decryptDeviceCredentials(r.device), r.wanIp));
+    const items = rows.map(r => stripCredentials(enrichDevice(decryptDeviceCredentials(r.device), r.wanIp)));
 
     return {
       items,
@@ -174,7 +186,48 @@ export class DeviceService {
       .limit(1);
 
     if (!row) throw new NotFoundError('Device', id);
+    return stripCredentials(enrichDevice(decryptDeviceCredentials(row.device), row.wanIp));
+  }
+
+  /**
+   * Get a single device by ID with credentials included (internal use only).
+   * Used by routes that need device credentials for stream registration, validation, etc.
+   */
+  async getByIdWithCredentials(id: string, tenantId: string) {
+    const [row] = await db
+      .select({
+        device: devices,
+        wanIp: sites.wanIp,
+      })
+      .from(devices)
+      .leftJoin(sites, eq(devices.siteId, sites.id))
+      .where(and(eq(devices.id, id), eq(devices.tenantId, tenantId)))
+      .limit(1);
+
+    if (!row) throw new NotFoundError('Device', id);
     return enrichDevice(decryptDeviceCredentials(row.device), row.wanIp);
+  }
+
+  /**
+   * Get decrypted credentials for a device (admin-only endpoint).
+   * Returns { username, password } with actual values.
+   */
+  async getCredentials(id: string, tenantId: string) {
+    const [row] = await db
+      .select({
+        username: devices.username,
+        password: devices.password,
+      })
+      .from(devices)
+      .where(and(eq(devices.id, id), eq(devices.tenantId, tenantId)))
+      .limit(1);
+
+    if (!row) throw new NotFoundError('Device', id);
+
+    return {
+      username: decryptCredential(row.username) ?? null,
+      password: decryptCredential(row.password) ?? null,
+    };
   }
 
   /**

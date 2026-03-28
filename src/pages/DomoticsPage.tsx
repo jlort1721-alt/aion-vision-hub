@@ -9,6 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Zap, MoreHorizontal, Power, RefreshCw, Settings, Search, Plus, DoorOpen, Shield, Siren, Lightbulb, CircuitBoard, Activity, ToggleLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 
 import { useSections, useDomoticDevices, useDomoticMutations, useDomoticActions } from '@/hooks/use-module-data';
 import { useEWeLinkAuth, useEWeLinkControl, useEWeLinkSync, useEWeLinkHealth, useEWeLinkLogs } from '@/hooks/use-ewelink';
@@ -43,6 +47,7 @@ export default function DomoticsPage() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [logsOpen, setLogsOpen] = useState(false);
   const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null);
+  const [deleteDeviceId, setDeleteDeviceId] = useState<string | null>(null);
 
   const selectedDevice = useMemo(() => 
     selectedDeviceId ? devices.find((d: any) => d.id === selectedDeviceId) : null,
@@ -135,7 +140,7 @@ export default function DomoticsPage() {
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleTestConnection(row); }}>
               <RefreshCw className="mr-2 h-3 w-3" /> {t('domotics.test_connection')}
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); if (confirm('Delete?')) remove.mutate(row.id); }}>
+            <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteDeviceId(row.id); }}>
               <Settings className="mr-2 h-3 w-3" /> {t('common.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -223,6 +228,32 @@ export default function DomoticsPage() {
           )}
         </div>
       </PageShell>
+
+      {/* ── Delete Device Confirmation ─── */}
+      <AlertDialog open={!!deleteDeviceId} onOpenChange={open => { if (!open) setDeleteDeviceId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('common.delete')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this device? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteDeviceId) {
+                  remove.mutate(deleteDeviceId);
+                  setDeleteDeviceId(null);
+                }
+              }}
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
