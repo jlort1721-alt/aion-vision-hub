@@ -11,7 +11,7 @@ export async function registerIntegrationRoutes(app: FastifyInstance) {
   // ── GET / — List integrations for tenant ────────────────────
   app.get(
     '/',
-    { preHandler: [requireRole('tenant_admin', 'operator', 'viewer')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator', 'viewer')] },
     async (request) => {
       const items = await integrationService.list(request.tenantId);
 
@@ -26,7 +26,7 @@ export async function registerIntegrationRoutes(app: FastifyInstance) {
   // ── GET /:id — Get single integration ───────────────────────
   app.get<{ Params: { id: string } }>(
     '/:id',
-    { preHandler: [requireRole('tenant_admin', 'operator', 'viewer')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator', 'viewer')] },
     async (request) => {
       const integration = await integrationService.getById(
         request.params.id,
@@ -40,7 +40,7 @@ export async function registerIntegrationRoutes(app: FastifyInstance) {
   // ── POST / — Create integration ─────────────────────────────
   app.post(
     '/',
-    { preHandler: [requireRole('tenant_admin')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin')] },
     async (request, reply) => {
       const input = createIntegrationSchema.parse(request.body);
       const integration = await integrationService.create(request.tenantId, input);
@@ -60,7 +60,7 @@ export async function registerIntegrationRoutes(app: FastifyInstance) {
   // ── PATCH /:id — Update integration ─────────────────────────
   app.patch<{ Params: { id: string } }>(
     '/:id',
-    { preHandler: [requireRole('tenant_admin')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin')] },
     async (request) => {
       const input = updateIntegrationSchema.parse(request.body);
       const integration = await integrationService.update(
@@ -80,7 +80,7 @@ export async function registerIntegrationRoutes(app: FastifyInstance) {
   // ── DELETE /:id — Delete integration ────────────────────────
   app.delete<{ Params: { id: string } }>(
     '/:id',
-    { preHandler: [requireRole('tenant_admin')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin')] },
     async (request, reply) => {
       await integrationService.delete(request.params.id, request.tenantId);
 
@@ -93,7 +93,7 @@ export async function registerIntegrationRoutes(app: FastifyInstance) {
   // ── POST /:id/test — Test integration connectivity ──────────
   app.post<{ Params: { id: string } }>(
     '/:id/test',
-    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
     async (request) => {
       const result = await integrationService.testConnectivity(
         request.params.id,

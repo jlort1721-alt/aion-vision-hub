@@ -8,7 +8,7 @@ export async function registerMCPBridgeRoutes(app: FastifyInstance) {
   // ── GET /tools — List available MCP tools for tenant ────────
   app.get(
     '/tools',
-    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
     async (request) => {
       const tools = await mcpBridgeService.listTools(request.tenantId);
 
@@ -23,7 +23,7 @@ export async function registerMCPBridgeRoutes(app: FastifyInstance) {
   // ── GET /connectors — List MCP connectors for tenant ────────
   app.get(
     '/connectors',
-    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
     async (request) => {
       const connectors = await mcpBridgeService.listConnectors(request.tenantId);
 
@@ -38,7 +38,7 @@ export async function registerMCPBridgeRoutes(app: FastifyInstance) {
   // ── POST /execute — Execute an MCP tool ─────────────────────
   app.post(
     '/execute',
-    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
     async (request) => {
       const input = executeToolSchema.parse(request.body);
       const result = await mcpBridgeService.execute(request.tenantId, input, request.userId);

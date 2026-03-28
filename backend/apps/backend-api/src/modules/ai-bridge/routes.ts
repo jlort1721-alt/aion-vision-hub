@@ -12,7 +12,7 @@ export async function registerAIBridgeRoutes(app: FastifyInstance) {
   // ── POST /chat — Send chat message to AI provider ───────────
   app.post(
     '/chat',
-    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
     async (request) => {
       const input = chatRequestSchema.parse(request.body);
 
@@ -27,7 +27,7 @@ export async function registerAIBridgeRoutes(app: FastifyInstance) {
   // ── POST /chat/stream — Streaming chat response (SSE) ───────
   app.post(
     '/chat/stream',
-    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
     async (request, reply) => {
       const input = chatStreamRequestSchema.parse(request.body);
 
@@ -82,7 +82,7 @@ export async function registerAIBridgeRoutes(app: FastifyInstance) {
   // ── GET /usage — Get AI usage stats for tenant ──────────────
   app.get(
     '/usage',
-    { preHandler: [requireRole('tenant_admin')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin')] },
     async (request) => {
       const query = usageQuerySchema.parse(request.query);
       const usage = await aiBridgeService.getUsage(request.tenantId, query);
@@ -94,7 +94,7 @@ export async function registerAIBridgeRoutes(app: FastifyInstance) {
   // ── GET /shift-summary — AI-generated shift summary ────────
   app.get(
     '/shift-summary',
-    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
     async (request) => {
       const now = new Date();
       const last8h = new Date(now.getTime() - 8 * 60 * 60 * 1000);

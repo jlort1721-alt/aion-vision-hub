@@ -36,7 +36,7 @@ export default function SettingsPage() {
     queryKey: ['tenant'],
     queryFn: async () => {
       const response = await apiClient.get<any>('/tenants/current');
-      return response.data;
+      return response;
     },
     enabled: !!profile,
   });
@@ -46,7 +46,7 @@ export default function SettingsPage() {
     queryKey: ['feature_flags'],
     queryFn: async () => {
       const response = await apiClient.get<any>('/database-records', { category: 'feature_flag' });
-      return Array.isArray(response.data) ? response.data : [];
+      return Array.isArray(response) ? response : [];
     },
   });
 

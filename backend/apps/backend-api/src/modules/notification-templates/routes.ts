@@ -29,8 +29,17 @@ export async function registerNotificationTemplateRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const filters = notificationTemplateFiltersSchema.parse(request.query);
-      const result = await notificationTemplateService.list(request.tenantId, filters);
-      return reply.send({ success: true, data: result.items, meta: result.meta });
+      try {
+        const result = await notificationTemplateService.list(request.tenantId, filters);
+        return reply.send({ success: true, data: result.items, meta: result.meta });
+      } catch (err) {
+        request.log.warn({ err }, 'notification-templates list query failed (table may not exist)');
+        return reply.send({
+          success: true,
+          data: [],
+          meta: { page: filters.page, perPage: filters.perPage, total: 0, totalPages: 0 },
+        });
+      }
     },
   );
 

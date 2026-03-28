@@ -78,6 +78,15 @@ export async function registerPatrolRoutes(app: FastifyInstance) {
   // CHECKPOINTS
   // ══════════════════════════════════════════════════════════
 
+  // List all checkpoints for the tenant
+  app.get(
+    '/checkpoints',
+    async (request, reply) => {
+      const data = await patrolService.listCheckpoints(request.tenantId);
+      return reply.send({ success: true, data });
+    },
+  );
+
   app.get<{ Params: { routeId: string } }>(
     '/routes/:routeId/checkpoints',
     async (request, reply) => {

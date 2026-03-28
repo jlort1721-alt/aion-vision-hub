@@ -196,6 +196,15 @@ export async function registerAlertRoutes(app: FastifyInstance) {
     },
   );
 
+  // Alias: /notification-channels maps to the same handler as /channels
+  app.get(
+    '/notification-channels',
+    async (request, reply) => {
+      const data = await alertService.listChannels(request.tenantId);
+      return reply.send({ success: true, data });
+    },
+  );
+
   app.post<{ Body: CreateNotificationChannelInput }>(
     '/channels',
     { preHandler: [requireRole('tenant_admin', 'super_admin')] },

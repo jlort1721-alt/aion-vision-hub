@@ -6,10 +6,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bell, BellRing, CheckCircle, AlertTriangle, AlertCircle, Shield, Plus,
-  Clock, ArrowUpCircle, Mail, MessageSquare, Globe, Settings
+  Clock, ArrowUpCircle, Mail, MessageSquare, Globe, Settings, Loader2
 } from "lucide-react";
 import EscalationConfigPanel from "@/components/alerts/EscalationConfigPanel";
 import { PageShell } from "@/components/shared/PageShell";
@@ -89,6 +94,49 @@ export default function AlertsPage() {
   const { data: channelsData } = useQuery({
     queryKey: ["alerts", "channels"],
     queryFn: () => notificationChannelsApi.list(),
+  });
+
+  // ── Create Rule ───────────────────────────────────────────
+  const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
+  const [ruleForm, setRuleForm] = useState({ name: "", condition: "", severity: "medium", isActive: true });
+  const createRuleMutation = useMutation({
+    mutationFn: (data: typeof ruleForm) =>
+      alertRulesApi.create({ name: data.name, condition: data.condition, severity: data.severity, isActive: data.isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alerts", "rules"] });
+      toast({ title: "Rule created" });
+      setRuleDialogOpen(false);
+      setRuleForm({ name: "", condition: "", severity: "medium", isActive: true });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
+  });
+
+  // ── Create Channel ──────────────────────────────────────
+  const [channelDialogOpen, setChannelDialogOpen] = useState(false);
+  const [channelForm, setChannelForm] = useState({ name: "", type: "email", config: "{}" });
+  const createChannelMutation = useMutation({
+    mutationFn: (data: typeof channelForm) => {
+      let parsedConfig: unknown = {};
+      try { parsedConfig = JSON.parse(data.config); } catch { /* keep empty */ }
+      return notificationChannelsApi.create({ name: data.name, type: data.type, config: parsedConfig });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alerts", "channels"] });
+      toast({ title: "Channel created" });
+      setChannelDialogOpen(false);
+      setChannelForm({ name: "", type: "email", config: "{}" });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
+  });
+
+  // ── Toggle Channel ──────────────────────────────────────
+  const toggleChannelMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      notificationChannelsApi.update(id, { isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alerts", "channels"] });
+      toast({ title: "Channel updated" });
+    },
   });
 
   const stats = statsData?.data;
@@ -228,7 +276,7 @@ export default function AlertsPage() {
         {/* ── Rules ────────────────────────────────────────── */}
         <TabsContent value="rules" className="space-y-4">
           <div className="flex justify-end">
-            <Button className="gap-1">
+            <Button className="gap-1" onClick={() => setRuleDialogOpen(true)}>
               <Plus className="h-4 w-4" /> New Rule
             </Button>
           </div>
@@ -282,7 +330,7 @@ export default function AlertsPage() {
         {/* ── Notification Channels ────────────────────────── */}
         <TabsContent value="channels" className="space-y-4">
           <div className="flex justify-end">
-            <Button className="gap-1">
+            <Button className="gap-1" onClick={() => setChannelDialogOpen(true)}>
               <Plus className="h-4 w-4" /> New Channel
             </Button>
           </div>
@@ -316,7 +364,7 @@ export default function AlertsPage() {
                           )}
                         </div>
                       </div>
-                      <Switch checked={channel.isActive} />
+                      <Switch checked={channel.isActive} onCheckedChange={(checked) => toggleChannelMutation.mutate({ id: channel.id, isActive: checked })} />
                     </div>
                   </CardContent>
                 </Card>
@@ -326,6 +374,80 @@ export default function AlertsPage() {
         </TabsContent>
       </Tabs>
     </div>
+
+      {/* New Rule Dialog */}
+      <Dialog open={ruleDialogOpen} onOpenChange={setRuleDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>New Alert Rule</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input value={ruleForm.name} onChange={(e) => setRuleForm(f => ({ ...f, name: e.target.value }))} placeholder="Rule name" />
+            </div>
+            <div className="space-y-2">
+              <Label>Condition Description</Label>
+              <Textarea value={ruleForm.condition} onChange={(e) => setRuleForm(f => ({ ...f, condition: e.target.value }))} placeholder="Describe the alert condition" />
+            </div>
+            <div className="space-y-2">
+              <Label>Severity</Label>
+              <Select value={ruleForm.severity} onValueChange={(v) => setRuleForm(f => ({ ...f, severity: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="info">Info</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={ruleForm.isActive} onCheckedChange={(v) => setRuleForm(f => ({ ...f, isActive: v }))} />
+              <Label>Active</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRuleDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => createRuleMutation.mutate(ruleForm)} disabled={!ruleForm.name || createRuleMutation.isPending}>
+              {createRuleMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Create Rule
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Channel Dialog */}
+      <Dialog open={channelDialogOpen} onOpenChange={setChannelDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>New Notification Channel</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input value={channelForm.name} onChange={(e) => setChannelForm(f => ({ ...f, name: e.target.value }))} placeholder="Channel name" />
+            </div>
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select value={channelForm.type} onValueChange={(v) => setChannelForm(f => ({ ...f, type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="push">Push</SelectItem>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Config (JSON)</Label>
+              <Textarea value={channelForm.config} onChange={(e) => setChannelForm(f => ({ ...f, config: e.target.value }))} placeholder='{"email": "admin@example.com"}' rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChannelDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => createChannelMutation.mutate(channelForm)} disabled={!channelForm.name || createChannelMutation.isPending}>
+              {createChannelMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Create Channel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }

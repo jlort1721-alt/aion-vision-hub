@@ -113,6 +113,14 @@ export class PatrolService {
   // CHECKPOINTS
   // ══════════════════════════════════════════════════════════
 
+  async listCheckpoints(tenantId: string) {
+    return db
+      .select()
+      .from(patrolCheckpoints)
+      .where(eq(patrolCheckpoints.tenantId, tenantId))
+      .orderBy(patrolCheckpoints.order);
+  }
+
   async listCheckpointsByRoute(routeId: string, tenantId: string) {
     return db
       .select()

@@ -24,7 +24,7 @@ export async function registerShiftRoutes(app: FastifyInstance) {
   // ══════════════════════════════════════════════════════════
 
   app.get<{ Querystring: ShiftFilters }>(
-    '/shifts',
+    '/',
     async (request, reply) => {
       const filters = shiftFiltersSchema.parse(request.query);
       const result = await shiftService.listShifts(request.tenantId, filters);
@@ -33,7 +33,7 @@ export async function registerShiftRoutes(app: FastifyInstance) {
   );
 
   app.get<{ Params: { id: string } }>(
-    '/shifts/:id',
+    '/:id',
     async (request, reply) => {
       const data = await shiftService.getShiftById(request.params.id, request.tenantId);
       return reply.send({ success: true, data });
@@ -41,7 +41,7 @@ export async function registerShiftRoutes(app: FastifyInstance) {
   );
 
   app.post<{ Body: CreateShiftInput }>(
-    '/shifts',
+    '/',
     { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const body = createShiftSchema.parse(request.body);
@@ -52,7 +52,7 @@ export async function registerShiftRoutes(app: FastifyInstance) {
   );
 
   app.patch<{ Params: { id: string }; Body: UpdateShiftInput }>(
-    '/shifts/:id',
+    '/:id',
     { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const body = updateShiftSchema.parse(request.body);
@@ -63,7 +63,7 @@ export async function registerShiftRoutes(app: FastifyInstance) {
   );
 
   app.delete<{ Params: { id: string } }>(
-    '/shifts/:id',
+    '/:id',
     { preHandler: [requireRole('tenant_admin', 'super_admin')] },
     async (request, reply) => {
       await shiftService.deleteShift(request.params.id, request.tenantId);

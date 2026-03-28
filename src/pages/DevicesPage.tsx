@@ -11,6 +11,7 @@ import { useI18n } from '@/contexts/I18nContext';
 import DeviceFormDialog from '@/components/devices/DeviceFormDialog';
 import DeleteDeviceDialog from '@/components/devices/DeleteDeviceDialog';
 import CloudAccountsPanel from '@/components/devices/CloudAccountsPanel';
+import DataImportDialog from '@/components/shared/DataImportDialog';
 import { lazy, Suspense } from 'react';
 const EWeLinkCloudPanel = lazy(() => import('@/components/devices/EWeLinkCloudPanel'));
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -34,6 +35,7 @@ export default function DevicesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editDevice, setEditDevice] = useState<any>(null);
   const [deleteDevice, setDeleteDevice] = useState<any>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data: devices = [], isLoading } = useDevices();
   const { data: sites = [] } = useSites();
@@ -66,7 +68,7 @@ export default function DevicesPage() {
       actions={
         pageTab === 'inventory' ? (
           <>
-            <Button variant="outline" size="sm"><Upload className="mr-1 h-3 w-3" /> {t('common.import')}</Button>
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="mr-1 h-3 w-3" /> {t('common.import')}</Button>
             <Button size="sm" onClick={openAdd}><Plus className="mr-1 h-3 w-3" /> {t('devices.add_device')}</Button>
           </>
         ) : undefined
@@ -176,7 +178,16 @@ export default function DevicesPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setSelectedDevice(device.id)}><Eye className="mr-2 h-3 w-3" /> {t('devices.view_details')}</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => openEdit(device)}><Pencil className="mr-2 h-3 w-3" /> {t('common.edit')}</DropdownMenuItem>
-                            <DropdownMenuItem><RefreshCw className="mr-2 h-3 w-3" /> {t('devices.test_connection')}</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+                              fetch(`${backendUrl}/api/v1/devices/${device.id}/test`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+                                .then(r => r.json())
+                                .then(d => {
+                                  if (d.data?.reachable) toast.success(`Connected — Latency: ${d.data.latencyMs}ms`);
+                                  else toast.error(`Unreachable: ${d.data?.error || 'No response'}`);
+                                })
+                                .catch(() => toast.error('Error testing connection'));
+                            }}><RefreshCw className="mr-2 h-3 w-3" /> {t('devices.test_connection')}</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-destructive" onClick={() => setDeleteDevice(device)}><Trash2 className="mr-2 h-3 w-3" /> {t('common.delete')}</DropdownMenuItem>
                           </DropdownMenuContent>
@@ -291,6 +302,7 @@ export default function DevicesPage() {
 
       <DeviceFormDialog open={formOpen} onOpenChange={setFormOpen} device={editDevice} />
       <DeleteDeviceDialog open={!!deleteDevice} onOpenChange={() => setDeleteDevice(null)} device={deleteDevice} onDeleted={() => setSelectedDevice(null)} />
+      <DataImportDialog open={importOpen} onOpenChange={setImportOpen} entityType="devices" />
     </div>
       )}
     </div>

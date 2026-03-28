@@ -21,7 +21,7 @@ export async function registerWhatsAppRoutes(app: FastifyInstance) {
   // ── GET /config — Get current WhatsApp config ───────────────
   app.get(
     '/config',
-    { preHandler: [requireRole('tenant_admin')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin')] },
     async (request) => {
       try {
         const config = await whatsappService.getConfig(request.tenantId);
@@ -45,7 +45,7 @@ export async function registerWhatsAppRoutes(app: FastifyInstance) {
   // ── PUT /config — Save WhatsApp config ──────────────────────
   app.put(
     '/config',
-    { preHandler: [requireRole('tenant_admin')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin')] },
     async (request) => {
       const input = waConfigSchema.parse(request.body);
       await whatsappService.saveConfig(request.tenantId, input);
@@ -66,7 +66,7 @@ export async function registerWhatsAppRoutes(app: FastifyInstance) {
   // ── GET /health — Health check ──────────────────────────────
   app.get(
     '/health',
-    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
     async (request) => {
       const result = await whatsappService.healthCheck(request.tenantId);
 
@@ -81,7 +81,7 @@ export async function registerWhatsAppRoutes(app: FastifyInstance) {
   // ── POST /test — Send test message ──────────────────────────
   app.post<{ Body: { to: string } }>(
     '/test',
-    { preHandler: [requireRole('tenant_admin')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin')] },
     async (request) => {
       const { to } = request.body as { to: string };
       const result = await whatsappService.sendMessage(
@@ -111,7 +111,7 @@ export async function registerWhatsAppRoutes(app: FastifyInstance) {
   // ── POST /messages — Send a message ─────────────────────────
   app.post(
     '/messages',
-    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
     async (request) => {
       const input = sendMessageSchema.parse(request.body);
       const result = await whatsappService.sendMessage(
@@ -134,7 +134,7 @@ export async function registerWhatsAppRoutes(app: FastifyInstance) {
   // ── POST /messages/quick-reply — Send quick reply ───────────
   app.post(
     '/messages/quick-reply',
-    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
     async (request) => {
       const input = quickReplySchema.parse(request.body);
       const result = await whatsappService.sendQuickReply(request.tenantId, input);
@@ -154,7 +154,7 @@ export async function registerWhatsAppRoutes(app: FastifyInstance) {
   // ── GET /conversations — List conversations ─────────────────
   app.get(
     '/conversations',
-    { preHandler: [requireRole('tenant_admin', 'operator', 'viewer')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator', 'viewer')] },
     async (request) => {
       const query = conversationQuerySchema.parse(request.query);
       const items = await whatsappService.listConversations(request.tenantId, query);
@@ -170,7 +170,7 @@ export async function registerWhatsAppRoutes(app: FastifyInstance) {
   // ── GET /conversations/:id — Get single conversation ────────
   app.get<{ Params: { id: string } }>(
     '/conversations/:id',
-    { preHandler: [requireRole('tenant_admin', 'operator', 'viewer')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator', 'viewer')] },
     async (request) => {
       const conversation = await whatsappService.getConversation(
         request.tenantId,
@@ -184,7 +184,7 @@ export async function registerWhatsAppRoutes(app: FastifyInstance) {
   // ── GET /conversations/:id/messages — Get messages ──────────
   app.get<{ Params: { id: string }; Querystring: { limit?: string; before?: string } }>(
     '/conversations/:id/messages',
-    { preHandler: [requireRole('tenant_admin', 'operator', 'viewer')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator', 'viewer')] },
     async (request) => {
       const query = messageQuerySchema.parse({
         conversationId: request.params.id,
@@ -203,7 +203,7 @@ export async function registerWhatsAppRoutes(app: FastifyInstance) {
   // ── POST /conversations/handoff — Handoff to human ──────────
   app.post(
     '/conversations/handoff',
-    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
     async (request) => {
       const input = handoffSchema.parse(request.body);
       await whatsappService.handoffToHuman(request.tenantId, input);
@@ -219,7 +219,7 @@ export async function registerWhatsAppRoutes(app: FastifyInstance) {
   // ── POST /conversations/close — Close conversation ──────────
   app.post(
     '/conversations/close',
-    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
     async (request) => {
       const input = closeConversationSchema.parse(request.body);
       await whatsappService.closeConversation(request.tenantId, input);
@@ -239,7 +239,7 @@ export async function registerWhatsAppRoutes(app: FastifyInstance) {
   // ── GET /templates — List synced templates ──────────────────
   app.get(
     '/templates',
-    { preHandler: [requireRole('tenant_admin', 'operator')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
     async (request) => {
       const templates = await whatsappService.listTemplates(request.tenantId);
 
@@ -254,7 +254,7 @@ export async function registerWhatsAppRoutes(app: FastifyInstance) {
   // ── POST /templates/sync — Sync templates from Meta ─────────
   app.post(
     '/templates/sync',
-    { preHandler: [requireRole('tenant_admin')] },
+    { preHandler: [requireRole('super_admin', 'tenant_admin')] },
     async (request) => {
       const { force } = templateSyncSchema.parse(request.body || {});
       const result = await whatsappService.syncTemplates(request.tenantId);

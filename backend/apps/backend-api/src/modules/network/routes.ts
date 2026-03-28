@@ -14,11 +14,49 @@ import { requireRole } from '../../plugins/auth.js';
 import { networkScanner } from '../../services/network-scanner.js';
 import { db } from '../../db/client.js';
 import { devices, sites } from '../../db/schema/index.js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 
 const ALLOWED_ROLES = ['operator', 'tenant_admin', 'super_admin'] as const;
 
 export async function registerNetworkRoutes(app: FastifyInstance) {
+
+  // ── GET /status — Network overview status ──────────────────────────────
+
+  app.get(
+    '/status',
+    {
+      preHandler: [requireRole(...ALLOWED_ROLES)],
+      schema: {
+        tags: ['Network'],
+        summary: 'Get network status overview',
+      },
+    },
+    async (request, reply) => {
+      const tenantId = request.tenantId;
+
+      // Get device counts grouped by status
+      const deviceRows = await db
+        .select({
+          total: sql<number>`count(*)::int`,
+          online: sql<number>`count(*) filter (where ${devices.status} = 'online')::int`,
+          offline: sql<number>`count(*) filter (where ${devices.status} = 'offline')::int`,
+        })
+        .from(devices)
+        .where(eq(devices.tenantId, tenantId));
+
+      const stats = deviceRows[0] ?? { total: 0, online: 0, offline: 0 };
+
+      const ifaces = await networkScanner.getLocalInterfaces();
+
+      return reply.send({
+        success: true,
+        data: {
+          devices: stats,
+          interfaces: ifaces,
+        },
+      });
+    },
+  );
 
   // ── POST /scan/host — Scan all common security ports on a single host ──
 

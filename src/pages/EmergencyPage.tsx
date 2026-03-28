@@ -8,6 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertOctagon, Phone, ShieldAlert, Users, Plus,
@@ -507,6 +512,54 @@ export default function EmergencyPage() {
     },
   });
 
+  // ── Create Protocol ──────────────────────────────────────
+  const [protocolDialogOpen, setProtocolDialogOpen] = useState(false);
+  const [protocolForm, setProtocolForm] = useState({ name: "", type: "security", description: "", steps: "[]" });
+  const createProtocolMutation = useMutation({
+    mutationFn: (data: typeof protocolForm) => {
+      let parsedSteps: unknown = [];
+      try { parsedSteps = JSON.parse(data.steps); } catch { /* keep empty */ }
+      return emergencyProtocolsApi.create({ name: data.name, type: data.type, description: data.description, steps: parsedSteps });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["emergency"] });
+      toast({ title: "Protocol created" });
+      setProtocolDialogOpen(false);
+      setProtocolForm({ name: "", type: "security", description: "", steps: "[]" });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
+  });
+
+  // ── Create Contact ─────────────────────────────────────
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: "", phone: "", role: "", email: "", priority: "1" });
+  const createContactMutation = useMutation({
+    mutationFn: (data: typeof contactForm) =>
+      emergencyContactsApi.create({ name: data.name, phone: data.phone, role: data.role, email: data.email, priority: data.priority ? Number(data.priority) : undefined }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["emergency"] });
+      toast({ title: "Contact created" });
+      setContactDialogOpen(false);
+      setContactForm({ name: "", phone: "", role: "", email: "", priority: "1" });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
+  });
+
+  // ── Activate Emergency ─────────────────────────────────
+  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
+  const [activateForm, setActivateForm] = useState({ protocolId: "", notes: "" });
+  const activateEmergencyMutation = useMutation({
+    mutationFn: (data: typeof activateForm) =>
+      emergencyActivationsApi.create({ protocolId: data.protocolId, notes: data.notes }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["emergency"] });
+      toast({ title: "Emergency activated", variant: "destructive" });
+      setActivateDialogOpen(false);
+      setActivateForm({ protocolId: "", notes: "" });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
+  });
+
   const protocols = protocolsData?.data ?? [];
   const contacts = contactsData?.data ?? [];
   const activations = activationsData?.data ?? [];
@@ -611,7 +664,7 @@ export default function EmergencyPage() {
         {/* ── Protocols Tab ───────────────────────────────── */}
         <TabsContent value="protocols" className="space-y-4">
           <div className="flex justify-end">
-            <Button className="gap-1">
+            <Button className="gap-1" onClick={() => setProtocolDialogOpen(true)}>
               <Plus className="h-4 w-4" /> New Protocol
             </Button>
           </div>
@@ -660,7 +713,7 @@ export default function EmergencyPage() {
         {/* ── Contacts Tab ────────────────────────────────── */}
         <TabsContent value="contacts" className="space-y-4">
           <div className="flex justify-end">
-            <Button className="gap-1">
+            <Button className="gap-1" onClick={() => setContactDialogOpen(true)}>
               <Plus className="h-4 w-4" /> New Contact
             </Button>
           </div>
@@ -710,7 +763,7 @@ export default function EmergencyPage() {
         {/* ── Activations Tab ─────────────────────────────── */}
         <TabsContent value="activations" className="space-y-4">
           <div className="flex justify-end">
-            <Button className="gap-1" variant="destructive">
+            <Button className="gap-1" variant="destructive" onClick={() => setActivateDialogOpen(true)}>
               <AlertOctagon className="h-4 w-4" /> Activate Emergency
             </Button>
           </div>
@@ -833,6 +886,119 @@ export default function EmergencyPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* New Protocol Dialog */}
+      <Dialog open={protocolDialogOpen} onOpenChange={setProtocolDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>New Emergency Protocol</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input value={protocolForm.name} onChange={(e) => setProtocolForm(f => ({ ...f, name: e.target.value }))} placeholder="Protocol name" />
+            </div>
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select value={protocolForm.type} onValueChange={(v) => setProtocolForm(f => ({ ...f, type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fire">Fire</SelectItem>
+                  <SelectItem value="medical">Medical</SelectItem>
+                  <SelectItem value="security">Security</SelectItem>
+                  <SelectItem value="natural_disaster">Natural Disaster</SelectItem>
+                  <SelectItem value="evacuation">Evacuation</SelectItem>
+                  <SelectItem value="lockdown">Lockdown</SelectItem>
+                  <SelectItem value="bomb_threat">Bomb Threat</SelectItem>
+                  <SelectItem value="active_shooter">Active Shooter</SelectItem>
+                  <SelectItem value="hazmat">Hazmat</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea value={protocolForm.description} onChange={(e) => setProtocolForm(f => ({ ...f, description: e.target.value }))} placeholder="Describe the protocol" />
+            </div>
+            <div className="space-y-2">
+              <Label>Steps (JSON array)</Label>
+              <Textarea value={protocolForm.steps} onChange={(e) => setProtocolForm(f => ({ ...f, steps: e.target.value }))} placeholder='["Step 1", "Step 2"]' rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProtocolDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => createProtocolMutation.mutate(protocolForm)} disabled={!protocolForm.name || createProtocolMutation.isPending}>
+              {createProtocolMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Create Protocol
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Contact Dialog */}
+      <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>New Emergency Contact</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input value={contactForm.name} onChange={(e) => setContactForm(f => ({ ...f, name: e.target.value }))} placeholder="Contact name" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input value={contactForm.phone} onChange={(e) => setContactForm(f => ({ ...f, phone: e.target.value }))} placeholder="+57 300 123 4567" />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input value={contactForm.email} onChange={(e) => setContactForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Input value={contactForm.role} onChange={(e) => setContactForm(f => ({ ...f, role: e.target.value }))} placeholder="Security Manager" />
+              </div>
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Input type="number" value={contactForm.priority} onChange={(e) => setContactForm(f => ({ ...f, priority: e.target.value }))} placeholder="1" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setContactDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => createContactMutation.mutate(contactForm)} disabled={!contactForm.name || createContactMutation.isPending}>
+              {createContactMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Create Contact
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activate Emergency Dialog */}
+      <Dialog open={activateDialogOpen} onOpenChange={setActivateDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Activate Emergency</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Protocol</Label>
+              <Select value={activateForm.protocolId} onValueChange={(v) => setActivateForm(f => ({ ...f, protocolId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select a protocol" /></SelectTrigger>
+                <SelectContent>
+                  {protocols.map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name} ({p.type?.replace('_', ' ')})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea value={activateForm.notes} onChange={(e) => setActivateForm(f => ({ ...f, notes: e.target.value }))} placeholder="Describe the emergency situation" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setActivateDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => activateEmergencyMutation.mutate(activateForm)} disabled={!activateForm.protocolId || activateEmergencyMutation.isPending}>
+              {activateEmergencyMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Activate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

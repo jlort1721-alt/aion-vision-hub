@@ -10,6 +10,13 @@ export async function registerKeyRoutes(app: FastifyInstance) {
     return { success: true, data: result.items, meta: result.meta };
   });
 
+  // Alias: GET /inventory maps to the same list handler
+  app.get('/inventory', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (request: FastifyRequest) => {
+    const filters = KeyFilters.parse(request.query);
+    const result = await keyService.listKeys(request.tenantId, filters);
+    return { success: true, data: result.items, meta: result.meta };
+  });
+
   app.post('/', { preHandler: [requireRole('tenant_admin', 'super_admin')] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const data = CreateKeyInput.parse(request.body);
     const result = await keyService.createKey(request.tenantId, data);

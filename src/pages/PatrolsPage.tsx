@@ -1,14 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { patrolRoutesApi, patrolCheckpointsApi, patrolLogsApi } from "@/services/patrols-api";
+import { useSites } from "@/hooks/use-supabase-data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { Map, MapPin, Navigation, CheckCircle, Plus, Radar, ShieldAlert, Timer, Crosshair, ChevronDown, MapPinOff } from "lucide-react";
+import { Map, MapPin, Navigation, CheckCircle, Plus, Radar, ShieldAlert, Timer, Crosshair, ChevronDown, MapPinOff, Loader2 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -178,6 +183,44 @@ export default function PatrolsPage() {
     queryKey: ["patrols", "stats"],
     queryFn: () => patrolLogsApi.stats(),
     refetchInterval: 30000,
+  });
+
+  const { data: sites = [] } = useSites();
+
+  // ── Create Route ───────────────────────────────────────
+  const [routeDialogOpen, setRouteDialogOpen] = useState(false);
+  const [routeForm, setRouteForm] = useState({ name: "", siteId: "", estimatedMinutes: "" });
+  const createRouteMutation = useMutation({
+    mutationFn: (data: typeof routeForm) =>
+      patrolRoutesApi.create({ name: data.name, siteId: data.siteId || undefined, estimatedMinutes: data.estimatedMinutes ? Number(data.estimatedMinutes) : undefined }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patrols", "routes"] });
+      toast({ title: "Route created" });
+      setRouteDialogOpen(false);
+      setRouteForm({ name: "", siteId: "", estimatedMinutes: "" });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
+  });
+
+  // ── Create Checkpoint ──────────────────────────────────
+  const [cpDialogOpen, setCpDialogOpen] = useState(false);
+  const [cpForm, setCpForm] = useState({ name: "", latitude: "", longitude: "", order: "", qrCode: "" });
+  const createCpMutation = useMutation({
+    mutationFn: (data: typeof cpForm) =>
+      patrolCheckpointsApi.create(selectedRouteId!, {
+        name: data.name,
+        latitude: data.latitude ? Number(data.latitude) : undefined,
+        longitude: data.longitude ? Number(data.longitude) : undefined,
+        order: data.order ? Number(data.order) : undefined,
+        qrCode: data.qrCode || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patrols", "checkpoints"] });
+      toast({ title: "Checkpoint created" });
+      setCpDialogOpen(false);
+      setCpForm({ name: "", latitude: "", longitude: "", order: "", qrCode: "" });
+    },
+    onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
   });
 
   const routes = routesData?.data ?? [];
@@ -390,7 +433,7 @@ export default function PatrolsPage() {
         {/* ── Routes Tab ──────────────────────────────────── */}
         <TabsContent value="routes" className="space-y-4">
           <div className="flex justify-end">
-            <Button className="gap-1">
+            <Button className="gap-1" onClick={() => setRouteDialogOpen(true)}>
               <Plus className="h-4 w-4" /> New Route
             </Button>
           </div>
@@ -466,7 +509,7 @@ export default function PatrolsPage() {
                     Route: {routes.find((r: any) => r.id === selectedRouteId)?.name || selectedRouteId}
                   </span>
                 </div>
-                <Button className="gap-1">
+                <Button className="gap-1" onClick={() => setCpDialogOpen(true)}>
                   <Plus className="h-4 w-4" /> New Checkpoint
                 </Button>
               </div>
@@ -554,6 +597,79 @@ export default function PatrolsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* New Route Dialog */}
+      <Dialog open={routeDialogOpen} onOpenChange={setRouteDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>New Patrol Route</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input value={routeForm.name} onChange={(e) => setRouteForm(f => ({ ...f, name: e.target.value }))} placeholder="Route name" />
+            </div>
+            <div className="space-y-2">
+              <Label>Site</Label>
+              <Select value={routeForm.siteId} onValueChange={(v) => setRouteForm(f => ({ ...f, siteId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select a site" /></SelectTrigger>
+                <SelectContent>
+                  {sites.map((site: any) => (
+                    <SelectItem key={site.id} value={site.id}>{site.name?.split('—')[0]?.trim() || site.id}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Estimated Duration (minutes)</Label>
+              <Input type="number" value={routeForm.estimatedMinutes} onChange={(e) => setRouteForm(f => ({ ...f, estimatedMinutes: e.target.value }))} placeholder="30" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRouteDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => createRouteMutation.mutate(routeForm)} disabled={!routeForm.name || createRouteMutation.isPending}>
+              {createRouteMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Create Route
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Checkpoint Dialog */}
+      <Dialog open={cpDialogOpen} onOpenChange={setCpDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>New Checkpoint</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input value={cpForm.name} onChange={(e) => setCpForm(f => ({ ...f, name: e.target.value }))} placeholder="Checkpoint name" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Latitude</Label>
+                <Input type="number" step="any" value={cpForm.latitude} onChange={(e) => setCpForm(f => ({ ...f, latitude: e.target.value }))} placeholder="4.6097" />
+              </div>
+              <div className="space-y-2">
+                <Label>Longitude</Label>
+                <Input type="number" step="any" value={cpForm.longitude} onChange={(e) => setCpForm(f => ({ ...f, longitude: e.target.value }))} placeholder="-74.0817" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Order</Label>
+                <Input type="number" value={cpForm.order} onChange={(e) => setCpForm(f => ({ ...f, order: e.target.value }))} placeholder="1" />
+              </div>
+              <div className="space-y-2">
+                <Label>QR Code</Label>
+                <Input value={cpForm.qrCode} onChange={(e) => setCpForm(f => ({ ...f, qrCode: e.target.value }))} placeholder="QR code value" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCpDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => createCpMutation.mutate(cpForm)} disabled={!cpForm.name || createCpMutation.isPending}>
+              {createCpMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Create Checkpoint
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

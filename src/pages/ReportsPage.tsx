@@ -208,7 +208,7 @@ export default function ReportsPage() {
   const handleDownload = async (report: any) => {
     try {
       const blob = await reportsApi.download(report.id);
-      const url = URL.createObjectURL(blob as Blob);
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = report.name || `report-${report.id}.${(report.format || 'pdf').toLowerCase()}`;
