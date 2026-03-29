@@ -22,6 +22,7 @@ import { registerTenantRoutes } from './modules/tenants/routes.js';
 import { registerUserRoutes } from './modules/users/routes.js';
 import { registerRoleRoutes } from './modules/roles/routes.js';
 import { registerDeviceRoutes } from './modules/devices/routes.js';
+import { registerCamerasRoutes } from './modules/cameras/routes.js';
 import { registerSiteRoutes } from './modules/sites/routes.js';
 import { registerStreamRoutes } from './modules/streams/routes.js';
 import { registerEventRoutes } from './modules/events/routes.js';
@@ -192,6 +193,7 @@ export async function buildApp() {
   await app.register(registerRoleRoutes, { prefix: '/roles' });
   await app.register(biomarkerRoutes, { prefix: '/analytics/biomarkers' });
   await app.register(registerDeviceRoutes, { prefix: '/devices' });
+  await app.register(registerCamerasRoutes, { prefix: '/cameras' });
   await app.register(registerSiteRoutes, { prefix: '/sites' });
   await app.register(registerStreamRoutes, { prefix: '/streams' });
   await app.register(registerEventRoutes, { prefix: '/events' });

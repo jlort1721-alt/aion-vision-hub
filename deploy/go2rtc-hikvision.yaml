@@ -1,0 +1,281 @@
+# go2rtc — AION Hikvision ISAPI Streams
+# Generated: 2026-03-29
+# Total: 203 camera channels across 16 DVR/NVR devices
+# Pattern: isapi://user:pass@WAN_IP:HTTP_PORT/Streaming/Channels/[channel]02
+# [channel]02 = substream (~200kbps each)
+
+streams:
+
+  # ══════════════════════════════════════════════════════════════
+  # TORRE LUCIA (WAN: 181.205.215.210)
+  # DVR: 16ch port 8010 | NVR: 8ch port 8020
+  # ══════════════════════════════════════════════════════════════
+
+  tl_dvr_ch01: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/102"
+  tl_dvr_ch02: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/202"
+  tl_dvr_ch03: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/302"
+  tl_dvr_ch04: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/402"
+  tl_dvr_ch05: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/502"
+  tl_dvr_ch06: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/602"
+  tl_dvr_ch07: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/702"
+  tl_dvr_ch08: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/802"
+  tl_dvr_ch09: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/902"
+  tl_dvr_ch10: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1002"
+  tl_dvr_ch11: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1102"
+  tl_dvr_ch12: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1202"
+  tl_dvr_ch13: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1302"
+  tl_dvr_ch14: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1402"
+  tl_dvr_ch15: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1502"
+  tl_dvr_ch16: "isapi://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1602"
+
+  tl_nvr_ch01: "isapi://admin:seg12345@181.205.215.210:8020/Streaming/Channels/102"
+  tl_nvr_ch02: "isapi://admin:seg12345@181.205.215.210:8020/Streaming/Channels/202"
+  tl_nvr_ch03: "isapi://admin:seg12345@181.205.215.210:8020/Streaming/Channels/302"
+  tl_nvr_ch04: "isapi://admin:seg12345@181.205.215.210:8020/Streaming/Channels/402"
+  tl_nvr_ch05: "isapi://admin:seg12345@181.205.215.210:8020/Streaming/Channels/502"
+  tl_nvr_ch06: "isapi://admin:seg12345@181.205.215.210:8020/Streaming/Channels/602"
+  tl_nvr_ch07: "isapi://admin:seg12345@181.205.215.210:8020/Streaming/Channels/702"
+  tl_nvr_ch08: "isapi://admin:seg12345@181.205.215.210:8020/Streaming/Channels/802"
+
+  # ══════════════════════════════════════════════════════════════
+  # SAN NICOLAS (WAN: 181.143.16.170)
+  # NVR: 16ch port 8000 | LPR: 1ch port 8081
+  # ══════════════════════════════════════════════════════════════
+
+  sn_nvr_ch01: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/102"
+  sn_nvr_ch02: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/202"
+  sn_nvr_ch03: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/302"
+  sn_nvr_ch04: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/402"
+  sn_nvr_ch05: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/502"
+  sn_nvr_ch06: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/602"
+  sn_nvr_ch07: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/702"
+  sn_nvr_ch08: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/802"
+  sn_nvr_ch09: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/902"
+  sn_nvr_ch10: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1002"
+  sn_nvr_ch11: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1102"
+  sn_nvr_ch12: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1202"
+  sn_nvr_ch13: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1302"
+  sn_nvr_ch14: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1402"
+  sn_nvr_ch15: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1502"
+  sn_nvr_ch16: "isapi://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1602"
+  sn_lpr: "isapi://admin:Clave.seg2023@181.143.16.170:8081/Streaming/Channels/102"
+
+  # ══════════════════════════════════════════════════════════════
+  # PISQUINES (WAN: 181.205.202.122)
+  # NVR: 16ch port 8010 | DVR: 16ch port 8020
+  # ══════════════════════════════════════════════════════════════
+
+  pq_nvr_ch01: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/102"
+  pq_nvr_ch02: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/202"
+  pq_nvr_ch03: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/302"
+  pq_nvr_ch04: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/402"
+  pq_nvr_ch05: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/502"
+  pq_nvr_ch06: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/602"
+  pq_nvr_ch07: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/702"
+  pq_nvr_ch08: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/802"
+  pq_nvr_ch09: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/902"
+  pq_nvr_ch10: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1002"
+  pq_nvr_ch11: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1102"
+  pq_nvr_ch12: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1202"
+  pq_nvr_ch13: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1302"
+  pq_nvr_ch14: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1402"
+  pq_nvr_ch15: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1502"
+  pq_nvr_ch16: "isapi://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1602"
+
+  pq_dvr_ch01: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/102"
+  pq_dvr_ch02: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/202"
+  pq_dvr_ch03: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/302"
+  pq_dvr_ch04: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/402"
+  pq_dvr_ch05: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/502"
+  pq_dvr_ch06: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/602"
+  pq_dvr_ch07: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/702"
+  pq_dvr_ch08: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/802"
+  pq_dvr_ch09: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/902"
+  pq_dvr_ch10: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1002"
+  pq_dvr_ch11: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1102"
+  pq_dvr_ch12: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1202"
+  pq_dvr_ch13: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1302"
+  pq_dvr_ch14: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1402"
+  pq_dvr_ch15: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1502"
+  pq_dvr_ch16: "isapi://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1602"
+
+  # ══════════════════════════════════════════════════════════════
+  # SAN SEBASTIAN (WAN: 186.97.106.252)
+  # DVR: 16ch port 8000
+  # ══════════════════════════════════════════════════════════════
+
+  ss_dvr_ch01: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/102"
+  ss_dvr_ch02: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/202"
+  ss_dvr_ch03: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/302"
+  ss_dvr_ch04: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/402"
+  ss_dvr_ch05: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/502"
+  ss_dvr_ch06: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/602"
+  ss_dvr_ch07: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/702"
+  ss_dvr_ch08: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/802"
+  ss_dvr_ch09: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/902"
+  ss_dvr_ch10: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1002"
+  ss_dvr_ch11: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1102"
+  ss_dvr_ch12: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1202"
+  ss_dvr_ch13: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1302"
+  ss_dvr_ch14: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1402"
+  ss_dvr_ch15: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1502"
+  ss_dvr_ch16: "isapi://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1602"
+
+  # ══════════════════════════════════════════════════════════════
+  # PORTALEGRE (WAN: 200.58.214.114)
+  # NVR: 16ch port 8000 | DVR: 4ch port 8040
+  # ══════════════════════════════════════════════════════════════
+
+  pe_nvr_ch01: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/102"
+  pe_nvr_ch02: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/202"
+  pe_nvr_ch03: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/302"
+  pe_nvr_ch04: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/402"
+  pe_nvr_ch05: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/502"
+  pe_nvr_ch06: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/602"
+  pe_nvr_ch07: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/702"
+  pe_nvr_ch08: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/802"
+  pe_nvr_ch09: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/902"
+  pe_nvr_ch10: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1002"
+  pe_nvr_ch11: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1102"
+  pe_nvr_ch12: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1202"
+  pe_nvr_ch13: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1302"
+  pe_nvr_ch14: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1402"
+  pe_nvr_ch15: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1502"
+  pe_nvr_ch16: "isapi://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1602"
+
+  pe_dvr_ch01: "isapi://admin:Clave.seg2023@200.58.214.114:8040/Streaming/Channels/102"
+  pe_dvr_ch02: "isapi://admin:Clave.seg2023@200.58.214.114:8040/Streaming/Channels/202"
+  pe_dvr_ch03: "isapi://admin:Clave.seg2023@200.58.214.114:8040/Streaming/Channels/302"
+  pe_dvr_ch04: "isapi://admin:Clave.seg2023@200.58.214.114:8040/Streaming/Channels/402"
+
+  # ══════════════════════════════════════════════════════════════
+  # ALTAGRACIA (WAN: 181.205.175.18)
+  # DVR: 32ch port 8030 | LPR: 1ch port 8010
+  # ══════════════════════════════════════════════════════════════
+
+  ag_dvr_ch01: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/102"
+  ag_dvr_ch02: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/202"
+  ag_dvr_ch03: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/302"
+  ag_dvr_ch04: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/402"
+  ag_dvr_ch05: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/502"
+  ag_dvr_ch06: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/602"
+  ag_dvr_ch07: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/702"
+  ag_dvr_ch08: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/802"
+  ag_dvr_ch09: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/902"
+  ag_dvr_ch10: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1002"
+  ag_dvr_ch11: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1102"
+  ag_dvr_ch12: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1202"
+  ag_dvr_ch13: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1302"
+  ag_dvr_ch14: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1402"
+  ag_dvr_ch15: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1502"
+  ag_dvr_ch16: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1602"
+  ag_dvr_ch17: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1702"
+  ag_dvr_ch18: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1802"
+  ag_dvr_ch19: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1902"
+  ag_dvr_ch20: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2002"
+  ag_dvr_ch21: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2102"
+  ag_dvr_ch22: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2202"
+  ag_dvr_ch23: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2302"
+  ag_dvr_ch24: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2402"
+  ag_dvr_ch25: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2502"
+  ag_dvr_ch26: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2602"
+  ag_dvr_ch27: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2702"
+  ag_dvr_ch28: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2802"
+  ag_dvr_ch29: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2902"
+  ag_dvr_ch30: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/3002"
+  ag_dvr_ch31: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/3102"
+  ag_dvr_ch32: "isapi://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/3202"
+  ag_lpr: "isapi://admin:Clave.seg2023@181.205.175.18:8010/Streaming/Channels/102"
+
+  # ══════════════════════════════════════════════════════════════
+  # PORTAL PLAZA (WAN: 181.205.175.19) — POSIBLEMENTE DESCONECTADO
+  # NVR: 16ch port 8020
+  # ══════════════════════════════════════════════════════════════
+
+  pp_nvr_ch01: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/102"
+  pp_nvr_ch02: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/202"
+  pp_nvr_ch03: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/302"
+  pp_nvr_ch04: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/402"
+  pp_nvr_ch05: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/502"
+  pp_nvr_ch06: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/602"
+  pp_nvr_ch07: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/702"
+  pp_nvr_ch08: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/802"
+  pp_nvr_ch09: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/902"
+  pp_nvr_ch10: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1002"
+  pp_nvr_ch11: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1102"
+  pp_nvr_ch12: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1202"
+  pp_nvr_ch13: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1302"
+  pp_nvr_ch14: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1402"
+  pp_nvr_ch15: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1502"
+  pp_nvr_ch16: "isapi://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1602"
+
+  # ══════════════════════════════════════════════════════════════
+  # BRESCIA (WAN: 186.97.104.202) — Solo LPR (video principal es Dahua)
+  # LPR1: port 8030 | LPR2: port 8020
+  # ══════════════════════════════════════════════════════════════
+
+  br_lpr1: "isapi://admin:Clave.seg2023@186.97.104.202:8030/Streaming/Channels/102"
+  br_lpr2: "isapi://admin:Clave.seg2023@186.97.104.202:8020/Streaming/Channels/102"
+
+  # ══════════════════════════════════════════════════════════════
+  # SENDEROS DE CALASANZ (WAN: 38.9.217.12)
+  # DVR1: 8ch port 8030 | DVR2: 4ch port 8020 (OFFLINE)
+  # ══════════════════════════════════════════════════════════════
+
+  se_dvr1_ch01: "isapi://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/102"
+  se_dvr1_ch02: "isapi://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/202"
+  se_dvr1_ch03: "isapi://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/302"
+  se_dvr1_ch04: "isapi://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/402"
+  se_dvr1_ch05: "isapi://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/502"
+  se_dvr1_ch06: "isapi://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/602"
+  se_dvr1_ch07: "isapi://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/702"
+  se_dvr1_ch08: "isapi://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/802"
+
+  se_dvr2_ch01: "isapi://admin:Clave.seg2023@38.9.217.12:8020/Streaming/Channels/102"
+  se_dvr2_ch02: "isapi://admin:Clave.seg2023@38.9.217.12:8020/Streaming/Channels/202"
+  se_dvr2_ch03: "isapi://admin:Clave.seg2023@38.9.217.12:8020/Streaming/Channels/302"
+  se_dvr2_ch04: "isapi://admin:Clave.seg2023@38.9.217.12:8020/Streaming/Channels/402"
+
+  # ══════════════════════════════════════════════════════════════
+  # ALTOS DEL ROSARIO (WAN: 190.159.37.188)
+  # DVR: 16ch port 8010
+  # ══════════════════════════════════════════════════════════════
+
+  ar_dvr_ch01: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/102"
+  ar_dvr_ch02: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/202"
+  ar_dvr_ch03: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/302"
+  ar_dvr_ch04: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/402"
+  ar_dvr_ch05: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/502"
+  ar_dvr_ch06: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/602"
+  ar_dvr_ch07: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/702"
+  ar_dvr_ch08: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/802"
+  ar_dvr_ch09: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/902"
+  ar_dvr_ch10: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1002"
+  ar_dvr_ch11: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1102"
+  ar_dvr_ch12: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1202"
+  ar_dvr_ch13: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1302"
+  ar_dvr_ch14: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1402"
+  ar_dvr_ch15: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1502"
+  ar_dvr_ch16: "isapi://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1602"
+
+  # ══════════════════════════════════════════════════════════════
+  # LA PALENCIA (WAN: 181.205.249.130) — INTERMITENTE
+  # DVR: 16ch port 8000
+  # ══════════════════════════════════════════════════════════════
+
+  lp_dvr_ch01: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/102"
+  lp_dvr_ch02: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/202"
+  lp_dvr_ch03: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/302"
+  lp_dvr_ch04: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/402"
+  lp_dvr_ch05: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/502"
+  lp_dvr_ch06: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/602"
+  lp_dvr_ch07: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/702"
+  lp_dvr_ch08: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/802"
+  lp_dvr_ch09: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/902"
+  lp_dvr_ch10: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1002"
+  lp_dvr_ch11: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1102"
+  lp_dvr_ch12: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1202"
+  lp_dvr_ch13: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1302"
+  lp_dvr_ch14: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1402"
+  lp_dvr_ch15: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1502"
+  lp_dvr_ch16: "isapi://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1602"

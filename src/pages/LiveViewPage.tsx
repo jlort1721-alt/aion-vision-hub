@@ -1,493 +1,673 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useDevices } from '@/hooks/use-devices';
-import { useSites } from '@/hooks/use-supabase-data'; // Sites still legacy for now
-import { useSections } from '@/hooks/use-module-data';
-import { useAuth } from '@/contexts/AuthContext';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { apiClient } from '@/lib/api-client';
-import ErrorState from '@/components/ui/ErrorState';
-import { GridLayout, Device } from '@/types';
 import {
-  Grid2x2, Grid3x3, Maximize, Volume2, Camera,
-  Star, Save, RotateCcw, MonitorSpeaker, Wifi, WifiOff,
-  Trash2, Loader2, GripVertical, X, Frame, FolderOpen, Bell, Navigation, Zap
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  Video,
+  Grid3X3,
+  Maximize,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Pause,
+  Loader2,
 } from 'lucide-react';
 
-import LiveViewOpsPanel from '@/components/liveview/LiveViewOpsPanel';
-import LiveViewEventsPanel from '@/components/liveview/LiveViewEventsPanel';
-import TourEngine from '@/components/liveview/TourEngine';
+// ── Types ────────────────────────────────────────────────────
 
-import { WebRTCPlayer } from '@/components/video/WebRTCPlayer';
-import { Go2RTCPlayer } from '@/components/video/Go2RTCPlayer';
+interface Camera {
+  id: string;
+  name: string;
+  stream_key: string;
+  status: 'online' | 'offline' | 'degraded' | 'unknown' | 'maintenance';
+  site_id: string;
+}
 
-const GRID_OPTIONS: { grid: GridLayout; label: string; icon: React.ReactNode }[] = [
-  { grid: 1, label: '1×1', icon: <Maximize className="h-4 w-4" /> },
-  { grid: 4, label: '2×2', icon: <Grid2x2 className="h-4 w-4" /> },
-  { grid: 9, label: '3×3', icon: <Grid3x3 className="h-4 w-4" /> },
-  { grid: 16, label: '4×4', icon: <Grid3x3 className="h-4 w-4" /> },
-  { grid: 25, label: '5×5', icon: <Grid3x3 className="h-4 w-4" /> },
-  { grid: 36, label: '6×6', icon: <Grid3x3 className="h-4 w-4" /> },
-];
+interface SiteGroup {
+  site_id: string;
+  site_name: string;
+  cameras: Camera[];
+}
+
+type GridSize = 4 | 9 | 16;
+
+// ── WebRTC Camera Cell ───────────────────────────────────────
 
 function CameraCell({
-  device, index, onDrop, onDragStart, onRemove, isDragOver,
+  camera,
+  onDoubleClick,
 }: {
-  device?: Device; index: number;
-  onDrop: (index: number) => void;
-  onDragStart: (device: Device) => void;
-  onRemove: (index: number) => void;
-  isDragOver: boolean;
+  camera: Camera | null;
+  onDoubleClick?: () => void;
 }) {
-  const [hovered, setHovered] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
 
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+  useEffect(() => {
+    if (!camera || camera.status !== 'online') return;
 
-  const handleCapture = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!device) return;
-    const video = document.querySelector(`[data-camera-id="${device.id}"] video`) as HTMLVideoElement;
-    if (!video) { toast.error('No video stream available'); return; }
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    canvas.getContext('2d')?.drawImage(video, 0, 0);
-    canvas.toBlob((blob) => {
-      if (!blob) { toast.error('Failed to capture frame'); return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const ts = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-      const fileName = `snapshot_${device.name}_${ts}.jpg`;
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('Snapshot saved', { description: fileName });
-    }, 'image/jpeg', 0.95);
-  }, [device]);
+    const videoEl = videoRef.current;
 
-  if (!device) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/go2rtc/api/ws?src=${camera.stream_key}`;
+
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    });
+    pcRef.current = pc;
+
+    pc.addTransceiver('video', { direction: 'recvonly' });
+    pc.addTransceiver('audio', { direction: 'recvonly' });
+
+    pc.ontrack = (e) => {
+      if (videoEl && e.streams[0]) {
+        videoEl.srcObject = e.streams[0];
+      }
+    };
+
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      // Request WebRTC offer from go2rtc
+      ws.send(JSON.stringify({ type: 'webrtc/offer', value: '' }));
+    };
+
+    ws.onmessage = async (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'webrtc/offer') {
+          await pc.setRemoteDescription({ type: 'offer', sdp: msg.value });
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          ws.send(
+            JSON.stringify({ type: 'webrtc/answer', value: answer.sdp })
+          );
+        } else if (msg.type === 'webrtc/candidate') {
+          await pc.addIceCandidate({
+            candidate: msg.value,
+            sdpMid: '0',
+          });
+        }
+      } catch {
+        // Silently handle malformed messages
+      }
+    };
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate && ws.readyState === WebSocket.OPEN) {
+        ws.send(
+          JSON.stringify({
+            type: 'webrtc/candidate',
+            value: e.candidate.candidate,
+          })
+        );
+      }
+    };
+
+    return () => {
+      ws.close();
+      pc.close();
+      wsRef.current = null;
+      pcRef.current = null;
+      if (videoEl) {
+        videoEl.srcObject = null;
+      }
+    };
+  }, [camera]);
+
+  const handleDoubleClick = useCallback(() => {
+    if (!videoRef.current) return;
+    if (onDoubleClick) {
+      onDoubleClick();
+    }
+    if (videoRef.current.requestFullscreen) {
+      videoRef.current.requestFullscreen().catch(() => {});
+    }
+  }, [onDoubleClick]);
+
+  // Empty cell
+  if (!camera) {
     return (
-      <div
-        className={`bg-muted/20 rounded-md border border-dashed flex items-center justify-center transition-all ${isDragOver ? 'border-primary bg-primary/20 scale-[1.02] shadow-primary/20 shadow-lg' : 'border-border'}`}
-        onDragOver={handleDragOver}
-        onDrop={(e) => { e.preventDefault(); onDrop(index); }}
-        aria-label={`Empty camera slot ${index + 1}, drop a camera here`}
-      >
-        <div className="text-center text-muted-foreground delay-75 duration-300">
-          <Camera className="h-8 w-8 mx-auto mb-2 opacity-20" />
-          <p className="text-xs font-medium tracking-tight opacity-50">SLOT {index + 1}</p>
+      <Card className="relative flex items-center justify-center bg-muted/30 border-dashed">
+        <div className="text-center text-muted-foreground">
+          <Video className="h-8 w-8 mx-auto mb-2 opacity-30" />
+          <p className="text-xs opacity-50">No camera</p>
         </div>
+      </Card>
+    );
+  }
+
+  const isOnline = camera.status === 'online';
+
+  return (
+    <Card
+      className="relative overflow-hidden bg-black border-border/50 group"
+      onDoubleClick={handleDoubleClick}
+    >
+      {/* Video element */}
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+
+      {/* Offline placeholder */}
+      {!isOnline && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/90 z-10">
+          <WifiOff className="h-8 w-8 text-destructive/60 mb-2" />
+          <p className="text-xs text-muted-foreground">Offline</p>
+        </div>
+      )}
+
+      {/* Bottom overlay with camera name */}
+      <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 bg-gradient-to-t from-black/90 to-transparent z-20 pointer-events-none">
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`w-2 h-2 rounded-full shrink-0 ${
+              isOnline
+                ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]'
+                : 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]'
+            }`}
+          />
+          <span className="text-xs font-medium text-white truncate drop-shadow-md">
+            {camera.name}
+          </span>
+        </div>
+      </div>
+
+      {/* LIVE indicator for online cameras */}
+      {isOnline && (
+        <div className="absolute top-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-black/60 backdrop-blur-sm border border-white/10 z-20">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-[9px] text-white/90 font-mono font-medium tracking-widest">
+            LIVE
+          </span>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ── Main Page Component ──────────────────────────────────────
+
+export default function LiveViewPage() {
+  const { profile } = useAuth();
+  const queryClient = useQueryClient();
+
+  // State
+  const [selectedSite, setSelectedSite] = useState<string>('all');
+  const [gridSize, setGridSize] = useState<GridSize>(9);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const autoRotateRef = useRef(autoRotate);
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+
+  // Keep ref in sync for interval callback
+  useEffect(() => {
+    autoRotateRef.current = autoRotate;
+  }, [autoRotate]);
+
+  // ── Data Fetching ────────────────────────────────────────
+
+  const {
+    data: siteGroups = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery<SiteGroup[]>({
+    queryKey: ['cameras-by-site'],
+    queryFn: () => apiClient.get<SiteGroup[]>('/cameras/by-site'),
+    enabled: !!profile,
+    refetchInterval: 30_000,
+  });
+
+  const syncStatus = useMutation({
+    mutationFn: () => apiClient.post('/cameras/sync-status'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cameras-by-site'] });
+      toast.success('Camera status synced');
+    },
+    onError: (err: Error) => toast.error(`Sync failed: ${err.message}`),
+  });
+
+  // ── Derived Data ─────────────────────────────────────────
+
+  const allCameras = useMemo(() => {
+    return siteGroups.flatMap((sg) => sg.cameras);
+  }, [siteGroups]);
+
+  const filteredCameras = useMemo(() => {
+    if (selectedSite === 'all') return allCameras;
+    const group = siteGroups.find((sg) => sg.site_id === selectedSite);
+    return group ? group.cameras : [];
+  }, [allCameras, siteGroups, selectedSite]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredCameras.length / gridSize));
+
+  // Clamp page when filters or grid size change
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages - 1));
+  }, [totalPages]);
+
+  // Reset page when site changes
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [selectedSite, gridSize]);
+
+  const paginatedCameras = useMemo(() => {
+    const start = currentPage * gridSize;
+    const slice = filteredCameras.slice(start, start + gridSize);
+    // Pad with nulls to fill the grid
+    const padded: (Camera | null)[] = [...slice];
+    while (padded.length < gridSize) padded.push(null);
+    return padded;
+  }, [filteredCameras, currentPage, gridSize]);
+
+  // ── Site Stats ───────────────────────────────────────────
+
+  const siteStats = useMemo(() => {
+    const stats: Record<string, { online: number; offline: number; total: number }> = {};
+    siteGroups.forEach((sg) => {
+      const online = sg.cameras.filter((c) => c.status === 'online').length;
+      stats[sg.site_id] = {
+        online,
+        offline: sg.cameras.length - online,
+        total: sg.cameras.length,
+      };
+    });
+    // Aggregate "all"
+    const allOnline = allCameras.filter((c) => c.status === 'online').length;
+    stats['all'] = {
+      online: allOnline,
+      offline: allCameras.length - allOnline,
+      total: allCameras.length,
+    };
+    return stats;
+  }, [siteGroups, allCameras]);
+
+  // ── Auto-Rotation Timer ──────────────────────────────────
+
+  useEffect(() => {
+    if (!autoRotate || totalPages <= 1) return;
+    const interval = setInterval(() => {
+      if (autoRotateRef.current) {
+        setCurrentPage((prev) => (prev + 1) % totalPages);
+      }
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, [autoRotate, totalPages]);
+
+  // ── Pagination Handlers ──────────────────────────────────
+
+  const goToPrevPage = useCallback(() => {
+    setCurrentPage((prev) => Math.max(0, prev - 1));
+  }, []);
+
+  const goToNextPage = useCallback(() => {
+    setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1));
+  }, [totalPages]);
+
+  // ── Fullscreen ───────────────────────────────────────────
+
+  const toggleFullscreen = useCallback(() => {
+    if (!gridContainerRef.current) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      gridContainerRef.current.requestFullscreen().catch(() => {});
+    }
+  }, []);
+
+  // ── Grid Layout ──────────────────────────────────────────
+
+  const cols = Math.sqrt(gridSize);
+
+  const gridOptions: { size: GridSize; label: string }[] = [
+    { size: 4, label: '2x2' },
+    { size: 9, label: '3x3' },
+    { size: 16, label: '4x4' },
+  ];
+
+  // ── Render ───────────────────────────────────────────────
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-3.5rem)]">
+        <Card className="p-6 max-w-md text-center">
+          <WifiOff className="h-10 w-10 mx-auto mb-3 text-destructive" />
+          <h3 className="text-lg font-semibold mb-1">Failed to load cameras</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {(error as Error)?.message || 'An unexpected error occurred'}
+          </p>
+          <Button onClick={() => refetch()}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Retry
+          </Button>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div
-      className={`relative bg-black rounded-md border border-border/50 overflow-hidden group cursor-grab active:cursor-grabbing transition-all ${isDragOver ? 'border-primary ring-2 ring-primary ring-offset-2 ring-offset-background' : 'hover:border-primary/50'} shadow-sm`}
-      draggable
-      onDragStart={() => onDragStart(device)}
-      onDragOver={handleDragOver}
-      onDrop={(e) => { e.preventDefault(); onDrop(index); }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      aria-label={`Camera: ${device.name}, status: ${device.status}`}
-    >
-      <div className="absolute inset-0 z-0 bg-zinc-950 flex items-center justify-center" data-camera-id={device.id}>
-        <Go2RTCPlayer
-          streamName={(device as unknown as Record<string, unknown>).device_slug as string || device.id}
-          cameraName={device.name}
-          controls={false}
-        />
-      </div>
-
-      <div className={`absolute top-0 left-0 right-0 p-2 bg-gradient-to-b from-black/90 via-black/40 to-transparent z-10 pointer-events-none transition-opacity duration-300 ${hovered ? 'opacity-100' : 'opacity-80'}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <GripVertical className="h-3.5 w-3.5 text-white/40 group-hover:text-white/80 transition-colors" />
-            <div className={`w-2 h-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.8)] ${device.status === 'online' ? 'bg-success shadow-success/50' : 'bg-destructive shadow-destructive/50'}`} />
-            <span className="text-xs font-semibold text-white tracking-wide truncate max-w-[120px] drop-shadow-md">{device.name}</span>
+    <TooltipProvider>
+      <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">
+        {/* ── Site Sidebar ────────────────────────────────────── */}
+        <div className="w-60 border-r bg-card flex flex-col shrink-0">
+          <div className="p-3 border-b">
+            <h2 className="text-sm font-semibold tracking-tight">Sites</h2>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Select a site to filter cameras
+            </p>
           </div>
-          <Badge variant="outline" className="text-[9px] font-mono px-1.5 py-0 h-4 text-white/90 border-white/20 bg-black/50 backdrop-blur-sm uppercase tracking-wider">{device.brand}</Badge>
-        </div>
-      </div>
 
-      {hovered && (
-        <div className="absolute bottom-0 left-0 right-0 flex items-center gap-1.5 p-2 bg-gradient-to-t from-black/95 via-black/80 to-transparent animate-in slide-in-from-bottom-2 duration-200">
-          <Button variant="secondary" size="icon" className="h-7 w-7 rounded-sm bg-white/10 hover:bg-white/25 text-white border-none shadow-none" aria-label="Fullscreen"><Maximize className="h-3.5 w-3.5" /></Button>
-          <Button variant="secondary" size="icon" className="h-7 w-7 rounded-sm bg-white/10 hover:bg-white/25 text-white border-none shadow-none" aria-label="Toggle audio"><Volume2 className="h-3.5 w-3.5" /></Button>
-          <Button variant="secondary" size="icon" className="h-7 w-7 rounded-sm bg-white/10 hover:bg-white/25 text-white border-none shadow-none" onClick={handleCapture} aria-label="Capture snapshot"><Frame className="h-3.5 w-3.5" /></Button>
-          <Button variant="secondary" size="icon" className="h-7 w-7 rounded-sm bg-white/10 hover:bg-white/25 text-white border-none shadow-none" aria-label="Refresh stream"><RotateCcw className="h-3.5 w-3.5" /></Button>
-          <div className="ml-auto">
-            <Button variant="destructive" size="icon" className="h-7 w-7 rounded-sm shadow-none opacity-80 hover:opacity-100" onClick={(e) => { e.stopPropagation(); onRemove(index); }} aria-label="Remove camera from slot">
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {device.status === 'online' && (
-        <div className="absolute top-2 right-2 flex items-center gap-1.5 px-1.5 py-0.5 rounded-sm bg-black/60 backdrop-blur-md border border-white/10 shadow-lg">
-          <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-[pulse_1.5s_ease-in-out_infinite]" />
-          <span className="text-[9px] text-white/90 font-mono font-medium tracking-widest">LIVE</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function LiveViewPage() {
-  const [grid, setGrid] = useState<GridLayout>(9);
-  const [selectedSite, setSelectedSite] = useState<string>('all');
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-  const [loadDialogOpen, setLoadDialogOpen] = useState(false);
-  const [layoutName, setLayoutName] = useState('');
-  const [isShared, setIsShared] = useState(false);
-  const [opsOpen, setOpsOpen] = useState(true);
-  const [eventsOpen, setEventsOpen] = useState(false);
-  const [tourOpen, setTourOpen] = useState(false);
-  // Slot assignments: index → deviceContext_id
-  const [slotAssignments, setSlotAssignments] = useState<Record<number, string>>({});
-  const [draggedDevice, setDraggedDevice] = useState<Device | null>(null);
-  const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
-  const [focusedCameraId, setFocusedCameraId] = useState<string | null>(null);
-
-  const { user, profile } = useAuth();
-  const queryClient = useQueryClient();
-  const { data: devices = [], isLoading, isError, error, refetch } = useDevices();
-  const { data: sites = [] } = useSites();
-  const { data: sections = [] } = useSections();
-
-  const allCameras = useMemo(() => {
-    return (devices || []).filter(d =>
-      d.type === 'camera' && (selectedSite === 'all' || d.site_id === selectedSite)
-    );
-  }, [devices, selectedSite]);
-
-  // Build the grid: use slot assignments if any, else fallback to sequential
-  const getDeviceForSlot = useCallback((index: number): Device | undefined => {
-    const assignedId = slotAssignments[index];
-    if (assignedId) {
-      return allCameras.find(c => c.id === assignedId);
-    }
-    // If no assignments exist at all, show sequential cameras
-    if (Object.keys(slotAssignments).length === 0) {
-      return allCameras[index];
-    }
-    return undefined;
-  }, [slotAssignments, allCameras]);
-
-  const handleDragStartFromSidebar = (device: Device) => {
-    setDraggedDevice(device);
-  };
-
-  const handleDragStartFromGrid = (device: Device) => {
-    setDraggedDevice(device);
-  };
-
-  const handleDrop = useCallback((targetSlot: number) => {
-    if (!draggedDevice) return;
-    setSlotAssignments(prev => {
-      const next = { ...prev };
-      // Remove device from any existing slot
-      Object.entries(next).forEach(([key, val]) => {
-        if (val === draggedDevice.id) delete next[Number(key)];
-      });
-      // If there was already a device in target, swap
-      // Assign dragged device to target
-      next[targetSlot] = draggedDevice.id;
-      return next;
-    });
-    setDraggedDevice(null);
-    setDragOverSlot(null);
-  }, [draggedDevice]);
-
-  const handleRemoveFromSlot = (index: number) => {
-    setSlotAssignments(prev => {
-      const next = { ...prev };
-      delete next[index];
-      return next;
-    });
-  };
-
-  // Unassigned cameras for sidebar
-  const assignedIds = new Set(Object.values(slotAssignments));
-  const unassignedCameras = allCameras.filter(c => !assignedIds.has(c.id));
-
-  // Saved layouts
-  const { data: savedLayouts = [] } = useQuery({
-    queryKey: ['live_view_layouts'],
-    queryFn: () => apiClient.get<Record<string, unknown>[]>('/live-view/layouts'),
-    enabled: !!profile,
-  });
-
-  const saveLayout = useMutation({
-    mutationFn: async () => {
-      if (!profile || !user) throw new Error('Not authenticated');
-      const slots = Object.entries(slotAssignments).map(([pos, deviceId]) => ({
-        position: Number(pos),
-        device_id: deviceId,
-      }));
-      await apiClient.post('/live-view/layouts', {
-        name: layoutName,
-        grid,
-        slots,
-        isShared,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['live_view_layouts'] });
-      toast.success('Layout saved securely via API');
-      setSaveDialogOpen(false);
-      setLayoutName('');
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const deleteLayout = useMutation({
-    mutationFn: async (id: string) => {
-      await apiClient.delete('/live-view/layouts/' + id);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['live_view_layouts'] });
-      toast.success('Layout deleted');
-    },
-  });
-
-  const toggleFavorite = useMutation({
-    mutationFn: async ({ id, current }: { id: string; current: boolean }) => {
-      await apiClient.patch('/live-view/layouts/' + id + '/favorite', {
-        isFavorite: !current,
-      });
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['live_view_layouts'] }),
-  });
-
-  const loadLayout = (layout: any) => {
-    setGrid(layout.grid as GridLayout);
-    // Restore slot assignments from saved layout
-    const newAssignments: Record<number, string> = {};
-    const slots = layout.slots as any[];
-    if (slots?.length) {
-      slots.forEach((slot: any) => {
-        if (slot.device_id) {
-          newAssignments[slot.position] = slot.device_id;
-        }
-      });
-    }
-    setSlotAssignments(newAssignments);
-    setLoadDialogOpen(false);
-    toast.success(`Layout "${layout.name}" loaded`);
-  };
-
-  const cols = Math.sqrt(grid);
-
-  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
-
-  return (
-    <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">
-      {/* Camera sidebar */}
-      <div className="w-56 border-r bg-card flex flex-col shrink-0">
-        <div className="p-2 border-b">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cameras</p>
-          <p className="text-[10px] text-muted-foreground">{unassignedCameras.length} available — drag to grid</p>
-        </div>
-        <ScrollArea className="flex-1">
-          <div className="p-1 space-y-0.5">
-            {allCameras.map(cam => (
-              <div
-                key={cam.id}
-                className={`flex items-center gap-2 p-2 rounded-md cursor-grab active:cursor-grabbing hover:bg-muted/50 transition-colors ${assignedIds.has(cam.id) ? 'opacity-40' : ''}`}
-                draggable={!assignedIds.has(cam.id)}
-                onDragStart={() => handleDragStartFromSidebar(cam)}
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-0.5">
+              {/* All Sites option */}
+              <button
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-left text-sm transition-colors ${
+                  selectedSite === 'all'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-muted/50'
+                }`}
+                onClick={() => setSelectedSite('all')}
               >
-                <GripVertical className="h-3 w-3 text-muted-foreground/50 shrink-0" />
-                {cam.status === 'online' ? <Wifi className="h-3 w-3 text-success shrink-0" /> : <WifiOff className="h-3 w-3 text-destructive shrink-0" />}
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-medium truncate">{cam.name}</p>
-                  <p className="text-[9px] text-muted-foreground truncate">{cam.ip_address} • {cam.brand}</p>
+                <span className="font-medium truncate">All Sites</span>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  {siteStats['all'] && (
+                    <>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] px-1.5 py-0 h-4 ${
+                          selectedSite === 'all'
+                            ? 'border-primary-foreground/30 text-primary-foreground'
+                            : 'border-green-500/30 text-green-600'
+                        }`}
+                      >
+                        <Wifi className="h-2.5 w-2.5 mr-0.5" />
+                        {siteStats['all'].online}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] px-1.5 py-0 h-4 ${
+                          selectedSite === 'all'
+                            ? 'border-primary-foreground/30 text-primary-foreground'
+                            : 'border-red-500/30 text-red-600'
+                        }`}
+                      >
+                        <WifiOff className="h-2.5 w-2.5 mr-0.5" />
+                        {siteStats['all'].offline}
+                      </Badge>
+                    </>
+                  )}
                 </div>
-              </div>
-            ))}
-            {allCameras.length === 0 && (
-              <p className="text-xs text-muted-foreground p-3 text-center">No cameras found</p>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
+              </button>
 
-      {/* Main grid area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex items-center gap-2 px-4 py-2 border-b bg-card">
-          <Select value={selectedSite} onValueChange={setSelectedSite}>
-            <SelectTrigger className="w-48 h-8 text-xs" aria-label="Filter by site"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sites</SelectItem>
-              {sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-
-          <div className="flex items-center border rounded-md" role="group" aria-label="Grid layout options">
-            {GRID_OPTIONS.map(opt => (
-              <Button
-                key={opt.grid}
-                variant={grid === opt.grid ? 'default' : 'ghost'}
-                size="sm"
-                className="h-8 px-2 rounded-none first:rounded-l-md last:rounded-r-md"
-                onClick={() => setGrid(opt.grid)}
-                aria-label={`${opt.label} grid layout`}
-                aria-pressed={grid === opt.grid}
-              >
-                {opt.icon}
-                <span className="ml-1 text-xs">{opt.label}</span>
-              </Button>
-            ))}
-          </div>
-
-          <div className="ml-auto flex items-center gap-1">
-            <Button
-              variant={tourOpen ? 'default' : 'outline'}
-              size="sm"
-              className="h-8 text-xs"
-              onClick={() => { setTourOpen(!tourOpen); if (!tourOpen) { setEventsOpen(false); setOpsOpen(false); } }}
-            >
-              <Navigation className="mr-1 h-3 w-3" /> Tours
-            </Button>
-            <Button
-              variant={eventsOpen ? 'default' : 'outline'}
-              size="sm"
-              className="h-8 text-xs"
-              onClick={() => { setEventsOpen(!eventsOpen); if (!eventsOpen) { setTourOpen(false); } }}
-            >
-              <Bell className="mr-1 h-3 w-3" /> Events
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              className="h-8 text-xs bg-cyan-500 hover:bg-cyan-600 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
-              onClick={() => { window.location.href = '/immersive' }}
-            >
-              <Zap className="mr-1 h-3 w-3" /> Immersive 3D
-            </Button>
-            {!opsOpen && (
-              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => { setOpsOpen(true); setTourOpen(false); }}>Ops Panel</Button>
-            )}
-            <Badge variant="outline" className="text-xs">{allCameras.length} cameras</Badge>
-
-            <Dialog open={loadDialogOpen} onOpenChange={setLoadDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8"><FolderOpen className="mr-1 h-3 w-3" /> Load</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Saved Layouts</DialogTitle></DialogHeader>
-                {savedLayouts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4">No saved layouts yet</p>
-                ) : (
-                  <div className="space-y-2 max-h-64 overflow-auto">
-                    {savedLayouts.map((layout: any) => (
-                      <div key={layout.id} className="flex items-center justify-between p-2 rounded-md border hover:bg-muted/50">
-                        <div className="flex items-center gap-2 cursor-pointer flex-1" onClick={() => loadLayout(layout)}>
-                          <div>
-                            <p className="text-sm font-medium">{layout.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {Math.sqrt(layout.grid)}×{Math.sqrt(layout.grid)} grid
-                              {layout.is_shared && ' • Shared'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleFavorite.mutate({ id: layout.id, current: layout.is_favorite })}>
-                            <Star className={`h-3.5 w-3.5 ${layout.is_favorite ? 'fill-warning text-warning' : ''}`} />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteLayout.mutate(layout.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8"><Save className="mr-1 h-3 w-3" /> Save Layout</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Save Current Layout</DialogTitle></DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Layout Name</Label>
-                    <Input value={layoutName} onChange={e => setLayoutName(e.target.value)} placeholder="e.g. Main Entrance 3x3" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Share with team</p>
-                      <p className="text-xs text-muted-foreground">Other operators can load this layout</p>
+              {/* Individual sites */}
+              {siteGroups.map((sg) => {
+                const stats = siteStats[sg.site_id];
+                return (
+                  <button
+                    key={sg.site_id}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-left text-sm transition-colors ${
+                      selectedSite === sg.site_id
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-muted/50'
+                    }`}
+                    onClick={() => setSelectedSite(sg.site_id)}
+                  >
+                    <span className="font-medium truncate">{sg.site_name}</span>
+                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                      {stats && (
+                        <>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] px-1.5 py-0 h-4 ${
+                              selectedSite === sg.site_id
+                                ? 'border-primary-foreground/30 text-primary-foreground'
+                                : 'border-green-500/30 text-green-600'
+                            }`}
+                          >
+                            <Wifi className="h-2.5 w-2.5 mr-0.5" />
+                            {stats.online}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] px-1.5 py-0 h-4 ${
+                              selectedSite === sg.site_id
+                                ? 'border-primary-foreground/30 text-primary-foreground'
+                                : 'border-red-500/30 text-red-600'
+                            }`}
+                          >
+                            <WifiOff className="h-2.5 w-2.5 mr-0.5" />
+                            {stats.offline}
+                          </Badge>
+                        </>
+                      )}
                     </div>
-                    <Switch checked={isShared} onCheckedChange={setIsShared} />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Grid: {Math.sqrt(grid)}×{Math.sqrt(grid)} • {Object.keys(slotAssignments).length || Math.min(allCameras.length, grid)} cameras assigned
-                  </p>
-                  <Button className="w-full" onClick={() => saveLayout.mutate()} disabled={!layoutName.trim() || saveLayout.isPending}>
-                    {saveLayout.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
-                    Save Layout
-                  </Button>
+                  </button>
+                );
+              })}
+
+              {siteGroups.length === 0 && !isLoading && (
+                <p className="text-xs text-muted-foreground p-3 text-center">
+                  No sites found
+                </p>
+              )}
+
+              {isLoading && (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
-              </DialogContent>
-            </Dialog>
+              )}
+            </div>
+          </ScrollArea>
+
+          {/* Sidebar footer with totals */}
+          <div className="p-3 border-t text-xs text-muted-foreground">
+            <p>
+              {filteredCameras.length} camera{filteredCameras.length !== 1 ? 's' : ''}{' '}
+              {selectedSite !== 'all' ? 'in site' : 'total'}
+            </p>
           </div>
         </div>
 
-        <div className="flex-1 p-2">
-          {isLoading ? (
-            <div className="grid gap-1 h-full" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${cols}, 1fr)` }}>
-              {Array.from({ length: grid }).map((_, i) => <Skeleton key={i} className="rounded-md" />)}
-            </div>
-          ) : (
-            <div className="grid gap-1 h-full" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${cols}, 1fr)` }}>
-              {Array.from({ length: grid }).map((_, i) => (
-                <CameraCell
-                  key={i}
-                  device={getDeviceForSlot(i)}
-                  index={i}
-                  onDrop={handleDrop}
-                  onDragStart={handleDragStartFromGrid}
-                  onRemove={handleRemoveFromSlot}
-                  isDragOver={dragOverSlot === i}
-                />
+        {/* ── Main Content ────────────────────────────────────── */}
+        <div className="flex-1 flex flex-col min-w-0" ref={gridContainerRef}>
+          {/* ── Controls Bar ──────────────────────────────────── */}
+          <div className="flex items-center gap-2 px-4 py-2 border-b bg-card">
+            {/* Grid size selector */}
+            <div
+              className="flex items-center border rounded-md"
+              role="group"
+              aria-label="Grid layout options"
+            >
+              {gridOptions.map((opt) => (
+                <Tooltip key={opt.size}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={gridSize === opt.size ? 'default' : 'ghost'}
+                      size="sm"
+                      className="h-8 px-3 rounded-none first:rounded-l-md last:rounded-r-md"
+                      onClick={() => setGridSize(opt.size)}
+                      aria-label={`${opt.label} grid layout`}
+                      aria-pressed={gridSize === opt.size}
+                    >
+                      <Grid3X3 className="h-4 w-4 mr-1" />
+                      <span className="text-xs font-medium">{opt.label}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{opt.label} grid ({opt.size} cameras)</p>
+                  </TooltipContent>
+                </Tooltip>
               ))}
             </div>
-          )}
+
+            {/* Pagination controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={goToPrevPage}
+                      disabled={currentPage === 0}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Previous group</TooltipContent>
+                </Tooltip>
+
+                <span className="text-xs text-muted-foreground px-2 tabular-nums">
+                  {currentPage + 1} / {totalPages}
+                </span>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={goToNextPage}
+                      disabled={currentPage >= totalPages - 1}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Next group</TooltipContent>
+                </Tooltip>
+              </div>
+            )}
+
+            {/* Auto-rotation toggle */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={autoRotate ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-8"
+                  onClick={() => setAutoRotate(!autoRotate)}
+                >
+                  {autoRotate ? (
+                    <Pause className="h-4 w-4 mr-1" />
+                  ) : (
+                    <Play className="h-4 w-4 mr-1" />
+                  )}
+                  <span className="text-xs">Auto</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {autoRotate
+                  ? 'Stop auto-rotation (currently every 60s)'
+                  : 'Auto-rotate camera groups every 60 seconds'}
+              </TooltipContent>
+            </Tooltip>
+
+            <div className="ml-auto flex items-center gap-2">
+              {/* Camera count */}
+              <Badge variant="outline" className="text-xs">
+                {filteredCameras.filter((c) => c.status === 'online').length}/
+                {filteredCameras.length} online
+              </Badge>
+
+              {/* Sync Status */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => syncStatus.mutate()}
+                    disabled={syncStatus.isPending}
+                  >
+                    {syncStatus.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                    )}
+                    <span className="text-xs">Sync Status</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Refresh camera online/offline status
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Fullscreen */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={toggleFullscreen}
+                  >
+                    <Maximize className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Toggle fullscreen</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+
+          {/* ── Video Grid ────────────────────────────────────── */}
+          <div className="flex-1 p-2 bg-background">
+            {isLoading ? (
+              <div
+                className="grid gap-1.5 h-full"
+                style={{
+                  gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                  gridTemplateRows: `repeat(${cols}, 1fr)`,
+                }}
+              >
+                {Array.from({ length: gridSize }).map((_, i) => (
+                  <Card
+                    key={i}
+                    className="flex items-center justify-center bg-muted/20 animate-pulse"
+                  >
+                    <Video className="h-8 w-8 text-muted-foreground/20" />
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div
+                className="grid gap-1.5 h-full"
+                style={{
+                  gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                  gridTemplateRows: `repeat(${cols}, 1fr)`,
+                }}
+              >
+                {paginatedCameras.map((camera, i) => (
+                  <CameraCell key={camera?.id ?? `empty-${i}`} camera={camera} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-      {tourOpen && (
-        <TourEngine
-          cameras={allCameras}
-          sections={[...sites.map(s => ({ id: s.id, name: s.name })), ...sections.map((s: any) => ({ id: s.id, name: s.name }))]}
-          onCameraFocus={(camId) => {
-            setFocusedCameraId(camId);
-            // Auto-assign to slot 0 for 1x1, or highlight in grid
-            if (grid === 1) {
-              setSlotAssignments({ 0: camId });
-            }
-          }}
-          onClose={() => setTourOpen(false)}
-        />
-      )}
-      {eventsOpen && <LiveViewEventsPanel onClose={() => setEventsOpen(false)} />}
-      {opsOpen && !tourOpen && <LiveViewOpsPanel onClose={() => setOpsOpen(false)} />}
-    </div>
+    </TooltipProvider>
   );
 }
