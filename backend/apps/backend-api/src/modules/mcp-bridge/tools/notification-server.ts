@@ -17,6 +17,7 @@ import {
   auditLogs,
 } from '../../../db/schema/index.js';
 import { config } from '../../../config/env.js';
+import { whatsappTwilio } from '../../../services/whatsapp-twilio.js';
 import type { MCPServerTool } from './index.js';
 
 // ── Rate Limiter (in-memory, per-tenant, max 10/minute) ──────
@@ -411,6 +412,101 @@ export const sendWhatsApp: MCPServerTool = {
   },
 };
 
+// ── send_whatsapp_twilio ──────────────────────────────────────
+
+export const sendWhatsAppTwilio: MCPServerTool = {
+  name: 'send_whatsapp_twilio',
+  description:
+    'Send a freeform WhatsApp message via Twilio. Use this when the Meta Cloud API is not configured or you need to send a freeform (non-template) message. Rate limited to 10 per minute per tenant.',
+  parameters: {
+    to: {
+      type: 'string',
+      description: 'Recipient phone number in E.164 format, e.g., +573001234567 (required)',
+      required: true,
+    },
+    message: {
+      type: 'string',
+      description: 'Message body text (required)',
+      required: true,
+    },
+  },
+  execute: async (params, context) => {
+    const to = params.to as string;
+    const message = params.message as string;
+
+    if (!to || !message) {
+      return { error: 'to and message are required' };
+    }
+
+    // Rate limit check
+    const rateCheck = checkRateLimit(context.tenantId);
+    if (!rateCheck.allowed) {
+      return {
+        error: 'Rate limit exceeded. Maximum 10 notifications per minute per tenant.',
+        remaining: rateCheck.remaining,
+      };
+    }
+
+    if (!whatsappTwilio.isConfigured()) {
+      // Log the failed attempt
+      await db.insert(notificationLog).values({
+        tenantId: context.tenantId,
+        type: 'whatsapp',
+        recipient: to,
+        subject: 'Twilio WhatsApp',
+        message: message.substring(0, 1000),
+        status: 'failed',
+        error: 'Twilio WhatsApp not configured. Set TWILIO_ACCOUNT_SID and TWILIO_WHATSAPP_FROM.',
+      });
+
+      return {
+        error: 'Twilio WhatsApp not configured. Set TWILIO_ACCOUNT_SID and TWILIO_WHATSAPP_FROM.',
+        notification_logged: true,
+      };
+    }
+
+    const success = await whatsappTwilio.sendMessage(to, message);
+
+    // Log notification
+    await db.insert(notificationLog).values({
+      tenantId: context.tenantId,
+      type: 'whatsapp',
+      recipient: to,
+      subject: 'Twilio WhatsApp',
+      message: message.substring(0, 1000),
+      status: success ? 'sent' : 'failed',
+      error: success ? null : 'Twilio API call failed',
+      sentAt: success ? new Date() : null,
+    });
+
+    // Audit log
+    await db.insert(auditLogs).values({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      userEmail: 'mcp-agent',
+      action: 'mcp.notification.send_whatsapp_twilio',
+      entityType: 'notification',
+      afterState: {
+        to,
+        success,
+        provider: 'twilio',
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    return {
+      message: success
+        ? `WhatsApp message sent to ${to} via Twilio`
+        : `Failed to send WhatsApp message to ${to} via Twilio`,
+      status: success ? 'sent' : 'failed',
+      provider: 'twilio',
+      recipient: to,
+      rate_limit_remaining: rateCheck.remaining,
+      timestamp: new Date().toISOString(),
+    };
+  },
+};
+
 // ── send_email ────────────────────────────────────────────────
 
 export const sendEmail: MCPServerTool = {
@@ -652,6 +748,7 @@ export const getNotificationHistory: MCPServerTool = {
 export const notificationServerTools: MCPServerTool[] = [
   sendAlert,
   sendWhatsApp,
+  sendWhatsAppTwilio,
   sendEmail,
   getNotificationHistory,
 ];

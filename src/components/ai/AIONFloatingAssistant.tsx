@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Bot, Send, Mic, Plus } from 'lucide-react';
+import { Bot, Send, Mic, Plus, Volume2, VolumeX } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -64,6 +64,13 @@ export function AIONFloatingAssistant() {
   const [listening, setListening] = useState(false);
   const [unreadCount] = useState(0);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [autoSpeak, setAutoSpeak] = useState(() => {
+    try {
+      return localStorage.getItem('aion-auto-speak') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
 
@@ -160,6 +167,37 @@ export function AIONFloatingAssistant() {
     recognition.onend = () => setListening(false);
   };
 
+  // ── Text-to-Speech (TTS) ──────────────────────────────────────
+  const speakResponse = useCallback((text: string) => {
+    if (!('speechSynthesis' in window)) {
+      toast.error('TTS no disponible en este navegador');
+      return;
+    }
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'es-CO';
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    // Try to find a Spanish voice
+    const voices = window.speechSynthesis.getVoices();
+    const spanishVoice = voices.find(v => v.lang.startsWith('es'));
+    if (spanishVoice) utterance.voice = spanishVoice;
+
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
+  // Persist auto-speak preference
+  useEffect(() => {
+    try {
+      localStorage.setItem('aion-auto-speak', String(autoSpeak));
+    } catch {
+      // localStorage unavailable
+    }
+  }, [autoSpeak]);
+
   // ── New Conversation ─────────────────────────────────────────
   const startNewConversation = async () => {
     setMessages([]);
@@ -196,6 +234,10 @@ export function AIONFloatingAssistant() {
       const response = (resp as Record<string, unknown>)?.response as string || 'Sin respuesta';
       const allMessages = [...updatedMessages, { role: 'assistant' as const, content: response }];
       setMessages(allMessages);
+      // Auto-speak new AI response if enabled
+      if (autoSpeak) {
+        speakResponse(response);
+      }
       // Persist after successful exchange
       await saveConversation(allMessages);
     } catch {
@@ -229,16 +271,28 @@ export function AIONFloatingAssistant() {
             <h3 className="font-semibold flex items-center gap-2">
               <Bot className="h-4 w-4" /> AION Assistant
             </h3>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={startNewConversation}
-              className="h-7 text-xs gap-1"
-              aria-label="Nueva conversación"
-            >
-              <Plus className="h-3 w-3" />
-              Nueva
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant={autoSpeak ? 'default' : 'outline'}
+                onClick={() => setAutoSpeak(prev => !prev)}
+                className="h-7 text-xs gap-1"
+                aria-label={autoSpeak ? 'Desactivar lectura automática' : 'Activar lectura automática'}
+                title={autoSpeak ? 'Auto-lectura activada' : 'Auto-lectura desactivada'}
+              >
+                {autoSpeak ? <Volume2 className="h-3 w-3" /> : <VolumeX className="h-3 w-3" />}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={startNewConversation}
+                className="h-7 text-xs gap-1"
+                aria-label="Nueva conversación"
+              >
+                <Plus className="h-3 w-3" />
+                Nueva
+              </Button>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground">
             Pregúntame sobre {pagePath.slice(1) || 'la plataforma'}
@@ -288,6 +342,14 @@ export function AIONFloatingAssistant() {
               }`}
             >
               {m.content}
+              {m.role === 'assistant' && (
+                <button
+                  onClick={() => speakResponse(m.content)}
+                  className="mt-1 text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                >
+                  <Volume2 className="h-3 w-3 inline" /> Escuchar
+                </button>
+              )}
             </div>
           ))}
           {loading && (

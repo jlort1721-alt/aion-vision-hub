@@ -62,6 +62,13 @@ export const envSchema = z.object({
   WHATSAPP_APP_SECRET: z.string().min(32).optional(),
   WHATSAPP_API_VERSION: z.string().default('v21.0'),
 
+  // Twilio WhatsApp (alternative to Meta Cloud API)
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_API_KEY_SID: z.string().optional(),
+  TWILIO_API_KEY_SECRET: z.string().optional(),
+  TWILIO_WHATSAPP_FROM: z.string().optional(),
+
   // SIP / VoIP / Intercom
   SIP_HOST: z.string().optional(),
   SIP_PORT: z.coerce.number().default(5060),

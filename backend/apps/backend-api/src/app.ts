@@ -79,6 +79,9 @@ import { registerClaveBridgeRoutes } from './modules/clave-bridge/routes.js';
 import { registerLiveViewRoutes } from './modules/live-view/routes.js';
 import { registerProvisioningRoutes } from './modules/provisioning/routes.js';
 import { registerImouRoutes } from './modules/imou/routes.js';
+import { registerHikConnectRoutes } from './modules/hikconnect/routes.js';
+import { registerFaceRecognitionRoutes } from './modules/face-recognition/routes.js';
+import { registerHeatMappingRoutes } from './modules/heat-mapping/routes.js';
 import websocketPlugin from './plugins/websocket.js';
 import { cameraEvents } from './services/camera-events.js';
 
@@ -254,6 +257,15 @@ export async function buildApp() {
 
   // IMOU / Dahua Cloud API (P2P cloud relay for XVR devices)
   await app.register(registerImouRoutes, { prefix: '/imou' });
+
+  // Hik-Connect P2P Cloud Streaming (requires tpp.hikvision.com AK/SK)
+  await app.register(registerHikConnectRoutes, { prefix: '/hikconnect' });
+
+  // Face Recognition Framework (CodeProject.AI / DeepStack / Frigate)
+  await app.register(registerFaceRecognitionRoutes, { prefix: '/face-recognition' });
+
+  // Heat Mapping — Traffic analysis and zone activity visualization
+  await app.register(registerHeatMappingRoutes, { prefix: '/analytics/heatmap' });
 
   // CLAVE bidirectional bridge (voice commands, event push, status)
   await app.register(registerClaveBridgeRoutes, { prefix: '/clave' });

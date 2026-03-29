@@ -43,4 +43,34 @@ export async function registerImouRoutes(app: FastifyInstance) {
       return reply.send({ success: false, error: (err as Error).message });
     }
   });
+
+  // GET /imou/binding-guide -- Instructions for binding Dahua XVR devices
+  app.get('/binding-guide', { preHandler: [requireRole('tenant_admin', 'super_admin')] }, async (_request, reply) => {
+    const serials = [
+      { sede: 'Alborada', serial: 'AL02505PAJD40E7' },
+      { sede: 'Brescia', serial: 'AK01E46PAZ0BA9C' },
+      { sede: 'Patio Bonito', serial: 'AL02505PAJDC6A4' },
+      { sede: 'Terrabamba', serial: 'BB01B89PAJ5DDCD' },
+      { sede: 'Danubios (Clave)', serial: 'AJ00421PAZF2E60' },
+      { sede: 'Danubios (Puesto)', serial: 'AH0306CPAZ5EA1A' },
+      { sede: 'Terrazzino', serial: 'AL02505PAJ638AA' },
+      { sede: 'Quintas SM', serial: 'AH1020EPAZ39E67' },
+      { sede: 'Hospital SJ', serial: 'AE01C60PAZA4D94' },
+      { sede: 'Factory', serial: '9B02D09PAZ4C0D2' },
+      { sede: 'Santana', serial: 'AB081E4PAZD6D5B' },
+    ];
+    return reply.send({
+      success: true,
+      data: {
+        instructions: [
+          '1. Login to https://open.imoulife.com',
+          '2. Go to Device Management -> Add Device',
+          '3. Enter each serial number below with verification code: admin / Clave.seg2023',
+          '4. After binding, devices will appear in GET /imou/devices',
+        ],
+        devices: serials,
+        configured: imouCloud.isConfigured(),
+      },
+    });
+  });
 }
