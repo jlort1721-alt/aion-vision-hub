@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth.js';
 import { domoticService } from './service.js';
+import { ewelinkMCP } from '../../services/ewelink-mcp.js';
 import {
   createDomoticDeviceSchema, updateDomoticDeviceSchema,
   domoticFiltersSchema, domoticActionSchema,
@@ -8,6 +9,44 @@ import {
 import type { CreateDomoticDeviceInput, UpdateDomoticDeviceInput, DomoticFilters, DomoticActionInput } from './schemas.js';
 
 export async function registerDomoticRoutes(app: FastifyInstance) {
+  // ── eWeLink MCP endpoints ──────────────────────────────────
+  app.get('/ewelink/status', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (_request, reply) => {
+    return reply.send({ success: true, data: { configured: ewelinkMCP.isConfigured() } });
+  });
+
+  app.get('/ewelink/devices', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (_request, reply) => {
+    if (!ewelinkMCP.isConfigured()) return reply.send({ success: true, data: [], message: 'eWeLink MCP not configured' });
+    try {
+      const devices = await ewelinkMCP.getDevices();
+      return reply.send({ success: true, data: devices });
+    } catch (err) {
+      return reply.send({ success: false, error: (err as Error).message });
+    }
+  });
+
+  app.post('/ewelink/:deviceId/toggle', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
+    const { deviceId } = request.params as { deviceId: string };
+    const { on } = request.body as { on: boolean };
+    try {
+      await ewelinkMCP.toggleDevice(deviceId, on);
+      await request.audit('domotics.ewelink.toggle', 'ewelink', deviceId, { on });
+      return reply.send({ success: true });
+    } catch (err) {
+      return reply.send({ success: false, error: (err as Error).message });
+    }
+  });
+
+  app.post('/ewelink/:deviceId/control', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
+    const { deviceId } = request.params as { deviceId: string };
+    const { action } = request.body as { action: string };
+    try {
+      await ewelinkMCP.controlDevice(deviceId, action);
+      await request.audit('domotics.ewelink.control', 'ewelink', deviceId, { action });
+      return reply.send({ success: true });
+    } catch (err) {
+      return reply.send({ success: false, error: (err as Error).message });
+    }
+  });
   app.get<{ Querystring: DomoticFilters }>('/', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const filters = domoticFiltersSchema.parse(request.query);
     const data = await domoticService.list(request.tenantId, filters);
