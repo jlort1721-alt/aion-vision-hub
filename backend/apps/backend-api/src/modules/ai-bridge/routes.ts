@@ -246,4 +246,129 @@ Responde en español, formato markdown.`;
       } satisfies ApiResponse;
     },
   );
+
+  // ══════════════════════════════════════════════════════════════
+  // Conversation Persistence CRUD
+  // ══════════════════════════════════════════════════════════════
+
+  // ── GET /conversations — List user's conversations ───────────
+  app.get(
+    '/conversations',
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
+    async (request) => {
+      const query = request.query as { limit?: string };
+      const limit = Math.min(Math.max(parseInt(query.limit || '20', 10) || 20, 1), 100);
+
+      const rows = await db.execute(
+        sql`SELECT id, user_id, tenant_id, title, messages, tools_used, token_count, created_at, updated_at
+            FROM ai_conversations
+            WHERE user_id = ${request.userId} AND tenant_id = ${request.tenantId}
+            ORDER BY updated_at DESC
+            LIMIT ${limit}`,
+      );
+
+      return { success: true, data: rows as unknown as Record<string, unknown>[] } satisfies ApiResponse;
+    },
+  );
+
+  // ── GET /conversations/:id — Get a specific conversation ─────
+  app.get(
+    '/conversations/:id',
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      const rows = await db.execute(
+        sql`SELECT id, user_id, tenant_id, title, messages, tools_used, token_count, created_at, updated_at
+            FROM ai_conversations
+            WHERE id = ${id}::uuid AND user_id = ${request.userId} AND tenant_id = ${request.tenantId}`,
+      );
+      const row = (rows as unknown as Record<string, unknown>[])[0];
+      if (!row) {
+        return reply.status(404).send({ success: false, error: 'Conversation not found' });
+      }
+
+      return { success: true, data: row } satisfies ApiResponse;
+    },
+  );
+
+  // ── POST /conversations — Create a new conversation ──────────
+  app.post(
+    '/conversations',
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
+    async (request) => {
+      const body = request.body as {
+        title?: string;
+        messages?: Array<{ role: string; content: string }>;
+      };
+      const title = body.title || null;
+      const messages = JSON.stringify(body.messages || []);
+
+      const rows = await db.execute(
+        sql`INSERT INTO ai_conversations (user_id, tenant_id, title, messages)
+            VALUES (${request.userId}, ${request.tenantId}, ${title}, ${messages}::jsonb)
+            RETURNING id, user_id, tenant_id, title, messages, tools_used, token_count, created_at, updated_at`,
+      );
+
+      return { success: true, data: (rows as unknown as Record<string, unknown>[])[0] } satisfies ApiResponse;
+    },
+  );
+
+  // ── PATCH /conversations/:id — Update (add messages) ─────────
+  app.patch(
+    '/conversations/:id',
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as {
+        title?: string;
+        messages?: Array<{ role: string; content: string }>;
+        tools_used?: string[];
+        token_count?: number;
+      };
+
+      const messagesJson = body.messages ? JSON.stringify(body.messages) : null;
+      const title = body.title ?? null;
+      const toolsUsed = body.tools_used ?? null;
+      const tokenCount = body.token_count ?? null;
+
+      const rows = await db.execute(
+        sql`UPDATE ai_conversations
+            SET messages = COALESCE(${messagesJson}::jsonb, messages),
+                title = COALESCE(${title}, title),
+                tools_used = COALESCE(${toolsUsed}::text[], tools_used),
+                token_count = COALESCE(${tokenCount}::int, token_count),
+                updated_at = NOW()
+            WHERE id = ${id}::uuid AND user_id = ${request.userId} AND tenant_id = ${request.tenantId}
+            RETURNING id, user_id, tenant_id, title, messages, tools_used, token_count, created_at, updated_at`,
+      );
+      const row = (rows as unknown as Record<string, unknown>[])[0];
+      if (!row) {
+        return reply.status(404).send({ success: false, error: 'Conversation not found' });
+      }
+
+      return { success: true, data: row } satisfies ApiResponse;
+    },
+  );
+
+  // ── DELETE /conversations/:id — Delete a conversation ────────
+  app.delete(
+    '/conversations/:id',
+    { preHandler: [requireRole('super_admin', 'tenant_admin', 'operator')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      const rows = await db.execute(
+        sql`DELETE FROM ai_conversations
+            WHERE id = ${id}::uuid AND user_id = ${request.userId} AND tenant_id = ${request.tenantId}
+            RETURNING id`,
+      );
+      const row = (rows as unknown as Record<string, unknown>[])[0];
+      if (!row) {
+        return reply.status(404).send({ success: false, error: 'Conversation not found' });
+      }
+
+      return { success: true, data: { deleted: true } } satisfies ApiResponse;
+    },
+  );
 }

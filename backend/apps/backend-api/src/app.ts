@@ -80,6 +80,7 @@ import { registerLiveViewRoutes } from './modules/live-view/routes.js';
 import { registerProvisioningRoutes } from './modules/provisioning/routes.js';
 import { registerImouRoutes } from './modules/imou/routes.js';
 import websocketPlugin from './plugins/websocket.js';
+import { cameraEvents } from './services/camera-events.js';
 
 const loggerOpts = { name: 'aion-api', level: config.LOG_LEVEL };
 
@@ -269,9 +270,13 @@ export async function buildApp() {
   // Start internal monitoring agent (5 min interval)
   internalAgent.start(300000);
 
+  // Start camera event poller (1 min interval)
+  cameraEvents.start(60000);
+
   // Graceful shutdown
   app.addHook('onClose', async () => {
     internalAgent.stop();
+    cameraEvents.stop();
   });
 
   return app;

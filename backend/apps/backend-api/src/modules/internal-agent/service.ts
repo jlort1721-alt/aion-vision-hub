@@ -12,20 +12,39 @@ interface AgentReport {
   timestamp: string;
 }
 
+export interface ProactiveAlert {
+  type: 'unresolved_critical' | 'device_offline' | 'volume_spike';
+  message: string;
+  severity: 'high' | 'medium' | 'low';
+  count: number;
+}
+
+export interface Prediction {
+  type: 'peak_hour';
+  message: string;
+  confidence: number;
+  data: Record<string, unknown>;
+}
+
 export class InternalAgentService {
   private intervalId: NodeJS.Timeout | null = null;
+  private proactiveIntervalId: NodeJS.Timeout | null = null;
   private reports: AgentReport[] = [];
+  private proactiveAlerts: ProactiveAlert[] = [];
 
   async start(intervalMs = 300000) { // 5 minutes default
     logger.info({ interval: intervalMs }, 'Internal agent started');
     // Run immediately on start
     await this.runHealthCheck();
+    await this.runProactiveAnalysis();
     // Then on interval
     this.intervalId = setInterval(() => this.runHealthCheck(), intervalMs);
+    this.proactiveIntervalId = setInterval(() => this.runProactiveAnalysis(), intervalMs);
   }
 
   stop() {
     if (this.intervalId) clearInterval(this.intervalId);
+    if (this.proactiveIntervalId) clearInterval(this.proactiveIntervalId);
     logger.info('Internal agent stopped');
   }
 
@@ -73,6 +92,92 @@ export class InternalAgentService {
   getOverallScore(): number {
     if (this.reports.length === 0) return 0;
     return Math.round(this.reports.reduce((s, r) => s + r.score, 0) / this.reports.length);
+  }
+
+  async runProactiveAnalysis(): Promise<ProactiveAlert[]> {
+    const alerts: ProactiveAlert[] = [];
+
+    try {
+      // 1. Unresolved critical events > 15 min
+      const criticals = await db.execute(sql`
+        SELECT count(*) as cnt FROM events
+        WHERE tenant_id IS NOT NULL AND status = 'new' AND severity IN ('critical', 'high')
+        AND created_at < NOW() - INTERVAL '15 minutes'
+      `);
+      const critCount = parseInt((criticals as unknown as Record<string, unknown>[])[0]?.cnt as string || '0');
+      if (critCount > 0) {
+        alerts.push({ type: 'unresolved_critical', message: `${critCount} eventos criticos sin atender por mas de 15 minutos`, severity: 'high', count: critCount });
+      }
+
+      // 2. Recently offline devices
+      const offline = await db.execute(sql`
+        SELECT count(*) as cnt FROM devices
+        WHERE status = 'offline' AND updated_at > NOW() - INTERVAL '5 minutes'
+      `);
+      const offCount = parseInt((offline as unknown as Record<string, unknown>[])[0]?.cnt as string || '0');
+      if (offCount > 0) {
+        alerts.push({ type: 'device_offline', message: `${offCount} dispositivos se desconectaron en los ultimos 5 minutos`, severity: 'medium', count: offCount });
+      }
+
+      // 3. Event volume spike (>3x normal)
+      const recent = await db.execute(sql`
+        SELECT count(*) as cnt FROM events WHERE created_at > NOW() - INTERVAL '1 hour'
+      `);
+      const baseline = await db.execute(sql`
+        SELECT count(*)::float / 24 as avg FROM events WHERE created_at > NOW() - INTERVAL '24 hours'
+      `);
+      const recentCount = parseInt((recent as unknown as Record<string, unknown>[])[0]?.cnt as string || '0');
+      const avgCount = parseFloat((baseline as unknown as Record<string, unknown>[])[0]?.avg as string || '1');
+      if (recentCount > avgCount * 3 && recentCount > 5) {
+        alerts.push({ type: 'volume_spike', message: `Volumen de eventos ${Math.round(recentCount / avgCount)}x por encima del promedio`, severity: 'high', count: recentCount });
+      }
+
+      this.proactiveAlerts = alerts;
+
+      if (alerts.length > 0) {
+        logger.info({ alertCount: alerts.length }, 'Proactive analysis found anomalies');
+      }
+    } catch (err) {
+      logger.error({ error: (err as Error).message }, 'Proactive analysis failed');
+    }
+    return alerts;
+  }
+
+  getProactiveAlerts(): ProactiveAlert[] {
+    return this.proactiveAlerts;
+  }
+
+  async getPredictions(): Promise<Prediction[]> {
+    const predictions: Prediction[] = [];
+
+    try {
+      // Predict based on day-of-week patterns
+      const dayOfWeek = new Date().getDay();
+      const historicalForDay = await db.execute(sql`
+        SELECT EXTRACT(HOUR FROM created_at) as hour, count(*) as cnt, avg(CASE WHEN severity = 'critical' THEN 1 ELSE 0 END) as critical_ratio
+        FROM events
+        WHERE EXTRACT(DOW FROM created_at) = ${dayOfWeek}
+        AND created_at > NOW() - INTERVAL '30 days'
+        GROUP BY EXTRACT(HOUR FROM created_at)
+        ORDER BY hour
+      `);
+
+      const rows = historicalForDay as unknown as Record<string, unknown>[];
+      const currentHour = new Date().getHours();
+      const upcomingPeak = rows.find(r => parseInt(r.hour as string) > currentHour && parseInt(r.cnt as string) > 10);
+      if (upcomingPeak) {
+        predictions.push({
+          type: 'peak_hour',
+          message: `Se espera pico de actividad a las ${upcomingPeak.hour as string}:00 (basado en patron de 30 dias)`,
+          confidence: 0.75,
+          data: upcomingPeak,
+        });
+      }
+    } catch (err) {
+      logger.error({ error: (err as Error).message }, 'Predictions analysis failed');
+    }
+
+    return predictions;
   }
 
   private async checkDevices(): Promise<AgentReport> {

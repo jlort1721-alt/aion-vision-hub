@@ -3,6 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger,
+} from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
 import { useDevices, useSites, useEventsLegacy } from '@/hooks/use-supabase-data';
 import { useRealtimeEvents } from '@/hooks/use-realtime-events';
@@ -17,7 +21,8 @@ import {
 } from 'recharts';
 import {
   MonitorSpeaker, Bell, AlertTriangle, Activity, Video, ArrowRight,
-  CheckCircle2, XCircle, AlertCircle, MapPin, Clock, Shield, BellRing, BellOff, Globe2
+  CheckCircle2, XCircle, AlertCircle, MapPin, Clock, Shield, BellRing, BellOff, Globe2,
+  Settings, GripVertical, ArrowUp, ArrowDown,
 } from 'lucide-react';
 
 /** Typed event for dashboard use */
@@ -55,6 +60,53 @@ import ClaveAssistantWidget from '@/components/dashboard/ClaveAssistantWidget';
 import { PageShell } from '@/components/shared/PageShell';
 import ErrorState from '@/components/ui/ErrorState';
 
+/** Widget configuration for customizable dashboard */
+interface WidgetConfig {
+  id: string;
+  label: string;
+  enabled: boolean;
+}
+
+const DEFAULT_WIDGETS: WidgetConfig[] = [
+  { id: 'kpis', label: 'KPI Cards', enabled: true },
+  { id: 'events_chart', label: 'Events per Hour', enabled: true },
+  { id: 'timeline', label: 'Event Timeline', enabled: true },
+  { id: 'severity', label: 'Severity Distribution', enabled: true },
+  { id: 'recent_events', label: 'Recent Events', enabled: true },
+  { id: 'device_status', label: 'Device Status', enabled: true },
+  { id: 'alerts_by_site', label: 'Alerts by Site', enabled: true },
+  { id: 'anomaly_banner', label: 'Anomaly Detection', enabled: true },
+  { id: 'clave_widget', label: 'CLAVE Assistant', enabled: true },
+  { id: 'cross_site', label: 'Cross-Site Dashboard', enabled: false },
+];
+
+const WIDGETS_STORAGE_KEY = 'aion-dashboard-widgets';
+
+function loadWidgets(): WidgetConfig[] {
+  try {
+    const stored = localStorage.getItem(WIDGETS_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as WidgetConfig[];
+      // Merge with defaults so new widgets are included
+      const storedIds = new Set(parsed.map(w => w.id));
+      const merged = [
+        ...parsed,
+        ...DEFAULT_WIDGETS.filter(d => !storedIds.has(d.id)),
+      ];
+      return merged;
+    }
+  } catch { /* ignore parse errors */ }
+  return DEFAULT_WIDGETS.map(w => ({ ...w }));
+}
+
+function saveWidgets(widgets: WidgetConfig[]) {
+  localStorage.setItem(WIDGETS_STORAGE_KEY, JSON.stringify(widgets));
+}
+
+function isWidgetEnabled(widgets: WidgetConfig[], id: string): boolean {
+  return widgets.find(w => w.id === id)?.enabled ?? false;
+}
+
 const SEVERITY_COLORS: Record<string, string> = {
   critical: 'hsl(0, 84%, 60%)',
   high: 'hsl(25, 95%, 53%)',
@@ -75,7 +127,38 @@ const statusIcon = (status: string) => {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'current' | 'all'>('current');
+  const [widgets, setWidgets] = useState<WidgetConfig[]>(loadWidgets);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
   const REFRESH_INTERVAL = 30000;
+
+  const wEnabled = useCallback((id: string) => isWidgetEnabled(widgets, id), [widgets]);
+
+  const toggleWidget = useCallback((id: string) => {
+    setWidgets(prev => {
+      const next = prev.map(w => w.id === id ? { ...w, enabled: !w.enabled } : w);
+      saveWidgets(next);
+      return next;
+    });
+  }, []);
+
+  const moveWidget = useCallback((id: string, direction: 'up' | 'down') => {
+    setWidgets(prev => {
+      const idx = prev.findIndex(w => w.id === id);
+      if (idx < 0) return prev;
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+      saveWidgets(next);
+      return next;
+    });
+  }, []);
+
+  const resetWidgets = useCallback(() => {
+    const defaults = DEFAULT_WIDGETS.map(w => ({ ...w }));
+    setWidgets(defaults);
+    saveWidgets(defaults);
+  }, []);
 
   // Cross-site drill-down: select a site from the comparison table
   const handleSelectSite = useCallback((siteId: string) => {
@@ -239,6 +322,64 @@ export default function DashboardPage() {
               {t('dashboard.all_sites') || 'All Sites'}
             </Button>
           </div>
+
+          {/* Customize Dashboard Widgets */}
+          <Dialog open={customizeOpen} onOpenChange={setCustomizeOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings className="mr-2 h-4 w-4" /> Customize
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Customize Dashboard</DialogTitle>
+                <DialogDescription>Toggle widgets on or off and reorder them using the arrow buttons.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2 py-2">
+                {widgets.map((widget, idx) => (
+                  <div key={widget.id} className="flex items-center gap-3 rounded-lg border p-3">
+                    <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium">{widget.label}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        disabled={idx === 0}
+                        onClick={() => moveWidget(widget.id, 'up')}
+                        aria-label={`Move ${widget.label} up`}
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        disabled={idx === widgets.length - 1}
+                        onClick={() => moveWidget(widget.id, 'down')}
+                        aria-label={`Move ${widget.label} down`}
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <Switch
+                      checked={widget.enabled}
+                      onCheckedChange={() => toggleWidget(widget.id)}
+                      aria-label={`Toggle ${widget.label}`}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button variant="outline" size="sm" onClick={resetWidgets}>
+                  Reset to Defaults
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           {permission !== 'granted' ? (
             <Button variant="outline" size="sm" onClick={subscribe}>
               <BellRing className="mr-2 h-4 w-4" /> {t('dashboard.enable_notifications')}
@@ -259,8 +400,13 @@ export default function DashboardPage() {
         {t('dashboard.welcome_back') || 'Welcome back'}, {user?.email?.split('@')[0] || 'User'}. {t('dashboard.last_login') || 'Last login'}: {new Date().toLocaleDateString('es-CO')}.
       </div>
 
-      {/* Cross-site view — shown when "All Sites" is selected */}
+      {/* Cross-site view — shown when "All Sites" is selected or widget enabled */}
       {viewMode === 'all' && (
+        <CrossSiteDashboard onSelectSite={handleSelectSite} />
+      )}
+
+      {/* Cross-site widget in current view if enabled */}
+      {viewMode === 'current' && wEnabled('cross_site') && (
         <CrossSiteDashboard onSelectSite={handleSelectSite} />
       )}
 
@@ -268,9 +414,10 @@ export default function DashboardPage() {
       {viewMode === 'current' && <>
 
       {/* Anomaly Detection Banner */}
-      <AnomalyAlertBanner />
+      {wEnabled('anomaly_banner') && <AnomalyAlertBanner />}
 
       {/* KPI Cards */}
+      {wEnabled('kpis') && (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map(stat => (
           <Card key={stat.label} className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate(stat.path)} aria-label={`${stat.label}: ${stat.value}`}>
@@ -291,9 +438,12 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
+      )}
 
       {/* Events per Hour + Device Status Donut */}
+      {(wEnabled('events_chart') || wEnabled('device_status')) && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {wEnabled('events_chart') && (
         <Card className="lg:col-span-2" aria-label="Events per hour chart">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -315,7 +465,9 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        )}
 
+        {wEnabled('device_status') && (
         <Card aria-label="Device status chart">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -347,10 +499,14 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
+      )}
 
       {/* Event Timeline + Active Alerts by Site */}
+      {(wEnabled('timeline') || wEnabled('alerts_by_site')) && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {wEnabled('timeline') && (
         <Card className="lg:col-span-2" aria-label="Event timeline chart">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t('dashboard.event_timeline')}</CardTitle>
@@ -373,7 +529,9 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        )}
 
+        {wEnabled('alerts_by_site') && (
         <Card aria-label="Active alerts by site chart">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -399,10 +557,14 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
+      )}
 
       {/* Severity + Recent Events + System Health */}
+      {(wEnabled('severity') || wEnabled('recent_events')) && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {wEnabled('severity') && (
         <Card aria-label="Severity distribution chart">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">{t('dashboard.severity_distribution')}</CardTitle>
@@ -422,8 +584,10 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Recent Events */}
+        {wEnabled('recent_events') && (
         <Card aria-label="Recent events">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -450,6 +614,7 @@ export default function DashboardPage() {
             ))}
           </CardContent>
         </Card>
+        )}
 
         {/* System Health */}
         <Card aria-label="System health status">
@@ -475,6 +640,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      )}
 
       {/* Bottom row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -509,7 +675,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <ClaveAssistantWidget />
+        {wEnabled('clave_widget') && <ClaveAssistantWidget />}
       </div>
 
       </>}

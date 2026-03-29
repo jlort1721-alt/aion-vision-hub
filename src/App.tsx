@@ -100,6 +100,8 @@ const MinutaPage = lazy(() => import("@/pages/MinutaPage"));
 const PhonePanelPage = lazy(() => import("@/pages/PhonePanelPage"));
 const NetworkPage = lazy(() => import("@/pages/NetworkPage"));
 const OperationsPanelPage = lazy(() => import("@/pages/OperationsPanelPage"));
+const GuardMobilePage = lazy(() => import("@/pages/GuardMobilePage"));
+const OnboardingWizardPage = lazy(() => import("@/pages/OnboardingWizardPage"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -205,6 +207,8 @@ function AppRoutes() {
           <Route path="phone" element={<ModuleGuard module="phone"><PhonePanelPage /></ModuleGuard>} />
           <Route path="network" element={<ModuleGuard module="system"><NetworkPage /></ModuleGuard>} />
           <Route path="operations" element={<ModuleGuard module="operations"><OperationsPanelPage /></ModuleGuard>} />
+          <Route path="guard" element={<GuardMobilePage />} />
+          <Route path="onboarding" element={<OnboardingWizardPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

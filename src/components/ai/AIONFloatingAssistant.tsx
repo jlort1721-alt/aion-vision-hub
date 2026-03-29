@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Bot, Send, Mic } from 'lucide-react';
+import { Bot, Send, Mic, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -38,6 +38,18 @@ interface ChatMessage {
   content: string;
 }
 
+interface AIConversation {
+  id: string;
+  user_id: string;
+  tenant_id: string;
+  title: string | null;
+  messages: ChatMessage[];
+  tools_used: string[];
+  token_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export function AIONFloatingAssistant() {
   const [open, setOpen] = useState(() => {
     try {
@@ -49,7 +61,9 @@ export function AIONFloatingAssistant() {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
   const [unreadCount] = useState(0);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
 
@@ -70,24 +84,124 @@ export function AIONFloatingAssistant() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
+  // ── Conversation Persistence ─────────────────────────────────
+  // Load latest conversation on mount
+  useEffect(() => {
+    const loadLatestConversation = async () => {
+      try {
+        const convos = await apiClient.get<AIConversation[]>('/ai/conversations', { limit: 1 });
+        if (convos && convos.length > 0) {
+          const convo = convos[0];
+          setConversationId(convo.id);
+          if (convo.messages && convo.messages.length > 0) {
+            setMessages(convo.messages);
+          }
+        }
+      } catch {
+        // Conversation loading is best-effort; silently ignore errors
+      }
+    };
+    loadLatestConversation();
+  }, []);
+
+  // Save messages to the current conversation after each exchange
+  const saveConversation = useCallback(async (msgs: ChatMessage[]) => {
+    try {
+      if (conversationId) {
+        await apiClient.patch(`/ai/conversations/${conversationId}`, { messages: msgs });
+      } else {
+        // Create a new conversation with the first user message as title
+        const firstUserMsg = msgs.find(m => m.role === 'user');
+        const title = firstUserMsg ? firstUserMsg.content.slice(0, 100) : 'Nueva conversación';
+        const convo = await apiClient.post<AIConversation>('/ai/conversations', {
+          title,
+          messages: msgs,
+        });
+        if (convo?.id) {
+          setConversationId(convo.id);
+        }
+      }
+    } catch {
+      // Saving is best-effort
+    }
+  }, [conversationId]);
+
+  // ── Voice Recognition ────────────────────────────────────────
+  const startVoiceInput = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const win = window as any;
+    if (!win.webkitSpeechRecognition && !win.SpeechRecognition) {
+      toast.error('Voice input not supported in this browser');
+      return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SpeechRecognitionCtor = (win.SpeechRecognition || win.webkitSpeechRecognition) as any;
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = 'es-CO'; // Spanish Colombia
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    setListening(true);
+    recognition.start();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
+      const text: string = event.results[0][0].transcript;
+      setMessage(text);
+      sendMessage(text); // Auto-send the voice command
+      setListening(false);
+    };
+
+    recognition.onerror = () => {
+      setListening(false);
+      toast.error('Error en reconocimiento de voz');
+    };
+
+    recognition.onend = () => setListening(false);
+  };
+
+  // ── New Conversation ─────────────────────────────────────────
+  const startNewConversation = async () => {
+    setMessages([]);
+    setConversationId(null);
+    setMessage('');
+    try {
+      const convo = await apiClient.post<AIConversation>('/ai/conversations', {
+        title: 'Nueva conversación',
+        messages: [],
+      });
+      if (convo?.id) {
+        setConversationId(convo.id);
+      }
+    } catch {
+      // Best-effort
+    }
+  };
+
+  // ── Send Message ─────────────────────────────────────────────
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
     const userMsg: ChatMessage = { role: 'user', content: text };
-    setMessages(prev => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setMessage('');
     setLoading(true);
 
     try {
       const resp = await apiClient.post<Record<string, unknown>>('/ai/chat', {
-        messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
+        messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
         tools: true,
         pageContext: { page: pagePath },
       });
       const response = (resp as Record<string, unknown>)?.response as string || 'Sin respuesta';
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      const allMessages = [...updatedMessages, { role: 'assistant' as const, content: response }];
+      setMessages(allMessages);
+      // Persist after successful exchange
+      await saveConversation(allMessages);
     } catch {
       toast.error('Error al comunicarse con AION');
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Error de conexión. Intenta de nuevo.' }]);
+      const allMessages = [...updatedMessages, { role: 'assistant' as const, content: 'Error de conexión. Intenta de nuevo.' }];
+      setMessages(allMessages);
     }
     setLoading(false);
   };
@@ -111,13 +225,38 @@ export function AIONFloatingAssistant() {
       <SheetContent side="right" className="w-[400px] sm:w-[450px] p-0 flex flex-col">
         {/* Header */}
         <div className="p-4 border-b bg-primary/5">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Bot className="h-4 w-4" /> AION Assistant
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Bot className="h-4 w-4" /> AION Assistant
+            </h3>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={startNewConversation}
+              className="h-7 text-xs gap-1"
+              aria-label="Nueva conversación"
+            >
+              <Plus className="h-3 w-3" />
+              Nueva
+            </Button>
+          </div>
           <p className="text-xs text-muted-foreground">
             Pregúntame sobre {pagePath.slice(1) || 'la plataforma'}
           </p>
         </div>
+
+        {/* Voice listening indicator */}
+        {listening && (
+          <div className="px-4 py-2 bg-red-50 dark:bg-red-950/30 border-b flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+            </span>
+            <span className="text-xs font-medium text-red-600 dark:text-red-400">
+              Escuchando...
+            </span>
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="p-3 border-b flex flex-wrap gap-1.5">
@@ -169,7 +308,13 @@ export function AIONFloatingAssistant() {
             className="flex-1"
             disabled={loading}
           />
-          <Button size="icon" variant="ghost" className="shrink-0" aria-label="Entrada de voz">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={startVoiceInput}
+            className={`shrink-0 ${listening ? 'text-red-500 animate-pulse' : ''}`}
+            aria-label="Entrada de voz"
+          >
             <Mic className="h-4 w-4" />
           </Button>
           <Button
