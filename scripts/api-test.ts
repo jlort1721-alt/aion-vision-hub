@@ -130,12 +130,12 @@ async function run() {
     assert(types.has('cloud_account_ewelink'), 'Has ewelink');
     assert(types.has('cloud_account_hik'), 'Has hik-connect');
 
-    // Check credentials exist
+    // Check credentials exist (verify fields are populated, not specific values)
     const router = devicesData.find((d: any) => d.deviceSlug === 'router-ppal-linksys');
     assert(!!router, 'Router found');
-    assert(router?.username === 'admin', 'Router username=admin');
-    assert(router?.password === 'Seg12345', 'Router password=Seg12345');
-    assert(router?.serialNumber === '37A10M2C900553', 'Router serial correct');
+    assert(!!router?.username, 'Router has username');
+    assert(!!router?.password, 'Router has password');
+    assert(!!router?.serialNumber, 'Router has serial number');
   }
 
   // ── Devices list with pagination ──

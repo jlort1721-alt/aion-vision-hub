@@ -103,6 +103,9 @@ const OperationsPanelPage = lazy(() => import("@/pages/OperationsPanelPage"));
 const GuardMobilePage = lazy(() => import("@/pages/GuardMobilePage"));
 const OnboardingWizardPage = lazy(() => import("@/pages/OnboardingWizardPage"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
+const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage"));
+const TermsPage = lazy(() => import("@/pages/TermsPage"));
+const CookiePolicyPage = lazy(() => import("@/pages/CookiePolicyPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = createQueryClient();
@@ -210,6 +213,9 @@ function AppRoutes() {
           <Route path="guard" element={<GuardMobilePage />} />
           <Route path="onboarding" element={<OnboardingWizardPage />} />
         </Route>
+        <Route path="privacy" element={<PrivacyPolicyPage />} />
+        <Route path="terms" element={<TermsPage />} />
+        <Route path="cookies" element={<CookiePolicyPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

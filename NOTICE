@@ -1,0 +1,24 @@
+AION Security Platform — Clave Seguridad CTA
+Copyright (c) 2026 Clave Seguridad CTA. All rights reserved.
+
+This product includes software developed by third parties.
+See THIRD-PARTY-LICENSES.md for the complete list of third-party
+components and their respective licenses.
+
+== Dual-Licensed Component Elections ==
+
+DOMPurify (dompurify)
+  Available under: MPL-2.0 OR Apache-2.0
+  Elected license: Apache-2.0
+  Rationale: Apache-2.0 is compatible with the platform's proprietary
+  distribution model and avoids copyleft obligations.
+
+== Apache-2.0 NOTICE Propagation ==
+
+This product includes software developed by Datadog, Inc.
+(import-in-the-middle — transitive dependency via OpenTelemetry)
+Licensed under Apache-2.0.
+
+== Contact ==
+
+For OSS compliance inquiries: legal@claveseguridad.co

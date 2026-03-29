@@ -456,6 +456,14 @@ export default function AppLayout() {
         <main id="main-content" className="flex-1 overflow-auto scrollbar-thin">
           <Outlet />
         </main>
+        <footer className="border-t px-4 py-2 text-xs text-muted-foreground flex items-center justify-between gap-4 shrink-0">
+          <span>&copy; {new Date().getFullYear()} Clave Seguridad CTA</span>
+          <nav className="flex items-center gap-3">
+            <a href="/privacy" className="hover:underline">Privacidad</a>
+            <a href="/terms" className="hover:underline">Términos</a>
+            <a href="/cookies" className="hover:underline">Cookies</a>
+          </nav>
+        </footer>
       </div>
       <Suspense fallback={null}>
         <CommandPalette />

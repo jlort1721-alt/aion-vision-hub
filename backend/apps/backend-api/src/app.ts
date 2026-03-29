@@ -121,6 +121,10 @@ export async function buildApp() {
   await app.register(cors, {
     origin: config.CORS_ORIGINS.split(',').map((o) => o.trim()),
     credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Tenant-Id'],
+    exposedHeaders: ['X-Request-Id', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'Retry-After'],
+    maxAge: 86400,
   });
 
   // Security headers
@@ -128,13 +132,30 @@ export async function buildApp() {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "blob:"],
         connectSrc: ["'self'", "wss:", ...config.CORS_ORIGINS.split(',').map((o) => o.trim())],
+        fontSrc: ["'self'", "data:"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'none'"],
+        upgradeInsecureRequests: [],
       },
     },
-    hsts: { maxAge: 31536000, includeSubDomains: true },
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+    xFrameOptions: { action: 'deny' },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  });
+
+  // Permissions-Policy header (not supported by helmet — set manually)
+  app.addHook('onSend', (_request, reply, _payload, done) => {
+    reply.header(
+      'Permissions-Policy',
+      'camera=(self), microphone=(self), geolocation=(self), fullscreen=(self), payment=(), usb=()',
+    );
+    done();
   });
 
   // JWT — explicit algorithm to prevent 'alg: none' attacks

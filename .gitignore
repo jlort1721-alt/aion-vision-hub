@@ -16,12 +16,18 @@ dist-ssr
 .env
 .env.local
 .env.production
+.env.production.*
 .env.*.local
 .env.docker
 backend/.env
 backend/**/.env
 gateway/.env
 gateway/**/.env
+
+# Credential documents (NEVER commit)
+CREDENTIALS.md
+credentials*.md
+**/CREDENTIALS*
 
 # Private keys
 *.pem

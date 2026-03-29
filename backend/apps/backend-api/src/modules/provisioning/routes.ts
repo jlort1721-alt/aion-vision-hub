@@ -25,7 +25,7 @@ export async function registerProvisioningRoutes(app: FastifyInstance) {
       const device = (results as unknown as Record<string, unknown>[])[0];
       const siteName = (device?.site_name as string) || 'AION';
       const extension = (device?.username as string) || mac.slice(-4);
-      const password = (device?.password as string) || 'aion2026';
+      const password = (device?.password as string) || process.env.SIP_DEFAULT_PASSWORD || '';
 
       // Generate Fanvil .cfg format
       const config = `
@@ -37,10 +37,10 @@ DisplayName = ${siteName}
 UserName = ${extension}
 AuthName = ${extension}
 Password = ${password}
-SIPServerAddr = 18.230.40.6
+SIPServerAddr = ${process.env.SIP_SERVER_ADDR || '0.0.0.0'}
 SIPServerPort = 5061
 TransportType = 4
-OutboundProxyAddr = 18.230.40.6
+OutboundProxyAddr = ${process.env.SIP_SERVER_ADDR || '0.0.0.0'}
 OutboundProxyPort = 5061
 
 [Auto Answer]
@@ -81,7 +81,7 @@ DisplayName = AION Phone
 UserName = ${mac.slice(-4)}
 AuthName = ${mac.slice(-4)}
 Password = aion2026
-SIPServerAddr = 18.230.40.6
+SIPServerAddr = ${process.env.SIP_SERVER_ADDR || '0.0.0.0'}
 SIPServerPort = 5061
 TransportType = 4
 

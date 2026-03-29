@@ -157,9 +157,16 @@ export default function LoginPage() {
           </Tabs>
         </Card>
 
-        <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground justify-center">
-          <Shield className="h-3 w-3" />
-          <span>Clave Seguridad — Plataforma Protegida</span>
+        <div className="mt-3 flex flex-col items-center gap-1 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Shield className="h-3 w-3" />
+            <span>Clave Seguridad — Plataforma Protegida</span>
+          </div>
+          <nav className="flex items-center gap-3">
+            <a href="/privacy" className="hover:underline">Privacidad</a>
+            <a href="/terms" className="hover:underline">Términos</a>
+            <a href="/cookies" className="hover:underline">Cookies</a>
+          </nav>
         </div>
       </div>
     </div>
