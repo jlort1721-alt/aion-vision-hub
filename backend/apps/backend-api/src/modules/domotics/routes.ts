@@ -60,8 +60,10 @@ export async function registerDomoticRoutes(app: FastifyInstance) {
   });
 
   // /actions list (frontend calls /domotics/actions)
-  app.get('/actions', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (_request, reply) => {
-    return reply.send({ success: true, data: [] });
+  app.get('/actions', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
+    const { deviceId, limit } = request.query as { deviceId?: string; limit?: string };
+    const data = await domoticService.listActions(request.tenantId, deviceId, limit ? parseInt(limit, 10) : 50);
+    return reply.send({ success: true, data });
   });
 
   app.get<{ Params: { id: string } }>('/:id', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {

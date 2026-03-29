@@ -176,6 +176,16 @@ export class ReportService {
 
     return updated;
   }
+
+  /** Delete a report by ID */
+  async delete(id: string, tenantId: string) {
+    const [deleted] = await db
+      .delete(reports)
+      .where(and(eq(reports.id, id), eq(reports.tenantId, tenantId)))
+      .returning();
+    if (!deleted) throw new NotFoundError('Report', id);
+    return deleted;
+  }
 }
 
 export const reportService = new ReportService();

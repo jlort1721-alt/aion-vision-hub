@@ -18,6 +18,13 @@ export async function registerKnowledgeBaseRoutes(app: FastifyInstance) {
     return reply.send({ success: true, data: results });
   });
 
+  // List all entries
+  app.get('/', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
+    const { limit } = request.query as { limit?: string };
+    const results = await knowledgeBase.listAll(limit ? parseInt(limit, 10) : 50);
+    return reply.send({ success: true, data: results });
+  });
+
   // Add knowledge entry (admin only)
   app.post('/', { preHandler: [requireRole('tenant_admin', 'super_admin')] }, async (request, reply) => {
     const body = request.body as { category: string; title: string; content: string; tags?: string[]; source?: string };
@@ -29,6 +36,23 @@ export async function registerKnowledgeBaseRoutes(app: FastifyInstance) {
       source: body.source || 'manual',
     });
     return reply.code(201).send({ success: true });
+  });
+
+  // Update knowledge entry
+  app.patch('/:id', { preHandler: [requireRole('tenant_admin', 'super_admin')] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as Partial<{ category: string; title: string; content: string; tags: string[]; source: string }>;
+    await knowledgeBase.update(id, body);
+    await request.audit('knowledge.update', 'knowledge_base', id, body);
+    return reply.send({ success: true });
+  });
+
+  // Delete knowledge entry
+  app.delete('/:id', { preHandler: [requireRole('tenant_admin', 'super_admin')] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    await knowledgeBase.remove(id);
+    await request.audit('knowledge.delete', 'knowledge_base', id);
+    return reply.code(204).send();
   });
 
   // Seed default knowledge

@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { domoticDevices, domoticActions } from '../../db/schema/index.js';
 import { NotFoundError } from '@aion/shared-contracts';
@@ -53,10 +53,16 @@ class DomoticService {
     return { device: { ...device, state: newState }, action: log };
   }
 
-  async getActions(deviceId: string, tenantId: string) {
+  async listActions(tenantId: string, deviceId?: string, limit = 50) {
+    const conditions = [eq(domoticActions.tenantId, tenantId)];
+    if (deviceId) conditions.push(eq(domoticActions.deviceId, deviceId));
     return db.select().from(domoticActions)
-      .where(and(eq(domoticActions.deviceId, deviceId), eq(domoticActions.tenantId, tenantId)))
-      .orderBy(domoticActions.createdAt).limit(100);
+      .where(and(...conditions))
+      .orderBy(desc(domoticActions.createdAt)).limit(limit);
+  }
+
+  async getActions(deviceId: string, tenantId: string) {
+    return this.listActions(tenantId, deviceId, 100);
   }
 }
 

@@ -20,7 +20,7 @@ export async function registerBackupRoutes(app: FastifyInstance) {
     { preHandler: [requireRole('tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const manifest = await runBackupNow(db);
-      await request.audit('backup.trigger', 'backups', null as any, {
+      await request.audit('backup.trigger', 'backups', 'manual', {
         total_rows: manifest.total_rows,
         duration_ms: manifest.duration_ms,
       });

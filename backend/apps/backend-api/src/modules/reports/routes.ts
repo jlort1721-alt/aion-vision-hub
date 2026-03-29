@@ -64,6 +64,17 @@ export async function registerReportRoutes(app: FastifyInstance) {
     },
   );
 
+  // ── DELETE /:id — Delete a report ──────────────────────────
+  app.delete<{ Params: { id: string } }>(
+    '/:id',
+    { preHandler: [requireRole('super_admin', 'tenant_admin')] },
+    async (request, reply) => {
+      await reportService.delete(request.params.id, request.tenantId);
+      await request.audit('report.delete', 'reports', request.params.id);
+      return reply.code(204).send();
+    },
+  );
+
   // ── POST /:id/generate — Generate report content ─────────
   app.post<{ Params: { id: string } }>(
     '/:id/generate',

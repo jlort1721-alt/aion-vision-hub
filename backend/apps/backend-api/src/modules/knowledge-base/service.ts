@@ -50,6 +50,49 @@ export class KnowledgeBaseService {
     logger.info({ category: entry.category, title: entry.title }, 'Knowledge entry added');
   }
 
+  /** Update an existing knowledge entry */
+  async update(id: string, entry: Partial<Omit<KnowledgeEntry, 'id' | 'created_at' | 'relevance_score'>>): Promise<void> {
+    const sets: string[] = [];
+    const values: unknown[] = [];
+    if (entry.category) { sets.push('category'); values.push(entry.category); }
+    if (entry.title) { sets.push('title'); values.push(entry.title); }
+    if (entry.content) { sets.push('content'); values.push(entry.content); }
+    if (entry.tags) { sets.push('tags'); values.push(entry.tags); }
+    if (entry.source) { sets.push('source'); values.push(entry.source); }
+    if (sets.length === 0) return;
+
+    await db.execute(sql`
+      UPDATE knowledge_base SET
+        category = COALESCE(${entry.category ?? null}, category),
+        title = COALESCE(${entry.title ?? null}, title),
+        content = COALESCE(${entry.content ?? null}, content),
+        tags = COALESCE(${entry.tags ?? null}, tags),
+        source = COALESCE(${entry.source ?? null}, source),
+        updated_at = NOW()
+      WHERE id = ${id}
+    `);
+    logger.info({ id }, 'Knowledge entry updated');
+  }
+
+  /** Delete a knowledge entry */
+  async remove(id: string): Promise<void> {
+    await db.execute(sql`DELETE FROM knowledge_base WHERE id = ${id}`);
+    logger.info({ id }, 'Knowledge entry deleted');
+  }
+
+  /** List all entries with optional limit */
+  async listAll(limit = 50): Promise<KnowledgeEntry[]> {
+    try {
+      const results = await db.execute(sql`
+        SELECT * FROM knowledge_base ORDER BY created_at DESC LIMIT ${limit}
+      `);
+      return results as unknown as KnowledgeEntry[];
+    } catch {
+      logger.warn('Knowledge base listAll failed — table may not exist yet');
+      return [];
+    }
+  }
+
   /** Learn from resolved incident */
   async learnFromIncident(incidentId: string, resolution: string): Promise<void> {
     await this.add({
