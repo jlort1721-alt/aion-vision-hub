@@ -35,6 +35,7 @@ const PUBLIC_ROUTES = [
   '/auth/refresh',
   '/auth/reset-password',
   '/auth/reset-password/confirm',
+  '/provisioning',
 ];
 
 /**

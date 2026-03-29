@@ -77,6 +77,7 @@ import { registerInternalAgentRoutes } from './modules/internal-agent/routes.js'
 import { internalAgent } from './modules/internal-agent/service.js';
 import { registerClaveBridgeRoutes } from './modules/clave-bridge/routes.js';
 import { registerLiveViewRoutes } from './modules/live-view/routes.js';
+import { registerProvisioningRoutes } from './modules/provisioning/routes.js';
 import websocketPlugin from './plugins/websocket.js';
 
 const loggerOpts = { name: 'aion-api', level: config.LOG_LEVEL };
@@ -251,6 +252,9 @@ export async function buildApp() {
 
   // CLAVE bidirectional bridge (voice commands, event push, status)
   await app.register(registerClaveBridgeRoutes, { prefix: '/clave' });
+
+  // Fanvil SIP phone auto-provisioning (no JWT — phones can't authenticate)
+  await app.register(registerProvisioningRoutes, { prefix: '/provisioning' });
 
   // Public webhook routes (no JWT — Meta sends requests without auth)
   await app.register(registerWebhookRoutes, { prefix: '/webhooks/whatsapp' });
