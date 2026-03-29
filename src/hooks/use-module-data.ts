@@ -143,6 +143,35 @@ export function useDomoticActions(deviceId?: string) {
   });
 }
 
+// ── eWeLink MCP Devices (backend proxy) ──
+
+export function useEWeLinkMCPDevices() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ['ewelink-devices'],
+    queryFn: async () => {
+      const response = await apiClient.get<unknown>('/domotics/ewelink/devices');
+      return extractArray(response);
+    },
+    enabled: isAuthenticated,
+    refetchInterval: 30_000,
+  });
+}
+
+export function useEWeLinkToggle() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ deviceId, on }: { deviceId: string; on: boolean }) => {
+      return apiClient.post(`/domotics/ewelink/${deviceId}/toggle`, { on });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ewelink-devices'] });
+      toast.success('Dispositivo eWeLink actualizado');
+    },
+    onError: (e: Error) => toast.error(`Error eWeLink: ${e.message}`),
+  });
+}
+
 // ── Access People ──
 export function useAccessPeople() {
   const { isAuthenticated } = useAuth();
