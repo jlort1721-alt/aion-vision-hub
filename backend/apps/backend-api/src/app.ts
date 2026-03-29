@@ -78,6 +78,7 @@ import { internalAgent } from './modules/internal-agent/service.js';
 import { registerClaveBridgeRoutes } from './modules/clave-bridge/routes.js';
 import { registerLiveViewRoutes } from './modules/live-view/routes.js';
 import { registerProvisioningRoutes } from './modules/provisioning/routes.js';
+import { registerImouRoutes } from './modules/imou/routes.js';
 import websocketPlugin from './plugins/websocket.js';
 
 const loggerOpts = { name: 'aion-api', level: config.LOG_LEVEL };
@@ -249,6 +250,9 @@ export async function buildApp() {
 
   // Live view layout persistence
   await app.register(registerLiveViewRoutes, { prefix: '/live-view' });
+
+  // IMOU / Dahua Cloud API (P2P cloud relay for XVR devices)
+  await app.register(registerImouRoutes, { prefix: '/imou' });
 
   // CLAVE bidirectional bridge (voice commands, event push, status)
   await app.register(registerClaveBridgeRoutes, { prefix: '/clave' });

@@ -37,6 +37,70 @@ export async function registerLiveViewRoutes(app: FastifyInstance) {
     },
   );
 
+  // ── GET /cameras — List all cameras with filters ────────────
+  app.get(
+    '/cameras',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
+    async (request, reply) => {
+      const { site_id, status, is_lpr } = request.query as Record<string, string>;
+      let query = sql`SELECT c.*, s.name as site_name FROM cameras c JOIN sites s ON c.site_id = s.id WHERE c.deleted_at IS NULL`;
+      if (site_id) query = sql`${query} AND c.site_id = ${site_id}`;
+      if (status) query = sql`${query} AND c.status = ${status}`;
+      if (is_lpr === 'true') query = sql`${query} AND c.is_lpr = true`;
+      query = sql`${query} ORDER BY s.name, c.channel_number`;
+      const results = await db.execute(query);
+      return reply.send({ success: true, data: results as unknown as Record<string, unknown>[] });
+    },
+  );
+
+  // ── GET /cameras/:id/stream-info — Stream URLs for a camera ──
+  app.get(
+    '/cameras/:id/stream-info',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const results = await db.execute(sql`SELECT stream_key FROM cameras WHERE id = ${id}`);
+      const cam = (results as unknown as Record<string, unknown>[])[0];
+      if (!cam) return reply.code(404).send({ success: false, error: 'Camera not found' });
+      const streamKey = cam.stream_key as string;
+      return reply.send({
+        success: true,
+        data: {
+          streamKey,
+          mseUrl: `/go2rtc/api/ws?src=${streamKey}`,
+          hlsUrl: `/go2rtc/api/stream.m3u8?src=${streamKey}`,
+          mp4Url: `/go2rtc/api/stream.mp4?src=${streamKey}`,
+          snapshotUrl: `/go2rtc/api/frame.jpeg?src=${streamKey}`,
+        },
+      });
+    },
+  );
+
+  // ── POST /cameras/sync — Sync cameras status with go2rtc ────
+  app.post(
+    '/cameras/sync',
+    { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
+    async (_request, reply) => {
+      try {
+        const streamsResp = await fetch('http://localhost:1984/api/streams');
+        const streams = (await streamsResp.json()) as Record<string, unknown>;
+        let updated = 0;
+        for (const [key, info] of Object.entries(streams)) {
+          const hasProducers =
+            Array.isArray((info as Record<string, unknown>).producers) &&
+            ((info as Record<string, unknown>).producers as unknown[]).length > 0;
+          await db.execute(
+            sql`UPDATE cameras SET status = ${hasProducers ? 'online' : 'offline'}, updated_at = NOW() WHERE stream_key = ${key}`,
+          );
+          updated++;
+        }
+        return reply.send({ success: true, data: { synced: updated, totalStreams: Object.keys(streams).length } });
+      } catch {
+        return reply.send({ success: true, data: { synced: 0, error: 'go2rtc not reachable' } });
+      }
+    },
+  );
+
   // ── GET /layouts — List layouts for the current user ─────────
   app.get(
     '/layouts',
