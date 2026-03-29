@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 
 export type Language = 'es' | 'en';
 
@@ -42,56 +41,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     });
   }, [lang]);
 
-  // Load language preference from DB on mount
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('tenant_id')
-          .eq('user_id', session.user.id)
-          .single();
-        if (!profile) return;
-        const { data: tenant } = await supabase
-          .from('tenants')
-          .select('settings')
-          .eq('id', profile.tenant_id)
-          .single();
-        const savedLang = (tenant?.settings as any)?.language;
-        if (savedLang === 'en' || savedLang === 'es') {
-          setLangState(savedLang);
-          localStorage.setItem('clave-lang', savedLang);
-        }
-      } catch { /* ignore */ }
-    })();
-  }, []);
-
-  const setLang = useCallback(async (newLang: Language) => {
+  const setLang = useCallback((newLang: Language) => {
     setLangState(newLang);
     localStorage.setItem('clave-lang', newLang);
-    // Persist to DB
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('tenant_id')
-        .eq('user_id', session.user.id)
-        .single();
-      if (!profile) return;
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('settings')
-        .eq('id', profile.tenant_id)
-        .single();
-      const currentSettings = (tenant?.settings as Record<string, any>) || {};
-      await supabase
-        .from('tenants')
-        .update({ settings: { ...currentSettings, language: newLang } })
-        .eq('id', profile.tenant_id);
-    } catch { /* ignore */ }
   }, []);
 
   const t = useCallback((key: string, fallback?: string): string => {

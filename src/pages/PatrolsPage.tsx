@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { Map, MapPin, Navigation, CheckCircle, Plus, Radar, ShieldAlert, Timer, Crosshair, ChevronDown, MapPinOff, Loader2 } from "lucide-react";
+import { Map, MapPin, Navigation, CheckCircle, Plus, Radar, ShieldAlert, Timer, Crosshair, ChevronDown, MapPinOff, Loader2, QrCode } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -151,6 +151,75 @@ export default function PatrolsPage() {
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // ── QR Scanner State ─────────────────────────────────────
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [manualQr, setManualQr] = useState("");
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const stopScan = useCallback(() => {
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    setScanning(false);
+  }, []);
+
+  const handleQrDetected = useCallback(async (rawValue: string) => {
+    if (!selectedRouteId) {
+      toast({ title: "Select a route first", variant: "destructive" });
+      return;
+    }
+    try {
+      await patrolLogsApi.create({
+        routeId: selectedRouteId,
+        checkpointQr: rawValue,
+        timestamp: new Date().toISOString(),
+      });
+      toast({ title: "Checkpoint scanned", description: rawValue });
+      queryClient.invalidateQueries({ queryKey: ["patrols", "logs"] });
+      setQrDialogOpen(false);
+    } catch (err) {
+      toast({ title: "Error logging checkpoint", description: (err as Error).message, variant: "destructive" });
+    }
+  }, [selectedRouteId, toast, queryClient]);
+
+  const startScan = useCallback(async () => {
+    setScanning(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      if ("BarcodeDetector" in window) {
+        const detector = new (window as unknown as Record<string, unknown> & { BarcodeDetector: new (opts: { formats: string[] }) => { detect: (source: HTMLVideoElement) => Promise<{ rawValue: string }[]> } }).BarcodeDetector({ formats: ["qr_code"] });
+        scanIntervalRef.current = setInterval(async () => {
+          if (!videoRef.current) return;
+          try {
+            const barcodes = await detector.detect(videoRef.current);
+            if (barcodes.length > 0) {
+              stopScan();
+              handleQrDetected(barcodes[0].rawValue);
+            }
+          } catch {
+            // detection may fail on some frames — ignore
+          }
+        }, 500);
+      }
+    } catch {
+      setScanning(false);
+      toast({ title: "Camera not available", description: "Use manual input instead", variant: "destructive" });
+    }
+  }, [stopScan, handleQrDetected, toast]);
 
   // ── Routes ──────────────────────────────────────────────
   const { data: routesData, isLoading: loadingRoutes } = useQuery({
@@ -560,6 +629,11 @@ export default function PatrolsPage() {
 
         {/* ── Logs Tab ────────────────────────────────────── */}
         <TabsContent value="logs" className="space-y-4">
+          <div className="flex justify-end">
+            <Button className="gap-1" onClick={() => setQrDialogOpen(true)}>
+              <QrCode className="h-4 w-4" /> Scan QR
+            </Button>
+          </div>
           {loadingLogs ? (
             <div className="space-y-4">
               {[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
@@ -674,6 +748,66 @@ export default function PatrolsPage() {
               {createCpMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Create Checkpoint
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR Scanner Dialog */}
+      <Dialog open={qrDialogOpen} onOpenChange={(open) => { if (!open) { stopScan(); setManualQr(""); } setQrDialogOpen(open); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Scan QR Checkpoint</DialogTitle></DialogHeader>
+
+          {/* Route selector */}
+          <div className="space-y-2">
+            <Label>Route</Label>
+            <Select value={selectedRouteId ?? ""} onValueChange={(v) => setSelectedRouteId(v)}>
+              <SelectTrigger><SelectValue placeholder="Select a route" /></SelectTrigger>
+              <SelectContent>
+                {routes.map((r: PatrolRoute) => (
+                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Camera view */}
+          <div className="space-y-3">
+            {scanning ? (
+              <div className="relative rounded-lg overflow-hidden bg-black aspect-video">
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                <div className="absolute inset-0 border-2 border-dashed border-primary/50 pointer-events-none" />
+                <Button size="sm" variant="destructive" className="absolute bottom-2 right-2" onClick={stopScan}>
+                  Stop
+                </Button>
+              </div>
+            ) : (
+              <Button className="w-full gap-2" onClick={startScan} disabled={!selectedRouteId}>
+                <QrCode className="h-4 w-4" /> Start Camera Scan
+              </Button>
+            )}
+
+            {"BarcodeDetector" in window ? null : (
+              <p className="text-xs text-muted-foreground">BarcodeDetector not available in this browser. Use manual input below.</p>
+            )}
+
+            {/* Manual fallback */}
+            <div className="space-y-2">
+              <Label>Manual QR Code</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={manualQr}
+                  onChange={(e) => setManualQr(e.target.value)}
+                  placeholder="Enter QR code value"
+                  onKeyDown={(e) => { if (e.key === "Enter" && manualQr.trim()) handleQrDetected(manualQr.trim()); }}
+                />
+                <Button
+                  disabled={!manualQr.trim() || !selectedRouteId}
+                  onClick={() => handleQrDetected(manualQr.trim())}
+                >
+                  Submit
+                </Button>
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

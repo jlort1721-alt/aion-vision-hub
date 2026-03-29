@@ -17,6 +17,7 @@ import { Clock, Users, CalendarCheck, UserCheck, Plus, Loader2, CalendarDays, Al
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/components/shared/PageShell";
 import ErrorState from "@/components/ui/ErrorState";
+import { useI18n } from "@/contexts/I18nContext";
 
 const assignmentStatusColors: Record<string, string> = {
   scheduled: "bg-primary",
@@ -27,11 +28,19 @@ const assignmentStatusColors: Record<string, string> = {
 };
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const CALENDAR_DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-const SHIFT_BLOCKS = [
-  { label: 'Mañana (06:00-14:00)', start: 6, end: 14 },
-  { label: 'Tarde (14:00-22:00)', start: 14, end: 22 },
-  { label: 'Noche (22:00-06:00)', start: 22, end: 6 },
+const CALENDAR_DAY_KEYS = [
+  { key: 'shifts.mon', fallback: 'Lun' },
+  { key: 'shifts.tue', fallback: 'Mar' },
+  { key: 'shifts.wed', fallback: 'Mié' },
+  { key: 'shifts.thu', fallback: 'Jue' },
+  { key: 'shifts.fri', fallback: 'Vie' },
+  { key: 'shifts.sat', fallback: 'Sáb' },
+  { key: 'shifts.sun', fallback: 'Dom' },
+];
+const SHIFT_BLOCK_KEYS = [
+  { labelKey: 'shifts.block_morning', fallback: 'Mañana (06:00-14:00)', start: 6, end: 14 },
+  { labelKey: 'shifts.block_afternoon', fallback: 'Tarde (14:00-22:00)', start: 14, end: 22 },
+  { labelKey: 'shifts.block_night', fallback: 'Noche (22:00-06:00)', start: 22, end: 6 },
 ];
 const GUARD_COLORS = [
   'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500',
@@ -57,7 +66,7 @@ function parseTime(t: string): number {
   return h;
 }
 
-function shiftMatchesBlock(startTime: string, endTime: string, block: typeof SHIFT_BLOCKS[number]): boolean {
+function shiftMatchesBlock(startTime: string, endTime: string, block: typeof SHIFT_BLOCK_KEYS[number]): boolean {
   const sh = parseTime(startTime);
   const eh = parseTime(endTime);
   if (block.start === 22) {
@@ -70,6 +79,7 @@ const defaultShift = { name: '', startTime: '06:00', endTime: '14:00', daysOfWee
 const defaultAssignment = { shiftId: '', userId: '', date: new Date().toISOString().slice(0, 10) };
 
 export default function ShiftsPage() {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState("shifts");
   const [showCreateShift, setShowCreateShift] = useState(false);
   const [showCreateAssignment, setShowCreateAssignment] = useState(false);
@@ -192,8 +202,8 @@ export default function ShiftsPage() {
       const endTime = shift?.endTime || assignment.endTime || '14:00';
       const guardName = assignment.userName || assignment.userId || 'Unknown';
 
-      for (let bi = 0; bi < SHIFT_BLOCKS.length; bi++) {
-        if (shiftMatchesBlock(startTime, endTime, SHIFT_BLOCKS[bi])) {
+      for (let bi = 0; bi < SHIFT_BLOCK_KEYS.length; bi++) {
+        if (shiftMatchesBlock(startTime, endTime, SHIFT_BLOCK_KEYS[bi])) {
           grid[dayIdx][bi].guards.push({
             name: guardName,
             assignmentId: assignment.id,
@@ -386,7 +396,7 @@ export default function ShiftsPage() {
                 <ChevronRight className="h-4 w-4" />
               </Button>
               {weekOffset !== 0 && (
-                <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)}>Hoy</Button>
+                <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)}>{t('shifts.today', 'Hoy')}</Button>
               )}
             </div>
           </div>
@@ -402,9 +412,9 @@ export default function ShiftsPage() {
               >
                 {/* Header row */}
                 <div className="p-2 border-b border-r bg-muted/50 font-medium text-xs text-muted-foreground" />
-                {CALENDAR_DAYS.map((day, di) => (
-                  <div key={day} className="p-2 border-b bg-muted/50 text-center">
-                    <div className="font-medium text-xs">{day}</div>
+                {CALENDAR_DAY_KEYS.map((day, di) => (
+                  <div key={day.key} className="p-2 border-b bg-muted/50 text-center">
+                    <div className="font-medium text-xs">{t(day.key, day.fallback)}</div>
                     <div className="text-xs text-muted-foreground">
                       {weekDates[di]?.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
                     </div>
@@ -412,12 +422,12 @@ export default function ShiftsPage() {
                 ))}
 
                 {/* Shift block rows */}
-                {SHIFT_BLOCKS.map((block, bi) => (
+                {SHIFT_BLOCK_KEYS.map((block, bi) => (
                   <>
                     <div key={`label-${bi}`} className="p-2 border-b border-r bg-muted/30 flex items-center">
-                      <span className="text-xs font-medium">{block.label}</span>
+                      <span className="text-xs font-medium">{t(block.labelKey, block.fallback)}</span>
                     </div>
-                    {CALENDAR_DAYS.map((_, di) => {
+                    {CALENDAR_DAY_KEYS.map((_, di) => {
                       const cell = calendarData[di]?.[bi];
                       const guards = cell?.guards ?? [];
                       const hasConflict = cell?.hasConflict ?? false;
@@ -428,7 +438,7 @@ export default function ShiftsPage() {
                           onClick={() => setCalendarCellDetail({ dayIndex: di, blockIndex: bi })}
                         >
                           {hasConflict && (
-                            <div className="absolute top-1 right-1" title="Conflicto: guardia en múltiples turnos">
+                            <div className="absolute top-1 right-1" title={t('shifts.conflict_tooltip', 'Conflicto: guardia en múltiples turnos')}>
                               <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
                             </div>
                           )}
@@ -442,7 +452,7 @@ export default function ShiftsPage() {
                               </Badge>
                             ))}
                             {guards.length === 0 && (
-                              <span className="text-[10px] text-muted-foreground italic">Sin asignar</span>
+                              <span className="text-[10px] text-muted-foreground italic">{t('shifts.unassigned', 'Sin asignar')}</span>
                             )}
                           </div>
                         </div>
@@ -459,14 +469,18 @@ export default function ShiftsPage() {
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>
-                  {calendarCellDetail !== null && (
-                    <>
-                      {CALENDAR_DAYS[calendarCellDetail.dayIndex]}{' '}
-                      {weekDates[calendarCellDetail.dayIndex]?.toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}
-                      {' - '}
-                      {SHIFT_BLOCKS[calendarCellDetail.blockIndex]?.label}
-                    </>
-                  )}
+                  {calendarCellDetail !== null && (() => {
+                    const dayEntry = CALENDAR_DAY_KEYS[calendarCellDetail.dayIndex];
+                    const blockEntry = SHIFT_BLOCK_KEYS[calendarCellDetail.blockIndex];
+                    return (
+                      <>
+                        {t(dayEntry.key, dayEntry.fallback)}{' '}
+                        {weekDates[calendarCellDetail.dayIndex]?.toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}
+                        {' - '}
+                        {t(blockEntry.labelKey, blockEntry.fallback)}
+                      </>
+                    );
+                  })()}
                 </DialogTitle>
               </DialogHeader>
               {calendarCellDetail !== null && (() => {
@@ -477,11 +491,11 @@ export default function ShiftsPage() {
                     {cell?.hasConflict && (
                       <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 text-destructive text-sm">
                         <AlertTriangle className="h-4 w-4" />
-                        Conflicto detectado: un guardia tiene múltiples turnos este día
+                        {t('shifts.conflict_detected', 'Conflicto detectado: un guardia tiene múltiples turnos este día')}
                       </div>
                     )}
                     {guards.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No hay guardias asignados en este bloque.</p>
+                      <p className="text-sm text-muted-foreground">{t('shifts.no_guards_block', 'No hay guardias asignados en este bloque.')}</p>
                     ) : (
                       <div className="space-y-2">
                         {guards.map((g, gi) => (
@@ -505,7 +519,7 @@ export default function ShiftsPage() {
                         setShowCreateAssignment(true);
                       }}
                     >
-                      <Plus className="h-3 w-3" /> Crear Asignación
+                      <Plus className="h-3 w-3" /> {t('shifts.create_assignment', 'Crear Asignación')}
                     </Button>
                   </div>
                 );

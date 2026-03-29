@@ -47,8 +47,24 @@ interface AccessSchedule {
 }
 
 const SCHEDULES_KEY = 'aion-access-schedules';
-const DAY_LABELS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
-const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const DAY_LABEL_KEYS = [
+  { key: 'access.day_sun_s', fallback: 'D' },
+  { key: 'access.day_mon_s', fallback: 'L' },
+  { key: 'access.day_tue_s', fallback: 'M' },
+  { key: 'access.day_wed_s', fallback: 'M' },
+  { key: 'access.day_thu_s', fallback: 'J' },
+  { key: 'access.day_fri_s', fallback: 'V' },
+  { key: 'access.day_sat_s', fallback: 'S' },
+];
+const DAY_NAME_KEYS = [
+  { key: 'access.day_sun', fallback: 'Dom' },
+  { key: 'access.day_mon', fallback: 'Lun' },
+  { key: 'access.day_tue', fallback: 'Mar' },
+  { key: 'access.day_wed', fallback: 'Mié' },
+  { key: 'access.day_thu', fallback: 'Jue' },
+  { key: 'access.day_fri', fallback: 'Vie' },
+  { key: 'access.day_sat', fallback: 'Sáb' },
+];
 
 const EMPTY_SCHEDULE: Omit<AccessSchedule, 'id'> = {
   name: '', type: 'allow', dayOfWeek: [1, 2, 3, 4, 5],
@@ -488,7 +504,7 @@ export default function AccessControlPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-0.5">
-                          {DAY_LABELS.map((label, i) => (
+                          {DAY_LABEL_KEYS.map((day, i) => (
                             <span
                               key={i}
                               className={cn(
@@ -498,7 +514,7 @@ export default function AccessControlPage() {
                                   : 'bg-muted text-muted-foreground',
                               )}
                             >
-                              {label}
+                              {t(day.key, day.fallback)}
                             </span>
                           ))}
                         </div>
@@ -680,7 +696,7 @@ export default function AccessControlPage() {
             <div className="space-y-1">
               <Label>Days of Week</Label>
               <div className="flex gap-1">
-                {DAY_LABELS.map((label, i) => (
+                {DAY_LABEL_KEYS.map((day, i) => (
                   <button
                     key={i}
                     type="button"
@@ -691,9 +707,9 @@ export default function AccessControlPage() {
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'bg-muted text-muted-foreground border-border hover:bg-muted/80',
                     )}
-                    title={DAY_NAMES[i]}
+                    title={t(DAY_NAME_KEYS[i].key, DAY_NAME_KEYS[i].fallback)}
                   >
-                    {label}
+                    {t(day.key, day.fallback)}
                   </button>
                 ))}
               </div>

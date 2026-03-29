@@ -1,11 +1,11 @@
 import { useEffect, useMemo } from 'react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client'; // ALLOWED: Supabase Realtime channels (postgres_changes)
 import { apiClient } from '@/lib/api-client';
 import { useToast } from '@/hooks/use-toast';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { addNotification } from '@/lib/notification-history';
+import { useWebSocket } from '@/hooks/use-websocket';
 
 interface NotificationPrefs {
   critical_events?: boolean;
@@ -23,6 +23,7 @@ export function useRealtimeEvents() {
   const { toast } = useToast();
   const { showNotification, permission } = usePushNotifications();
   const { profile } = useAuth();
+  const { subscribe } = useWebSocket();
 
   const { data: tenant } = useQuery({
     queryKey: ['tenant'],
@@ -39,62 +40,58 @@ export function useRealtimeEvents() {
   }, [tenant?.settings]);
 
   useEffect(() => {
-    const channel = supabase
-      .channel('events-realtime')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'events' },
-        (payload) => {
-          queryClient.invalidateQueries({ queryKey: ['events'] });
-          queryClient.invalidateQueries({ queryKey: ['events-legacy'] });
-          const evt = payload.new as any;
+    const unsubscribe = subscribe('events', (msg) => {
+      const payload = msg.payload as { type?: string; event?: Record<string, unknown> };
 
-          const shouldNotify =
-            (evt.severity === 'critical' && prefs.critical_events !== false) ||
-            (evt.severity === 'high' && prefs.high_severity !== false) ||
-            (evt.severity === 'medium' && prefs.medium_severity !== false) ||
-            (evt.severity === 'low' && prefs.low_severity !== false) ||
-            (evt.severity === 'info' && prefs.info_events !== false);
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['events-legacy'] });
+      queryClient.invalidateQueries({ queryKey: ['events-liveview'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-event-count'] });
 
-          const isCritical = evt.severity === 'critical' || evt.severity === 'high';
+      if (payload.type === 'event.new' && payload.event) {
+        const evt = payload.event;
+        const severity = evt.severity as string;
 
-          // Store in notification history (always, regardless of prefs)
-          addNotification({
-            title: evt.title,
-            body: `${evt.event_type?.replace(/_/g, ' ')} — ${evt.severity}`,
-            severity: evt.severity,
+        const shouldNotify =
+          (severity === 'critical' && prefs.critical_events !== false) ||
+          (severity === 'high' && prefs.high_severity !== false) ||
+          (severity === 'medium' && prefs.medium_severity !== false) ||
+          (severity === 'low' && prefs.low_severity !== false) ||
+          (severity === 'info' && prefs.info_events !== false);
+
+        const isCritical = severity === 'critical' || severity === 'high';
+
+        // Store in notification history (always, regardless of prefs)
+        addNotification({
+          title: (evt.title as string) ?? 'New Event',
+          body: `${(evt.event_type as string)?.replace(/_/g, ' ')} — ${severity}`,
+          severity,
+        });
+
+        // Only show toast if user preferences allow this severity
+        if (shouldNotify) {
+          toast({
+            title: `${isCritical ? '[!] ' : ''}${evt.title}`,
+            description: `${(evt.event_type as string)?.replace(/_/g, ' ')} — ${severity}`,
+            variant: isCritical ? 'destructive' : 'default',
           });
-
-          // Only show toast if user preferences allow this severity
-          if (shouldNotify) {
-            toast({
-              title: `${isCritical ? '[!] ' : ''}${evt.title}`,
-              description: `${evt.event_type?.replace(/_/g, ' ')} — ${evt.severity}`,
-              variant: isCritical ? 'destructive' : 'default',
-            });
-          }
-
-          if (shouldNotify && isCritical && permission === 'granted') {
-            showNotification(
-              `${evt.severity.toUpperCase()}: ${evt.title}`,
-              `${evt.event_type?.replace(/_/g, ' ')} — Requires immediate attention`,
-              `event-${evt.id}`
-            );
-          }
         }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'events' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['events'] });
-          queryClient.invalidateQueries({ queryKey: ['events-legacy'] });
-        }
-      )
-      .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient, toast, showNotification, permission, prefs]);
+        if (shouldNotify && isCritical && permission === 'granted') {
+          showNotification(
+            `${severity.toUpperCase()}: ${evt.title}`,
+            `${(evt.event_type as string)?.replace(/_/g, ' ')} — Requires immediate attention`,
+            `event-${evt.id}`
+          );
+        }
+      }
+
+      if (payload.type === 'event.updated') {
+        queryClient.invalidateQueries({ queryKey: ['events'] });
+        queryClient.invalidateQueries({ queryKey: ['events-legacy'] });
+      }
+    });
+
+    return unsubscribe;
+  }, [queryClient, toast, showNotification, permission, prefs, subscribe]);
 }

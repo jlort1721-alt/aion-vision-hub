@@ -1,12 +1,12 @@
 // ================================================================
 // AION VISION HUB -- Alarm Video Popup
 // Floating, draggable popup that shows the camera feed when a
-// critical/high severity event arrives via Supabase Realtime.
+// critical/high severity event arrives via WebSocket.
 // Stacks up to 3 popups; auto-dismisses after 60 s.
 // ================================================================
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useWebSocket } from '@/hooks/use-websocket';
 import { Go2RTCPlayer } from '@/components/video/Go2RTCPlayer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,7 @@ import { useDevices } from '@/hooks/use-devices';
 import { toast } from 'sonner';
 import type { EventSeverity } from '@/types';
 
-// ── Types ────────────────────────────────────────────────────
+// -- Types --------------------------------------------------------
 
 interface AlarmPopupEntry {
   id: string;
@@ -34,7 +34,7 @@ interface AlarmPopupEntry {
 const MAX_POPUPS = 3;
 const AUTO_DISMISS_MS = 60_000;
 
-// ── Single Popup Card ────────────────────────────────────────
+// -- Single Popup Card --------------------------------------------
 
 function AlarmPopupCard({
   alarm,
@@ -185,11 +185,12 @@ function AlarmPopupCard({
   );
 }
 
-// ── Main Container ───────────────────────────────────────────
+// -- Main Container -----------------------------------------------
 
 export default function AlarmVideoPopup() {
   const [alarms, setAlarms] = useState<AlarmPopupEntry[]>([]);
   const { data: devices = [] } = useDevices();
+  const { subscribe } = useWebSocket();
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   // Build a lookup map from device id to device info
@@ -217,62 +218,58 @@ export default function AlarmVideoPopup() {
     timersRef.current.set(id, timer);
   }, []);
 
-  // Listen for critical / high events via Supabase Realtime
+  // Listen for critical / high events via WebSocket
   useEffect(() => {
-    const channel = supabase
-      .channel('alarm-video-popup')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'events' },
-        (payload) => {
-          const evt = payload.new as Record<string, unknown>;
-          const severity = evt.severity as EventSeverity;
-          if (severity !== 'critical' && severity !== 'high') return;
+    const unsubscribe = subscribe('events', (msg) => {
+      const payload = msg.payload as { type?: string; event?: Record<string, unknown> };
+      if (payload.type !== 'event.new' || !payload.event) return;
 
-          const deviceId = evt.device_id as string;
-          const info = deviceMap.current.get(deviceId);
+      const evt = payload.event;
+      const severity = evt.severity as EventSeverity;
+      if (severity !== 'critical' && severity !== 'high') return;
 
-          const entry: AlarmPopupEntry = {
-            id: evt.id as string,
-            device_id: deviceId,
-            device_name: info?.name || 'Unknown Camera',
-            stream_name: info?.slug || deviceId,
-            severity,
-            title: (evt.title as string) || 'Alarm',
-            description: (evt.description as string) || (evt.event_type as string)?.replace(/_/g, ' ') || '',
-            site_name: info?.site_id || '',
-            timestamp: (evt.created_at as string) || new Date().toISOString(),
-            fullscreen: false,
-          };
+      const deviceId = evt.device_id as string;
+      const info = deviceMap.current.get(deviceId);
 
-          setAlarms((prev) => {
-            // Don't duplicate
-            if (prev.some((a) => a.id === entry.id)) return prev;
-            const next = [entry, ...prev];
-            // Keep max 3
-            if (next.length > MAX_POPUPS) {
-              const removed = next.pop();
-              if (removed) {
-                const t = timersRef.current.get(removed.id);
-                if (t) clearTimeout(t);
-                timersRef.current.delete(removed.id);
-              }
-            }
-            return next;
-          });
+      const entry: AlarmPopupEntry = {
+        id: evt.id as string,
+        device_id: deviceId,
+        device_name: info?.name || 'Unknown Camera',
+        stream_name: info?.slug || deviceId,
+        severity,
+        title: (evt.title as string) || 'Alarm',
+        description: (evt.description as string) || (evt.event_type as string)?.replace(/_/g, ' ') || '',
+        site_name: info?.site_id || '',
+        timestamp: (evt.created_at as string) || new Date().toISOString(),
+        fullscreen: false,
+      };
 
-          scheduleAutoDismiss(entry.id);
-        },
-      )
-      .subscribe();
+      setAlarms((prev) => {
+        // Don't duplicate
+        if (prev.some((a) => a.id === entry.id)) return prev;
+        const next = [entry, ...prev];
+        // Keep max 3
+        if (next.length > MAX_POPUPS) {
+          const removed = next.pop();
+          if (removed) {
+            const t = timersRef.current.get(removed.id);
+            if (t) clearTimeout(t);
+            timersRef.current.delete(removed.id);
+          }
+        }
+        return next;
+      });
+
+      scheduleAutoDismiss(entry.id);
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      unsubscribe();
       // Clear all timers
       timersRef.current.forEach((t) => clearTimeout(t));
       timersRef.current.clear();
     };
-  }, [scheduleAutoDismiss]);
+  }, [scheduleAutoDismiss, subscribe]);
 
   // Handlers
   const handleDismiss = useCallback((id: string) => {

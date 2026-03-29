@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import ErrorState from "@/components/ui/ErrorState";
+import { useI18n } from "@/contexts/I18nContext";
 
 // ═══════════════════════════════════════════════════════════
 // Protocol Checklists — step-by-step operator procedures
@@ -145,6 +146,7 @@ const CURRENT_OPERATOR = 'Operator';
 // ═══════════════════════════════════════════════════════════
 
 function EmergencyChecklist({ protocolType, activationId }: { protocolType: string; activationId: string }) {
+  const { t } = useI18n();
   const items = PROTOCOL_CHECKLISTS[protocolType] ?? [];
   const storageKey = `emergency-checklist-${activationId}`;
 
@@ -276,7 +278,7 @@ function EmergencyChecklist({ protocolType, activationId }: { protocolType: stri
               />
               <div className="flex-1 min-w-0">
                 <span className={`text-sm ${state.checked ? 'line-through text-muted-foreground' : ''}`}>
-                  {label}
+                  {t(`emergency.checklist.${protocolType}.${idx}`, label)}
                 </span>
                 {state.checked && state.timestamp && (
                   <p className="text-xs text-muted-foreground mt-0.5">

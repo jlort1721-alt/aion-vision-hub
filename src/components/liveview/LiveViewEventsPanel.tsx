@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 import { AlertTriangle, Bell, Eye, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,24 +19,34 @@ const severityColors: Record<string, string> = {
   info: 'text-muted-foreground',
 };
 
+interface EventItem {
+  id: string;
+  title: string;
+  event_type: string;
+  severity: string;
+  created_at: string;
+}
+
+interface EventsEnvelope {
+  items?: EventItem[];
+  data?: EventItem[];
+  meta?: { total?: number };
+}
+
 export default function LiveViewEventsPanel({ onClose }: LiveViewEventsPanelProps) {
   const { data: events = [] } = useQuery({
     queryKey: ['events-liveview'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(30);
-      if (error) throw error;
-      return data ?? [];
+      const resp = await apiClient.get<EventsEnvelope | EventItem[]>('/events', { limit: '30' });
+      if (Array.isArray(resp)) return resp;
+      return resp?.items ?? resp?.data ?? [];
     },
     refetchInterval: 10000,
   });
   const navigate = useNavigate();
 
   const recent = events.slice(0, 30);
-  const criticalCount = recent.filter((e: any) => e.severity === 'critical' || e.severity === 'high').length;
+  const criticalCount = recent.filter((e: EventItem) => e.severity === 'critical' || e.severity === 'high').length;
 
   return (
     <div className="w-64 border-l bg-card flex flex-col shrink-0">
@@ -58,7 +68,7 @@ export default function LiveViewEventsPanel({ onClose }: LiveViewEventsPanelProp
           </div>
         ) : (
           <div className="p-1 space-y-0.5">
-            {recent.map((event: any) => (
+            {recent.map((event: EventItem) => (
               <button
                 key={event.id}
                 className="w-full text-left p-2 rounded-md hover:bg-muted/50 transition-colors"

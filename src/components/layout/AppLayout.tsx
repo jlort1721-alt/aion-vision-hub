@@ -25,7 +25,6 @@ import {
   FolderOpen, ClipboardList, PhoneCall, Scan
 } from 'lucide-react';
 import { hasModuleAccess, ALL_MODULES, DEFAULT_ROLE_PERMISSIONS } from '@/lib/permissions';
-import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { apiClient } from '@/lib/api-client';
@@ -197,10 +196,7 @@ export default function AppLayout() {
   const { data: dbPerms } = useQuery({
     queryKey: ['role-module-permissions', profile?.tenant_id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('role_module_permissions')
-        .select('*')
-        .eq('tenant_id', profile!.tenant_id);
+      const data = await apiClient.get<DbPermRow[]>('/roles/permissions');
       return data || [];
     },
     enabled: !!profile?.tenant_id,

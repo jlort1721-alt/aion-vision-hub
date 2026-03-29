@@ -611,6 +611,40 @@ const es: Record<string, string> = {
   'posts.none': 'Ninguno',
   'posts.assigned_devices': 'Dispositivos Asignados',
   'posts.no_devices_available': 'No hay dispositivos disponibles',
+
+  // Shifts calendar
+  'shifts.mon': 'Lun',
+  'shifts.tue': 'Mar',
+  'shifts.wed': 'Mié',
+  'shifts.thu': 'Jue',
+  'shifts.fri': 'Vie',
+  'shifts.sat': 'Sáb',
+  'shifts.sun': 'Dom',
+  'shifts.block_morning': 'Mañana (06:00-14:00)',
+  'shifts.block_afternoon': 'Tarde (14:00-22:00)',
+  'shifts.block_night': 'Noche (22:00-06:00)',
+  'shifts.unassigned': 'Sin asignar',
+  'shifts.today': 'Hoy',
+  'shifts.conflict_tooltip': 'Conflicto: guardia en múltiples turnos',
+  'shifts.conflict_detected': 'Conflicto detectado: un guardia tiene múltiples turnos este día',
+  'shifts.no_guards_block': 'No hay guardias asignados en este bloque.',
+  'shifts.create_assignment': 'Crear Asignación',
+
+  // Access Control — day labels
+  'access.day_sun_s': 'D',
+  'access.day_mon_s': 'L',
+  'access.day_tue_s': 'M',
+  'access.day_wed_s': 'M',
+  'access.day_thu_s': 'J',
+  'access.day_fri_s': 'V',
+  'access.day_sat_s': 'S',
+  'access.day_sun': 'Dom',
+  'access.day_mon': 'Lun',
+  'access.day_tue': 'Mar',
+  'access.day_wed': 'Mié',
+  'access.day_thu': 'Jue',
+  'access.day_fri': 'Vie',
+  'access.day_sat': 'Sáb',
 };
 
 export default es;

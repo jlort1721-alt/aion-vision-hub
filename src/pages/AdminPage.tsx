@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Users, UserPlus, Shield, Loader2, Search, MailPlus, Copy, Key, Save } from 'lucide-react';
@@ -28,6 +28,16 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   viewer: { label: 'Viewer', color: 'bg-muted text-muted-foreground' },
   auditor: { label: 'Auditor', color: 'bg-accent text-accent-foreground' },
 };
+
+interface UserWithRoles {
+  id: string;
+  user_id: string;
+  tenant_id: string;
+  full_name: string;
+  is_active: boolean;
+  last_login: string | null;
+  roles: string[];
+}
 
 export default function AdminPage() {
   const { hasAnyRole, profile } = useAuth();
@@ -47,20 +57,8 @@ export default function AdminPage() {
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('full_name');
-      if (error) throw error;
-
-      const { data: allRoles } = await supabase
-        .from('user_roles')
-        .select('*');
-
-      return (profiles || []).map(p => ({
-        ...p,
-        roles: (allRoles || []).filter(r => r.user_id === p.user_id).map(r => r.role),
-      }));
+      const data = await apiClient.get<UserWithRoles[]>('/users');
+      return data;
     },
     enabled: isAdmin,
   });
@@ -80,15 +78,11 @@ export default function AdminPage() {
     setLoading(true);
     setInviteResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke('admin-users', {
-        body: {
-          action: 'invite',
-          email: inviteEmail,
-          full_name: inviteName || inviteEmail,
-          role: inviteRole,
-        },
+      const data = await apiClient.post<{ temp_password?: string; activation_link?: string }>('/users/invite', {
+        email: inviteEmail,
+        full_name: inviteName || inviteEmail,
+        role: inviteRole,
       });
-      if (error) throw error;
       setInviteResult({ temp_password: data?.temp_password, activation_link: data?.activation_link });
       toast.success(`User created: ${inviteEmail}`);
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -106,11 +100,7 @@ export default function AdminPage() {
 
   const handleToggleActive = async (userId: string, currentActive: boolean) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_active: !currentActive })
-        .eq('user_id', userId);
-      if (error) throw error;
+      await apiClient.patch('/users/' + userId, { is_active: !currentActive });
       toast.success(`User ${currentActive ? 'deactivated' : 'activated'}`);
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     } catch (err) {
@@ -121,15 +111,7 @@ export default function AdminPage() {
   const handleRoleChange = async (userId: string, tenantId: string, newRole: string) => {
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke('admin-users', {
-        body: {
-          action: 'update_role',
-          user_id: userId,
-          tenant_id: tenantId,
-          role: newRole,
-        },
-      });
-      if (error) throw error;
+      await apiClient.patch('/users/' + userId + '/role', { role: newRole, tenant_id: tenantId });
       toast.success('Role updated');
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     } catch (err) {
@@ -369,6 +351,13 @@ export default function AdminPage() {
 }
 
 // Editable permissions component
+interface PermissionRow {
+  role: string;
+  module: string;
+  enabled: boolean;
+  tenant_id: string;
+}
+
 function PermissionsEditor({ tenantId }: { tenantId?: string }) {
   const EDITABLE_ROLES = useMemo(() => ['operator', 'viewer', 'auditor'], []);
   const queryClient = useQueryClient();
@@ -376,33 +365,29 @@ function PermissionsEditor({ tenantId }: { tenantId?: string }) {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
-  // Load custom permissions from DB
+  // Load custom permissions from API
   const { data: dbPerms, isLoading } = useQuery({
     queryKey: ['role-module-permissions', tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('role_module_permissions')
-        .select('*')
-        .eq('tenant_id', tenantId!);
-      if (error) throw error;
+      const data = await apiClient.get<PermissionRow[]>('/roles/permissions');
       return data || [];
     },
     enabled: !!tenantId,
   });
 
-  // Initialize local state from DB or defaults
+  // Initialize local state from API response or defaults
   useEffect(() => {
     const map: Record<string, Set<string>> = {};
     for (const role of Object.keys(DEFAULT_ROLE_PERMISSIONS)) {
       map[role] = new Set(DEFAULT_ROLE_PERMISSIONS[role]);
     }
-    // Override with DB values
+    // Override with API values
     if (dbPerms && dbPerms.length > 0) {
       // For editable roles, start from empty and only add enabled ones
       for (const role of EDITABLE_ROLES) {
-        const rolePerms = dbPerms.filter((p: any) => p.role === role);
+        const rolePerms = dbPerms.filter((p) => p.role === role);
         if (rolePerms.length > 0) {
-          map[role] = new Set(rolePerms.filter((p: any) => p.enabled).map((p: any) => p.module));
+          map[role] = new Set(rolePerms.filter((p) => p.enabled).map((p) => p.module));
         }
       }
     }
@@ -425,7 +410,7 @@ function PermissionsEditor({ tenantId }: { tenantId?: string }) {
     if (!tenantId) return;
     setSaving(true);
     try {
-      const rows: any[] = [];
+      const rows: Array<{ tenant_id: string; role: string; module: string; enabled: boolean }> = [];
       for (const role of EDITABLE_ROLES) {
         for (const mod of ALL_MODULES) {
           rows.push({
@@ -433,14 +418,10 @@ function PermissionsEditor({ tenantId }: { tenantId?: string }) {
             role,
             module: mod.module,
             enabled: perms[role]?.has(mod.module) ?? false,
-            updated_at: new Date().toISOString(),
           });
         }
       }
-      const { error } = await supabase
-        .from('role_module_permissions')
-        .upsert(rows, { onConflict: 'tenant_id,role,module' });
-      if (error) throw error;
+      await apiClient.put('/roles/permissions', { permissions: rows });
       toast.success('Permissions saved');
       setDirty(false);
       queryClient.invalidateQueries({ queryKey: ['role-module-permissions'] });
@@ -459,14 +440,10 @@ function PermissionsEditor({ tenantId }: { tenantId?: string }) {
       map[role] = new Set(DEFAULT_ROLE_PERMISSIONS[role]);
     }
     setPerms(map);
-    // Delete all custom permissions from DB
+    // Delete all custom permissions via API
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('role_module_permissions')
-        .delete()
-        .eq('tenant_id', tenantId);
-      if (error) throw error;
+      await apiClient.delete('/roles/permissions');
       toast.success('Permissions reset to defaults');
       setDirty(false);
       queryClient.invalidateQueries({ queryKey: ['role-module-permissions'] });

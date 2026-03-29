@@ -566,6 +566,40 @@ const en: Record<string, string> = {
   'database.no_vehicles': 'No vehicles',
   'database.observations': 'Observations',
   'database.select_section': 'Select section',
+
+  // Shifts calendar
+  'shifts.mon': 'Mon',
+  'shifts.tue': 'Tue',
+  'shifts.wed': 'Wed',
+  'shifts.thu': 'Thu',
+  'shifts.fri': 'Fri',
+  'shifts.sat': 'Sat',
+  'shifts.sun': 'Sun',
+  'shifts.block_morning': 'Morning (06:00-14:00)',
+  'shifts.block_afternoon': 'Afternoon (14:00-22:00)',
+  'shifts.block_night': 'Night (22:00-06:00)',
+  'shifts.unassigned': 'Unassigned',
+  'shifts.today': 'Today',
+  'shifts.conflict_tooltip': 'Conflict: guard in multiple shifts',
+  'shifts.conflict_detected': 'Conflict detected: a guard has multiple shifts this day',
+  'shifts.no_guards_block': 'No guards assigned to this block.',
+  'shifts.create_assignment': 'Create Assignment',
+
+  // Access Control — day labels
+  'access.day_sun_s': 'S',
+  'access.day_mon_s': 'M',
+  'access.day_tue_s': 'T',
+  'access.day_wed_s': 'W',
+  'access.day_thu_s': 'T',
+  'access.day_fri_s': 'F',
+  'access.day_sat_s': 'S',
+  'access.day_sun': 'Sun',
+  'access.day_mon': 'Mon',
+  'access.day_tue': 'Tue',
+  'access.day_wed': 'Wed',
+  'access.day_thu': 'Thu',
+  'access.day_fri': 'Fri',
+  'access.day_sat': 'Sat',
 };
 
 export default en;

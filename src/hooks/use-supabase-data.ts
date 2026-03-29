@@ -9,6 +9,26 @@ import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { operationsApi, cloudAccountsApi, analyticsApi } from '@/services/api';
 
+/** Extract array from API response (handles both { items: [] } and [] formats) */
+function extractArray(response: unknown): Record<string, unknown>[] {
+  if (Array.isArray(response)) return response as Record<string, unknown>[];
+  if (response && typeof response === 'object') {
+    const r = response as Record<string, unknown>;
+    if (Array.isArray(r.items)) return r.items as Record<string, unknown>[];
+    if (Array.isArray(r.data)) return r.data as Record<string, unknown>[];
+  }
+  return [];
+}
+
+/** Extract meta from API envelope response */
+function extractMeta(response: unknown): Record<string, unknown> | undefined {
+  if (response && typeof response === 'object' && !Array.isArray(response)) {
+    const r = response as Record<string, unknown>;
+    if (r.meta && typeof r.meta === 'object') return r.meta as Record<string, unknown>;
+  }
+  return undefined;
+}
+
 // ── Devices ───────────────────────────────────────────────
 
 export function useDevices(refetchInterval?: number) {
@@ -16,11 +36,11 @@ export function useDevices(refetchInterval?: number) {
   return useQuery({
     queryKey: ['devices'],
     queryFn: async () => {
-      const response = await apiClient.get<any>('/devices', { limit: '500' });
+      const response = await apiClient.get<unknown>('/devices', { limit: '500' });
       // After apiClient unwraps envelope, response is either [...] or { items: [...], meta: {...} }
-      const items: Record<string, unknown>[] = Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
+      const items = extractArray(response);
       return items.map((d) => {
-        const sites = (d as Record<string, unknown>).sites as Record<string, unknown> | undefined;
+        const sites = d.sites as Record<string, unknown> | undefined;
         const siteWanIp = (d.site_wan_ip ?? sites?.wan_ip ?? null) as string | null;
         const siteName = (d.site_name ?? sites?.name ?? null) as string | null;
         return {
@@ -43,8 +63,8 @@ export function useSites(refetchInterval?: number) {
   return useQuery({
     queryKey: ['sites'],
     queryFn: async () => {
-      const response = await apiClient.get<any>('/sites');
-      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
+      const response = await apiClient.get<unknown>('/sites');
+      return extractArray(response);
     },
     enabled: isAuthenticated,
     refetchInterval,
@@ -85,10 +105,11 @@ export function useEvents(filters?: EventFilters) {
       if (filters?.date_from) params.from = filters.date_from;
       if (filters?.date_to) params.to = filters.date_to;
 
-      const response = await apiClient.get<any>('/events', params);
+      const response = await apiClient.get<unknown>('/events', params);
       // After unwrap: either [...] or { items: [...], meta: {...} }
-      const items = Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
-      const total = response?.meta?.total ?? items.length;
+      const items = extractArray(response);
+      const meta = extractMeta(response);
+      const total = (meta?.total as number | undefined) ?? items.length;
       return {
         data: items,
         count: total,
@@ -104,8 +125,8 @@ export function useEventsLegacy(refetchInterval?: number) {
   return useQuery({
     queryKey: ['events-legacy'],
     queryFn: async () => {
-      const response = await apiClient.get<any>('/events', { limit: '100' });
-      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
+      const response = await apiClient.get<unknown>('/events', { limit: '100' });
+      return extractArray(response);
     },
     enabled: isAuthenticated,
     refetchInterval,
@@ -119,8 +140,8 @@ export function useIncidents() {
   return useQuery({
     queryKey: ['incidents'],
     queryFn: async () => {
-      const response = await apiClient.get<any>('/incidents', { limit: '100' });
-      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
+      const response = await apiClient.get<unknown>('/incidents', { limit: '100' });
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
@@ -133,8 +154,8 @@ export function useIntegrations() {
   return useQuery({
     queryKey: ['integrations'],
     queryFn: async () => {
-      const response = await apiClient.get<any>('/integrations');
-      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
+      const response = await apiClient.get<unknown>('/integrations');
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
@@ -145,8 +166,8 @@ export function useMcpConnectors() {
   return useQuery({
     queryKey: ['mcp_connectors'],
     queryFn: async () => {
-      const response = await apiClient.get<any>('/mcp/connectors');
-      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
+      const response = await apiClient.get<unknown>('/mcp/connectors');
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
@@ -159,8 +180,8 @@ export function useAuditLogs() {
   return useQuery({
     queryKey: ['audit_logs'],
     queryFn: async () => {
-      const response = await apiClient.get<any>('/audit/logs', { limit: '500' });
-      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
+      const response = await apiClient.get<unknown>('/audit/logs', { limit: '500' });
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
@@ -173,8 +194,8 @@ export function useAiSessions() {
   return useQuery({
     queryKey: ['ai_sessions'],
     queryFn: async () => {
-      const response = await apiClient.get<any>('/ai/sessions', { limit: '100' });
-      return Array.isArray(response) ? response : (response?.items ?? response?.data ?? []);
+      const response = await apiClient.get<unknown>('/ai/sessions', { limit: '100' });
+      return extractArray(response);
     },
     enabled: isAuthenticated,
   });
