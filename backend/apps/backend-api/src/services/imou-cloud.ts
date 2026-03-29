@@ -8,7 +8,8 @@ import crypto from 'crypto';
 
 const logger = createLogger({ name: 'imou-cloud' });
 
-const IMOU_BASE = 'https://openapi.easy4ip.com'; // or https://openapi-sg.easy4ip.com for Singapore region
+// Americas region (detected from token response: currentDomain)
+const IMOU_BASE = process.env.IMOU_BASE_URL || 'https://openapi-or.easy4ip.com';
 
 interface ImouConfig {
   appId: string;
@@ -39,11 +40,9 @@ export class ImouCloudService {
     return !!this.config.appId && !!this.config.appSecret;
   }
 
-  /** Generate IMOU API signature */
-  private sign(params: Record<string, string>): string {
-    // IMOU uses MD5 signature: sort params alphabetically, concat, add appSecret, MD5
-    const sorted = Object.keys(params).sort().map(k => `${k}:${params[k]}`).join(',');
-    const signStr = `${sorted},appSecret:${this.config.appSecret}`;
+  /** Generate IMOU API signature — md5(time:T,nonce:N,appSecret:S) */
+  private sign(time: string, nonce: string): string {
+    const signStr = `time:${time},nonce:${nonce},appSecret:${this.config.appSecret}`;
     return crypto.createHash('md5').update(signStr).digest('hex');
   }
 
@@ -54,16 +53,12 @@ export class ImouCloudService {
     const nonce = crypto.randomBytes(16).toString('hex');
     const time = Math.floor(Date.now() / 1000).toString();
     const id = crypto.randomUUID();
-
-    const params: Record<string, string> = {
-      time, nonce, appId: this.config.appId, id,
-    };
-    params.sign = this.sign(params);
+    const sign = this.sign(time, nonce);
 
     const resp = await fetch(`${IMOU_BASE}/openapi/accessToken`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system: { ver: '1.0', ...params }, params: {} }),
+      body: JSON.stringify({ system: { ver: '1.0', appId: this.config.appId, sign, time, nonce, id }, params: {} }),
     });
 
     const data = await resp.json() as Record<string, unknown>;
@@ -84,17 +79,13 @@ export class ImouCloudService {
     const nonce = crypto.randomBytes(16).toString('hex');
     const time = Math.floor(Date.now() / 1000).toString();
     const id = crypto.randomUUID();
-
-    const params: Record<string, string> = {
-      time, nonce, appId: this.config.appId, id, token,
-    };
-    params.sign = this.sign(params);
+    const sign = this.sign(time, nonce);
 
     const resp = await fetch(`${IMOU_BASE}/openapi/deviceBaseList`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system: { ver: '1.0', ...params },
+        system: { ver: '1.0', appId: this.config.appId, sign, time, nonce, id, token },
         params: { bindId: '-1', limit: '100', type: 'bindAndShare' },
       }),
     });
@@ -112,17 +103,13 @@ export class ImouCloudService {
     const nonce = crypto.randomBytes(16).toString('hex');
     const time = Math.floor(Date.now() / 1000).toString();
     const id = crypto.randomUUID();
-
-    const params: Record<string, string> = {
-      time, nonce, appId: this.config.appId, id, token,
-    };
-    params.sign = this.sign(params);
+    const sign = this.sign(time, nonce);
 
     const resp = await fetch(`${IMOU_BASE}/openapi/realTimePlay`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system: { ver: '1.0', ...params },
+        system: { ver: '1.0', appId: this.config.appId, sign, time, nonce, id, token },
         params: { deviceId, channelId: channelId.toString(), streamId: '1' }, // 0=main, 1=sub
       }),
     });
