@@ -24,7 +24,7 @@ export class FaceRecognitionService {
     if (!this.isConfigured()) return [];
     try {
       const formData = new FormData();
-      formData.append('image', new Blob([imageBuffer]), 'frame.jpg');
+      formData.append('image', new Blob([new Uint8Array(imageBuffer)]), 'frame.jpg');
       const resp = await fetch(`${this.apiUrl}/v1/vision/face`, { method: 'POST', body: formData });
       const data = await resp.json() as Record<string, unknown>;
       return (data.predictions || []) as Record<string, unknown>[];
@@ -38,7 +38,7 @@ export class FaceRecognitionService {
     if (!this.isConfigured()) return null;
     try {
       const formData = new FormData();
-      formData.append('image', new Blob([imageBuffer]), 'frame.jpg');
+      formData.append('image', new Blob([new Uint8Array(imageBuffer)]), 'frame.jpg');
       const resp = await fetch(`${this.apiUrl}/v1/vision/face/recognize`, { method: 'POST', body: formData });
       return await resp.json() as Record<string, unknown>;
     } catch {
@@ -50,7 +50,7 @@ export class FaceRecognitionService {
     if (!this.isConfigured()) return false;
     try {
       const formData = new FormData();
-      formData.append('image', new Blob([imageBuffer]), 'face.jpg');
+      formData.append('image', new Blob([new Uint8Array(imageBuffer)]), 'face.jpg');
       formData.append('userid', personId);
       formData.append('name', name);
       const resp = await fetch(`${this.apiUrl}/v1/vision/face/register`, { method: 'POST', body: formData });

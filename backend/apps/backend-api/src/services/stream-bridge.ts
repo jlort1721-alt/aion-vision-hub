@@ -127,8 +127,8 @@ export async function registerStreamInMediaMTX(
     }
 
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: `MediaMTX unreachable: ${error.message}` };
+  } catch (error) {
+    return { success: false, error: `MediaMTX unreachable: ${(error as Error).message}` };
   }
 }
 

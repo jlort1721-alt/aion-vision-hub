@@ -63,8 +63,8 @@ export class VllmService {
       const data = await response.json();
       return data.choices[0]?.message?.content || '';
 
-    } catch (error: any) {
-      logger.error(`[vLLM Gateway Failure]: ${error.message}. Returning Failsafe Logic.`);
+    } catch (error) {
+      logger.error(`[vLLM Gateway Failure]: ${(error as Error).message}. Returning Failsafe Logic.`);
       // Mocked Response for when the local GPU is offline / not installed yet.
       return `[SIMULATED vLLM] Analysis: Based on the spatial coordinates, the asset requires immediate dispatch. Model inference bypassed locally. System operational.`;
     }

@@ -7,7 +7,7 @@ import { db } from '../db/client.js';
 import { sql } from 'drizzle-orm';
 import { createLogger } from '@aion/common-utils';
 
-const _logger = createLogger({ name: 'heat-mapping' });
+const logger = createLogger({ name: 'heat-mapping' });
 
 export class HeatMappingService {
   /** Get hourly event density by site for the last N days */
@@ -22,7 +22,8 @@ export class HeatMappingService {
         ORDER BY s.name, day_of_week, hour
       `);
       return results as unknown as Record<string, unknown>[];
-    } catch {
+    } catch (err) {
+      logger.error({ err }, 'Failed to get event heatmap');
       return [];
     }
   }
@@ -50,7 +51,8 @@ export class HeatMappingService {
         GROUP BY hour, day ORDER BY day, hour
       `);
       return results as unknown as Record<string, unknown>[];
-    } catch {
+    } catch (err) {
+      logger.error({ err }, 'Failed to get access heatmap');
       return [];
     }
   }
@@ -69,7 +71,8 @@ export class HeatMappingService {
         ORDER BY event_count DESC
       `);
       return results as unknown as Record<string, unknown>[];
-    } catch {
+    } catch (err) {
+      logger.error({ err }, 'Failed to get device activity zones');
       return [];
     }
   }

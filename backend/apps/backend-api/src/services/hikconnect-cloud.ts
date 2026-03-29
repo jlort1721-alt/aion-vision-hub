@@ -6,7 +6,7 @@
 import crypto from 'crypto';
 import { createLogger } from '@aion/common-utils';
 
-const _logger = createLogger({ name: 'hikconnect' });
+const logger = createLogger({ name: 'hikconnect' });
 
 export class HikConnectService {
   private ak: string;
@@ -25,9 +25,9 @@ export class HikConnectService {
 
   private sign(method: string, path: string, body: string = ''): Record<string, string> {
     const timestamp = Date.now().toString();
-    const _nonce = crypto.randomBytes(8).toString('hex');
+    const nonce = crypto.randomBytes(8).toString('hex');
     const contentMD5 = body ? crypto.createHash('md5').update(body).digest('base64') : '';
-    const stringToSign = [method.toUpperCase(), contentMD5, 'application/json', timestamp, path].join('\n');
+    const stringToSign = [method.toUpperCase(), contentMD5, 'application/json', timestamp, nonce, path].join('\n');
     const signature = crypto.createHmac('sha256', this.sk).update(stringToSign).digest('base64');
     return { timestamp, Authorization: `HMAC-SHA256 ak=${this.ak}, signature=${signature}` };
   }
@@ -45,6 +45,7 @@ export class HikConnectService {
       });
       return await resp.json() as Record<string, unknown>;
     } catch (err) {
+      logger.error({ err }, 'HikConnect getDevices failed');
       return { error: (err as Error).message };
     }
   }
