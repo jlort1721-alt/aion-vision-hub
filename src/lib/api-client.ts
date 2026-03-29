@@ -3,8 +3,6 @@
 // All frontend → backend communication goes through this
 // ═══════════════════════════════════════════════════════════
 
-import { supabase } from '@/integrations/supabase/client';
-
 // ── Types ──────────────────────────────────────────────────
 
 export interface ApiResponse<T> {
@@ -65,7 +63,6 @@ export class ApiClientError extends Error {
 // ── Configuration ──────────────────────────────────────────
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
-const SUPABASE_FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const MAX_RETRIES = 2;
@@ -96,17 +93,15 @@ class ApiClient {
 
   // ── Auth Headers ───────────────────────────────────────
 
-  private async getAuthHeaders(): Promise<Record<string, string>> {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+  private getAuthHeaders(): Record<string, string> {
+    const token = localStorage.getItem('aion_token');
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     return headers;
@@ -144,24 +139,39 @@ class ApiClient {
 
       // 401 Interceptor — attempt token refresh and retry once
       if (response.status === 401) {
-        const { data } = await supabase.auth.refreshSession();
-        if (data.session) {
-          // Retry the original request with the refreshed token
-          const retryHeaders = {
-            ...Object.fromEntries(new Headers(fetchOptions.headers).entries()),
-            Authorization: `Bearer ${data.session.access_token}`,
-          };
-          clearTimeout(timer);
-          return fetch(finalUrl, { ...fetchOptions, headers: retryHeaders });
-        } else {
-          // Session truly expired — redirect to login
-          window.location.href = '/login';
-          throw new ApiClientError({
-            message: 'Session expired. Please log in again.',
-            status: 401,
-            code: 'SESSION_EXPIRED',
+        const refreshToken = localStorage.getItem('aion_refresh_token');
+        if (refreshToken) {
+          const refreshResp = await fetch(`${API_BASE_URL}/auth/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken }),
           });
+
+          if (refreshResp.ok) {
+            const json = await refreshResp.json();
+            const data = json.data ?? json;
+            localStorage.setItem('aion_token', data.token);
+            localStorage.setItem('aion_refresh_token', data.refreshToken);
+
+            // Retry the original request with the refreshed token
+            const retryHeaders = {
+              ...Object.fromEntries(new Headers(fetchOptions.headers).entries()),
+              Authorization: `Bearer ${data.token}`,
+            };
+            clearTimeout(timer);
+            return fetch(finalUrl, { ...fetchOptions, headers: retryHeaders });
+          }
         }
+
+        // Session truly expired — redirect to login
+        localStorage.removeItem('aion_token');
+        localStorage.removeItem('aion_refresh_token');
+        window.location.href = '/login';
+        throw new ApiClientError({
+          message: 'Session expired. Please log in again.',
+          status: 401,
+          code: 'SESSION_EXPIRED',
+        });
       }
 
       // Retry on 5xx or network error
@@ -232,7 +242,7 @@ class ApiClient {
    * GET request to the Backend API (Fastify)
    */
   async get<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
-    const headers = await this.getAuthHeaders();
+    const headers = this.getAuthHeaders();
     const url = new URL(`${API_BASE_URL}${path}`);
 
     if (params) {
@@ -255,7 +265,7 @@ class ApiClient {
    * POST request to the Backend API (Fastify)
    */
   async post<T>(path: string, body?: unknown): Promise<T> {
-    const headers = await this.getAuthHeaders();
+    const headers = this.getAuthHeaders();
     const response = await this.fetchWithRetry(`${API_BASE_URL}${path}`, {
       method: 'POST',
       headers,
@@ -269,7 +279,7 @@ class ApiClient {
    * PUT request to the Backend API (Fastify)
    */
   async put<T>(path: string, body?: unknown): Promise<T> {
-    const headers = await this.getAuthHeaders();
+    const headers = this.getAuthHeaders();
     const response = await this.fetchWithRetry(`${API_BASE_URL}${path}`, {
       method: 'PUT',
       headers,
@@ -283,7 +293,7 @@ class ApiClient {
    * PATCH request to the Backend API (Fastify)
    */
   async patch<T>(path: string, body?: unknown): Promise<T> {
-    const headers = await this.getAuthHeaders();
+    const headers = this.getAuthHeaders();
     const response = await this.fetchWithRetry(`${API_BASE_URL}${path}`, {
       method: 'PATCH',
       headers,
@@ -297,7 +307,7 @@ class ApiClient {
    * DELETE request to the Backend API (Fastify)
    */
   async delete<T = void>(path: string): Promise<T> {
-    const headers = await this.getAuthHeaders();
+    const headers = this.getAuthHeaders();
     const response = await this.fetchWithRetry(`${API_BASE_URL}${path}`, {
       method: 'DELETE',
       headers,
@@ -310,10 +320,11 @@ class ApiClient {
    * Call a Supabase Edge Function (legacy, for functions not yet migrated to Fastify)
    */
   async edgeFunction<T>(functionName: string, params?: Record<string, string>, options?: RequestInit): Promise<T> {
-    const headers = await this.getAuthHeaders();
+    const headers = this.getAuthHeaders();
     // Edge functions also need the apikey
     headers['apikey'] = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+    const SUPABASE_FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
     const url = new URL(`${SUPABASE_FUNCTIONS_URL}/${functionName}`);
     if (params) {
       Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));

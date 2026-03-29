@@ -14,7 +14,6 @@
  *   4. Configure voice selection via /voice/config endpoint
  */
 
-import { supabase } from '@/integrations/supabase/client';
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -94,17 +93,16 @@ export interface TestConnectionResult {
 const BACKEND_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 const ELEVENLABS_API_BASE = 'https://api.elevenlabs.io/v1';
 
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession();
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('aion_token');
   return {
     'Content-Type': 'application/json',
-    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
 async function voiceApiFetch<T = unknown>(path: string, options?: RequestInit): Promise<T> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const resp = await fetch(`${BACKEND_BASE}/voice-api${path}`, {
     ...options,
     headers: { ...headers, ...(options?.headers || {}) },
@@ -117,7 +115,7 @@ async function voiceApiFetch<T = unknown>(path: string, options?: RequestInit): 
 }
 
 async function voiceApiFetchBlob(path: string, options?: RequestInit): Promise<{ blob: Blob; headers: Headers }> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const resp = await fetch(`${BACKEND_BASE}/voice-api${path}`, {
     ...options,
     headers: { ...headers, ...(options?.headers || {}) },

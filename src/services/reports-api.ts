@@ -3,7 +3,6 @@
 // ═══════════════════════════════════════════════════════════
 
 import { apiClient } from '@/lib/api-client';
-import { supabase } from '@/integrations/supabase/client';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -15,10 +14,10 @@ export const reportsApi = {
     apiClient.post<{ success: boolean; data: any }>('/reports/generate', params),
 
   download: async (id: string): Promise<Blob> => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = localStorage.getItem('aion_token');
     const headers: Record<string, string> = {};
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
     const response = await fetch(`${API_BASE_URL}/reports/${id}/download`, { headers });
     if (!response.ok) {

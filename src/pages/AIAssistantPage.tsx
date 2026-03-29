@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { apiClient } from '@/lib/api-client';
 
 // ── Types ──────────────────────────────────────────────────
@@ -106,12 +105,12 @@ const QUICK_ACTIONS = [
 
 // ── Helpers ────────────────────────────────────────────────
 
-async function getAuthHeaders() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) throw new Error('Not authenticated');
+function getAuthHeaders() {
+  const token = localStorage.getItem('aion_token');
+  if (!token) throw new Error('Not authenticated');
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${session.access_token}`,
+    'Authorization': `Bearer ${token}`,
   };
 }
 
@@ -276,7 +275,7 @@ export default function AIAssistantPage() {
     const assistantId = `msg-${Date.now()}-resp`;
 
     try {
-      const headers = await getAuthHeaders();
+      const headers = getAuthHeaders();
       const resp = await fetch(CHAT_URL, {
         method: 'POST',
         headers,

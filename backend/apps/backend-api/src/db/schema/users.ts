@@ -1,12 +1,17 @@
-import { pgTable, uuid, varchar, boolean, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, boolean, timestamp, text } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 
 export const profiles = pgTable('profiles', {
   id: uuid('id').primaryKey(),
   userId: uuid('user_id').notNull(),
   fullName: varchar('full_name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   avatarUrl: varchar('avatar_url', { length: 1024 }),
+  passwordHash: text('password_hash'),
+  emailVerified: boolean('email_verified').default(false),
+  resetToken: text('reset_token'),
+  resetTokenExpires: timestamp('reset_token_expires', { withTimezone: true }),
   isActive: boolean('is_active').notNull().default(true),
   lastLoginAt: timestamp('last_login', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

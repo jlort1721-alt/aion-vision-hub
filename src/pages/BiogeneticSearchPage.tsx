@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Dna, Fingerprint, ScanFace, Database, Upload, Crosshair, Search, Loader2, Activity, Camera } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -20,14 +19,14 @@ interface BioSearchResult {
 
 async function searchBiomarkers(embedding: number[]): Promise<BioSearchResult[]> {
   if (!API_URL) return [];
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) return [];
+  const token = localStorage.getItem('aion_token');
+  if (!token) return [];
 
   const resp = await fetch(`${API_URL}/biomarkers/search`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify({ targetEmbedding: embedding }),
   });

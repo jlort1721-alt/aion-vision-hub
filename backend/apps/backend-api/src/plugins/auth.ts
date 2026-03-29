@@ -1,15 +1,9 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
-import { eq } from 'drizzle-orm';
 import type { UserRole } from '@aion/shared-contracts';
-import { db } from '../db/client.js';
-import { profiles, userRoles } from '../db/schema/index.js';
-import { verifySupabaseToken } from '../lib/supabase.js';
 import { ApiKeyService } from '../modules/api-keys/service.js';
-import { RedisCache } from '../lib/cache.js';
 
 const apiKeyService = new ApiKeyService();
-const userContextCache = new RedisCache<{ tenantId: string; role: UserRole }>('user', 300_000);
 
 export interface JWTPayload {
   sub: string;
@@ -29,7 +23,19 @@ declare module 'fastify' {
   }
 }
 
-const PUBLIC_ROUTES = ['/health', '/health/ready', '/health/metrics', '/webhooks/whatsapp', '/ws', '/push/vapid-public-key', '/auth/login'];
+const PUBLIC_ROUTES = [
+  '/health',
+  '/health/ready',
+  '/health/metrics',
+  '/webhooks/whatsapp',
+  '/ws',
+  '/push/vapid-public-key',
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh',
+  '/auth/reset-password',
+  '/auth/reset-password/confirm',
+];
 
 /**
  * Check if a request URL matches a public route.
@@ -42,45 +48,12 @@ function isPublicRoute(url: string): boolean {
   return PUBLIC_ROUTES.some((r) => path === r || path.startsWith(r + '/'));
 }
 
-/**
- * Look up user profile and role from the database by auth user ID.
- */
-async function getUserContext(authUserId: string): Promise<{ tenantId: string; role: UserRole } | null> {
-  // Check Redis cache first
-  const cached = await userContextCache.get(authUserId);
-  if (cached) return cached;
-
-  const [profile] = await db
-    .select({ id: profiles.id, userId: profiles.userId, tenantId: profiles.tenantId })
-    .from(profiles)
-    .where(eq(profiles.userId, authUserId))
-    .limit(1);
-
-  if (!profile) return null;
-
-  const [roleRecord] = await db
-    .select({ role: userRoles.role })
-    .from(userRoles)
-    .where(eq(userRoles.userId, authUserId))
-    .limit(1);
-
-  const result = {
-    tenantId: profile.tenantId,
-    role: (roleRecord?.role || 'viewer') as UserRole,
-  };
-
-  // Cache user context for 5 minutes
-  await userContextCache.set(authUserId, result);
-
-  return result;
-}
-
 async function authPlugin(app: FastifyInstance) {
   app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
     if (isPublicRoute(request.url)) return;
     if (request.method === 'OPTIONS') return;
 
-    // Try backend JWT first
+    // 1. Try local backend JWT first (primary auth)
     try {
       const payload = await request.jwtVerify<JWTPayload>();
       request.userId = payload.sub;
@@ -89,10 +62,10 @@ async function authPlugin(app: FastifyInstance) {
       request.userRole = payload.role;
       return;
     } catch {
-      // Fall through to Supabase token verification
+      // Fall through to API key check
     }
 
-    // Try API key (X-API-Key header)
+    // 2. Try API key (X-API-Key header)
     const apiKey = request.headers['x-api-key'] as string | undefined;
     if (apiKey) {
       const keyCtx = await apiKeyService.validate(apiKey);
@@ -106,27 +79,8 @@ async function authPlugin(app: FastifyInstance) {
       return reply.code(401).send({ success: false, error: { code: 'AUTH_API_KEY_INVALID', message: 'Invalid or expired API key' } });
     }
 
-    // Try Supabase token
-    const authHeader = request.headers.authorization;
-    const token = authHeader?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ success: false, error: { code: 'AUTH_TOKEN_INVALID', message: 'Unauthorized' } });
-    }
-
-    const supabaseUser = await verifySupabaseToken(token);
-    if (!supabaseUser) {
-      return reply.code(401).send({ success: false, error: { code: 'AUTH_TOKEN_INVALID', message: 'Unauthorized' } });
-    }
-
-    const ctx = await getUserContext(supabaseUser.id);
-    if (!ctx) {
-      return reply.code(401).send({ success: false, error: { code: 'AUTH_USER_NOT_FOUND', message: 'User profile not found' } });
-    }
-
-    request.userId = supabaseUser.id;
-    request.userEmail = supabaseUser.email;
-    request.tenantId = ctx.tenantId;
-    request.userRole = ctx.role;
+    // 3. No valid authentication found
+    return reply.code(401).send({ success: false, error: { code: 'AUTH_TOKEN_INVALID', message: 'Unauthorized' } });
   });
 }
 

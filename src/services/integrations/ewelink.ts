@@ -19,7 +19,6 @@
  *   - All API calls are authenticated via the user's JWT session
  */
 
-import { supabase } from '@/integrations/supabase/client';
 
 // ── Types ──
 
@@ -103,9 +102,8 @@ const LOG_MAX_ENTRIES = 200;
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('aion_token');
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -113,7 +111,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 }
 
 async function apiCall<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const resp = await fetch(`${API_BASE}${path}`, {
     method,
     headers,

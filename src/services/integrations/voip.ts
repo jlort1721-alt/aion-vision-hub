@@ -27,7 +27,6 @@
  *   http://<device-ip>/cgi-bin/ConfigManApp.com?key=<parameter>&value=<value>
  */
 
-import { supabase } from '@/integrations/supabase/client';
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -191,17 +190,16 @@ export interface CallStats {
 
 const BACKEND_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession();
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('aion_token');
   return {
     'Content-Type': 'application/json',
-    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
 async function intercomFetch<T = unknown>(path: string, options?: RequestInit): Promise<T> {
-  const headers = await getAuthHeaders();
+  const headers = getAuthHeaders();
   const resp = await fetch(`${BACKEND_BASE}/intercom-api${path}`, {
     ...options,
     headers: { ...headers, ...(options?.headers || {}) },
