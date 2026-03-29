@@ -2,6 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth.js';
 import { domoticService } from './service.js';
 import { ewelinkMCP } from '../../services/ewelink-mcp.js';
+import { db } from '../../db/client.js';
+import { sql } from 'drizzle-orm';
 import {
   createDomoticDeviceSchema, updateDomoticDeviceSchema,
   domoticFiltersSchema, domoticActionSchema,
@@ -117,5 +119,130 @@ export async function registerDomoticRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>('/:id/actions', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const data = await domoticService.getActions(request.params.id, request.tenantId);
     return reply.send({ success: true, data });
+  });
+
+  // ── eWeLink Device Mappings CRUD ─────────────────────────────
+
+  /** GET /ewelink/mappings — List all eWeLink device mappings for tenant (with site name via JOIN) */
+  app.get('/ewelink/mappings', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT
+          m.*,
+          COALESCE(s.name, 'Unassigned') AS site_name
+        FROM ewelink_device_mappings m
+        LEFT JOIN sites s ON s.id = m.site_id
+        WHERE m.tenant_id = ${request.tenantId}
+        ORDER BY m.label ASC
+      `);
+      const rows = (result as unknown as Record<string, unknown>[]);
+      return reply.send({ success: true, data: rows });
+    } catch (err) {
+      return reply.code(500).send({ success: false, error: (err as Error).message });
+    }
+  });
+
+  /** POST /ewelink/mappings — Create a new eWeLink device mapping */
+  app.post('/ewelink/mappings', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
+    const { ewelink_device_id, site_id, device_type, label, requires_confirmation } = request.body as {
+      ewelink_device_id: string;
+      site_id?: string;
+      device_type?: string;
+      label: string;
+      requires_confirmation?: boolean;
+    };
+    try {
+      const result = await db.execute(sql`
+        INSERT INTO ewelink_device_mappings (tenant_id, ewelink_device_id, site_id, device_type, label, requires_confirmation)
+        VALUES (
+          ${request.tenantId},
+          ${ewelink_device_id},
+          ${site_id ?? null},
+          ${device_type ?? null},
+          ${label},
+          ${requires_confirmation ?? false}
+        )
+        RETURNING *
+      `);
+      const rows = (result as unknown as Record<string, unknown>[]);
+      return reply.code(201).send({ success: true, data: rows[0] });
+    } catch (err) {
+      return reply.code(500).send({ success: false, error: (err as Error).message });
+    }
+  });
+
+  /** PATCH /ewelink/mappings/:id — Update an existing eWeLink device mapping */
+  app.patch<{ Params: { id: string } }>('/ewelink/mappings/:id', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
+    const { id } = request.params;
+    const { ewelink_device_id, site_id, device_type, label, requires_confirmation } = request.body as {
+      ewelink_device_id?: string;
+      site_id?: string | null;
+      device_type?: string | null;
+      label?: string;
+      requires_confirmation?: boolean;
+    };
+    try {
+      const result = await db.execute(sql`
+        UPDATE ewelink_device_mappings
+        SET
+          ewelink_device_id = COALESCE(${ewelink_device_id ?? null}, ewelink_device_id),
+          site_id = COALESCE(${site_id ?? null}, site_id),
+          device_type = COALESCE(${device_type ?? null}, device_type),
+          label = COALESCE(${label ?? null}, label),
+          requires_confirmation = COALESCE(${requires_confirmation ?? null}, requires_confirmation),
+          updated_at = now()
+        WHERE id = ${id} AND tenant_id = ${request.tenantId}
+        RETURNING *
+      `);
+      const rows = (result as unknown as Record<string, unknown>[]);
+      if (!rows.length) return reply.code(404).send({ success: false, error: 'Mapping not found' });
+      return reply.send({ success: true, data: rows[0] });
+    } catch (err) {
+      return reply.code(500).send({ success: false, error: (err as Error).message });
+    }
+  });
+
+  /** DELETE /ewelink/mappings/:id — Delete an eWeLink device mapping */
+  app.delete<{ Params: { id: string } }>('/ewelink/mappings/:id', { preHandler: [requireRole('tenant_admin', 'super_admin')] }, async (request, reply) => {
+    const { id } = request.params;
+    try {
+      const result = await db.execute(sql`
+        DELETE FROM ewelink_device_mappings
+        WHERE id = ${id} AND tenant_id = ${request.tenantId}
+        RETURNING id
+      `);
+      const rows = (result as unknown as Record<string, unknown>[]);
+      if (!rows.length) return reply.code(404).send({ success: false, error: 'Mapping not found' });
+      return reply.code(204).send();
+    } catch (err) {
+      return reply.code(500).send({ success: false, error: (err as Error).message });
+    }
+  });
+
+  /** GET /ewelink/by-site/:siteId — Get eWeLink devices for a specific site (JOIN mappings with device data) */
+  app.get<{ Params: { siteId: string } }>('/ewelink/by-site/:siteId', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
+    const { siteId } = request.params;
+    try {
+      const result = await db.execute(sql`
+        SELECT
+          m.id AS mapping_id,
+          m.ewelink_device_id,
+          m.device_type,
+          m.label,
+          m.requires_confirmation,
+          m.created_at,
+          m.updated_at,
+          s.name AS site_name
+        FROM ewelink_device_mappings m
+        LEFT JOIN sites s ON s.id = m.site_id
+        WHERE m.tenant_id = ${request.tenantId}
+          AND m.site_id = ${siteId}
+        ORDER BY m.label ASC
+      `);
+      const rows = (result as unknown as Record<string, unknown>[]);
+      return reply.send({ success: true, data: rows });
+    } catch (err) {
+      return reply.code(500).send({ success: false, error: (err as Error).message });
+    }
   });
 }
