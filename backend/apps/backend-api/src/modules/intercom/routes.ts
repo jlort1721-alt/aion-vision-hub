@@ -10,6 +10,7 @@ import {
   initiateCallSchema, callSessionFiltersSchema, updateCallSessionSchema,
   doorActionSchema, testDeviceSchema, provisionDeviceSchema,
   voipConfigSchema,
+  inboundSessionSchema, endSessionSchema, handoffSchema,
 } from './schemas.js';
 import type {
   CreateIntercomDeviceInput, UpdateIntercomDeviceInput, IntercomFilters,
@@ -17,6 +18,7 @@ import type {
   InitiateCallInput, CallSessionFilters, UpdateCallSessionInput,
   DoorActionInput, TestDeviceInput, ProvisionDeviceInput,
   VoipConfigInput,
+  InboundSessionInput, EndSessionInput, HandoffInput,
 } from './schemas.js';
 
 export async function registerIntercomRoutes(app: FastifyInstance) {
@@ -117,11 +119,11 @@ export async function registerIntercomRoutes(app: FastifyInstance) {
   );
 
   /** Handle inbound call (called by PBX webhook/AGI) */
-  app.post(
+  app.post<{ Body: InboundSessionInput }>(
     '/sessions/inbound',
     { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
-      const { callerUri, deviceId, sipCallId } = request.body as any;
+      const { callerUri, deviceId, sipCallId } = inboundSessionSchema.parse(request.body);
       const result = await orchestrationService.handleInboundCall({
         tenantId: request.tenantId,
         deviceId,
@@ -157,11 +159,11 @@ export async function registerIntercomRoutes(app: FastifyInstance) {
   );
 
   /** End call / hang up */
-  app.post<{ Params: { id: string } }>(
+  app.post<{ Params: { id: string }; Body: EndSessionInput }>(
     '/sessions/:id/end',
     { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
-      const { notes } = (request.body as any) || {};
+      const { notes } = endSessionSchema.parse(request.body ?? {});
       const data = await orchestrationService.endCall(request.params.id, request.tenantId, notes);
       await request.audit('intercom.call.end', 'call_sessions', data.id);
       return reply.send({ success: true, data });
@@ -169,11 +171,11 @@ export async function registerIntercomRoutes(app: FastifyInstance) {
   );
 
   /** Handoff to human operator */
-  app.post<{ Params: { id: string } }>(
+  app.post<{ Params: { id: string }; Body: HandoffInput }>(
     '/sessions/:id/handoff',
     { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
-      const { reason } = (request.body as any) || {};
+      const { reason } = handoffSchema.parse(request.body ?? {});
       await orchestrationService.handoffToHuman(request.params.id, request.tenantId, reason);
       await request.audit('intercom.call.handoff', 'call_sessions', request.params.id, { reason });
       return reply.send({ success: true, data: { handoff: true, reason } });

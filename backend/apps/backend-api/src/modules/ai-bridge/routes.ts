@@ -79,6 +79,26 @@ export async function registerAIBridgeRoutes(app: FastifyInstance) {
     },
   );
 
+  // ── POST /feedback — Record user feedback on AI responses ───
+  app.post(
+    '/feedback',
+    { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
+    async (request, reply) => {
+      const { messageIndex, rating, comment } = request.body as {
+        messageIndex: number;
+        rating: 1 | -1;
+        comment?: string;
+      };
+      // Log to audit trail (ai_feedback table will be added later)
+      await request.audit('ai.feedback', 'ai_sessions', 'feedback', {
+        messageIndex,
+        rating,
+        comment,
+      });
+      return reply.send({ success: true });
+    },
+  );
+
   // ── GET /usage — Get AI usage stats for tenant ──────────────
   app.get(
     '/usage',

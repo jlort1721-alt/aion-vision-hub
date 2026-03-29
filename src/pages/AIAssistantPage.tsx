@@ -19,6 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -559,8 +560,37 @@ export default function AIAssistantPage() {
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => navigator.clipboard.writeText(msg.content)}>
                     <Copy className="h-3 w-3" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6"><ThumbsUp className="h-3 w-3" /></Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6"><ThumbsDown className="h-3 w-3" /></Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => {
+                      const idx = messages.indexOf(msg);
+                      apiClient.post('/ai/feedback', { messageIndex: idx, rating: 1 }).then(() => {
+                        toast({ title: 'Gracias por tu feedback' });
+                      }).catch(() => {
+                        toast({ title: 'Error al enviar feedback', variant: 'destructive' });
+                      });
+                    }}
+                  >
+                    <ThumbsUp className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => {
+                      const idx = messages.indexOf(msg);
+                      const comment = window.prompt('Comentario (opcional):') ?? undefined;
+                      apiClient.post('/ai/feedback', { messageIndex: idx, rating: -1, comment }).then(() => {
+                        toast({ title: 'Gracias por tu feedback' });
+                      }).catch(() => {
+                        toast({ title: 'Error al enviar feedback', variant: 'destructive' });
+                      });
+                    }}
+                  >
+                    <ThumbsDown className="h-3 w-3" />
+                  </Button>
                 </div>
               )}
             </div>

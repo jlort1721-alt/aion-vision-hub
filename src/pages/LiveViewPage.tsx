@@ -14,6 +14,7 @@ import { useSections } from '@/hooks/use-module-data';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/api-client';
 import { GridLayout, Device } from '@/types';
 import {
   Grid2x2, Grid3x3, Maximize, Volume2, Camera,
@@ -224,18 +225,23 @@ export default function LiveViewPage() {
   // Saved layouts
   const { data: savedLayouts = [] } = useQuery({
     queryKey: ['live_view_layouts'],
-    queryFn: async () => {
-      // API call to fetch layouts natively from API will be hooked here
-      return [] as any[];
-    },
+    queryFn: () => apiClient.get<Record<string, unknown>[]>('/live-view/layouts'),
     enabled: !!profile,
   });
 
   const saveLayout = useMutation({
     mutationFn: async () => {
       if (!profile || !user) throw new Error('Not authenticated');
-      // API Post layout
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const slots = Object.entries(slotAssignments).map(([pos, deviceId]) => ({
+        position: Number(pos),
+        device_id: deviceId,
+      }));
+      await apiClient.post('/live-view/layouts', {
+        name: layoutName,
+        grid,
+        slots,
+        isShared,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['live_view_layouts'] });
@@ -243,24 +249,24 @@ export default function LiveViewPage() {
       setSaveDialogOpen(false);
       setLayoutName('');
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const deleteLayout = useMutation({
     mutationFn: async (id: string) => {
-      // Delete layout natively
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await apiClient.delete('/live-view/layouts/' + id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['live_view_layouts'] });
-      toast.success('Layout deleted natively');
+      toast.success('Layout deleted');
     },
   });
 
   const toggleFavorite = useMutation({
     mutationFn: async ({ id, current }: { id: string; current: boolean }) => {
-      // Patch layout favorite
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await apiClient.patch('/live-view/layouts/' + id + '/favorite', {
+        isFavorite: !current,
+      });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['live_view_layouts'] }),
   });

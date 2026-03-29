@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { shiftsApi, shiftAssignmentsApi } from "@/services/shifts-api";
+import { apiClient } from "@/lib/api-client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -77,6 +79,18 @@ export default function ShiftsPage() {
   const [calendarCellDetail, setCalendarCellDetail] = useState<{ dayIndex: number; blockIndex: number } | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Fetch users for the assignment picker
+  const { data: usersData } = useQuery({
+    queryKey: ['users-for-shifts'],
+    queryFn: () => apiClient.get<Record<string, unknown>[] | { items: Record<string, unknown>[] }>('/users'),
+  });
+  const usersList = useMemo(() => {
+    if (!usersData) return [];
+    if (Array.isArray(usersData)) return usersData;
+    if (usersData && typeof usersData === 'object' && 'items' in usersData) return (usersData as { items: Record<string, unknown>[] }).items;
+    return [];
+  }, [usersData]);
 
   const createShiftMutation = useMutation({
     mutationFn: (data: typeof defaultShift) => shiftsApi.create(data),
@@ -518,7 +532,18 @@ export default function ShiftsPage() {
                     {shifts.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
-                <div className="space-y-1"><Label className="text-xs">User ID *</Label><Input value={newAssignment.userId} onChange={e => setNewAssignment(a => ({ ...a, userId: e.target.value }))} placeholder="User UUID or name" /></div>
+                <div className="space-y-1"><Label className="text-xs">User *</Label>
+                  <Select value={newAssignment.userId} onValueChange={(v) => setNewAssignment(a => ({ ...a, userId: v }))}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Select user..." /></SelectTrigger>
+                    <SelectContent>
+                      {usersList.map((u) => (
+                        <SelectItem key={String(u.id ?? u.userId)} value={String(u.id ?? u.userId)}>
+                          {String(u.fullName || u.full_name || u.name || u.email || u.id || 'Unknown')}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-1"><Label className="text-xs">Date *</Label><Input type="date" value={newAssignment.date} onChange={e => setNewAssignment(a => ({ ...a, date: e.target.value }))} /></div>
               </div>
               <DialogFooter>

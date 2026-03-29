@@ -151,6 +151,29 @@ export const voipConfigSchema = z.object({
 });
 export type VoipConfigInput = z.infer<typeof voipConfigSchema>;
 
+// ── Inbound Session Schema ────────────────────────────────
+
+export const inboundSessionSchema = z.object({
+  callerUri: z.string().max(255).optional(),
+  deviceId: z.string().uuid().optional(),
+  sipCallId: z.string().max(255).optional(),
+});
+export type InboundSessionInput = z.infer<typeof inboundSessionSchema>;
+
+// ── End Session Schema ────────────────────────────────────
+
+export const endSessionSchema = z.object({
+  notes: z.string().max(1000).optional(),
+});
+export type EndSessionInput = z.infer<typeof endSessionSchema>;
+
+// ── Handoff Schema ────────────────────────────────────────
+
+export const handoffSchema = z.object({
+  reason: z.string().max(255).optional(),
+});
+export type HandoffInput = z.infer<typeof handoffSchema>;
+
 // ── SIP Health Check Schema ───────────────────────────────
 
 export const sipHealthSchema = z.object({
