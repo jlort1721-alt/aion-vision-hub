@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth.js';
-import { automationService } from './service.js';
+import { automationService, getSystemEnabled, setSystemEnabled } from './service.js';
 import {
   createAutomationRuleSchema,
   updateAutomationRuleSchema,
@@ -15,6 +15,37 @@ import type {
 } from './schemas.js';
 
 export async function registerAutomationRoutes(app: FastifyInstance) {
+  // ═══════════════════════════════════════════════════════════
+  // SYSTEM-WIDE ON/OFF SWITCH
+  // ═══════════════════════════════════════════════════════════
+
+  // ── POST /system/toggle — Enable or disable ALL automation ──
+  app.post<{ Body: { enabled: boolean } }>(
+    '/system/toggle',
+    { preHandler: [requireRole('tenant_admin', 'super_admin')] },
+    async (request, reply) => {
+      const { enabled } = request.body as { enabled: boolean };
+      setSystemEnabled(enabled);
+
+      await request.audit('automation.system.toggle', 'system', 'automation', { enabled });
+
+      return reply.send({ success: true, data: { enabled: getSystemEnabled() } });
+    },
+  );
+
+  // ── GET /system/status — Get current system-wide automation status ──
+  app.get(
+    '/system/status',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
+    async (_request, reply) => {
+      return reply.send({ success: true, data: { enabled: getSystemEnabled() } });
+    },
+  );
+
+  // ═══════════════════════════════════════════════════════════
+  // AUTOMATION RULES CRUD
+  // ═══════════════════════════════════════════════════════════
+
   // ── GET /rules — List automation rules with filters + pagination ──
   app.get<{ Querystring: AutomationRuleFilters }>(
     '/rules',
@@ -87,6 +118,10 @@ export async function registerAutomationRoutes(app: FastifyInstance) {
     },
   );
 
+  // ═══════════════════════════════════════════════════════════
+  // AUTOMATION EXECUTIONS & STATS
+  // ═══════════════════════════════════════════════════════════
+
   // ── GET /executions — List automation executions with filters ─────
   app.get<{ Querystring: AutomationExecutionFilters }>(
     '/executions',
@@ -110,6 +145,23 @@ export async function registerAutomationRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const data = await automationService.getAutomationStats(request.tenantId);
       return reply.send({ success: true, data });
+    },
+  );
+
+  // ── POST /evaluate — Manually trigger evaluation for testing ──────
+  app.post<{ Body: { type: string; data: Record<string, unknown> } }>(
+    '/evaluate',
+    { preHandler: [requireRole('tenant_admin', 'super_admin')] },
+    async (request, reply) => {
+      const trigger = request.body as { type: string; data: Record<string, unknown> };
+
+      await automationService.evaluateAndExecute(trigger);
+
+      await request.audit('automation.manual_evaluate', 'automation', undefined, {
+        triggerType: trigger.type,
+      });
+
+      return reply.send({ success: true, data: { message: 'Evaluation complete', triggerType: trigger.type } });
     },
   );
 }

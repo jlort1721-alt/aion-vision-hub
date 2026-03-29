@@ -40,6 +40,7 @@ import { incidentServerTools } from './incident-server.js';
 import { deviceCommandTools } from './device-command.js';
 import { notificationServerTools } from './notification-server.js';
 import { reportServerTools } from './report-server.js';
+import { ewelinkTools } from './ewelink-tools.js';
 
 // ── Tool Registry ────────────────────────────────────────────
 
@@ -53,6 +54,7 @@ const allTools: MCPServerTool[] = [
   ...deviceCommandTools,
   ...notificationServerTools,
   ...reportServerTools,
+  ...ewelinkTools,
 ];
 
 // Populate the registry

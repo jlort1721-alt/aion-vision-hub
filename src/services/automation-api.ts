@@ -30,6 +30,16 @@ export const automationExecutionsApi = {
     apiClient.get<{ success: boolean; data: Record<string, unknown>[]; meta: Record<string, unknown> }>('/automation/executions', filters as Record<string, string | number | boolean | undefined>),
 };
 
+// ── Automation System Toggle ────────────────────────────────
+
+export const automationSystemApi = {
+  getStatus: () =>
+    apiClient.get<{ enabled: boolean }>('/automation/system/status'),
+
+  toggle: (enabled: boolean) =>
+    apiClient.post<{ enabled: boolean }>('/automation/system/toggle', { enabled }),
+};
+
 // ── Automation Stats ────────────────────────────────────────
 
 export const automationStatsApi = {

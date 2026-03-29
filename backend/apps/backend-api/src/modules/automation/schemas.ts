@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const triggerTypes = ['event', 'schedule', 'device_status', 'threshold'] as const;
+const triggerTypes = ['event', 'schedule', 'device_status', 'threshold', 'event_severity', 'device_offline', 'manual'] as const;
 const actionTypes = [
   'send_alert',
   'create_incident',
@@ -8,6 +8,10 @@ const actionTypes = [
   'webhook',
   'toggle_device',
   'activate_protocol',
+  'ewelink_toggle',
+  'ewelink_siren',
+  'ewelink_door',
+  'send_notification',
 ] as const;
 const executionStatuses = ['success', 'partial', 'failed'] as const;
 
