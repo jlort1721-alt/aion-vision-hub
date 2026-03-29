@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ErrorState from '@/components/ui/ErrorState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,7 +41,7 @@ export default function RebootsPage() {
   const [aiResult, setAiResult] = useState<string | null>(null);
 
   // Fetch reboot tasks from backend API
-  const { data: rebootTasks = [], isLoading } = useQuery({
+  const { data: rebootTasks = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['reboot_tasks'],
     queryFn: async () => {
       const resp = await rebootsApi.list();
@@ -125,6 +126,8 @@ export default function RebootsPage() {
       setAiLoading(null);
     }
   };
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">

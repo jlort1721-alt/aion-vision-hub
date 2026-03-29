@@ -38,25 +38,25 @@ export interface SiteComparison {
  */
 export async function getCrossSiteStats(): Promise<CrossSiteStats> {
   try {
-    const response = await apiClient.get<{ data: any }>('/analytics/dashboard', { scope: 'all' });
+    const response = await apiClient.get<{ data: Record<string, unknown> }>('/analytics/dashboard', { scope: 'all' });
     const d = response?.data ?? response;
 
     return {
-      totalDevices: d.totalDevices ?? d.total_devices ?? 0,
-      devicesOnline: d.devicesOnline ?? d.devices_online ?? 0,
-      totalEvents24h: d.totalEvents24h ?? d.total_events_24h ?? 0,
-      criticalEvents24h: d.criticalEvents24h ?? d.critical_events_24h ?? 0,
-      activeIncidents: d.activeIncidents ?? d.active_incidents ?? 0,
-      totalSites: d.totalSites ?? d.total_sites ?? 0,
-      sitesHealthy: d.sitesHealthy ?? d.sites_healthy ?? 0,
+      totalDevices: (d.totalDevices ?? d.total_devices ?? 0) as number,
+      devicesOnline: (d.devicesOnline ?? d.devices_online ?? 0) as number,
+      totalEvents24h: (d.totalEvents24h ?? d.total_events_24h ?? 0) as number,
+      criticalEvents24h: (d.criticalEvents24h ?? d.critical_events_24h ?? 0) as number,
+      activeIncidents: (d.activeIncidents ?? d.active_incidents ?? 0) as number,
+      totalSites: (d.totalSites ?? d.total_sites ?? 0) as number,
+      sitesHealthy: (d.sitesHealthy ?? d.sites_healthy ?? 0) as number,
     };
   } catch {
     // Fallback: aggregate from individual endpoints
     const [devicesRes, eventsRes, incidentsRes, sitesRes] = await Promise.allSettled([
-      apiClient.get<{ data: any[] }>('/devices', { limit: '1000' }),
-      apiClient.get<{ data: any[] }>('/events', { limit: '500' }),
-      apiClient.get<{ data: any[] }>('/incidents', { limit: '200' }),
-      apiClient.get<{ data: any[] }>('/sites'),
+      apiClient.get<{ data: Record<string, unknown>[] }>('/devices', { limit: '1000' }),
+      apiClient.get<{ data: Record<string, unknown>[] }>('/events', { limit: '500' }),
+      apiClient.get<{ data: Record<string, unknown>[] }>('/incidents', { limit: '200' }),
+      apiClient.get<{ data: Record<string, unknown>[] }>('/sites'),
     ]);
 
     const devices = devicesRes.status === 'fulfilled'
@@ -79,19 +79,19 @@ export async function getCrossSiteStats(): Promise<CrossSiteStats> {
 
     const now = Date.now();
     const h24 = 24 * 60 * 60 * 1000;
-    const recent = evtArr.filter((e: any) => {
-      const ts = new Date(e.created_at).getTime();
+    const recent = evtArr.filter((e: Record<string, unknown>) => {
+      const ts = new Date(e.created_at as string).getTime();
       return !isNaN(ts) && now - ts < h24;
     });
 
     return {
       totalDevices: devArr.length,
-      devicesOnline: devArr.filter((d: any) => d.status === 'online').length,
+      devicesOnline: devArr.filter((d: Record<string, unknown>) => d.status === 'online').length,
       totalEvents24h: recent.length,
-      criticalEvents24h: recent.filter((e: any) => e.severity === 'critical' || e.severity === 'high').length,
-      activeIncidents: incArr.filter((i: any) => i.status === 'open' || i.status === 'investigating').length,
+      criticalEvents24h: recent.filter((e: Record<string, unknown>) => e.severity === 'critical' || e.severity === 'high').length,
+      activeIncidents: incArr.filter((i: Record<string, unknown>) => i.status === 'open' || i.status === 'investigating').length,
       totalSites: siteArr.length,
-      sitesHealthy: siteArr.filter((s: any) => s.status === 'healthy').length,
+      sitesHealthy: siteArr.filter((s: Record<string, unknown>) => s.status === 'healthy').length,
     };
   }
 }
@@ -102,20 +102,20 @@ export async function getCrossSiteStats(): Promise<CrossSiteStats> {
  */
 export async function getSiteComparison(): Promise<SiteComparison[]> {
   try {
-    const response = await apiClient.get<{ data: any[] }>('/analytics/risk-score', { scope: 'all' });
+    const response = await apiClient.get<{ data: Record<string, unknown>[] }>('/analytics/risk-score', { scope: 'all' });
     const items = response?.data ?? response ?? [];
 
-    if (Array.isArray(items) && items.length > 0 && items[0].riskScore != null) {
-      return items
-        .map((s: any) => ({
-          id: s.id ?? s.site_id ?? '',
-          name: s.name ?? s.site_name ?? 'Unknown',
-          devicesOnline: s.devicesOnline ?? s.devices_online ?? 0,
-          devicesTotal: s.devicesTotal ?? s.devices_total ?? 0,
-          events24h: s.events24h ?? s.events_24h ?? 0,
-          activeIncidents: s.activeIncidents ?? s.active_incidents ?? 0,
-          riskScore: s.riskScore ?? s.risk_score ?? 0,
-          status: s.status ?? 'unknown',
+    if (Array.isArray(items) && items.length > 0 && (items[0] as Record<string, unknown>).riskScore != null) {
+      return (items as Record<string, unknown>[])
+        .map((s: Record<string, unknown>) => ({
+          id: (s.id ?? s.site_id ?? '') as string,
+          name: (s.name ?? s.site_name ?? 'Unknown') as string,
+          devicesOnline: (s.devicesOnline ?? s.devices_online ?? 0) as number,
+          devicesTotal: (s.devicesTotal ?? s.devices_total ?? 0) as number,
+          events24h: (s.events24h ?? s.events_24h ?? 0) as number,
+          activeIncidents: (s.activeIncidents ?? s.active_incidents ?? 0) as number,
+          riskScore: (s.riskScore ?? s.risk_score ?? 0) as number,
+          status: (s.status ?? 'unknown') as string,
         }))
         .sort((a: SiteComparison, b: SiteComparison) => b.riskScore - a.riskScore);
     }
@@ -124,10 +124,10 @@ export async function getSiteComparison(): Promise<SiteComparison[]> {
   } catch {
     // Client-side aggregation fallback
     const [sitesRes, devicesRes, eventsRes, incidentsRes] = await Promise.allSettled([
-      apiClient.get<{ data: any[] }>('/sites'),
-      apiClient.get<{ data: any[] }>('/devices', { limit: '1000' }),
-      apiClient.get<{ data: any[] }>('/events', { limit: '500' }),
-      apiClient.get<{ data: any[] }>('/incidents', { limit: '200' }),
+      apiClient.get<{ data: Record<string, unknown>[] }>('/sites'),
+      apiClient.get<{ data: Record<string, unknown>[] }>('/devices', { limit: '1000' }),
+      apiClient.get<{ data: Record<string, unknown>[] }>('/events', { limit: '500' }),
+      apiClient.get<{ data: Record<string, unknown>[] }>('/incidents', { limit: '200' }),
     ]);
 
     const sites = sitesRes.status === 'fulfilled'
@@ -146,37 +146,37 @@ export async function getSiteComparison(): Promise<SiteComparison[]> {
     const now = Date.now();
     const h24 = 24 * 60 * 60 * 1000;
 
-    return sites
-      .map((site: any) => {
-        const siteDevices = devices.filter((d: any) => d.site_id === site.id);
-        const siteEvents = events.filter((e: any) => {
+    return (sites as Record<string, unknown>[])
+      .map((site: Record<string, unknown>) => {
+        const siteDevices = (devices as Record<string, unknown>[]).filter((d: Record<string, unknown>) => d.site_id === site.id);
+        const siteEvents = (events as Record<string, unknown>[]).filter((e: Record<string, unknown>) => {
           if (e.site_id !== site.id) return false;
-          const ts = new Date(e.created_at).getTime();
+          const ts = new Date(e.created_at as string).getTime();
           return !isNaN(ts) && now - ts < h24;
         });
-        const siteIncidents = incidents.filter(
-          (i: any) => i.site_id === site.id && (i.status === 'open' || i.status === 'investigating'),
+        const siteIncidents = (incidents as Record<string, unknown>[]).filter(
+          (i: Record<string, unknown>) => i.site_id === site.id && (i.status === 'open' || i.status === 'investigating'),
         );
 
         // Simple risk score: weighted sum of critical events, incidents, offline devices
         const criticalCount = siteEvents.filter(
-          (e: any) => e.severity === 'critical' || e.severity === 'high',
+          (e: Record<string, unknown>) => e.severity === 'critical' || e.severity === 'high',
         ).length;
-        const offlineDevices = siteDevices.filter((d: any) => d.status === 'offline').length;
+        const offlineDevices = siteDevices.filter((d: Record<string, unknown>) => d.status === 'offline').length;
         const riskScore = Math.min(
           100,
           criticalCount * 15 + siteIncidents.length * 20 + offlineDevices * 10,
         );
 
         return {
-          id: site.id,
-          name: site.name ?? 'Unknown',
-          devicesOnline: siteDevices.filter((d: any) => d.status === 'online').length,
+          id: site.id as string,
+          name: (site.name as string) ?? 'Unknown',
+          devicesOnline: siteDevices.filter((d: Record<string, unknown>) => d.status === 'online').length,
           devicesTotal: siteDevices.length,
           events24h: siteEvents.length,
           activeIncidents: siteIncidents.length,
           riskScore,
-          status: site.status ?? 'unknown',
+          status: (site.status as string) ?? 'unknown',
         };
       })
       .sort((a: SiteComparison, b: SiteComparison) => b.riskScore - a.riskScore);

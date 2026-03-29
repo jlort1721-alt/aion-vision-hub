@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import ErrorState from '@/components/ui/ErrorState';
 import { useI18n } from '@/contexts/I18nContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -87,7 +88,7 @@ export default function KeysPage() {
   const [returnNotes, setReturnNotes] = useState('');
 
   // Queries
-  const { data: keys, isLoading: loadingKeys } = useQuery({
+  const { data: keys, isLoading: loadingKeys, isError, error, refetch } = useQuery({
     queryKey: ['keys', statusFilter, typeFilter],
     queryFn: () => keysApi.list({
       ...(statusFilter !== 'all' && { status: statusFilter }),
@@ -263,6 +264,8 @@ export default function KeysPage() {
   });
 
   const s = stats?.data;
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="p-6 space-y-6">

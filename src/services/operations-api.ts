@@ -7,9 +7,9 @@ import { apiClient } from '@/lib/api-client';
 export const operationsApi = {
   /** GET /operations/dashboard — Full consolidated operations dashboard */
   getDashboard: () =>
-    apiClient.get<{ success: boolean; data: any }>('/operations/dashboard'),
+    apiClient.get<{ success: boolean; data: Record<string, unknown> }>('/operations/dashboard'),
 
   /** GET /operations/sites-status — Lightweight site status array */
   getSitesStatus: () =>
-    apiClient.get<{ success: boolean; data: any[] }>('/operations/sites-status'),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[] }>('/operations/sites-status'),
 };

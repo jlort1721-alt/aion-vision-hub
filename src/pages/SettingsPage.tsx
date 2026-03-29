@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import ErrorState from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
@@ -34,7 +35,7 @@ export default function SettingsPage() {
   );
 
   // Tenant data
-  const { data: tenant, isLoading: loadingTenant } = useQuery({
+  const { data: tenant, isLoading: loadingTenant, isError, error, refetch } = useQuery({
     queryKey: ['tenant'],
     queryFn: async () => {
       const response = await apiClient.get<any>('/tenants/current');
@@ -131,6 +132,8 @@ export default function SettingsPage() {
       setSaving(null);
     }
   };
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="p-6 space-y-6 max-w-4xl">

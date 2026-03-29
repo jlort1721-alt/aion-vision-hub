@@ -1,9 +1,9 @@
 import { apiClient } from '@/lib/api-client';
 
 export const systemHealthApi = {
-  getStatus: () => apiClient.get<any>('/health'),
+  getStatus: () => apiClient.get<Record<string, unknown>>('/health'),
 
-  getReady: () => apiClient.get<any>('/health/ready'),
+  getReady: () => apiClient.get<Record<string, unknown>>('/health/ready'),
 
-  getDevices: () => apiClient.get<any>('/health/devices'),
+  getDevices: () => apiClient.get<Record<string, unknown>>('/health/devices'),
 };

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import ErrorState from "@/components/ui/ErrorState";
 import {
   notificationTemplatesApi,
   type NotificationTemplate,
@@ -213,7 +214,7 @@ export default function NotificationTemplatesPage() {
 
   // -- Queries -------------------------------------------------------
 
-  const { data: templatesResult, isLoading } = useQuery({
+  const { data: templatesResult, isLoading, isError, error, refetch } = useQuery({
     queryKey: [
       "notification-templates",
       filterCategory,
@@ -371,6 +372,8 @@ export default function NotificationTemplatesPage() {
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   // -- Render --------------------------------------------------------
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="space-y-6">

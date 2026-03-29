@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useIncidents, useSites } from '@/hooks/use-supabase-data';
-import { incidentsApi } from '@/services/api';
+import { apiClient } from '@/lib/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';
@@ -52,7 +52,7 @@ export default function IncidentsPage() {
     if (!newIncident.title.trim()) { toast.error(t('incidents.title_label') + ' required'); return; }
     setActionLoading('create');
     try {
-      await incidentsApi.create({ title: newIncident.title, description: newIncident.description, priority: newIncident.priority, site_id: newIncident.site_id || null });
+      await apiClient.edgeFunction('incidents-api', undefined, { method: 'POST', body: JSON.stringify({ title: newIncident.title, description: newIncident.description, priority: newIncident.priority, site_id: newIncident.site_id || null }) });
       toast.success(t('incidents.create_incident') + ' ✓');
       setCreateOpen(false);
       setNewIncident({ title: '', description: '', priority: 'medium', site_id: '' });
@@ -64,7 +64,7 @@ export default function IncidentsPage() {
     if (!selectedInc || !comment.trim()) return;
     setActionLoading('comment');
     try {
-      await incidentsApi.addComment(selectedInc.id, comment);
+      await apiClient.edgeFunction('incidents-api', { id: selectedInc.id, action: 'comment' }, { method: 'POST', body: JSON.stringify({ content: comment }) });
       toast.success(t('incidents.comment') + ' ✓');
       setComment('');
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
@@ -75,7 +75,7 @@ export default function IncidentsPage() {
     if (!selectedInc) return;
     setActionLoading('close');
     try {
-      await incidentsApi.close(selectedInc.id);
+      await apiClient.edgeFunction('incidents-api', { id: selectedInc.id, action: 'close' }, { method: 'POST' });
       toast.success(t('incidents.closed'));
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed'); } finally { setActionLoading(null); }
@@ -85,7 +85,7 @@ export default function IncidentsPage() {
     if (!selectedInc) return;
     setActionLoading('ai');
     try {
-      await incidentsApi.aiSummary(selectedInc.id);
+      await apiClient.edgeFunction('incidents-api', { id: selectedInc.id, action: 'ai-summary' }, { method: 'POST' });
       toast.success(t('incidents.ai_summary') + ' ✓');
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed'); } finally { setActionLoading(null); }
@@ -95,7 +95,7 @@ export default function IncidentsPage() {
     if (!selectedInc) return;
     setActionLoading('resolve');
     try {
-      await incidentsApi.update(selectedInc.id, { status: 'resolved' });
+      await apiClient.edgeFunction('incidents-api', { id: selectedInc.id }, { method: 'PUT', body: JSON.stringify({ status: 'resolved' }) });
       toast.success(t('incidents.resolve') + ' ✓');
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed'); } finally { setActionLoading(null); }

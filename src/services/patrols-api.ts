@@ -8,16 +8,16 @@ import { apiClient } from '@/lib/api-client';
 
 export const patrolRoutesApi = {
   list: (filters?: { isActive?: string; siteId?: string; page?: number; perPage?: number }) =>
-    apiClient.get<{ success: boolean; data: any[]; meta: any }>('/patrols/routes', filters as Record<string, string | number | boolean | undefined>),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[]; meta: Record<string, unknown> }>('/patrols/routes', filters as Record<string, string | number | boolean | undefined>),
 
   get: (id: string) =>
-    apiClient.get<{ success: boolean; data: any }>(`/patrols/routes/${id}`),
+    apiClient.get<{ success: boolean; data: Record<string, unknown> }>(`/patrols/routes/${id}`),
 
   create: (route: Record<string, unknown>) =>
-    apiClient.post<{ success: boolean; data: any }>('/patrols/routes', route),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/patrols/routes', route),
 
   update: (id: string, updates: Record<string, unknown>) =>
-    apiClient.patch<{ success: boolean; data: any }>(`/patrols/routes/${id}`, updates),
+    apiClient.patch<{ success: boolean; data: Record<string, unknown> }>(`/patrols/routes/${id}`, updates),
 
   delete: (id: string) =>
     apiClient.delete<void>(`/patrols/routes/${id}`),
@@ -27,13 +27,13 @@ export const patrolRoutesApi = {
 
 export const patrolCheckpointsApi = {
   listByRoute: (routeId: string) =>
-    apiClient.get<{ success: boolean; data: any[] }>(`/patrols/routes/${routeId}/checkpoints`),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[] }>(`/patrols/routes/${routeId}/checkpoints`),
 
   create: (routeId: string, checkpoint: Record<string, unknown>) =>
-    apiClient.post<{ success: boolean; data: any }>(`/patrols/routes/${routeId}/checkpoints`, checkpoint),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>(`/patrols/routes/${routeId}/checkpoints`, checkpoint),
 
   update: (checkpointId: string, updates: Record<string, unknown>) =>
-    apiClient.patch<{ success: boolean; data: any }>(`/patrols/checkpoints/${checkpointId}`, updates),
+    apiClient.patch<{ success: boolean; data: Record<string, unknown> }>(`/patrols/checkpoints/${checkpointId}`, updates),
 
   delete: (checkpointId: string) =>
     apiClient.delete<void>(`/patrols/checkpoints/${checkpointId}`),
@@ -43,10 +43,10 @@ export const patrolCheckpointsApi = {
 
 export const patrolLogsApi = {
   list: (filters?: { routeId?: string; status?: string; page?: number; perPage?: number }) =>
-    apiClient.get<{ success: boolean; data: any[]; meta: any }>('/patrols/logs', filters as Record<string, string | number | boolean | undefined>),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[]; meta: Record<string, unknown> }>('/patrols/logs', filters as Record<string, string | number | boolean | undefined>),
 
   create: (log: Record<string, unknown>) =>
-    apiClient.post<{ success: boolean; data: any }>('/patrols/logs', log),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/patrols/logs', log),
 
   stats: () =>
     apiClient.get<{ success: boolean; data: { totalRoutes: number; complianceRate: number; completedToday: number; missedToday: number } }>('/patrols/stats'),

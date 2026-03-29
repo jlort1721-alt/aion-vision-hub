@@ -199,7 +199,7 @@ export function useEWeLinkSync() {
       // Sync devices via Fastify backend
       if (syncResult.devices.length > 0) {
         await apiClient.post('/ewelink/sync', {
-          devices: syncResult.devices.map((device: any) => ({
+          devices: syncResult.devices.map((device: Record<string, unknown>) => ({
             id: device.deviceId,
             name: device.name,
             type: inferDeviceType(device.productModel),
@@ -260,14 +260,14 @@ export function useEWeLinkSectionMapping() {
     if (!profile?.tenant_id) return;
 
     const { data } = await supabase
-      .from('domotic_devices' as any)
+      .from('domotic_devices' as unknown as 'profiles')
       .select('id, section_id')
       .eq('tenant_id', profile.tenant_id)
       .not('section_id', 'is', null);
 
     if (data) {
       ewelink.loadSectionMappings(
-        data.map((d: any) => ({ deviceId: d.id, sectionId: d.section_id })),
+        data.map((d: Record<string, unknown>) => ({ deviceId: d.id as string, sectionId: d.section_id as string })),
       );
     }
   }, [profile?.tenant_id]);

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import ErrorState from '@/components/ui/ErrorState';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/contexts/I18nContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -205,7 +206,7 @@ export default function CompliancePage() {
   }, [audits]);
 
   // Queries
-  const { data: templates, isLoading: loadingTemplates } = useQuery({
+  const { data: templates, isLoading: loadingTemplates, isError, error, refetch } = useQuery({
     queryKey: ['compliance-templates', typeFilter],
     queryFn: () => complianceTemplatesApi.list({
       ...(typeFilter !== 'all' && { type: typeFilter }),
@@ -476,6 +477,8 @@ export default function CompliancePage() {
     s && s.totalTemplates > 0
       ? Math.round((s.approvedTemplates / s.totalTemplates) * 100)
       : 0;
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="p-6 space-y-6">

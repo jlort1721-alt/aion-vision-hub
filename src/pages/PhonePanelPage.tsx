@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import ErrorState from '@/components/ui/ErrorState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -82,7 +83,7 @@ export default function PhonePanelPage() {
   const [queueTimers, setQueueTimers] = useState<Record<string, number>>({});
 
   // ── Load contacts from access_people ─────────────────────────────
-  const { data: contacts = [], isLoading } = useQuery({
+  const { data: contacts = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['phone_contacts', profile?.tenant_id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -233,6 +234,8 @@ export default function PhonePanelPage() {
   function categoryLabel(role: string) {
     return CONTACT_CATEGORIES.find((c) => c.value === role)?.label || role;
   }
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="space-y-6 p-4 md:p-6">

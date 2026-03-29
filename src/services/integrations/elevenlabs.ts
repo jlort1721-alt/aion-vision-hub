@@ -231,10 +231,10 @@ export class ElevenLabsService {
       const resp = await fetch(`${ELEVENLABS_API_BASE}/voices`, { headers: { 'xi-api-key': this.frontendApiKey } });
       if (!resp.ok) return [];
       const data = await resp.json();
-      return (data.voices || []).map((v: any) => ({
-        voiceId: v.voice_id, name: v.name, category: v.category,
-        language: v.labels?.language, gender: v.labels?.gender,
-        previewUrl: v.preview_url, labels: v.labels ?? {},
+      return (data.voices || []).map((v: Record<string, unknown>) => ({
+        voiceId: v.voice_id as string, name: v.name as string, category: v.category as string,
+        language: (v.labels as Record<string, unknown> | undefined)?.language as string | undefined, gender: (v.labels as Record<string, unknown> | undefined)?.gender as string | undefined,
+        previewUrl: v.preview_url as string, labels: (v.labels as Record<string, string>) ?? {},
       }));
     }
   }

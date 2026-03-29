@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import ErrorState from '@/components/ui/ErrorState';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {
@@ -132,7 +133,7 @@ const DocumentsPage = () => {
   const tenantId = (profile as any)?.tenant_id || user?.id || 'default';
 
   // ── Query: list documents ─────────────────────────────────
-  const { data: documents = [], isLoading } = useQuery({
+  const { data: documents = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['documents', tenantId],
     queryFn: async () => {
       const response = await apiClient.get<any>('/database-records', { category: 'document' });
@@ -300,6 +301,8 @@ const DocumentsPage = () => {
   }, [uploadOpen]);
 
   // ── Render ────────────────────────────────────────────────
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
+
   return (
     <div className="space-y-6 p-2 md:p-6 max-w-7xl mx-auto">
       {/* Header */}

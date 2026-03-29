@@ -113,9 +113,10 @@ vi.mock("@/hooks/use-push-notifications", () => ({
   }),
 }));
 
-vi.mock("@/services/api", () => ({
-  healthApi: {
-    check: vi.fn().mockResolvedValue({ checks: [] }),
+vi.mock("@/lib/api-client", () => ({
+  apiClient: {
+    get: vi.fn().mockResolvedValue([]),
+    edgeFunction: vi.fn().mockResolvedValue({ checks: [] }),
   },
 }));
 

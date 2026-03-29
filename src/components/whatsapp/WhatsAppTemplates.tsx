@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { whatsappApi } from '@/services/api';
+import { apiClient } from '@/lib/api-client';
 import {
   RefreshCw, Loader2, FileText, CheckCircle, Clock, XCircle,
   Eye, Search, Globe, Copy,
@@ -75,7 +75,7 @@ export default function WhatsAppTemplates() {
 
   const { data: templatesData, isLoading } = useQuery({
     queryKey: ['whatsapp-templates'],
-    queryFn: () => whatsappApi.listTemplates(),
+    queryFn: () => apiClient.edgeFunction<any>('whatsapp-api', { action: 'templates' }, { method: 'GET' }),
   });
 
   const allTemplates: Template[] = templatesData?.data || [];
@@ -93,7 +93,7 @@ export default function WhatsAppTemplates() {
   // ── Sync Mutation ──────────────────────────────────────
 
   const syncMutation = useMutation({
-    mutationFn: () => whatsappApi.syncTemplates(),
+    mutationFn: () => apiClient.edgeFunction<any>('whatsapp-api', { action: 'sync-templates' }, { method: 'POST' }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-templates'] });
       const data = res?.data;

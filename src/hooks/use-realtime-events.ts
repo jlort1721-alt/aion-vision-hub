@@ -28,14 +28,14 @@ export function useRealtimeEvents() {
   const { data: tenant } = useQuery({
     queryKey: ['tenant'],
     queryFn: async () => {
-      const response = await apiClient.get<any>('/tenants/current');
+      const response = await apiClient.get<{ data: Record<string, unknown> }>('/tenants/current');
       return response.data;
     },
     enabled: !!profile,
     staleTime: 60000,
   });
 
-  const prefs: NotificationPrefs = useMemo(() => (tenant?.settings as any)?.notifications ?? {
+  const prefs: NotificationPrefs = useMemo(() => ((tenant?.settings as Record<string, unknown> | undefined)?.notifications as NotificationPrefs | undefined) ?? {
     critical_events: true, high_severity: true, device_offline: true,
   }, [tenant?.settings]);
 

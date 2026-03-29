@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { patrolRoutesApi, patrolCheckpointsApi, patrolLogsApi } from "@/services/patrols-api";
 import { useSites } from "@/hooks/use-supabase-data";
+import ErrorState from "@/components/ui/ErrorState";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -222,7 +223,7 @@ export default function PatrolsPage() {
   }, [stopScan, handleQrDetected, toast]);
 
   // ── Routes ──────────────────────────────────────────────
-  const { data: routesData, isLoading: loadingRoutes } = useQuery({
+  const { data: routesData, isLoading: loadingRoutes, isError, error, refetch } = useQuery({
     queryKey: ["patrols", "routes"],
     queryFn: () => patrolRoutesApi.list(),
   });
@@ -297,6 +298,8 @@ export default function PatrolsPage() {
   const checkpoints = checkpointsData?.data ?? [];
   const logs = logsData?.data ?? [];
   const stats = statsData?.data;
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="space-y-6 p-6">

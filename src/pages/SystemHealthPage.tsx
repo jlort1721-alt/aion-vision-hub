@@ -7,11 +7,12 @@ import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { systemHealthApi } from '@/services/system-health-api';
-import { healthApi } from '@/services/api';
+import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import ErrorState from '@/components/ui/ErrorState';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
@@ -151,9 +152,9 @@ export default function SystemHealthPage() {
 
   // ── Data Fetching ──────────────────────────────────────────
 
-  const { data: healthData, isLoading: loadingHealth, dataUpdatedAt } = useQuery({
+  const { data: healthData, isLoading: loadingHealth, isError, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['system-health'],
-    queryFn: () => healthApi.check(),
+    queryFn: () => apiClient.edgeFunction<{ status: string; timestamp: string; checks: Array<{ component: string; status: string; latency_ms?: number; details?: Record<string, unknown> }> }>('health-api', undefined, { method: 'GET' }),
     enabled: isAuthenticated,
     refetchInterval: autoRefresh ? 15_000 : false,
     staleTime: 10_000,
@@ -302,6 +303,8 @@ export default function SystemHealthPage() {
   const isLoading = loadingHealth;
 
   // ── Render ─────────────────────────────────────────────────
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="p-6 space-y-6">

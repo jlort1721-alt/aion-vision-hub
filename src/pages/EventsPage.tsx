@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useEvents, useDevices, useSites, type EventFilters } from '@/hooks/use-supabase-data';
 import { useRealtimeEvents } from '@/hooks/use-realtime-events';
 import { useAudioAlerts } from '@/hooks/use-audio-alerts';
-import { eventsApi, incidentsApi } from '@/services/api';
+import { apiClient } from '@/lib/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';
@@ -105,9 +105,9 @@ export default function EventsPage() {
     for (let i = 0; i < ids.length; i++) {
       try {
         switch (action) {
-          case 'acknowledge': await eventsApi.acknowledge(ids[i]); break;
-          case 'resolve': await eventsApi.resolve(ids[i]); break;
-          case 'dismiss': await eventsApi.dismiss(ids[i]); break;
+          case 'acknowledge': await apiClient.edgeFunction('events-api', { id: ids[i], action: 'acknowledge' }, { method: 'POST' }); break;
+          case 'resolve': await apiClient.edgeFunction('events-api', { id: ids[i], action: 'resolve' }, { method: 'POST' }); break;
+          case 'dismiss': await apiClient.edgeFunction('events-api', { id: ids[i], action: 'dismiss' }, { method: 'POST' }); break;
         }
         successCount++;
       } catch { /* continue with remaining */ }
@@ -130,18 +130,19 @@ export default function EventsPage() {
     setActionLoading(action);
     try {
       switch (action) {
-        case 'acknowledge': await eventsApi.acknowledge(eventId); toast.success(t('events.acknowledged')); break;
-        case 'resolve': await eventsApi.resolve(eventId); toast.success(t('events.resolved')); break;
-        case 'dismiss': await eventsApi.dismiss(eventId); toast.success(t('events.dismissed')); break;
-        case 'ai-summary': await eventsApi.aiSummary(eventId); toast.success(t('events.ai_summary')); break;
+        case 'acknowledge': await apiClient.edgeFunction('events-api', { id: eventId, action: 'acknowledge' }, { method: 'POST' }); toast.success(t('events.acknowledged')); break;
+        case 'resolve': await apiClient.edgeFunction('events-api', { id: eventId, action: 'resolve' }, { method: 'POST' }); toast.success(t('events.resolved')); break;
+        case 'dismiss': await apiClient.edgeFunction('events-api', { id: eventId, action: 'dismiss' }, { method: 'POST' }); toast.success(t('events.dismissed')); break;
+        case 'ai-summary': await apiClient.edgeFunction('events-api', { id: eventId, action: 'ai-summary' }, { method: 'POST' }); toast.success(t('events.ai_summary')); break;
         case 'create-incident': {
           const event = events.find(e => e.id === eventId);
           if (event) {
-            await incidentsApi.create({
+            const incidentData = {
               title: `Incident: ${event.title}`, description: `Auto-created from event: ${event.description || event.title}`,
               priority: event.severity === 'critical' ? 'critical' : event.severity === 'high' ? 'high' : 'medium',
               site_id: event.site_id, event_ids: [eventId],
-            });
+            };
+            await apiClient.edgeFunction('incidents-api', undefined, { method: 'POST', body: JSON.stringify(incidentData) });
             toast.success(t('events.create_incident') + ' ✓');
           }
           break;

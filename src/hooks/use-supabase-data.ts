@@ -7,7 +7,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
-import { operationsApi, cloudAccountsApi, analyticsApi } from '@/services/api';
 
 /** Extract array from API response (handles both { items: [] } and [] formats) */
 function extractArray(response: unknown): Record<string, unknown>[] {
@@ -207,7 +206,7 @@ export function useOperationsDashboard(refetchInterval?: number) {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['operations-dashboard'],
-    queryFn: () => operationsApi.dashboard(),
+    queryFn: () => apiClient.edgeFunction<Record<string, unknown>>('operations-api', { action: 'dashboard' }, { method: 'GET' }),
     enabled: isAuthenticated,
     refetchInterval,
   });
@@ -217,7 +216,7 @@ export function useCloudAccountMapping() {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['cloud-account-mapping'],
-    queryFn: () => cloudAccountsApi.mapping(),
+    queryFn: () => apiClient.edgeFunction<Record<string, unknown>>('cloud-accounts-api', { action: 'mapping' }, { method: 'GET' }),
     enabled: isAuthenticated,
   });
 }
@@ -226,7 +225,7 @@ export function useRiskScore() {
   const { isAuthenticated } = useAuth();
   return useQuery({
     queryKey: ['risk-score'],
-    queryFn: () => analyticsApi.riskScore(),
+    queryFn: () => apiClient.edgeFunction<Record<string, unknown>>('analytics-api', { action: 'risk-score' }, { method: 'GET' }),
     enabled: isAuthenticated,
   });
 }

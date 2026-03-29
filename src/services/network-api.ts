@@ -7,31 +7,31 @@ import { apiClient } from '@/lib/api-client';
 export const networkApi = {
   /** POST /network/scan/host — Scan common security ports on a single host */
   scanHost: (host: string, timeout?: number) =>
-    apiClient.post<{ success: boolean; data: any }>('/network/scan/host', { host, timeout }),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/network/scan/host', { host, timeout }),
 
   /** POST /network/scan/range — Scan an IP range (CIDR or start-end) */
   scanRange: (range: string, options?: { ports?: number[]; concurrency?: number; timeout?: number }) =>
-    apiClient.post<{ success: boolean; data: any }>('/network/scan/range', { range, ...options }),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/network/scan/range', { range, ...options }),
 
   /** POST /network/scan/ports — Scan specific ports on a host */
   scanPorts: (host: string, ports: number[], timeout?: number) =>
-    apiClient.post<{ success: boolean; data: any }>('/network/scan/ports', { host, ports, timeout }),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/network/scan/ports', { host, ports, timeout }),
 
   /** GET /network/discover/onvif — ONVIF WS-Discovery multicast */
   discoverOnvif: (timeout?: number) =>
-    apiClient.get<{ success: boolean; data: any[] }>('/network/discover/onvif', { timeout }),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[] }>('/network/discover/onvif', { timeout }),
 
   /** POST /network/identify — Identify device brand from IP/port */
   identify: (host: string, port?: number) =>
-    apiClient.post<{ success: boolean; data: any }>('/network/identify', { host, port }),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/network/identify', { host, port }),
 
   /** GET /network/interfaces — List local network interfaces */
   getInterfaces: () =>
-    apiClient.get<{ success: boolean; data: any[] }>('/network/interfaces'),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[] }>('/network/interfaces'),
 
   /** GET /network/arp — Get ARP table (IP to MAC address mappings) */
   getArpTable: () =>
-    apiClient.get<{ success: boolean; data: any[] }>('/network/arp'),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[] }>('/network/arp'),
 
   /** POST /network/ping — TCP ping a host:port */
   ping: (host: string, port: number, timeout?: number) =>
@@ -39,5 +39,5 @@ export const networkApi = {
 
   /** POST /network/site/:siteId/scan — Batch scan all devices in a site */
   scanSite: (siteId: string, timeout?: number) =>
-    apiClient.post<{ success: boolean; data: any }>(`/network/site/${siteId}/scan`, { timeout }),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>(`/network/site/${siteId}/scan`, { timeout }),
 };

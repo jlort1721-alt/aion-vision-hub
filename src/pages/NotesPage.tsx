@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ErrorState from '@/components/ui/ErrorState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -59,7 +60,7 @@ export default function NotesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: notes = [], isLoading } = useQuery({
+  const { data: notes = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['operational_notes', profile?.tenant_id],
     queryFn: async () => {
       const response = await apiClient.get<any>('/database-records', { category: 'operational_note' });
@@ -139,6 +140,8 @@ export default function NotesPage() {
 
   const getCategoryColor = (cat: string) => CATEGORIES.find(c => c.value === cat)?.color || 'text-gray-400';
   const getPriorityVariant = (pri: string) => PRIORITIES.find(p => p.value === pri)?.variant || 'secondary';
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="p-6 space-y-4">

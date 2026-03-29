@@ -8,10 +8,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export const reportsApi = {
   list: (filters?: Record<string, string | number | boolean | undefined>) =>
-    apiClient.get<{ success: boolean; data: any[]; meta?: any }>('/reports', filters),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[]; meta?: Record<string, unknown> }>('/reports', filters),
 
   generate: (params: { type: string; site_id?: string; date_from: string; date_to: string; format: string }) =>
-    apiClient.post<{ success: boolean; data: any }>('/reports/generate', params),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/reports/generate', params),
 
   download: async (id: string): Promise<Blob> => {
     const token = localStorage.getItem('aion_token');

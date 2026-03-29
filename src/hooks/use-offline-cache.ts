@@ -54,7 +54,7 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-async function putAll(storeName: string, items: any[]): Promise<void> {
+async function putAll(storeName: string, items: Record<string, unknown>[]): Promise<void> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(storeName, 'readwrite');
@@ -69,7 +69,7 @@ async function putAll(storeName: string, items: any[]): Promise<void> {
   });
 }
 
-async function getAll(storeName: string): Promise<any[]> {
+async function getAll(storeName: string): Promise<Record<string, unknown>[]> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(storeName, 'readonly');
@@ -146,10 +146,10 @@ const SYNC_RETRY_DELAY_MS = 2_000;
 
 export interface OfflineCacheResult {
   /** Fetch from network first; fall back to cache when offline */
-  getCachedDevices: () => Promise<any[]>;
-  getCachedSites: () => Promise<any[]>;
-  getCachedEvents: () => Promise<any[]>;
-  getCachedIncidents: () => Promise<any[]>;
+  getCachedDevices: () => Promise<Record<string, unknown>[]>;
+  getCachedSites: () => Promise<Record<string, unknown>[]>;
+  getCachedEvents: () => Promise<Record<string, unknown>[]>;
+  getCachedIncidents: () => Promise<Record<string, unknown>[]>;
 
   /** Queue a mutation for sync when back online */
   queueMutation: (mutation: Omit<QueuedMutation, 'queueId' | 'createdAt' | 'retries'>) => Promise<void>;
@@ -173,10 +173,10 @@ export function useOfflineCache(): OfflineCacheResult {
 
     try {
       const [devicesRes, sitesRes, eventsRes, incidentsRes] = await Promise.allSettled([
-        apiClient.get<{ data: any[] }>('/devices', { limit: '500' }),
-        apiClient.get<{ data: any[] }>('/sites'),
-        apiClient.get<{ data: any[] }>('/events', { limit: '200' }),
-        apiClient.get<{ data: any[] }>('/incidents', { limit: String(MAX_INCIDENTS) }),
+        apiClient.get<{ data: Record<string, unknown>[] }>('/devices', { limit: '500' }),
+        apiClient.get<{ data: Record<string, unknown>[] }>('/sites'),
+        apiClient.get<{ data: Record<string, unknown>[] }>('/events', { limit: '200' }),
+        apiClient.get<{ data: Record<string, unknown>[] }>('/incidents', { limit: String(MAX_INCIDENTS) }),
       ]);
 
       if (devicesRes.status === 'fulfilled') {
@@ -191,7 +191,7 @@ export function useOfflineCache(): OfflineCacheResult {
         const items = eventsRes.value?.data ?? eventsRes.value ?? [];
         // Keep only events within last 48 h
         const cutoff = Date.now() - EVENTS_MAX_AGE_MS;
-        const filtered = (Array.isArray(items) ? items : []).filter((e: any) => {
+        const filtered = (Array.isArray(items) ? items : []).filter((e: Record<string, unknown>) => {
           const ts = new Date(e.created_at).getTime();
           return !isNaN(ts) && ts >= cutoff;
         });
@@ -214,7 +214,7 @@ export function useOfflineCache(): OfflineCacheResult {
   const getCachedDevices = useCallback(async () => {
     if (navigator.onLine) {
       try {
-        const res = await apiClient.get<{ data: any[] }>('/devices', { limit: '500' });
+        const res = await apiClient.get<{ data: Record<string, unknown>[] }>('/devices', { limit: '500' });
         const items = res?.data ?? res ?? [];
         const arr = Array.isArray(items) ? items : [];
         await putAll(STORE_DEVICES, arr);
@@ -227,7 +227,7 @@ export function useOfflineCache(): OfflineCacheResult {
   const getCachedSites = useCallback(async () => {
     if (navigator.onLine) {
       try {
-        const res = await apiClient.get<{ data: any[] }>('/sites');
+        const res = await apiClient.get<{ data: Record<string, unknown>[] }>('/sites');
         const items = res?.data ?? res ?? [];
         const arr = Array.isArray(items) ? items : [];
         await putAll(STORE_SITES, arr);
@@ -240,10 +240,10 @@ export function useOfflineCache(): OfflineCacheResult {
   const getCachedEvents = useCallback(async () => {
     if (navigator.onLine) {
       try {
-        const res = await apiClient.get<{ data: any[] }>('/events', { limit: '200' });
+        const res = await apiClient.get<{ data: Record<string, unknown>[] }>('/events', { limit: '200' });
         const items = res?.data ?? res ?? [];
         const cutoff = Date.now() - EVENTS_MAX_AGE_MS;
-        const filtered = (Array.isArray(items) ? items : []).filter((e: any) => {
+        const filtered = (Array.isArray(items) ? items : []).filter((e: Record<string, unknown>) => {
           const ts = new Date(e.created_at).getTime();
           return !isNaN(ts) && ts >= cutoff;
         });
@@ -257,7 +257,7 @@ export function useOfflineCache(): OfflineCacheResult {
   const getCachedIncidents = useCallback(async () => {
     if (navigator.onLine) {
       try {
-        const res = await apiClient.get<{ data: any[] }>('/incidents', { limit: String(MAX_INCIDENTS) });
+        const res = await apiClient.get<{ data: Record<string, unknown>[] }>('/incidents', { limit: String(MAX_INCIDENTS) });
         const items = res?.data ?? res ?? [];
         const trimmed = (Array.isArray(items) ? items : []).slice(0, MAX_INCIDENTS);
         await putAll(STORE_INCIDENTS, trimmed);

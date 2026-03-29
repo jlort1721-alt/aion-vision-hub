@@ -57,16 +57,10 @@ vi.mock("@/hooks/use-supabase-data", () => ({
   useMcpConnectors: () => ({ data: mockConnectors, isLoading: false }),
 }));
 
-vi.mock("@/services/api", () => ({
-  integrationsApi: {
-    test: vi.fn().mockResolvedValue({ message: "OK", latency_ms: 50 }),
-    toggle: vi.fn().mockResolvedValue({ status: "inactive" }),
-  },
-  mcpApi: {
-    healthCheck: vi
-      .fn()
-      .mockResolvedValue({ health: "healthy", check_latency_ms: 30 }),
-    toggle: vi.fn().mockResolvedValue({ status: "disconnected" }),
+vi.mock("@/lib/api-client", () => ({
+  apiClient: {
+    get: vi.fn().mockResolvedValue([]),
+    edgeFunction: vi.fn().mockResolvedValue({ message: "OK", latency_ms: 50 }),
   },
 }));
 

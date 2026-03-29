@@ -1,14 +1,14 @@
 import { apiClient } from '@/lib/api-client';
 
 export const rebootsApi = {
-  list: (filters?: Record<string, any>) =>
-    apiClient.get<{ success: boolean; data: any[] }>('/reboots', filters),
+  list: (filters?: Record<string, string | number | boolean | undefined>) =>
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[] }>('/reboots', filters),
   get: (id: string) =>
-    apiClient.get<{ success: boolean; data: any }>(`/reboots/${id}`),
+    apiClient.get<{ success: boolean; data: Record<string, unknown> }>(`/reboots/${id}`),
   create: (data: { deviceId?: string; sectionId?: string; reason: string }) =>
-    apiClient.post<{ success: boolean; data: any }>('/reboots', data),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/reboots', data),
   complete: (id: string, data: { status: 'completed' | 'failed'; result?: string; recoveryTimeSeconds?: number }) =>
-    apiClient.post<{ success: boolean; data: any }>(`/reboots/${id}/complete`, data),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>(`/reboots/${id}/complete`, data),
 };
 
 export const aiApi = {

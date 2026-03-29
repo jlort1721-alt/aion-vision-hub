@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
+import ErrorState from '@/components/ui/ErrorState';
 import { GridLayout, Device } from '@/types';
 import {
   Grid2x2, Grid3x3, Maximize, Volume2, Camera,
@@ -162,7 +163,7 @@ export default function LiveViewPage() {
 
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
-  const { data: devices = [], isLoading } = useDevices();
+  const { data: devices = [], isLoading, isError, error, refetch } = useDevices();
   const { data: sites = [] } = useSites();
   const { data: sections = [] } = useSections();
 
@@ -289,6 +290,8 @@ export default function LiveViewPage() {
   };
 
   const cols = Math.sqrt(grid);
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">

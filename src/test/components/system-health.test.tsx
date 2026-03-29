@@ -37,9 +37,10 @@ vi.mock("@/contexts/I18nContext", () => ({
   }),
 }));
 
-vi.mock("@/services/api", () => ({
-  healthApi: {
-    check: vi.fn().mockResolvedValue(undefined),
+vi.mock("@/lib/api-client", () => ({
+  apiClient: {
+    get: vi.fn().mockResolvedValue([]),
+    edgeFunction: vi.fn().mockResolvedValue(undefined),
   },
 }));
 

@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDevices, useSites, useEventsLegacy } from '@/hooks/use-supabase-data';
 import { useRealtimeEvents } from '@/hooks/use-realtime-events';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
-import { healthApi } from '@/services/api';
+import { apiClient } from '@/lib/api-client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
@@ -92,7 +92,7 @@ export default function DashboardPage() {
   const { isAuthenticated, user } = useAuth();
   const { data: healthData } = useQuery({
     queryKey: ['system-health'],
-    queryFn: () => healthApi.check(),
+    queryFn: () => apiClient.edgeFunction<{ status: string; timestamp: string; checks: Array<{ component: string; status: string; latency_ms?: number; details?: Record<string, unknown> }> }>('health-api', undefined, { method: 'GET' }),
     enabled: isAuthenticated,
     refetchInterval: 60000,
   });

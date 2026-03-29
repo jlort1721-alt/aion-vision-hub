@@ -11,15 +11,15 @@ export const pushApi = {
 
   /** POST /push/subscribe — Subscribe to push notifications */
   subscribe: (subscription: Record<string, unknown>) =>
-    apiClient.post<{ success: boolean; data: any }>('/push/subscribe', { subscription }),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/push/subscribe', { subscription }),
 
   /** POST /push/unsubscribe — Unsubscribe from push notifications */
   unsubscribe: (endpoint: string) =>
-    apiClient.post<{ success: boolean; data: any }>('/push/unsubscribe', { endpoint }),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/push/unsubscribe', { endpoint }),
 
   /** GET /push/subscriptions — List current user subscriptions */
   listSubscriptions: () =>
-    apiClient.get<{ success: boolean; data: any[] }>('/push/subscriptions'),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[] }>('/push/subscriptions'),
 
   /** POST /push/send — Send push notification (tenant_admin+) */
   send: (data: { title: string; body: string; url?: string; userIds?: string[] }) =>

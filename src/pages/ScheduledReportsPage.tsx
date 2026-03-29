@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import ErrorState from "@/components/ui/ErrorState";
 import { scheduledReportsApi } from "@/services/scheduled-reports-api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -182,7 +183,7 @@ export default function ScheduledReportsPage() {
 
   // ── Queries ──────────────────────────────────────────────
 
-  const { data: reportsData, isLoading } = useQuery({
+  const { data: reportsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["scheduled-reports"],
     queryFn: () => scheduledReportsApi.list(),
   });
@@ -315,6 +316,8 @@ export default function ScheduledReportsPage() {
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   // ── Render ───────────────────────────────────────────────
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="space-y-6 p-6">

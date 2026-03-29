@@ -9,11 +9,11 @@ import { apiClient } from '@/lib/api-client';
 export const lprCamerasApi = {
   /** GET /lpr/cameras — List LPR cameras, optionally filtered by site */
   list: (filters?: { siteId?: string }) =>
-    apiClient.get<{ success: boolean; data: any[] }>('/lpr/cameras', filters as Record<string, string | number | boolean | undefined>),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[] }>('/lpr/cameras', filters as Record<string, string | number | boolean | undefined>),
 
   /** POST /lpr/cameras/:deviceId/configure — Configure a device as LPR camera */
   configure: (deviceId: string, config: Record<string, unknown>) =>
-    apiClient.post<{ success: boolean; data: any }>(`/lpr/cameras/${deviceId}/configure`, config),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>(`/lpr/cameras/${deviceId}/configure`, config),
 };
 
 // ── Detections ──────────────────────────────────────────────
@@ -21,15 +21,15 @@ export const lprCamerasApi = {
 export const lprDetectionsApi = {
   /** POST /lpr/detections — Submit a plate detection */
   create: (detection: Record<string, unknown>) =>
-    apiClient.post<{ success: boolean; data: any }>('/lpr/detections', detection),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/lpr/detections', detection),
 
   /** GET /lpr/detections — List recent detections with filters */
   list: (filters?: { plate?: string; confidence?: number; status?: string; from?: string; to?: string; cameraId?: string; limit?: number; offset?: number }) =>
-    apiClient.get<{ success: boolean; data: any[]; total?: number }>('/lpr/detections', filters as Record<string, string | number | boolean | undefined>),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[]; total?: number }>('/lpr/detections', filters as Record<string, string | number | boolean | undefined>),
 
   /** POST /lpr/detections/:id/action — Execute action on detection (open_gate, deny, manual_override) */
   action: (id: string, body: { action: string; notes?: string; relayDeviceId?: string }) =>
-    apiClient.post<{ success: boolean; data: any }>(`/lpr/detections/${id}/action`, body),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>(`/lpr/detections/${id}/action`, body),
 };
 
 // ── Matches & Manual Lookup ─────────────────────────────────
@@ -37,11 +37,11 @@ export const lprDetectionsApi = {
 export const lprMatchesApi = {
   /** GET /lpr/matches — List plate matches against registered vehicles */
   list: (filters?: { limit?: number; offset?: number }) =>
-    apiClient.get<{ success: boolean; data: any[]; total?: number }>('/lpr/matches', filters as Record<string, string | number | boolean | undefined>),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[]; total?: number }>('/lpr/matches', filters as Record<string, string | number | boolean | undefined>),
 
   /** POST /lpr/match — Manual plate lookup against registered vehicles */
   match: (plate: string) =>
-    apiClient.post<{ success: boolean; data: any }>('/lpr/match', { plate }),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/lpr/match', { plate }),
 };
 
 // ── Stats ───────────────────────────────────────────────────
@@ -49,7 +49,7 @@ export const lprMatchesApi = {
 export const lprStatsApi = {
   /** GET /lpr/stats — Detection statistics */
   get: () =>
-    apiClient.get<{ success: boolean; data: any }>('/lpr/stats'),
+    apiClient.get<{ success: boolean; data: Record<string, unknown> }>('/lpr/stats'),
 };
 
 // ── Unified export ──────────────────────────────────────────

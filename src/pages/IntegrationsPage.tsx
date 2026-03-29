@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIntegrations, useMcpConnectors } from '@/hooks/use-supabase-data';
-import { integrationsApi, mcpApi } from '@/services/api';
+import { apiClient } from '@/lib/api-client';
 import { MCP_CONNECTOR_CATALOG } from '@/services/mcp-registry';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQueryClient } from '@tanstack/react-query';
+import ErrorState from '@/components/ui/ErrorState';
 import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';
 import {
@@ -33,14 +34,14 @@ const statusBadge = (status: string) => {
 
 export default function IntegrationsPage() {
   const { t } = useI18n();
-  const { data: integrations = [], isLoading: li } = useIntegrations();
-  const { data: connectors = [], isLoading: lc } = useMcpConnectors();
+  const { data: integrations = [], isLoading: li, isError: integrationsError, error: intError, refetch: refetchInt } = useIntegrations();
+  const { data: connectors = [], isLoading: lc, isError: connectorsError, error: connError, refetch: refetchConn } = useMcpConnectors();
   const queryClient = useQueryClient();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const handleIntegrationTest = async (id: string) => {
     setActionLoading(`test-${id}`);
-    try { const result = await integrationsApi.test(id); toast.success(`Test: ${result.message} (${result.latency_ms}ms)`); }
+    try { const result = await apiClient.edgeFunction<any>('integrations-api', { id, action: 'test' }, { method: 'POST' }); toast.success(`Test: ${result.message} (${result.latency_ms}ms)`); }
     catch (err) { toast.error(err instanceof Error ? err.message : 'Test failed'); }
     finally { setActionLoading(null); }
   };
@@ -48,7 +49,7 @@ export default function IntegrationsPage() {
   const handleIntegrationToggle = async (id: string) => {
     setActionLoading(`toggle-${id}`);
     try {
-      const updated = await integrationsApi.toggle(id);
+      const updated = await apiClient.edgeFunction<any>('integrations-api', { id, action: 'toggle' }, { method: 'POST' });
       toast.success(`Integration ${updated.status === 'active' ? t('common.active').toLowerCase() : t('common.inactive').toLowerCase()}`);
       queryClient.invalidateQueries({ queryKey: ['integrations'] });
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed'); }
@@ -58,7 +59,7 @@ export default function IntegrationsPage() {
   const handleMcpHealthCheck = async (id: string) => {
     setActionLoading(`mcp-health-${id}`);
     try {
-      const result = await mcpApi.healthCheck(id);
+      const result = await apiClient.edgeFunction<any>('mcp-api', { id, action: 'health-check' }, { method: 'POST' });
       toast.success(`${t('integrations.health')}: ${result.health} (${result.check_latency_ms}ms)`);
       queryClient.invalidateQueries({ queryKey: ['mcp_connectors'] });
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed'); }
@@ -68,12 +69,15 @@ export default function IntegrationsPage() {
   const handleMcpToggle = async (id: string) => {
     setActionLoading(`mcp-toggle-${id}`);
     try {
-      const updated = await mcpApi.toggle(id);
+      const updated = await apiClient.edgeFunction<any>('mcp-api', { id, action: 'toggle' }, { method: 'POST' });
       toast.success(`Connector ${updated.status === 'connected' ? t('common.connect').toLowerCase() : t('common.disconnect').toLowerCase()}`);
       queryClient.invalidateQueries({ queryKey: ['mcp_connectors'] });
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed'); }
     finally { setActionLoading(null); }
   };
+
+  const hasError = integrationsError || connectorsError;
+  if (hasError) return <ErrorState error={(intError || connError) as Error} onRetry={() => { refetchInt(); refetchConn(); }} />;
 
   return (
     <div className="p-6 space-y-6">

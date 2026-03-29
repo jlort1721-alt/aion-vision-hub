@@ -25,7 +25,6 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { deviceControlApi } from '@/services/device-control-api';
-import { whatsappApi } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useDevices,
@@ -977,7 +976,7 @@ function WhatsAppQuickSendCard() {
 
   const { data: templatesData, isLoading: loadingTemplates } = useQuery({
     queryKey: ['whatsapp-templates-ops'],
-    queryFn: () => whatsappApi.listTemplates(),
+    queryFn: () => apiClient.edgeFunction<any>('whatsapp-api', { action: 'templates' }, { method: 'GET' }),
     enabled: isAuthenticated,
   });
 
@@ -995,7 +994,7 @@ function WhatsAppQuickSendCard() {
       } else {
         payload.body = customMessage;
       }
-      return whatsappApi.sendMessage(payload);
+      return apiClient.edgeFunction<any>('whatsapp-api', { action: 'send' }, { method: 'POST', body: JSON.stringify(payload) });
     },
     onSuccess: () => {
       toast.success('WhatsApp message sent', { description: `To: ${recipient}` });

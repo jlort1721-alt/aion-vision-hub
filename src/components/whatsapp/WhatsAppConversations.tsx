@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { whatsappApi } from '@/services/api';
+import { apiClient } from '@/lib/api-client';
 import {
   MessageSquare, Send, UserCheck, X, Bot, User, Phone,
   Loader2, RefreshCw, ArrowRight, Search, Clock, AlertTriangle,
@@ -90,9 +90,7 @@ export default function WhatsAppConversations() {
   const { data: convsData, isLoading: loadingConvs } = useQuery({
     queryKey: ['whatsapp-conversations', statusFilter],
     queryFn: () =>
-      whatsappApi.listConversations(
-        statusFilter !== 'all' ? { status: statusFilter } : undefined,
-      ),
+      apiClient.edgeFunction<any>('whatsapp-api', { action: 'conversations', ...(statusFilter !== 'all' ? { status: statusFilter } : {}) } as Record<string, string>, { method: 'GET' }),
     refetchInterval: 10_000,
   });
 
@@ -110,7 +108,7 @@ export default function WhatsAppConversations() {
 
   const { data: msgsData, isLoading: loadingMsgs } = useQuery({
     queryKey: ['whatsapp-messages', selectedConvId],
-    queryFn: () => whatsappApi.getMessages(selectedConvId!, 100),
+    queryFn: () => apiClient.edgeFunction<any>('whatsapp-api', { action: 'messages', conversationId: selectedConvId!, limit: '100' }, { method: 'GET' }),
     enabled: !!selectedConvId,
     refetchInterval: 5_000,
   });
@@ -128,11 +126,7 @@ export default function WhatsAppConversations() {
 
   const sendMutation = useMutation({
     mutationFn: (text: string) =>
-      whatsappApi.sendMessage({
-        to: selectedConv!.wa_contact_phone,
-        type: 'text',
-        body: text,
-      }),
+      apiClient.edgeFunction<any>('whatsapp-api', { action: 'send' }, { method: 'POST', body: JSON.stringify({ to: selectedConv!.wa_contact_phone, type: 'text', body: text }) }),
     onSuccess: () => {
       setReplyText('');
       queryClient.invalidateQueries({ queryKey: ['whatsapp-messages', selectedConvId] });
@@ -143,7 +137,7 @@ export default function WhatsAppConversations() {
 
   const handoffMutation = useMutation({
     mutationFn: () =>
-      whatsappApi.handoffToHuman(selectedConvId!, handoffAssignTo || undefined, handoffNote || undefined),
+      apiClient.edgeFunction<any>('whatsapp-api', { action: 'handoff' }, { method: 'POST', body: JSON.stringify({ conversationId: selectedConvId!, assignTo: handoffAssignTo || undefined, note: handoffNote || undefined }) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations'] });
       toast.success('Handed off to human agent');
@@ -156,7 +150,7 @@ export default function WhatsAppConversations() {
 
   const closeMutation = useMutation({
     mutationFn: () =>
-      whatsappApi.closeConversation(selectedConvId!, closeResolution || undefined),
+      apiClient.edgeFunction<any>('whatsapp-api', { action: 'close' }, { method: 'POST', body: JSON.stringify({ conversationId: selectedConvId!, resolution: closeResolution || undefined }) }),
     onSuccess: () => {
       setSelectedConvId(null);
       queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations'] });
@@ -169,11 +163,7 @@ export default function WhatsAppConversations() {
 
   const quickReplyMutation = useMutation({
     mutationFn: (buttons: Array<{ id: string; title: string }>) =>
-      whatsappApi.sendQuickReply({
-        to: selectedConv!.wa_contact_phone,
-        body: 'Please select an option:',
-        buttons,
-      }),
+      apiClient.edgeFunction<any>('whatsapp-api', { action: 'quick-reply' }, { method: 'POST', body: JSON.stringify({ to: selectedConv!.wa_contact_phone, body: 'Please select an option:', buttons }) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-messages', selectedConvId] });
       toast.success('Quick reply sent');

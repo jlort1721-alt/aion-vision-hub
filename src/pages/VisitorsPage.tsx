@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, UserCheck, ScanLine, Ticket, Ban, Plus, CheckCircle, XCircle, Camera, X, Bell } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageShell } from "@/components/shared/PageShell";
+import ErrorState from "@/components/ui/ErrorState";
 
 const passStatusColors: Record<string, string> = {
   active: "bg-success",
@@ -106,7 +107,7 @@ export default function VisitorsPage() {
   });
 
   // ── Visitors ─────────────────────────────────────────────
-  const { data: visitorsData, isLoading: loadingVisitors } = useQuery({
+  const { data: visitorsData, isLoading: loadingVisitors, isError, error, refetch } = useQuery({
     queryKey: ["visitors", "list"],
     queryFn: () => visitorsApi.list(),
   });
@@ -163,6 +164,8 @@ export default function VisitorsPage() {
   const visitors = visitorsData?.data ?? [];
   const passes = passesData?.data ?? [];
   const stats = statsData?.data;
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <PageShell

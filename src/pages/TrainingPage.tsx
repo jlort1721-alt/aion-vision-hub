@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import ErrorState from '@/components/ui/ErrorState';
 import { useI18n } from '@/contexts/I18nContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -98,7 +99,7 @@ export default function TrainingPage() {
   const [completeForm, setCompleteForm] = useState({ ...defaultCompleteForm });
 
   // Queries
-  const { data: programs, isLoading: loadingPrograms } = useQuery({
+  const { data: programs, isLoading: loadingPrograms, isError, error, refetch } = useQuery({
     queryKey: ['training-programs', categoryFilter],
     queryFn: () => trainingProgramsApi.list({
       ...(categoryFilter !== 'all' && { category: categoryFilter }),
@@ -265,6 +266,8 @@ export default function TrainingPage() {
 
   const s = stats?.data;
   const expiringCount = expiring?.data?.length ?? 0;
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="p-6 space-y-6">

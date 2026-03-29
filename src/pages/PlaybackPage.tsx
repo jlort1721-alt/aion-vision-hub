@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import ErrorState from '@/components/ui/ErrorState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -203,7 +204,7 @@ function InteractiveTimeline({
 
 // ── Main Page ───────────────────────────────────────────────
 export default function PlaybackPage() {
-  const { data: devices = [], isLoading } = useDevices();
+  const { data: devices = [], isLoading, isError, error, refetch } = useDevices();
   const { data: sites = [] } = useSites();
   const { data: events = [] } = useEventsLegacy();
   const { user, profile } = useAuth();
@@ -330,6 +331,8 @@ export default function PlaybackPage() {
 
   // Check if current time falls within a recorded segment
   const isInRecording = segments.some(s => currentTime >= s.start && currentTime <= s.end);
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">

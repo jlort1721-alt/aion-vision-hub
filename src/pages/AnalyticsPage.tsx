@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import ErrorState from "@/components/ui/ErrorState";
 import {
   analyticsDashboardApi,
   analyticsEventsApi,
@@ -19,7 +20,7 @@ import {
 
 export default function AnalyticsPage() {
   // ── Dashboard KPIs ───────────────────────────────────────
-  const { data: dashboardData, isLoading: loadingDashboard } = useQuery({
+  const { data: dashboardData, isLoading: loadingDashboard, isError, error, refetch } = useQuery({
     queryKey: ["analytics", "dashboard"],
     queryFn: () => analyticsDashboardApi.get(),
     refetchInterval: 60000,
@@ -64,6 +65,8 @@ export default function AnalyticsPage() {
     { key: "resolved", label: "Resolved", color: "bg-green-500" },
     { key: "closed", label: "Closed", color: "bg-gray-500" },
   ];
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="space-y-6 p-6">

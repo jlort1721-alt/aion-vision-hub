@@ -18,6 +18,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Users, UserPlus, Shield, Loader2, Search, MailPlus, Copy, Key, Save } from 'lucide-react';
 import { useI18n } from '@/contexts/I18nContext';
+import ErrorState from '@/components/ui/ErrorState';
 import { cn } from '@/lib/utils';
 import { ALL_MODULES, DEFAULT_ROLE_PERMISSIONS } from '@/lib/permissions';
 
@@ -54,7 +55,7 @@ export default function AdminPage() {
 
   const isAdmin = hasAnyRole(['super_admin', 'tenant_admin']);
 
-  const { data: users = [], isLoading } = useQuery({
+  const { data: users = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
       const data = await apiClient.get<UserWithRoles[]>('/users');
@@ -120,6 +121,8 @@ export default function AdminPage() {
       setLoading(false);
     }
   };
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   if (!isAdmin) {
     return (

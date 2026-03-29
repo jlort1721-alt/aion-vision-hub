@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import ErrorState from '@/components/ui/ErrorState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -102,7 +103,7 @@ export default function PostsPage() {
   const { data: sites = [], isLoading: loadingSites } = useSites();
   const { data: devices = [], isLoading: loadingDevices } = useDevices();
 
-  const { data: posts = [], isLoading: loadingPosts } = useQuery({
+  const { data: posts = [], isLoading: loadingPosts, isError, error, refetch } = useQuery({
     queryKey: ['posts'],
     queryFn: async () => {
       const response = await apiClient.get<any>('/database-records', { category: 'post' });
@@ -341,6 +342,8 @@ export default function PostsPage() {
   const loading = loadingPosts || loadingSites || loadingDevices;
 
   // ── Render ──
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="p-6 space-y-6">

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import ErrorState from "@/components/ui/ErrorState";
 import { automationRulesApi, automationExecutionsApi, automationStatsApi } from "@/services/automation-api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,7 +47,7 @@ export default function AutomationPage() {
   });
 
   // ── Automation Rules ─────────────────────────────────────
-  const { data: rulesData, isLoading: loadingRules } = useQuery({
+  const { data: rulesData, isLoading: loadingRules, isError, error, refetch } = useQuery({
     queryKey: ["automation", "rules"],
     queryFn: () => automationRulesApi.list(),
   });
@@ -76,6 +77,8 @@ export default function AutomationPage() {
   const rules = rulesData?.data ?? [];
   const executions = executionsData?.data ?? [];
   const stats = statsData?.data;
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="space-y-6 p-6">

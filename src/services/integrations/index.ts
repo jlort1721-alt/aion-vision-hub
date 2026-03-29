@@ -42,7 +42,7 @@ export async function checkAllIntegrations(): Promise<Record<string, { status: s
     voipService.testConnection(),
   ]);
 
-  const extract = (result: PromiseSettledResult<any>) =>
+  const extract = (result: PromiseSettledResult<{ status: string; message: string; latencyMs: number }>) =>
     result.status === 'fulfilled'
       ? { status: result.value.status, message: result.value.message, latencyMs: result.value.latencyMs }
       : { status: 'error', message: result.reason?.message || 'Unknown error', latencyMs: 0 };

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ErrorState from "@/components/ui/ErrorState";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { slaDefinitionsApi, slaTrackingApi } from "@/services/sla-api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,7 +50,7 @@ export default function SLAPage() {
   const { toast } = useToast();
 
   // ── Definitions ─────────────────────────────────────────
-  const { data: definitionsData, isLoading: loadingDefinitions } = useQuery({
+  const { data: definitionsData, isLoading: loadingDefinitions, isError, error, refetch } = useQuery({
     queryKey: ["sla", "definitions"],
     queryFn: () => slaDefinitionsApi.list(),
   });
@@ -79,6 +80,8 @@ export default function SLAPage() {
   const definitions = definitionsData?.data ?? [];
   const tracking = trackingData?.data ?? [];
   const stats = statsData?.data;
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="space-y-6 p-6">

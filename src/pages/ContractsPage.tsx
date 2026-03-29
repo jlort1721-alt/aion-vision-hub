@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import ErrorState from '@/components/ui/ErrorState';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/contexts/I18nContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -113,7 +114,7 @@ export default function ContractsPage() {
   const [uploading, setUploading] = useState(false);
 
   // Queries
-  const { data: contracts, isLoading: loadingContracts } = useQuery({
+  const { data: contracts, isLoading: loadingContracts, isError, error, refetch } = useQuery({
     queryKey: ['contracts', statusFilter, typeFilter],
     queryFn: () => contractsApi.list({
       ...(statusFilter !== 'all' && { status: statusFilter }),
@@ -360,6 +361,8 @@ export default function ContractsPage() {
       toast.success(`${newAttachments.length} file(s) attached`);
     }
   };
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="p-6 space-y-6">

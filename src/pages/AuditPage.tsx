@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import ErrorState from '@/components/ui/ErrorState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -143,7 +144,7 @@ export default function AuditPage() {
     return params;
   }, [filters]);
 
-  const { data: response, isLoading, isFetching } = useQuery({
+  const { data: response, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['audit-logs', queryParams],
     queryFn: () => auditApi.list(queryParams),
     enabled: isAuthenticated,
@@ -219,6 +220,8 @@ export default function AuditPage() {
   }, [queryClient]);
 
   // ── Render ─────────────────────────────────────────────────
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="p-6 space-y-6">

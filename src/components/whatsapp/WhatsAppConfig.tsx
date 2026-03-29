@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { whatsappApi } from '@/services/api';
+import { apiClient } from '@/lib/api-client';
 import {
   Save, Loader2, CheckCircle, XCircle, Wifi, Phone,
   Shield, Clock, Bot, RefreshCw,
@@ -20,7 +20,7 @@ export default function WhatsAppConfig() {
 
   const { data: configData, isLoading } = useQuery({
     queryKey: ['whatsapp-config'],
-    queryFn: () => whatsappApi.getConfig(),
+    queryFn: () => apiClient.edgeFunction<any>('whatsapp-api', { action: 'config' }, { method: 'GET' }),
   });
 
   const config = configData?.data;
@@ -61,7 +61,7 @@ export default function WhatsAppConfig() {
   }, [config]);
 
   const saveMutation = useMutation({
-    mutationFn: (data: typeof form) => whatsappApi.saveConfig(data),
+    mutationFn: (data: typeof form) => apiClient.edgeFunction<any>('whatsapp-api', { action: 'config' }, { method: 'PUT', body: JSON.stringify(data) }),
     onSuccess: () => {
       toast.success('WhatsApp configuration saved');
       queryClient.invalidateQueries({ queryKey: ['whatsapp-config'] });
@@ -72,13 +72,13 @@ export default function WhatsAppConfig() {
 
   const healthQuery = useQuery({
     queryKey: ['whatsapp-health'],
-    queryFn: () => whatsappApi.health(),
+    queryFn: () => apiClient.edgeFunction<any>('whatsapp-api', { action: 'health' }, { method: 'GET' }),
     enabled: !!config && config.configured !== false,
     refetchInterval: 60_000,
   });
 
   const testMutation = useMutation({
-    mutationFn: (to: string) => whatsappApi.testConnection(to),
+    mutationFn: (to: string) => apiClient.edgeFunction<any>('whatsapp-api', { action: 'test' }, { method: 'POST', body: JSON.stringify({ to }) }),
     onSuccess: (res) => {
       if (res?.data?.success) {
         toast.success('Test message sent successfully!');

@@ -7,15 +7,15 @@ import { apiClient } from '@/lib/api-client';
 export const extensionsApi = {
   /** GET /extensions — List all voice extensions */
   list: () =>
-    apiClient.get<{ success: boolean; data: any[] }>('/extensions'),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[] }>('/extensions'),
 
   /** POST /extensions — Create a new voice extension */
   create: (extension: Record<string, unknown>) =>
-    apiClient.post<{ success: boolean; data: any }>('/extensions', extension),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/extensions', extension),
 
   /** PATCH /extensions/:id — Update a voice extension */
   update: (id: string, updates: Record<string, unknown>) =>
-    apiClient.patch<{ success: boolean; data: any }>(`/extensions/${id}`, updates),
+    apiClient.patch<{ success: boolean; data: Record<string, unknown> }>(`/extensions/${id}`, updates),
 
   /** DELETE /extensions/:id — Delete a voice extension */
   delete: (id: string) =>
@@ -31,9 +31,9 @@ export const extensionsApi = {
 
   /** GET /extensions/voices — List available TTS voices */
   listVoices: () =>
-    apiClient.get<{ success: boolean; data: any[] }>('/extensions/voices'),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[] }>('/extensions/voices'),
 
   /** GET /extensions/health — ElevenLabs service health check */
   health: () =>
-    apiClient.get<{ success: boolean; data: any }>('/extensions/health'),
+    apiClient.get<{ success: boolean; data: Record<string, unknown> }>('/extensions/health'),
 };

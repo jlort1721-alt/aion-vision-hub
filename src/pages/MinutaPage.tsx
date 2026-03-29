@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import ErrorState from '@/components/ui/ErrorState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -124,7 +125,7 @@ export default function MinutaPage() {
   const today = todayDate();
 
   // ── Query entries ─────────────────────────────
-  const { data: entries = [], isLoading } = useQuery({
+  const { data: entries = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['minuta_entries', profile?.tenant_id, today],
     queryFn: async () => {
       const response = await apiClient.get<any>('/database-records', { category: 'minuta', shift_date: today });
@@ -236,6 +237,8 @@ export default function MinutaPage() {
   const typeLabel = (val: string) => ENTRY_TYPES.find((t) => t.value === val)?.label || val;
   const priorityVariant = (val: string) => PRIORITIES.find((p) => p.value === val)?.variant || ('secondary' as const);
   const priorityLabel = (val: string) => PRIORITIES.find((p) => p.value === val)?.label || val;
+
+  if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <div className="space-y-6 p-4 md:p-6">

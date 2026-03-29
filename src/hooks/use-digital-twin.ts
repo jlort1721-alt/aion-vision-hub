@@ -34,19 +34,23 @@ export function useDigitalTwinMQTT() {
   const fallbackRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Process incoming device telemetry message from WebSocket
-  const handleTelemetry = useCallback((data: any) => {
+  const handleTelemetry = useCallback((data: { channel?: string; payload?: Record<string, unknown> }) => {
     if (data.channel === 'devices' || data.channel === 'telemetry') {
       const payload = data.payload;
       if (payload?.deviceId && payload?.state) {
         const deviceId = payload.deviceId as string;
+        const deviceType = (payload.type as DeviceTelemetry['type'] | undefined) || undefined;
+        const deviceState = payload.state as TwinDeviceState;
+        const temperature = payload.temperature as number | undefined;
+        const lastPing = (payload.timestamp as string) || new Date().toISOString();
         setTelemetryState(prev => ({
           ...prev,
           [deviceId]: {
             id: deviceId,
-            type: payload.type || prev[deviceId]?.type || 'camera',
-            state: payload.state as TwinDeviceState,
-            temperature: payload.temperature,
-            lastPing: payload.timestamp || new Date().toISOString(),
+            type: deviceType || prev[deviceId]?.type || 'camera',
+            state: deviceState,
+            temperature,
+            lastPing,
           }
         }));
 
@@ -151,7 +155,7 @@ export function useDigitalTwinMQTT() {
     };
   }, [session?.access_token, handleTelemetry, startFallback]);
 
-  const dispatchTelecommand = useCallback((deviceId: string, payload: any) => {
+  const dispatchTelecommand = useCallback((deviceId: string, payload: Record<string, unknown>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: 'command',

@@ -11,7 +11,7 @@
  *   3. See docs/EmailIntegration.md for full details
  */
 
-import { emailApi } from '@/services/api';
+import { apiClient } from '@/lib/api-client';
 
 export interface EmailMessage {
   to: string | string[];
@@ -46,7 +46,7 @@ export interface EmailHealthCheck {
 export class EmailService {
   async testConnection(toEmail?: string): Promise<EmailHealthCheck> {
     try {
-      const resp = await emailApi.test(toEmail);
+      const resp = await apiClient.edgeFunction<{ data: { success: boolean; messageId?: string; error?: string; healthCheck: { ok: boolean; provider: string; latencyMs: number; message: string } } }>('email-api', { action: 'test' }, { method: 'POST', body: JSON.stringify({ to: toEmail }) });
       const d = resp.data;
       return {
         configured: d.success,
@@ -68,7 +68,7 @@ export class EmailService {
 
   async healthCheck(): Promise<EmailHealthCheck> {
     try {
-      const resp = await emailApi.health();
+      const resp = await apiClient.edgeFunction<{ data: { configured: boolean; provider: string; ok: boolean; latencyMs: number; message: string } }>('email-api', undefined, { method: 'GET' });
       const d = resp.data;
       return {
         configured: d.configured,
@@ -90,7 +90,7 @@ export class EmailService {
 
   async send(message: EmailMessage): Promise<EmailSendResult> {
     try {
-      const resp = await emailApi.send({
+      const resp = await apiClient.edgeFunction<{ data: { success: boolean; messageId?: string; error?: string } }>('email-api', { action: 'send' }, { method: 'POST', body: JSON.stringify({
         to: Array.isArray(message.to) ? message.to : [message.to],
         subject: message.subject,
         html: message.html,
@@ -99,7 +99,7 @@ export class EmailService {
         cc: message.cc,
         bcc: message.bcc,
         attachments: message.attachments,
-      });
+      }) });
       return resp.data;
     } catch (err) {
       return {
@@ -121,7 +121,7 @@ export class EmailService {
     snapshotUrl?: string;
   }): Promise<EmailSendResult> {
     try {
-      const resp = await emailApi.sendEventAlert(params);
+      const resp = await apiClient.edgeFunction<{ data: { success: boolean; messageId?: string; error?: string } }>('email-api', { action: 'event-alert' }, { method: 'POST', body: JSON.stringify(params) });
       return resp.data;
     } catch (err) {
       return {
@@ -143,7 +143,7 @@ export class EmailService {
     createdAt?: string;
   }): Promise<EmailSendResult> {
     try {
-      const resp = await emailApi.sendIncidentReport(params);
+      const resp = await apiClient.edgeFunction<{ data: { success: boolean; messageId?: string; error?: string } }>('email-api', { action: 'incident-report' }, { method: 'POST', body: JSON.stringify(params) });
       return resp.data;
     } catch (err) {
       return {
@@ -165,7 +165,7 @@ export class EmailService {
     topEventTypes?: Array<{ type: string; count: number }>;
   }): Promise<EmailSendResult> {
     try {
-      const resp = await emailApi.sendPeriodicReport(params);
+      const resp = await apiClient.edgeFunction<{ data: { success: boolean; messageId?: string; error?: string } }>('email-api', { action: 'periodic-report' }, { method: 'POST', body: JSON.stringify(params) });
       return resp.data;
     } catch (err) {
       return {
@@ -189,7 +189,7 @@ export class EmailService {
     attachments?: Array<{ filename: string; content: string; contentType: string }>;
   }): Promise<EmailSendResult> {
     try {
-      const resp = await emailApi.sendEvidencePackage(params);
+      const resp = await apiClient.edgeFunction<{ data: { success: boolean; messageId?: string; error?: string } }>('email-api', { action: 'evidence-package' }, { method: 'POST', body: JSON.stringify(params) });
       return resp.data;
     } catch (err) {
       return {
@@ -201,7 +201,7 @@ export class EmailService {
 
   async getLogs(limit?: number) {
     try {
-      const resp = await emailApi.logs(limit);
+      const resp = await apiClient.edgeFunction<{ data: Array<{ id: string; provider: string; action: string; to: string[]; subject: string; success: boolean; messageId?: string; error?: string; latencyMs: number; timestamp: string }> }>('email-api', { action: 'logs', ...(limit ? { limit: String(limit) } : {}) }, { method: 'GET' });
       return resp.data;
     } catch {
       return [];
