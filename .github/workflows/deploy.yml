@@ -1,57 +1,137 @@
-name: Test & Deploy
+name: CI/CD — Type Check, Build & Deploy
+
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip test step (emergency deploy)'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9'
 
 jobs:
-  test:
+  type-check:
+    name: Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci
-      - run: npx tsc --noEmit
-      - run: npx vitest run
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: TypeScript type check
+        run: pnpm exec tsc --noEmit
 
   build:
-    needs: test
-    if: github.event_name == 'push'
+    name: Build
+    needs: type-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci
-      - run: npx vite build
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm exec vite build
+
       - uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
+          retention-days: 7
 
   deploy:
+    name: Deploy to VPS
     needs: build
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    environment: production
     steps:
-      - uses: actions/checkout@v4
-      - name: Deploy to VPS
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+
+            echo "==> Pulling latest changes"
+            cd /var/www/aionseg
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "==> Installing dependencies"
+            pnpm install --frozen-lockfile
+
+            echo "==> Building frontend"
+            cd frontend
+            pnpm exec vite build
+            cd ..
+
+            echo "==> Building backend"
+            cd backend
+            pnpm exec tsc
+            cd ..
+
+            echo "==> Restarting services"
+            pm2 restart aionseg-api --update-env
+
+            echo "==> Waiting for service to stabilize"
+            sleep 5
+
+            echo "==> Deploy complete"
+
+      - name: Health check
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /var/www/aionseg
-            git pull origin main
-            cd frontend && npm ci && npx vite build
-            cd ../backend && npm ci && npx turbo run build
-            pm2 restart aionseg-api
-            sleep 5
-            curl -sf http://localhost:3001/health/ready || (echo "HEALTH CHECK FAILED" && exit 1)
+            set -euo pipefail
+
+            MAX_RETRIES=5
+            RETRY_DELAY=3
+
+            for i in $(seq 1 $MAX_RETRIES); do
+              HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health/ready || true)
+              if [ "$HTTP_STATUS" = "200" ]; then
+                echo "Health check passed (HTTP $HTTP_STATUS)"
+                exit 0
+              fi
+              echo "Attempt $i/$MAX_RETRIES — HTTP $HTTP_STATUS, retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            done
+
+            echo "HEALTH CHECK FAILED after $MAX_RETRIES attempts"
+            pm2 logs aionseg-api --lines 50 --nostream
+            exit 1
