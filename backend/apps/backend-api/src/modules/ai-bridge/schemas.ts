@@ -3,7 +3,7 @@ import { z } from 'zod';
 // ── Chat Message ──────────────────────────────────────────────
 const chatMessageSchema = z.object({
   role: z.enum(['system', 'user', 'assistant'], {
-    errorMap: () => ({ message: 'Role must be one of: system, user, assistant' }),
+    error: 'Role must be one of: system, user, assistant',
   }),
   content: z.string().min(1, 'Message content cannot be empty'),
 });

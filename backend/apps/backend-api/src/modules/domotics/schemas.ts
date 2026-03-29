@@ -10,7 +10,7 @@ export const createDomoticDeviceSchema = z.object({
   type: z.enum(domoticDeviceTypes).default('relay'),
   brand: z.string().max(64).default('Sonoff'),
   model: z.string().max(128).default(''),
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
 });
 export type CreateDomoticDeviceInput = z.infer<typeof createDomoticDeviceSchema>;
 
@@ -22,7 +22,7 @@ export const updateDomoticDeviceSchema = z.object({
   model: z.string().max(128).optional(),
   status: z.enum(domoticStatuses).optional(),
   state: z.enum(domoticStates).optional(),
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
 });
 export type UpdateDomoticDeviceInput = z.infer<typeof updateDomoticDeviceSchema>;
 

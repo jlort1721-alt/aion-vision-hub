@@ -109,8 +109,8 @@ export async function registerRelayRoutes(app: FastifyInstance) {
               reachable: !!piResp?.ok,
               latencyMs: Date.now() - start,
               backend: 'raspberry_pi',
-              gpioAvailable: piData?.gpio_available || false,
-              pins: piData?.pins || [],
+              gpioAvailable: (piData as Record<string, unknown>)?.gpio_available || false,
+              pins: (piData as Record<string, unknown>)?.pins || [],
             });
           }
 

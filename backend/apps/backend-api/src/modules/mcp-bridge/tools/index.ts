@@ -53,6 +53,7 @@ import { anomalyTools } from './anomaly-tools.js';
 import { knowledgeTools } from './knowledge-tools.js';
 import { automationQueryTools } from './automation-query-tools.js';
 import { aiSummaryTools } from './ai-summary-tools.js';
+import { hikvisionISAPITools } from './hikvision-isapi-tools.js';
 
 // ── Tool Registry ────────────────────────────────────────────
 
@@ -79,6 +80,7 @@ const allTools: MCPServerTool[] = [
   ...knowledgeTools,
   ...automationQueryTools,
   ...aiSummaryTools,
+  ...hikvisionISAPITools,
 ];
 
 // Populate the registry

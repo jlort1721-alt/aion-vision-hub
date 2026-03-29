@@ -19,7 +19,7 @@ export const createIntercomDeviceSchema = z.object({
   model: z.string().max(128).default(''),
   ipAddress: z.string().max(45).optional(),
   sipUri: z.string().max(255).optional(),
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
 });
 export type CreateIntercomDeviceInput = z.infer<typeof createIntercomDeviceSchema>;
 

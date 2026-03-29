@@ -13,7 +13,7 @@ export const createEventSchema = z.object({
   description: z.string().max(4096).optional(),
   channel: z.coerce.number().int().min(0).optional(),
   snapshotUrl: z.string().url().max(1024).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type CreateEventInput = z.infer<typeof createEventSchema>;

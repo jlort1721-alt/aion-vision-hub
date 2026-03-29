@@ -28,7 +28,7 @@ export const saveKPISnapshotSchema = z.object({
   period: z.enum(periods),
   periodStart: z.string().datetime({ offset: true }),
   periodEnd: z.string().datetime({ offset: true }),
-  metrics: z.record(z.unknown()),
+  metrics: z.record(z.string(), z.unknown()),
 });
 
 export type SaveKPISnapshotInput = z.infer<typeof saveKPISnapshotSchema>;

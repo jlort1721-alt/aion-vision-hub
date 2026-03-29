@@ -60,8 +60,8 @@ export class VllmService {
         throw new Error(`vLLM Inference Error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
-      return data.choices[0]?.message?.content || '';
+      const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+      return data.choices?.[0]?.message?.content || '';
 
     } catch (error) {
       logger.error(`[vLLM Gateway Failure]: ${(error as Error).message}. Returning Failsafe Logic.`);

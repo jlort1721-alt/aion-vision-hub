@@ -59,7 +59,7 @@ export type NotificationTemplateFilters = z.infer<typeof notificationTemplateFil
 
 // ── Preview ──────────────────────────────────────────────────
 export const previewTemplateSchema = z.object({
-  data: z.record(z.string()).default({}),
+  data: z.record(z.string(), z.string()).default({}),
 });
 export type PreviewTemplateInput = z.infer<typeof previewTemplateSchema>;
 
@@ -68,6 +68,6 @@ export const sendTestNotificationSchema = z.object({
   templateId: z.string().uuid(),
   channel: z.enum(['email', 'whatsapp', 'push']),
   recipient: z.string().min(1).max(320),
-  data: z.record(z.string()).default({}),
+  data: z.record(z.string(), z.string()).default({}),
 });
 export type SendTestNotificationInput = z.infer<typeof sendTestNotificationSchema>;

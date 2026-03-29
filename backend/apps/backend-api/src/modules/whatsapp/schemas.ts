@@ -140,10 +140,10 @@ const webhookMessageSchema = z
     timestamp: z.string(),
     type: z.string(),
     text: z.object({ body: z.string() }).optional(),
-    image: z.record(z.unknown()).optional(),
-    video: z.record(z.unknown()).optional(),
-    audio: z.record(z.unknown()).optional(),
-    document: z.record(z.unknown()).optional(),
+    image: z.record(z.string(), z.unknown()).optional(),
+    video: z.record(z.string(), z.unknown()).optional(),
+    audio: z.record(z.string(), z.unknown()).optional(),
+    document: z.record(z.string(), z.unknown()).optional(),
     location: z
       .object({
         latitude: z.number(),
@@ -152,7 +152,7 @@ const webhookMessageSchema = z
         address: z.string().optional(),
       })
       .optional(),
-    interactive: z.record(z.unknown()).optional(),
+    interactive: z.record(z.string(), z.unknown()).optional(),
     reaction: z
       .object({ message_id: z.string(), emoji: z.string() })
       .optional(),

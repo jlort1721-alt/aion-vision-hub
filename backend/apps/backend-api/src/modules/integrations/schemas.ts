@@ -10,10 +10,10 @@ export const createIntegrationSchema = z.object({
     .min(1, 'Name is required')
     .max(255, 'Name must be at most 255 characters'),
   type: z.enum(integrationTypes, {
-    errorMap: () => ({ message: `Type must be one of: ${integrationTypes.join(', ')}` }),
+    error: `Type must be one of: ${integrationTypes.join(', ')}`,
   }),
   provider: z.string().optional(),
-  config: z.record(z.unknown()).default({}),
+  config: z.record(z.string(), z.unknown()).default({}),
   status: z.enum(['active', 'inactive']).optional().default('active'),
 });
 
@@ -26,7 +26,7 @@ export const updateIntegrationSchema = z.object({
     .min(1, 'Name is required')
     .max(255, 'Name must be at most 255 characters')
     .optional(),
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
   status: z.enum(['active', 'inactive']).optional(),
 });
 

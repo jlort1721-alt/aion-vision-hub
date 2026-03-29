@@ -18,7 +18,7 @@ const executionStatuses = ['success', 'partial', 'failed'] as const;
 // ── Trigger Schema ─────────────────────────────────────────
 const triggerSchema = z.object({
   type: z.enum(triggerTypes),
-  config: z.record(z.unknown()).default({}),
+  config: z.record(z.string(), z.unknown()).default({}),
 });
 
 // ── Condition Schema ───────────────────────────────────────
@@ -31,7 +31,7 @@ const conditionSchema = z.object({
 // ── Action Schema ──────────────────────────────────────────
 const actionSchema = z.object({
   type: z.enum(actionTypes),
-  config: z.record(z.unknown()).default({}),
+  config: z.record(z.string(), z.unknown()).default({}),
 });
 
 // ── Create Automation Rule ─────────────────────────────────

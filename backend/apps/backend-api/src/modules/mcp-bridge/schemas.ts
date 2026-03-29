@@ -6,7 +6,7 @@ export const executeToolSchema = z.object({
     .string()
     .min(1, 'Tool name is required')
     .max(255, 'Tool name must be at most 255 characters'),
-  params: z.record(z.unknown()).default({}),
+  params: z.record(z.string(), z.unknown()).default({}),
 });
 
 export type ExecuteToolInput = z.infer<typeof executeToolSchema>;

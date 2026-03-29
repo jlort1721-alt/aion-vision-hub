@@ -93,7 +93,7 @@ export type UpdateEscalationPolicyInput = z.infer<typeof updateEscalationPolicyS
 export const createNotificationChannelSchema = z.object({
   name: z.string().min(1).max(255),
   type: z.enum(channelTypes),
-  config: z.record(z.unknown()),
+  config: z.record(z.string(), z.unknown()),
   isActive: z.boolean().default(true),
 });
 export type CreateNotificationChannelInput = z.infer<typeof createNotificationChannelSchema>;

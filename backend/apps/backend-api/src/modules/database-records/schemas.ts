@@ -7,7 +7,7 @@ export const createRecordSchema = z.object({
   sectionId: z.string().uuid().optional(),
   category: z.enum(categories).default('general'),
   title: z.string().min(1).max(255),
-  content: z.record(z.unknown()).default({}),
+  content: z.record(z.string(), z.unknown()).default({}),
   tags: z.array(z.string().max(64)).max(20).optional(),
 });
 export type CreateRecordInput = z.infer<typeof createRecordSchema>;

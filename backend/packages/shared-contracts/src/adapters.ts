@@ -205,7 +205,7 @@ export interface IPlaybackAdapter {
   startPlayback(params: PlaybackStartParams): Promise<PlaybackSession>;
   stopPlayback(sessionId: string): Promise<void>;
   exportClip(params: ClipExportParams): Promise<ExportJob>;
-  getSnapshot(deviceId: string, timestamp: Date, channel?: number): Promise<Buffer>;
+  getSnapshot(deviceId: string, timestamp: Date, channel?: number): Promise<Uint8Array>;
 }
 
 export interface IEventAdapter {

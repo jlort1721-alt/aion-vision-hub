@@ -13,6 +13,9 @@ importers:
       '@aion/common-utils':
         specifier: workspace:*
         version: link:../../packages/common-utils
+      '@aion/device-adapters':
+        specifier: workspace:*
+        version: link:../../packages/device-adapters
       '@aion/shared-contracts':
         specifier: workspace:*
         version: link:../../packages/shared-contracts

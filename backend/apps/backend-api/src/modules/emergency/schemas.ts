@@ -10,8 +10,8 @@ export const createProtocolSchema = z.object({
   name: z.string().min(1).max(255),
   type: z.enum(protocolTypes),
   description: z.string().max(2048).optional(),
-  steps: z.array(z.record(z.unknown())).default([]),
-  autoActions: z.array(z.record(z.unknown())).default([]),
+  steps: z.array(z.record(z.string(), z.unknown())).default([]),
+  autoActions: z.array(z.record(z.string(), z.unknown())).default([]),
   priority: z.coerce.number().int().min(1).max(10).default(5),
   isActive: z.boolean().default(true),
 });
@@ -37,7 +37,7 @@ export const createContactSchema = z.object({
   phone: z.string().min(1).max(50),
   email: z.string().email().max(255).optional(),
   priority: z.coerce.number().int().min(1).max(10).default(5),
-  availableHours: z.record(z.unknown()).optional(),
+  availableHours: z.record(z.string(), z.unknown()).optional(),
   isActive: z.boolean().default(true),
 });
 export type CreateContactInput = z.infer<typeof createContactSchema>;
@@ -65,7 +65,7 @@ export type CreateActivationInput = z.infer<typeof createActivationSchema>;
 export const updateActivationSchema = z.object({
   status: z.enum(activationStatuses).optional(),
   resolution: z.string().max(2048).optional(),
-  timeline: z.array(z.record(z.unknown())).optional(),
+  timeline: z.array(z.record(z.string(), z.unknown())).optional(),
 });
 export type UpdateActivationInput = z.infer<typeof updateActivationSchema>;
 

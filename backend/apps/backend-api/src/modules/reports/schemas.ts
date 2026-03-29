@@ -11,15 +11,15 @@ export const createReportSchema = z.object({
     .min(1, 'Report name is required')
     .max(255, 'Report name must be at most 255 characters'),
   type: z.enum(reportTypes, {
-    errorMap: () => ({ message: `Type must be one of: ${reportTypes.join(', ')}` }),
+    error: `Type must be one of: ${reportTypes.join(', ')}`,
   }),
   format: z
     .enum(reportFormats, {
-      errorMap: () => ({ message: `Format must be one of: ${reportFormats.join(', ')}` }),
+      error: `Format must be one of: ${reportFormats.join(', ')}`,
     })
     .optional()
     .default('json'),
-  parameters: z.record(z.unknown()).default({}),
+  parameters: z.record(z.string(), z.unknown()).default({}),
 });
 
 export type CreateReportInput = z.infer<typeof createReportSchema>;
