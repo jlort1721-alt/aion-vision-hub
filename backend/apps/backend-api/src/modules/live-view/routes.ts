@@ -1,10 +1,42 @@
 import type { FastifyInstance } from 'fastify';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { requireRole } from '../../plugins/auth.js';
 import { db } from '../../db/client.js';
 import { liveViewLayouts } from '../../db/schema/index.js';
 
 export async function registerLiveViewRoutes(app: FastifyInstance) {
+  // ── GET /cameras/by-site — Cameras grouped by site ─────────
+  app.get(
+    '/cameras/by-site',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
+    async (_request, reply) => {
+      try {
+        const results = await db.execute(sql`
+          SELECT c.id, c.name, c.channel_number, c.stream_key, c.status, c.is_lpr,
+                 s.id as site_id, s.name as site_name
+          FROM cameras c
+          JOIN sites s ON c.site_id = s.id
+          ORDER BY s.name, c.channel_number
+        `);
+        const rows = results as unknown as Array<Record<string, unknown>>;
+        const grouped: Record<string, { id: string; name: string; cameras: unknown[] }> = {};
+        for (const row of rows) {
+          const siteId = row.site_id as string;
+          if (!grouped[siteId]) {
+            grouped[siteId] = { id: siteId, name: row.site_name as string, cameras: [] };
+          }
+          grouped[siteId].cameras.push({
+            id: row.id, name: row.name, channel: row.channel_number,
+            streamKey: row.stream_key, status: row.status, isLpr: row.is_lpr,
+          });
+        }
+        return reply.send({ success: true, data: Object.values(grouped) });
+      } catch {
+        return reply.send({ success: true, data: [] });
+      }
+    },
+  );
+
   // ── GET /layouts — List layouts for the current user ─────────
   app.get(
     '/layouts',
