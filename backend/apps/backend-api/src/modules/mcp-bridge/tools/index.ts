@@ -41,6 +41,17 @@ import { deviceCommandTools } from './device-command.js';
 import { notificationServerTools } from './notification-server.js';
 import { reportServerTools } from './report-server.js';
 import { ewelinkTools } from './ewelink-tools.js';
+import { eventActionTools } from './event-action-tools.js';
+import { accessControlTools } from './access-control-tools.js';
+import { alertTools } from './alert-tools.js';
+import { emergencyTools } from './emergency-tools.js';
+import { operationsTools } from './operations-tools.js';
+import { visitorTools } from './visitor-tools.js';
+import { managementTools } from './management-tools.js';
+import { complianceTrainingTools } from './compliance-training-tools.js';
+import { anomalyTools } from './anomaly-tools.js';
+import { knowledgeTools } from './knowledge-tools.js';
+import { automationQueryTools } from './automation-query-tools.js';
 
 // ── Tool Registry ────────────────────────────────────────────
 
@@ -55,6 +66,17 @@ const allTools: MCPServerTool[] = [
   ...notificationServerTools,
   ...reportServerTools,
   ...ewelinkTools,
+  ...eventActionTools,
+  ...accessControlTools,
+  ...alertTools,
+  ...emergencyTools,
+  ...operationsTools,
+  ...visitorTools,
+  ...managementTools,
+  ...complianceTrainingTools,
+  ...anomalyTools,
+  ...knowledgeTools,
+  ...automationQueryTools,
 ];
 
 // Populate the registry

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const CommandPalette = lazy(() => import('@/components/CommandPalette'));
 const AlarmVideoPopup = lazy(() => import('@/components/alarms/AlarmVideoPopup'));
+const AIONFloatingAssistant = lazy(() => import('@/components/ai/AIONFloatingAssistant').then(m => ({ default: m.AIONFloatingAssistant })));
 import { useI18n } from '@/contexts/I18nContext';
 import { useBranding } from '@/contexts/BrandingContext';
 import { useNetworkStatus } from '@/hooks/use-network-status';
@@ -461,6 +462,9 @@ export default function AppLayout() {
       </Suspense>
       <Suspense fallback={null}>
         <AlarmVideoPopup />
+      </Suspense>
+      <Suspense fallback={null}>
+        <AIONFloatingAssistant />
       </Suspense>
     </div>
   );
