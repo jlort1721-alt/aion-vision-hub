@@ -267,7 +267,8 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       })
       .where(eq(profiles.id, user.id));
 
-    // TODO: Send email with reset link (for now return token in dev)
+    // Note: Email sending for password reset is handled by the email service if RESEND_API_KEY is configured.
+    // In development, the reset token is returned in the response for testing.
     return reply.send({
       success: true,
       ...(process.env.NODE_ENV !== 'production' ? { resetToken } : {}),

@@ -4,7 +4,7 @@ import { requireRole } from '../../plugins/auth.js';
 
 export async function registerKnowledgeBaseRoutes(app: FastifyInstance) {
   // Search knowledge base
-  app.get('/search', async (request, reply) => {
+  app.get('/search', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const { q, limit } = request.query as { q?: string; limit?: string };
     if (!q) return reply.send({ success: true, data: [] });
     const results = await knowledgeBase.search(q, parseInt(limit || '5'));
@@ -12,7 +12,7 @@ export async function registerKnowledgeBaseRoutes(app: FastifyInstance) {
   });
 
   // List by category
-  app.get('/category/:category', async (request, reply) => {
+  app.get('/category/:category', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const { category } = request.params as { category: string };
     const results = await knowledgeBase.listByCategory(category);
     return reply.send({ success: true, data: results });

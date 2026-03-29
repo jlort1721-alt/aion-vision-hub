@@ -163,7 +163,7 @@ export function useDigitalTwinMQTT() {
         payload: { deviceId, ...payload }
       }));
     } else {
-      console.log(`[Digital Twin] Offline command queued for ${deviceId}:`, payload);
+      // [Digital Twin] Offline command queued — will be sent when connection is restored
     }
   }, []);
 

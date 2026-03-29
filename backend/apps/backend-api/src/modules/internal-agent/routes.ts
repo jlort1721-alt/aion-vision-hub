@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify';
+import { requireRole } from '../../plugins/auth.js';
 import { internalAgent } from './service.js';
 
 export async function registerInternalAgentRoutes(app: FastifyInstance) {
   // Get latest health reports
-  app.get('/status', async (_request, reply) => {
+  app.get('/status', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (_request, reply) => {
     const reports = internalAgent.getLatestReports();
     const score = internalAgent.getOverallScore();
     return reply.send({
@@ -18,7 +19,7 @@ export async function registerInternalAgentRoutes(app: FastifyInstance) {
   });
 
   // Force immediate health check
-  app.post('/check', async (_request, reply) => {
+  app.post('/check', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (_request, reply) => {
     const reports = await internalAgent.runHealthCheck();
     return reply.send({ success: true, data: { reports, score: internalAgent.getOverallScore() } });
   });

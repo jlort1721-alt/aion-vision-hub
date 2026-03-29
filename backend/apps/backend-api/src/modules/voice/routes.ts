@@ -12,7 +12,7 @@ import type { ApiResponse } from '@aion/shared-contracts';
 
 export async function registerVoiceRoutes(app: FastifyInstance) {
   // ── Health Check ────────────────────────────────────────
-  app.get('/health', async () => {
+  app.get('/health', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async () => {
     const health = await voiceService.healthCheck();
     return { success: true, data: health } satisfies ApiResponse;
   });
@@ -30,7 +30,7 @@ export async function registerVoiceRoutes(app: FastifyInstance) {
   );
 
   // ── Voice Config ────────────────────────────────────────
-  app.get('/config', async () => {
+  app.get('/config', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async () => {
     return { success: true, data: voiceService.getVoiceConfig() } satisfies ApiResponse;
   });
 
@@ -46,13 +46,13 @@ export async function registerVoiceRoutes(app: FastifyInstance) {
   );
 
   // ── List Voices ─────────────────────────────────────────
-  app.get('/voices', async () => {
+  app.get('/voices', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async () => {
     const voices = await voiceService.listVoices();
     return { success: true, data: voices } satisfies ApiResponse;
   });
 
   // ── Get Single Voice ────────────────────────────────────
-  app.get<{ Params: { voiceId: string } }>('/voices/:voiceId', async (request) => {
+  app.get<{ Params: { voiceId: string } }>('/voices/:voiceId', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request) => {
     const voice = await voiceService.getVoice(request.params.voiceId);
     if (!voice) {
       return { success: false, error: 'Voice not found' };
@@ -77,7 +77,7 @@ export async function registerVoiceRoutes(app: FastifyInstance) {
   );
 
   // ── Greeting Templates ──────────────────────────────────
-  app.get('/greetings/templates', async () => {
+  app.get('/greetings/templates', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async () => {
     return { success: true, data: voiceService.getGreetingTemplates() } satisfies ApiResponse;
   });
 
