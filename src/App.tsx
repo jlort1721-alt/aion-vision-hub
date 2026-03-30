@@ -102,6 +102,8 @@ const NetworkPage = lazy(() => import("@/pages/NetworkPage"));
 const OperationsPanelPage = lazy(() => import("@/pages/OperationsPanelPage"));
 const GuardMobilePage = lazy(() => import("@/pages/GuardMobilePage"));
 const OnboardingWizardPage = lazy(() => import("@/pages/OnboardingWizardPage"));
+const OperationalDashboardPage = lazy(() => import("@/pages/OperationalDashboardPage"));
+const ResidentsAdminPage = lazy(() => import("@/pages/ResidentsAdminPage"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage"));
 const TermsPage = lazy(() => import("@/pages/TermsPage"));
@@ -210,6 +212,8 @@ function AppRoutes() {
           <Route path="phone" element={<ModuleGuard module="phone"><PhonePanelPage /></ModuleGuard>} />
           <Route path="network" element={<ModuleGuard module="system"><NetworkPage /></ModuleGuard>} />
           <Route path="operations" element={<ModuleGuard module="operations"><OperationsPanelPage /></ModuleGuard>} />
+          <Route path="admin/dashboard" element={<OperationalDashboardPage />} />
+          <Route path="admin/residents" element={<ResidentsAdminPage />} />
           <Route path="guard" element={<GuardMobilePage />} />
           <Route path="onboarding" element={<OnboardingWizardPage />} />
         </Route>
