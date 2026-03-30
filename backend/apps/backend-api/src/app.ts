@@ -25,6 +25,7 @@ import { registerDeviceRoutes } from './modules/devices/routes.js';
 import { registerCamerasRoutes } from './modules/cameras/routes.js';
 import { registerCameraEventRoutes } from './modules/camera-events/routes.js';
 import { registerOperationalDataRoutes } from './modules/operational-data/routes.js';
+import { registerVisitorPreregistrationRoutes } from './modules/visitor-preregistration/routes.js';
 import { registerSiteRoutes } from './modules/sites/routes.js';
 import { registerStreamRoutes } from './modules/streams/routes.js';
 import { registerEventRoutes } from './modules/events/routes.js';
@@ -198,6 +199,7 @@ export async function buildApp() {
   await app.register(registerCamerasRoutes, { prefix: '/cameras' });
   await app.register(registerCameraEventRoutes, { prefix: '/camera-events' });
   await app.register(registerOperationalDataRoutes, { prefix: '/operational-data' });
+  await app.register(registerVisitorPreregistrationRoutes, { prefix: '/pre-registrations' });
   await app.register(registerSiteRoutes, { prefix: '/sites' });
   await app.register(registerStreamRoutes, { prefix: '/streams' });
   await app.register(registerEventRoutes, { prefix: '/events' });
