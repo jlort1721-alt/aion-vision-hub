@@ -1,0 +1,261 @@
+api:
+  listen: ":1984"
+  origin: "*"
+rtsp:
+  listen: ":8554"
+webrtc:
+  listen: ":8555/tcp"
+  ice_servers:
+    - urls: [stun:stun.l.google.com:19302]
+ffmpeg:
+  bin: ffmpeg
+
+streams:
+
+  # ══════════════════════════════════════════════════════════════
+  # TORRE LUCIA (181.205.215.210) — DVR 16ch :8010 + NVR 8ch :8020
+  # ══════════════════════════════════════════════════════════════
+  tl-dvr-ch01: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/102"
+  tl-dvr-ch02: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/202"
+  tl-dvr-ch03: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/302"
+  tl-dvr-ch04: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/402"
+  tl-dvr-ch05: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/502"
+  tl-dvr-ch06: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/602"
+  tl-dvr-ch07: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/702"
+  tl-dvr-ch08: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/802"
+  tl-dvr-ch09: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/902"
+  tl-dvr-ch10: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1002"
+  tl-dvr-ch11: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1102"
+  tl-dvr-ch12: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1202"
+  tl-dvr-ch13: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1302"
+  tl-dvr-ch14: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1402"
+  tl-dvr-ch15: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1502"
+  tl-dvr-ch16: "rtsp://admin:seg12345@181.205.215.210:8010/Streaming/Channels/1602"
+  tl-nvr-ch01: "rtsp://admin:seg12345@181.205.215.210:8020/Streaming/Channels/102"
+  tl-nvr-ch02: "rtsp://admin:seg12345@181.205.215.210:8020/Streaming/Channels/202"
+  tl-nvr-ch03: "rtsp://admin:seg12345@181.205.215.210:8020/Streaming/Channels/302"
+  tl-nvr-ch04: "rtsp://admin:seg12345@181.205.215.210:8020/Streaming/Channels/402"
+  tl-nvr-ch05: "rtsp://admin:seg12345@181.205.215.210:8020/Streaming/Channels/502"
+  tl-nvr-ch06: "rtsp://admin:seg12345@181.205.215.210:8020/Streaming/Channels/602"
+  tl-nvr-ch07: "rtsp://admin:seg12345@181.205.215.210:8020/Streaming/Channels/702"
+  tl-nvr-ch08: "rtsp://admin:seg12345@181.205.215.210:8020/Streaming/Channels/802"
+
+  # ══════════════════════════════════════════════════════════════
+  # SAN NICOLAS (181.143.16.170) — NVR 16ch :8000 + LPR :8081
+  # ══════════════════════════════════════════════════════════════
+  sn-nvr-ch01: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/102"
+  sn-nvr-ch02: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/202"
+  sn-nvr-ch03: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/302"
+  sn-nvr-ch04: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/402"
+  sn-nvr-ch05: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/502"
+  sn-nvr-ch06: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/602"
+  sn-nvr-ch07: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/702"
+  sn-nvr-ch08: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/802"
+  sn-nvr-ch09: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/902"
+  sn-nvr-ch10: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1002"
+  sn-nvr-ch11: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1102"
+  sn-nvr-ch12: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1202"
+  sn-nvr-ch13: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1302"
+  sn-nvr-ch14: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1402"
+  sn-nvr-ch15: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1502"
+  sn-nvr-ch16: "rtsp://admin:Clave.seg2023@181.143.16.170:8000/Streaming/Channels/1602"
+  sn-lpr: "rtsp://admin:Clave.seg2023@181.143.16.170:8081/Streaming/Channels/102"
+
+  # ══════════════════════════════════════════════════════════════
+  # PISQUINES (181.205.202.122) — NVR 16ch :8010 + DVR 16ch :8020
+  # ══════════════════════════════════════════════════════════════
+  pq-nvr-ch01: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/102"
+  pq-nvr-ch02: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/202"
+  pq-nvr-ch03: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/302"
+  pq-nvr-ch04: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/402"
+  pq-nvr-ch05: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/502"
+  pq-nvr-ch06: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/602"
+  pq-nvr-ch07: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/702"
+  pq-nvr-ch08: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/802"
+  pq-nvr-ch09: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/902"
+  pq-nvr-ch10: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1002"
+  pq-nvr-ch11: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1102"
+  pq-nvr-ch12: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1202"
+  pq-nvr-ch13: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1302"
+  pq-nvr-ch14: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1402"
+  pq-nvr-ch15: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1502"
+  pq-nvr-ch16: "rtsp://admin:Clave.seg2023@181.205.202.122:8010/Streaming/Channels/1602"
+  pq-dvr-ch01: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/102"
+  pq-dvr-ch02: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/202"
+  pq-dvr-ch03: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/302"
+  pq-dvr-ch04: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/402"
+  pq-dvr-ch05: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/502"
+  pq-dvr-ch06: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/602"
+  pq-dvr-ch07: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/702"
+  pq-dvr-ch08: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/802"
+  pq-dvr-ch09: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/902"
+  pq-dvr-ch10: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1002"
+  pq-dvr-ch11: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1102"
+  pq-dvr-ch12: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1202"
+  pq-dvr-ch13: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1302"
+  pq-dvr-ch14: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1402"
+  pq-dvr-ch15: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1502"
+  pq-dvr-ch16: "rtsp://admin:Clave.seg2023@181.205.202.122:8020/Streaming/Channels/1602"
+
+  # ══════════════════════════════════════════════════════════════
+  # SAN SEBASTIAN (186.97.106.252) — DVR 16ch :8000
+  # ══════════════════════════════════════════════════════════════
+  ss-dvr-ch01: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/102"
+  ss-dvr-ch02: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/202"
+  ss-dvr-ch03: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/302"
+  ss-dvr-ch04: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/402"
+  ss-dvr-ch05: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/502"
+  ss-dvr-ch06: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/602"
+  ss-dvr-ch07: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/702"
+  ss-dvr-ch08: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/802"
+  ss-dvr-ch09: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/902"
+  ss-dvr-ch10: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1002"
+  ss-dvr-ch11: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1102"
+  ss-dvr-ch12: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1202"
+  ss-dvr-ch13: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1302"
+  ss-dvr-ch14: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1402"
+  ss-dvr-ch15: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1502"
+  ss-dvr-ch16: "rtsp://admin:Clave.seg2023@186.97.106.252:8000/Streaming/Channels/1602"
+
+  # ══════════════════════════════════════════════════════════════
+  # PORTALEGRE (200.58.214.114) — NVR 16ch :8000 + DVR 4ch :8040
+  # ══════════════════════════════════════════════════════════════
+  pe-nvr-ch01: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/102"
+  pe-nvr-ch02: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/202"
+  pe-nvr-ch03: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/302"
+  pe-nvr-ch04: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/402"
+  pe-nvr-ch05: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/502"
+  pe-nvr-ch06: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/602"
+  pe-nvr-ch07: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/702"
+  pe-nvr-ch08: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/802"
+  pe-nvr-ch09: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/902"
+  pe-nvr-ch10: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1002"
+  pe-nvr-ch11: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1102"
+  pe-nvr-ch12: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1202"
+  pe-nvr-ch13: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1302"
+  pe-nvr-ch14: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1402"
+  pe-nvr-ch15: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1502"
+  pe-nvr-ch16: "rtsp://admin:Clave.seg2023@200.58.214.114:8000/Streaming/Channels/1602"
+  pe-dvr-ch01: "rtsp://admin:Clave.seg2023@200.58.214.114:8040/Streaming/Channels/102"
+  pe-dvr-ch02: "rtsp://admin:Clave.seg2023@200.58.214.114:8040/Streaming/Channels/202"
+  pe-dvr-ch03: "rtsp://admin:Clave.seg2023@200.58.214.114:8040/Streaming/Channels/302"
+  pe-dvr-ch04: "rtsp://admin:Clave.seg2023@200.58.214.114:8040/Streaming/Channels/402"
+
+  # ══════════════════════════════════════════════════════════════
+  # ALTAGRACIA (181.205.175.18) — DVR 32ch :8030 + LPR :8010
+  # ══════════════════════════════════════════════════════════════
+  ag-dvr-ch01: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/102"
+  ag-dvr-ch02: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/202"
+  ag-dvr-ch03: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/302"
+  ag-dvr-ch04: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/402"
+  ag-dvr-ch05: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/502"
+  ag-dvr-ch06: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/602"
+  ag-dvr-ch07: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/702"
+  ag-dvr-ch08: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/802"
+  ag-dvr-ch09: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/902"
+  ag-dvr-ch10: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1002"
+  ag-dvr-ch11: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1102"
+  ag-dvr-ch12: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1202"
+  ag-dvr-ch13: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1302"
+  ag-dvr-ch14: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1402"
+  ag-dvr-ch15: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1502"
+  ag-dvr-ch16: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1602"
+  ag-dvr-ch17: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1702"
+  ag-dvr-ch18: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1802"
+  ag-dvr-ch19: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/1902"
+  ag-dvr-ch20: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2002"
+  ag-dvr-ch21: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2102"
+  ag-dvr-ch22: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2202"
+  ag-dvr-ch23: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2302"
+  ag-dvr-ch24: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2402"
+  ag-dvr-ch25: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2502"
+  ag-dvr-ch26: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2602"
+  ag-dvr-ch27: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2702"
+  ag-dvr-ch28: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2802"
+  ag-dvr-ch29: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/2902"
+  ag-dvr-ch30: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/3002"
+  ag-dvr-ch31: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/3102"
+  ag-dvr-ch32: "rtsp://admin:Clave.seg2023@181.205.175.18:8030/Streaming/Channels/3202"
+  ag-lpr: "rtsp://admin:Clave.seg2023@181.205.175.18:8010/Streaming/Channels/102"
+
+  # ══════════════════════════════════════════════════════════════
+  # PORTAL PLAZA (181.205.175.19) — NVR 16ch :8020
+  # ══════════════════════════════════════════════════════════════
+  pp-nvr-ch01: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/102"
+  pp-nvr-ch02: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/202"
+  pp-nvr-ch03: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/302"
+  pp-nvr-ch04: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/402"
+  pp-nvr-ch05: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/502"
+  pp-nvr-ch06: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/602"
+  pp-nvr-ch07: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/702"
+  pp-nvr-ch08: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/802"
+  pp-nvr-ch09: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/902"
+  pp-nvr-ch10: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1002"
+  pp-nvr-ch11: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1102"
+  pp-nvr-ch12: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1202"
+  pp-nvr-ch13: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1302"
+  pp-nvr-ch14: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1402"
+  pp-nvr-ch15: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1502"
+  pp-nvr-ch16: "rtsp://admin:Clave.seg2023@181.205.175.19:8020/Streaming/Channels/1602"
+
+  # ══════════════════════════════════════════════════════════════
+  # BRESCIA (186.97.104.202) — LPR only
+  # ══════════════════════════════════════════════════════════════
+  br-lpr1: "rtsp://admin:Clave.seg2023@186.97.104.202:8030/Streaming/Channels/102"
+  br-lpr2: "rtsp://admin:Clave.seg2023@186.97.104.202:8020/Streaming/Channels/102"
+
+  # ══════════════════════════════════════════════════════════════
+  # SENDEROS (38.9.217.12) — DVR1 8ch :8030 + DVR2 4ch :8020
+  # ══════════════════════════════════════════════════════════════
+  se-dvr1-ch01: "rtsp://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/102"
+  se-dvr1-ch02: "rtsp://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/202"
+  se-dvr1-ch03: "rtsp://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/302"
+  se-dvr1-ch04: "rtsp://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/402"
+  se-dvr1-ch05: "rtsp://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/502"
+  se-dvr1-ch06: "rtsp://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/602"
+  se-dvr1-ch07: "rtsp://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/702"
+  se-dvr1-ch08: "rtsp://admin:Clave.seg2023@38.9.217.12:8030/Streaming/Channels/802"
+  se-dvr2-ch01: "rtsp://admin:Clave.seg2023@38.9.217.12:8020/Streaming/Channels/102"
+  se-dvr2-ch02: "rtsp://admin:Clave.seg2023@38.9.217.12:8020/Streaming/Channels/202"
+  se-dvr2-ch03: "rtsp://admin:Clave.seg2023@38.9.217.12:8020/Streaming/Channels/302"
+  se-dvr2-ch04: "rtsp://admin:Clave.seg2023@38.9.217.12:8020/Streaming/Channels/402"
+
+  # ══════════════════════════════════════════════════════════════
+  # ALTOS DEL ROSARIO (190.159.37.188) — DVR 16ch :8010
+  # ══════════════════════════════════════════════════════════════
+  ar-dvr-ch01: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/102"
+  ar-dvr-ch02: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/202"
+  ar-dvr-ch03: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/302"
+  ar-dvr-ch04: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/402"
+  ar-dvr-ch05: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/502"
+  ar-dvr-ch06: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/602"
+  ar-dvr-ch07: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/702"
+  ar-dvr-ch08: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/802"
+  ar-dvr-ch09: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/902"
+  ar-dvr-ch10: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1002"
+  ar-dvr-ch11: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1102"
+  ar-dvr-ch12: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1202"
+  ar-dvr-ch13: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1302"
+  ar-dvr-ch14: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1402"
+  ar-dvr-ch15: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1502"
+  ar-dvr-ch16: "rtsp://admin:Clave.seg2023@190.159.37.188:8010/Streaming/Channels/1602"
+
+  # ══════════════════════════════════════════════════════════════
+  # LA PALENCIA (181.205.249.130) — DVR 16ch :8000
+  # ══════════════════════════════════════════════════════════════
+  lp-dvr-ch01: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/102"
+  lp-dvr-ch02: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/202"
+  lp-dvr-ch03: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/302"
+  lp-dvr-ch04: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/402"
+  lp-dvr-ch05: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/502"
+  lp-dvr-ch06: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/602"
+  lp-dvr-ch07: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/702"
+  lp-dvr-ch08: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/802"
+  lp-dvr-ch09: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/902"
+  lp-dvr-ch10: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1002"
+  lp-dvr-ch11: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1102"
+  lp-dvr-ch12: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1202"
+  lp-dvr-ch13: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1302"
+  lp-dvr-ch14: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1402"
+  lp-dvr-ch15: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1502"
+  lp-dvr-ch16: "rtsp://admin:Clave.seg2023@181.205.249.130:8000/Streaming/Channels/1602"
