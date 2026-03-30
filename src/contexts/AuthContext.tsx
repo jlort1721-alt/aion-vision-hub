@@ -163,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (resp.ok) {
               const json = await resp.json();
               const data = json.data ?? json;
-              const newToken: string = data.token;
+              const newToken: string = data.accessToken || data.token;
               const newRefreshToken: string = data.refreshToken;
               storeAuth(newToken, newRefreshToken);
 
@@ -209,12 +209,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ── Login ──────────────────────────────────────────────
   const login = useCallback(async (email: string, password: string) => {
-    const result = await apiClient.post<{ token: string; refreshToken: string; user: UserProfile }>(
+    const result = await apiClient.post<{ accessToken?: string; token?: string; refreshToken: string; user: UserProfile }>(
       '/auth/login',
       { email, password },
     );
 
-    storeAuth(result.token, result.refreshToken);
+    const token = result.accessToken || result.token || '';
+    storeAuth(token, result.refreshToken);
 
     // Fetch full profile (backend /auth/me may have extra fields)
     let userProfile: UserProfile;
@@ -225,7 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setState({
-      ...buildCompatObjects(userProfile, result.token, result.refreshToken),
+      ...buildCompatObjects(userProfile, token, result.refreshToken),
       isAuthenticated: true,
       isLoading: false,
     });
@@ -233,15 +234,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ── Signup / Register ──────────────────────────────────
   const signup = useCallback(async (email: string, password: string, fullName: string) => {
-    const result = await apiClient.post<{ token: string; refreshToken: string; user: UserProfile }>(
+    const result = await apiClient.post<{ accessToken?: string; token?: string; refreshToken: string; user: UserProfile }>(
       '/auth/register',
       { email, password, fullName },
     );
 
-    storeAuth(result.token, result.refreshToken);
+    const signupToken = result.accessToken || result.token || '';
+    storeAuth(signupToken, result.refreshToken);
 
     setState({
-      ...buildCompatObjects(result.user, result.token, result.refreshToken),
+      ...buildCompatObjects(result.user, signupToken, result.refreshToken),
       isAuthenticated: true,
       isLoading: false,
     });
