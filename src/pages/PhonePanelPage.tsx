@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { useSipPhone } from '@/hooks/use-sip-phone';
 import { useQuery } from '@tanstack/react-query';
 import {
   Phone, PhoneCall, PhoneOff, Search, User, Shield, Clock, Star, Hash,
@@ -74,12 +75,13 @@ function timeAgo(iso: string) {
 export default function PhonePanelPage() {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const sip = useSipPhone();
 
   const [phoneNumber, setPhoneNumber] = useState('');
   const [contactSearch, setContactSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [recentCalls, setRecentCalls] = useState<RecentCall[]>([]);
-  const [calling, setCalling] = useState(false);
+  const calling = sip.callStatus !== 'idle';
   const [queueTimers, setQueueTimers] = useState<Record<string, number>>({});
 
   // ── Load contacts from access_people ─────────────────────────────
@@ -170,10 +172,14 @@ export default function PhonePanelPage() {
   }, []);
 
   const handleAnswerQueue = useCallback((_callId: string, callerNumber: string) => {
-    // In production, this would signal the SIP backend to bridge the call
+    if (sip.incomingCall && sip.incomingCall.callerNumber === callerNumber) {
+      sip.answer();
+    } else {
+      sip.call(callerNumber.replace(/\D/g, ''));
+    }
     setPhoneNumber(callerNumber.replace(/\D/g, ''));
-    toast({ title: 'Answering call', description: `Connecting to ${callerNumber}` });
-  }, [toast]);
+    toast({ title: 'Connecting', description: `Calling ${callerNumber}` });
+  }, [toast, sip]);
 
   // ── Filtered contacts ─────────────────────────────
   const filteredContacts = useMemo(() => {
@@ -189,6 +195,9 @@ export default function PhonePanelPage() {
 
   // ── Dial functions ─────────────────────────────
   function handleKeyPress(key: string) {
+    if (sip.callStatus === 'in-call') {
+      sip.sendDtmf(key);
+    }
     setPhoneNumber((prev) => prev + key);
   }
 
@@ -201,7 +210,12 @@ export default function PhonePanelPage() {
       toast({ title: 'Ingrese un numero', variant: 'destructive' });
       return;
     }
-    setCalling(true);
+
+    if (sip.phoneStatus !== 'registered') {
+      toast({ title: 'Telefono no conectado', description: 'Conectando a Asterisk...', variant: 'destructive' });
+      sip.connect();
+      return;
+    }
 
     // Log the call locally
     const matchedContact = contacts.find((c) => c.phone === number);
@@ -212,17 +226,12 @@ export default function PhonePanelPage() {
       status: 'completada' as const,
     }, ...prev].slice(0, 20));
 
-    // Attempt tel: for mobile, sip: as fallback
-    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-    const uri = isMobile ? `tel:${number}` : `sip:${number}`;
-    window.open(uri, '_blank');
-
+    sip.call(number);
     toast({ title: 'Llamando...', description: `Marcando ${formatPhoneDisplay(number)}` });
-    setTimeout(() => setCalling(false), 2000);
   }
 
   function handleHangup() {
-    setCalling(false);
+    sip.hangup();
     setPhoneNumber('');
     toast({ title: 'Llamada finalizada' });
   }
@@ -239,16 +248,68 @@ export default function PhonePanelPage() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      {/* ── Header ────────────────────── */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Phone className="h-6 w-6 text-primary" />
-          Panel Telefonico
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Marcador rapido, contactos y registro de llamadas
-        </p>
+      {/* ── Header + SIP Status ────────────────────── */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Phone className="h-6 w-6 text-primary" />
+            Panel Telefonico
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Extension 099 — Central AION (WebRTC SIP)
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant={sip.phoneStatus === 'registered' ? 'default' : sip.phoneStatus === 'connecting' ? 'secondary' : 'destructive'}
+            className={sip.phoneStatus === 'registered' ? 'bg-green-600' : ''}>
+            {sip.phoneStatus === 'registered' ? 'Conectado' : sip.phoneStatus === 'connecting' ? 'Conectando...' : sip.phoneStatus === 'error' ? 'Error' : 'Desconectado'}
+          </Badge>
+          {sip.phoneStatus !== 'registered' && (
+            <Button size="sm" variant="outline" onClick={() => sip.connect()}>Reconectar</Button>
+          )}
+        </div>
       </div>
+
+      {/* ── Incoming Call Banner ────────────────────── */}
+      {sip.incomingCall && (
+        <Card className="border-green-500 bg-green-500/10 animate-pulse">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <PhoneIncoming className="h-6 w-6 text-green-500 animate-bounce" />
+              <div>
+                <p className="font-semibold">{sip.incomingCall.callerName || sip.incomingCall.callerNumber}</p>
+                {sip.incomingCall.callerName && <p className="text-sm text-muted-foreground">{sip.incomingCall.callerNumber}</p>}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button className="bg-green-600 hover:bg-green-700 text-white gap-1" onClick={() => sip.answer()}>
+                <PhoneCall className="h-4 w-4" /> Contestar
+              </Button>
+              <Button variant="destructive" className="gap-1" onClick={() => sip.reject()}>
+                <PhoneOff className="h-4 w-4" /> Rechazar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Active Call Status ────────────────────── */}
+      {sip.callStatus === 'in-call' && (
+        <Card className="border-primary bg-primary/5">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse" />
+              <span className="font-medium">En llamada: {sip.currentNumber}</span>
+              <span className="text-sm text-muted-foreground font-mono">
+                {Math.floor(sip.callDuration / 60).toString().padStart(2, '0')}:{(sip.callDuration % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
+            <Button variant="destructive" size="sm" onClick={handleHangup}>
+              <PhoneOff className="h-4 w-4 mr-1" /> Colgar
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Emergency Speed Dial ────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
