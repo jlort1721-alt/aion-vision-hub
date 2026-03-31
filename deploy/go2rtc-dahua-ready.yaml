@@ -1,0 +1,127 @@
+# ══════════════════════════════════════════════════════════════
+# DAHUA XVR — 11 sedes, 88 canales (8 canales × 11 XVR)
+# REQUIERE: port forward del puerto 554 (RTSP) en el router de cada sede
+# Formato: rtsp://user:pass@IP_PUBLICA:PUERTO/cam/realmonitor?channel=N&subtype=1
+# subtype=0 = mainstream, subtype=1 = substream
+#
+# INSTRUCCIONES PARA EL TÉCNICO:
+# En cada router de sede Dahua, crear port forward:
+#   Puerto externo: 554 (o el que elijan)
+#   Puerto interno: 554
+#   IP interna: IP del XVR en la LAN (típicamente 192.168.1.108 o similar)
+#   Protocolo: TCP
+#
+# Una vez configurado, reemplazar [IP_PUBLICA] y [PUERTO_RTSP] con los datos reales
+# ══════════════════════════════════════════════════════════════
+
+# NOTA: Estas entradas están COMENTADAS hasta que se configure el port forward.
+# Descomentar y ajustar IP/puerto cuando el técnico complete la configuración.
+
+streams:
+
+  # ══ ALBORADA (Serial: AL02505PAJD40E7) — 8 canales ══
+  # Router IP: [PENDIENTE — pedir al técnico]
+  # da-alborada-ch1: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=1&subtype=1"
+  # da-alborada-ch2: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=2&subtype=1"
+  # da-alborada-ch3: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=3&subtype=1"
+  # da-alborada-ch4: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=4&subtype=1"
+  # da-alborada-ch5: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=5&subtype=1"
+  # da-alborada-ch6: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=6&subtype=1"
+  # da-alborada-ch7: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=7&subtype=1"
+  # da-alborada-ch8: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=8&subtype=1"
+
+  # ══ BRESCIA (Serial: AK01E46PAZ0BA9C) — 8 canales ══
+  # da-brescia-ch1: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=1&subtype=1"
+  # da-brescia-ch2: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=2&subtype=1"
+  # da-brescia-ch3: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=3&subtype=1"
+  # da-brescia-ch4: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=4&subtype=1"
+  # da-brescia-ch5: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=5&subtype=1"
+  # da-brescia-ch6: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=6&subtype=1"
+  # da-brescia-ch7: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=7&subtype=1"
+  # da-brescia-ch8: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=8&subtype=1"
+
+  # ══ PATIO BONITO (Serial: AL02505PAJDC6A4) — 8 canales ══
+  # da-pbonito-ch1: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=1&subtype=1"
+  # da-pbonito-ch2: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=2&subtype=1"
+  # da-pbonito-ch3: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=3&subtype=1"
+  # da-pbonito-ch4: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=4&subtype=1"
+  # da-pbonito-ch5: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=5&subtype=1"
+  # da-pbonito-ch6: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=6&subtype=1"
+  # da-pbonito-ch7: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=7&subtype=1"
+  # da-pbonito-ch8: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=8&subtype=1"
+
+  # ══ TERRABAMBA (Serial: BB01B89PAJ5DDCD) — 8 canales ══
+  # da-terrabamba-ch1: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=1&subtype=1"
+  # da-terrabamba-ch2: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=2&subtype=1"
+  # da-terrabamba-ch3: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=3&subtype=1"
+  # da-terrabamba-ch4: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=4&subtype=1"
+  # da-terrabamba-ch5: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=5&subtype=1"
+  # da-terrabamba-ch6: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=6&subtype=1"
+  # da-terrabamba-ch7: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=7&subtype=1"
+  # da-terrabamba-ch8: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=8&subtype=1"
+
+  # ══ DANUBIOS CLAVE (Serial: AJ00421PAZF2E60) — 8 canales ══
+  # da-danubios-ch1: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=1&subtype=1"
+  # da-danubios-ch2: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=2&subtype=1"
+  # da-danubios-ch3: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=3&subtype=1"
+  # da-danubios-ch4: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=4&subtype=1"
+  # da-danubios-ch5: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=5&subtype=1"
+  # da-danubios-ch6: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=6&subtype=1"
+  # da-danubios-ch7: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=7&subtype=1"
+  # da-danubios-ch8: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=8&subtype=1"
+
+  # ══ DANUBIOS PUESTO (Serial: AH0306CPAZ5EA1A) — 8 canales ══
+  # da-danubios2-ch1: "rtsp://CLAVE:Clave.seg2023@[IP]:554/cam/realmonitor?channel=1&subtype=1"
+  # da-danubios2-ch2: "rtsp://CLAVE:Clave.seg2023@[IP]:554/cam/realmonitor?channel=2&subtype=1"
+  # da-danubios2-ch3: "rtsp://CLAVE:Clave.seg2023@[IP]:554/cam/realmonitor?channel=3&subtype=1"
+  # da-danubios2-ch4: "rtsp://CLAVE:Clave.seg2023@[IP]:554/cam/realmonitor?channel=4&subtype=1"
+  # da-danubios2-ch5: "rtsp://CLAVE:Clave.seg2023@[IP]:554/cam/realmonitor?channel=5&subtype=1"
+  # da-danubios2-ch6: "rtsp://CLAVE:Clave.seg2023@[IP]:554/cam/realmonitor?channel=6&subtype=1"
+  # da-danubios2-ch7: "rtsp://CLAVE:Clave.seg2023@[IP]:554/cam/realmonitor?channel=7&subtype=1"
+  # da-danubios2-ch8: "rtsp://CLAVE:Clave.seg2023@[IP]:554/cam/realmonitor?channel=8&subtype=1"
+
+  # ══ TERRAZZINO (Serial: AL02505PAJ638AA) — 8 canales ══
+  # da-terrazzino-ch1: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=1&subtype=1"
+  # da-terrazzino-ch2: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=2&subtype=1"
+  # da-terrazzino-ch3: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=3&subtype=1"
+  # da-terrazzino-ch4: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=4&subtype=1"
+  # da-terrazzino-ch5: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=5&subtype=1"
+  # da-terrazzino-ch6: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=6&subtype=1"
+  # da-terrazzino-ch7: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=7&subtype=1"
+  # da-terrazzino-ch8: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=8&subtype=1"
+
+  # ══ QUINTAS SANTA MARIA (Serial: AH1020EPAZ39E67) — 8 canales ══
+  # da-quintas-ch1: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=1&subtype=1"
+  # da-quintas-ch2: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=2&subtype=1"
+  # da-quintas-ch3: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=3&subtype=1"
+  # da-quintas-ch4: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=4&subtype=1"
+  # da-quintas-ch5: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=5&subtype=1"
+  # da-quintas-ch6: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=6&subtype=1"
+  # da-quintas-ch7: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=7&subtype=1"
+  # da-quintas-ch8: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=8&subtype=1"
+
+  # ══ HOSPITAL SAN JERONIMO (Serial: AE01C60PAZA4D94) — 8 canales ══
+  # da-hospital-ch1: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=1&subtype=1"
+  # da-hospital-ch2: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=2&subtype=1"
+  # da-hospital-ch3: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=3&subtype=1"
+  # da-hospital-ch4: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=4&subtype=1"
+  # da-hospital-ch5: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=5&subtype=1"
+  # da-hospital-ch6: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=6&subtype=1"
+  # da-hospital-ch7: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=7&subtype=1"
+  # da-hospital-ch8: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=8&subtype=1"
+
+  # ══ FACTORY (Serial: 9B02D09PAZ4C0D2) — 4 canales ══
+  # da-factory-ch1: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=1&subtype=1"
+  # da-factory-ch2: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=2&subtype=1"
+  # da-factory-ch3: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=3&subtype=1"
+  # da-factory-ch4: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=4&subtype=1"
+
+  # ══ SANTANA CABAÑAS (Serial: AB081E4PAZD6D5B) — 8 canales ══
+  # da-santana-ch1: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=1&subtype=1"
+  # da-santana-ch2: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=2&subtype=1"
+  # da-santana-ch3: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=3&subtype=1"
+  # da-santana-ch4: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=4&subtype=1"
+  # da-santana-ch5: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=5&subtype=1"
+  # da-santana-ch6: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=6&subtype=1"
+  # da-santana-ch7: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=7&subtype=1"
+  # da-santana-ch8: "rtsp://admin:Clave.seg2023@[IP]:554/cam/realmonitor?channel=8&subtype=1"
