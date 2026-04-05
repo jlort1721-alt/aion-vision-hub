@@ -805,7 +805,7 @@ export default function EmergencyPage() {
                               {activation.status}
                             </Badge>
                             <Badge className={protocolTypeColors[protocolType] || 'bg-gray-500'}>
-                              {protocolType.replace('_', ' ')}
+                              {(protocolType || '').replace('_', ' ')}
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">

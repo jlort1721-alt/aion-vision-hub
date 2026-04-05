@@ -123,7 +123,7 @@ export default function DatabasePage() {
   };
 
   const handleEdit = () => {
-    if (!editForm.title.trim()) return;
+    if (!(editForm.title || '').trim()) return;
     update.mutate({
       id: editForm.id,
       title: editForm.title, category: editForm.category,
@@ -353,7 +353,7 @@ export default function DatabasePage() {
           {selected.tags?.length > 0 && (
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">Tags</CardTitle></CardHeader>
-              <CardContent><div className="flex flex-wrap gap-1">{selected.tags.map((tag: string) => <Badge key={tag} variant="secondary">{tag}</Badge>)}</div></CardContent>
+              <CardContent><div className="flex flex-wrap gap-1">{(selected.tags || []).map((tag: string) => <Badge key={tag} variant="secondary">{tag}</Badge>)}</div></CardContent>
             </Card>
           )}
           <div className="flex gap-2">

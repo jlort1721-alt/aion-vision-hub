@@ -188,7 +188,7 @@ function StepDevices({
     onChange(
       devices.map((d) =>
         d.id === id
-          ? { ...d, status: d.ip.trim() ? ("ok" as const) : ("error" as const) }
+          ? { ...d, status: (d.ip || '').trim() ? ("ok" as const) : ("error" as const) }
           : d
       )
     );
@@ -488,7 +488,7 @@ function StepReview({ data }: { data: WizardData }) {
             <p className="text-muted-foreground">Ninguno configurado</p>
           ) : (
             <ul className="space-y-1">
-              {data.devices.map((d) => (
+              {(data.devices || []).map((d) => (
                 <li key={d.id} className="flex items-center gap-2">
                   <MonitorSpeaker className="h-3 w-3" />
                   {d.name || d.ip || "Sin nombre"} — {d.brand} {d.type}

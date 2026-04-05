@@ -90,7 +90,7 @@ function saveHistory(messages: ChatMessage[]) {
     const trimmed = messages.slice(-MAX_STORED_MESSAGES);
     const stored: StoredHistory = {
       sessionTimestamp: new Date().toISOString(),
-      messages: trimmed.map(m => ({ ...m, timestamp: m.timestamp.toISOString() as any })),
+      messages: trimmed.map(m => ({ ...m, timestamp: (m.timestamp ? new Date(m.timestamp).toISOString() : new Date().toISOString()) as any })),
     };
     localStorage.setItem(HISTORY_KEY, JSON.stringify(stored));
   } catch { /* storage full or unavailable */ }
@@ -544,7 +544,7 @@ export default function AIAssistantPage() {
               {/* Tool execution cards (rendered before/between text) */}
               {msg.role === 'assistant' && msg.toolExecutions && msg.toolExecutions.length > 0 && (
                 <div className="mb-2">
-                  {msg.toolExecutions.map(exec => (
+                  {(msg.toolExecutions || []).map(exec => (
                     <ToolExecutionCard key={exec.id} exec={exec} />
                   ))}
                 </div>

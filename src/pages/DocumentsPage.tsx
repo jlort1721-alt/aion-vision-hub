@@ -146,7 +146,7 @@ const DocumentsPage = () => {
   const filtered = (documents as DocumentRow[])
     .filter(d => {
       if (categoryFilter !== 'all' && d.category !== categoryFilter) return false;
-      if (searchTerm && !d.original_name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      if (searchTerm && !(d.original_name || '').toLowerCase().includes(searchTerm.toLowerCase())) return false;
       return true;
     })
     .sort((a, b) => {
@@ -582,7 +582,7 @@ const DocumentsPage = () => {
 
           <div className="flex-1 overflow-auto min-h-0">
             {previewDoc && previewUrl ? (
-              previewDoc.mime_type.startsWith('image/') ? (
+              (previewDoc.mime_type || '').startsWith('image/') ? (
                 <img src={previewUrl} alt={previewDoc.original_name} className="max-w-full rounded mx-auto" />
               ) : previewDoc.mime_type === 'application/pdf' ? (
                 <iframe src={previewUrl} className="w-full h-[60vh] rounded border" title={previewDoc.original_name} />

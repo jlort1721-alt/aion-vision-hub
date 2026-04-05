@@ -117,7 +117,7 @@ export default function IntegrationsPage() {
                         </div>
                         <div>
                           <CardTitle className="text-sm">{integration.name}</CardTitle>
-                          <CardDescription className="text-xs capitalize">{integration.type.replace(/_/g, ' ')}</CardDescription>
+                          <CardDescription className="text-xs capitalize">{(integration.type || '').replace(/_/g, ' ')}</CardDescription>
                         </div>
                       </div>
                       {statusBadge(integration.status)}
@@ -205,7 +205,7 @@ export default function IntegrationsPage() {
                     <Button size="sm" className="h-7 text-xs"><Plus className="mr-1 h-3 w-3" /> {t('common.connect')}</Button>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">
-                    {def.availableTools.map(tool => <Badge key={tool.name} variant="secondary" className="text-[8px]">{tool.name}</Badge>)}
+                    {(def.availableTools || []).map(tool => <Badge key={tool.name} variant="secondary" className="text-[8px]">{tool.name}</Badge>)}
                   </div>
                 </CardContent>
               </Card>

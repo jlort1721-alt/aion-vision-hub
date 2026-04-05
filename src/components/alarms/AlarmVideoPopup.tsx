@@ -87,7 +87,7 @@ function AlarmPopupCard({
             <AlertTriangle className="h-5 w-5 text-red-500" />
             <span className="text-white font-semibold text-sm">{alarm.title}</span>
             <Badge className={cn('text-[10px]', severityColor)}>
-              {alarm.severity.toUpperCase()}
+              {(alarm.severity || 'unknown').toUpperCase()}
             </Badge>
           </div>
           <div className="flex items-center gap-2">
@@ -144,7 +144,7 @@ function AlarmPopupCard({
         <AlertTriangle className="h-3.5 w-3.5 text-white shrink-0" />
         <span className="text-xs font-semibold text-white truncate flex-1">{alarm.title}</span>
         <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 text-white border-white/30 bg-white/10">
-          {alarm.severity.toUpperCase()}
+          {(alarm.severity || 'unknown').toUpperCase()}
         </Badge>
         <Button variant="ghost" size="icon" className="h-5 w-5 text-white/80 hover:text-white hover:bg-white/20 p-0" onClick={() => onDismiss(alarm.id)}>
           <X className="h-3 w-3" />

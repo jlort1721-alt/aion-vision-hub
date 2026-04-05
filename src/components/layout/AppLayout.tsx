@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const CommandPalette = lazy(() => import('@/components/CommandPalette'));
 const AlarmVideoPopup = lazy(() => import('@/components/alarms/AlarmVideoPopup'));
 const AIONFloatingAssistant = lazy(() => import('@/components/ai/AIONFloatingAssistant').then(m => ({ default: m.AIONFloatingAssistant })));
+const PanicButton = lazy(() => import('@/components/emergency/PanicButton'));
 import { useI18n } from '@/contexts/I18nContext';
 import { useBranding } from '@/contexts/BrandingContext';
 import { useNetworkStatus } from '@/hooks/use-network-status';
@@ -23,13 +24,15 @@ import {
   Zap, DoorOpen, RotateCcw, Phone, Database, MessageSquare, StickyNote,
   Clock, Timer, AlertOctagon, Navigation, CalendarClock,
   Cog, UserCheck, BarChart3, FileText, KeyRound, ShieldCheck, GraduationCap, Building2,
-  FolderOpen, ClipboardList, PhoneCall, Scan
+  FolderOpen, ClipboardList, PhoneCall, Scan, Map
 } from 'lucide-react';
 import { hasModuleAccess, ALL_MODULES, DEFAULT_ROLE_PERMISSIONS } from '@/lib/permissions';
 import { useQuery } from '@tanstack/react-query';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { apiClient } from '@/lib/api-client';
 import Logo from '@/components/brand/Logo';
+import { VoiceAssistant } from '@/components/VoiceAssistant';
+import { OperatorStatusBar } from '@/components/OperatorStatusBar';
 
 // ── Navigation with categories ─────────────────────────────
 
@@ -53,6 +56,7 @@ const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { labelKey: 'nav.dashboard', path: '/dashboard', icon: <LayoutDashboard size={18} /> },
       { labelKey: 'nav.live_view', path: '/live-view', icon: <Video size={18} /> },
+      { labelKey: 'nav.floorPlan', path: '/floor-plan', icon: <Map size={18} /> },
       { labelKey: 'nav.playback', path: '/playback', icon: <Play size={18} /> },
       { labelKey: 'nav.events', path: '/events', icon: <Bell size={18} />, badgeKey: 'events' },
       { labelKey: 'nav.alerts', path: '/alerts', icon: <Shield size={18} />, badgeKey: 'alerts' },
@@ -121,6 +125,8 @@ const NAV_CATEGORIES: NavCategory[] = [
       { labelKey: 'nav.settings', path: '/settings', icon: <Settings size={18} /> },
       { labelKey: 'nav.admin', path: '/admin', icon: <Users size={18} /> },
       { labelKey: 'nav.network', path: '/network', icon: <Scan size={18} /> },
+      { labelKey: 'nav.remoteAccess', path: '/remote-access', icon: <Globe size={18} /> },
+      { labelKey: 'nav.cameraHealth', path: '/camera-health', icon: <Activity size={18} /> },
     ],
   },
 ];
@@ -260,7 +266,7 @@ export default function AppLayout() {
             )}
             {!collapsed && (
               <div className="truncate">
-                <span className="font-semibold text-sm text-sidebar-primary-foreground" style={{ fontFamily: 'var(--font-heading)' }}>{branding.name || 'Clave Seguridad'}</span>
+                <span className="font-semibold text-sm text-sidebar-primary-foreground font-heading">{branding.name || 'Clave Seguridad'}</span>
               </div>
             )}
           </div>
@@ -289,10 +295,10 @@ export default function AppLayout() {
                     key={item.path}
                     onClick={() => { navigate(item.path); setMobileOpen(false); }}
                     className={cn(
-                      "flex items-center gap-3 w-full rounded-md px-3 py-1.5 text-sm transition-colors mb-0.5 relative",
+                      "flex items-center gap-3 w-full rounded-md px-3 py-2 text-sm transition-colors mb-0.5 relative",
                       isActive
-                        ? "bg-sidebar-accent text-sidebar-primary-foreground font-medium"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-primary-foreground"
+                        ? "bg-sidebar-accent text-sidebar-primary-foreground font-medium shadow-sm"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-primary-foreground"
                     )}
                     title={collapsed ? label : undefined}
                     aria-current={isActive ? 'page' : undefined}
@@ -383,6 +389,8 @@ export default function AppLayout() {
                 {t('common.connecting') || 'Connecting'}
               </Badge>
             ) : null}
+            {/* Voice Assistant */}
+            <VoiceAssistant />
             {/* Language selector */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -474,6 +482,11 @@ export default function AppLayout() {
       <Suspense fallback={null}>
         <AIONFloatingAssistant />
       </Suspense>
+      <Suspense fallback={null}>
+        <PanicButton />
+      </Suspense>
+      {/* Operator status bar — always visible at bottom */}
+      <OperatorStatusBar />
     </div>
   );
 }

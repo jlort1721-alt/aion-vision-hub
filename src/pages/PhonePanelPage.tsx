@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 import { useSipPhone } from '@/hooks/use-sip-phone';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -88,14 +88,14 @@ export default function PhonePanelPage() {
   const { data: contacts = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['phone_contacts', profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('access_people')
-        .select('*')
-        .eq('tenant_id', profile!.tenant_id)
-        .not('phone', 'is', null)
-        .order('full_name', { ascending: true });
-      if (error) throw error;
-      return (data || []) as unknown as ContactPerson[];
+      const data = await apiClient.get<ContactPerson[] | { data?: ContactPerson[]; items?: ContactPerson[] }>('/access-control/people', {
+        tenant_id: profile!.tenant_id,
+        has_phone: 'true',
+        order: 'full_name',
+      });
+      if (Array.isArray(data)) return data;
+      const wrapped = data as { data?: ContactPerson[]; items?: ContactPerson[] };
+      return wrapped?.data || wrapped?.items || [];
     },
     enabled: !!profile?.tenant_id,
   });
@@ -104,17 +104,16 @@ export default function PhonePanelPage() {
   const { data: intercomCalls = [] } = useQuery({
     queryKey: ['intercom_recent_calls', profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('intercom_calls')
-        .select('*')
-        .eq('tenant_id', profile!.tenant_id)
-        .order('created_at', { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      return (data || []).map((c: any) => ({
-        number: c.caller_id || c.sip_uri || 'Desconocido',
-        contactName: c.caller_name || '',
-        time: c.created_at,
+      const raw = await apiClient.get<Record<string, unknown>[]>('/intercom/calls', {
+        status: 'active,ringing',
+        limit: '20',
+        order: 'created_at:desc',
+      });
+      const items = Array.isArray(raw) ? raw : (raw as unknown as Record<string, unknown>)?.data as Record<string, unknown>[] || [];
+      return items.map((c: Record<string, unknown>) => ({
+        number: (c.caller_id as string) || (c.sip_uri as string) || 'Desconocido',
+        contactName: (c.caller_name as string) || '',
+        time: c.created_at as string,
         status: c.status === 'answered' ? 'completada' as const : 'perdida' as const,
       }));
     },
@@ -130,20 +129,18 @@ export default function PhonePanelPage() {
   const { data: sipQueueCalls = [] } = useQuery({
     queryKey: ['sip_queue', profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('intercom_calls')
-        .select('*')
-        .eq('tenant_id', profile!.tenant_id)
-        .in('status', ['queued', 'ringing'])
-        .order('created_at', { ascending: true })
-        .limit(10);
-      if (error) throw error;
-      return (data || []).map((c: any) => ({
-        id: c.id,
-        callerName: c.caller_name || '',
-        callerNumber: c.caller_id || c.sip_uri || 'Unknown',
-        waitingSince: c.created_at,
-        priority: c.priority || 'normal',
+      const raw = await apiClient.get<Record<string, unknown>[]>('/intercom/calls', {
+        status: 'queued',
+        limit: '10',
+        order: 'created_at:asc',
+      });
+      const items = Array.isArray(raw) ? raw : (raw as unknown as Record<string, unknown>)?.data as Record<string, unknown>[] || [];
+      return items.map((c: Record<string, unknown>) => ({
+        id: c.id as string,
+        callerName: (c.caller_name as string) || '',
+        callerNumber: (c.caller_id as string) || (c.sip_uri as string) || 'Unknown',
+        waitingSince: c.created_at as string,
+        priority: (c.priority as string) || 'normal',
       }));
     },
     enabled: !!profile?.tenant_id,
@@ -187,7 +184,7 @@ export default function PhonePanelPage() {
       if (categoryFilter !== 'all' && c.role !== categoryFilter) return false;
       if (contactSearch) {
         const q = contactSearch.toLowerCase();
-        return c.full_name.toLowerCase().includes(q) || (c.phone || '').includes(q);
+        return (c.full_name || '').toLowerCase().includes(q) || (c.phone || '').includes(q);
       }
       return true;
     });
@@ -494,7 +491,7 @@ export default function PhonePanelPage() {
                       key={`${call.number}-${i}`}
                       className="flex items-center justify-between py-2 px-2 rounded-md hover:bg-muted/30 cursor-pointer"
                       onClick={() => {
-                        setPhoneNumber(call.number.replace(/\D/g, ''));
+                        setPhoneNumber((call.number || '').replace(/\D/g, ''));
                       }}
                     >
                       <div className="flex items-center gap-2 min-w-0">

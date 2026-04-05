@@ -85,8 +85,8 @@ export default function WhatsAppTemplates() {
     const q = searchQuery.toLowerCase();
     return (
       tpl.name.toLowerCase().includes(q) ||
-      tpl.category.toLowerCase().includes(q) ||
-      tpl.language.toLowerCase().includes(q)
+      (tpl.category || '').toLowerCase().includes(q) ||
+      (tpl.language || '').toLowerCase().includes(q)
     );
   });
 

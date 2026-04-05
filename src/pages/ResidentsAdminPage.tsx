@@ -124,9 +124,9 @@ function ResidentDetails({ resident }: { resident: Resident }) {
           <Car className="h-3.5 w-3.5" />
           Vehiculos
         </h4>
-        {resident.plates.length > 0 ? (
+        {(resident.plates || []).length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {resident.plates.map((plate) => (
+            {(resident.plates || []).map((plate) => (
               <Badge key={plate} variant="outline" className="font-mono text-xs">
                 {plate}
               </Badge>
@@ -252,7 +252,7 @@ export default function ResidentsAdminPage() {
       icon={<Users className="h-5 w-5" />}
       badge={
         residentsData ? (
-          <Badge variant="secondary">{residentsData.total.toLocaleString('es-CO')}</Badge>
+          <Badge variant="secondary">{(residentsData?.total || 0).toLocaleString('es-CO')}</Badge>
         ) : undefined
       }
     >
@@ -313,7 +313,7 @@ export default function ResidentsAdminPage() {
                 {isLoading ? (
                   <TableSkeleton />
                 ) : residentsData && residentsData.residents.length > 0 ? (
-                  residentsData.residents.map((resident) => {
+                  (residentsData.residents || []).map((resident) => {
                     const isExpanded = expandedId === resident.id;
                     return (
                       <Collapsible
@@ -345,9 +345,9 @@ export default function ResidentsAdminPage() {
                                 {resident.contact}
                               </TableCell>
                               <TableCell>
-                                {resident.plates.length > 0 ? (
+                                {(resident.plates || []).length > 0 ? (
                                   <div className="flex flex-wrap gap-1">
-                                    {resident.plates.slice(0, 2).map((plate) => (
+                                    {(resident.plates || []).slice(0, 2).map((plate) => (
                                       <Badge
                                         key={plate}
                                         variant="outline"
@@ -356,9 +356,9 @@ export default function ResidentsAdminPage() {
                                         {plate}
                                       </Badge>
                                     ))}
-                                    {resident.plates.length > 2 && (
+                                    {(resident.plates || []).length > 2 && (
                                       <Badge variant="secondary" className="text-xs">
-                                        +{resident.plates.length - 2}
+                                        +{(resident.plates || []).length - 2}
                                       </Badge>
                                     )}
                                   </div>
@@ -410,7 +410,7 @@ export default function ResidentsAdminPage() {
               Mostrando {((page - 1) * PAGE_SIZE) + 1}
               {' - '}
               {Math.min(page * PAGE_SIZE, residentsData.total)} de{' '}
-              {residentsData.total.toLocaleString('es-CO')} residentes
+              {(residentsData?.total || 0).toLocaleString('es-CO')} residentes
             </p>
             <div className="flex items-center gap-2">
               <Button

@@ -90,7 +90,7 @@ export interface TestConnectionResult {
 
 // ── Backend Voice API Base ────────────────────────────────
 
-const BACKEND_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+const BACKEND_BASE = import.meta.env.VITE_API_URL || '/api';
 const ELEVENLABS_API_BASE = 'https://api.elevenlabs.io/v1';
 
 function getAuthHeaders(): Record<string, string> {
@@ -103,7 +103,7 @@ function getAuthHeaders(): Record<string, string> {
 
 async function voiceApiFetch<T = unknown>(path: string, options?: RequestInit): Promise<T> {
   const headers = getAuthHeaders();
-  const resp = await fetch(`${BACKEND_BASE}/voice-api${path}`, {
+  const resp = await fetch(`${BACKEND_BASE}/voice${path}`, {
     ...options,
     headers: { ...headers, ...(options?.headers || {}) },
   });
@@ -116,7 +116,7 @@ async function voiceApiFetch<T = unknown>(path: string, options?: RequestInit): 
 
 async function voiceApiFetchBlob(path: string, options?: RequestInit): Promise<{ blob: Blob; headers: Headers }> {
   const headers = getAuthHeaders();
-  const resp = await fetch(`${BACKEND_BASE}/voice-api${path}`, {
+  const resp = await fetch(`${BACKEND_BASE}/voice${path}`, {
     ...options,
     headers: { ...headers, ...(options?.headers || {}) },
   });

@@ -243,7 +243,7 @@ class ApiClient {
    */
   async get<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
     const headers = this.getAuthHeaders();
-    const url = new URL(`${API_BASE_URL}${path}`);
+    const url = new URL(`${API_BASE_URL}${path}`, window.location.origin);
 
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -317,25 +317,50 @@ class ApiClient {
   }
 
   /**
-   * Call a Supabase Edge Function (legacy, for functions not yet migrated to Fastify)
+   * Route legacy edge function calls through the local backend API.
    */
   async edgeFunction<T>(functionName: string, params?: Record<string, string>, options?: RequestInit): Promise<T> {
-    const headers = this.getAuthHeaders();
-    // Edge functions also need the apikey
-    headers['apikey'] = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const routeMap: Record<string, string> = {
+      'whatsapp-api': '/whatsapp',
+      'email-api': '/email',
+      'health-api': '/health',
+      'events-api': '/events',
+      'incidents-api': '/incidents',
+      'integrations-api': '/integrations',
+      'mcp-api': '/mcp',
+      'operations-api': '/operations',
+      'cloud-accounts-api': '/cloud-accounts',
+      'analytics-api': '/analytics',
+    };
 
-    const SUPABASE_FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
-    const url = new URL(`${SUPABASE_FUNCTIONS_URL}/${functionName}`);
+    const basePath = routeMap[functionName] || `/${functionName.replace(/-api$/, '')}`;
+
+    // Build path from params
+    let path = basePath;
+    const queryParams: Record<string, string> = {};
+
     if (params) {
-      Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+      const { id, action, ...rest } = params;
+      if (id) path += `/${id}`;
+      if (action) path += `/${action}`;
+      Object.assign(queryParams, rest);
     }
 
-    const response = await this.fetchWithRetry(url.toString(), {
-      ...options,
-      headers: { ...headers, ...(options?.headers || {}) },
-    });
+    const method = options?.method?.toUpperCase() || 'GET';
 
-    return this.parseResponse<T>(response);
+    if (method === 'GET') {
+      return this.get<T>(path, queryParams);
+    } else if (method === 'POST') {
+      const body = options?.body ? JSON.parse(options.body as string) : undefined;
+      return this.post<T>(path, body);
+    } else if (method === 'PUT') {
+      const body = options?.body ? JSON.parse(options.body as string) : undefined;
+      return this.put<T>(path, body);
+    } else if (method === 'DELETE') {
+      return this.delete<T>(path);
+    }
+
+    return this.get<T>(path, queryParams);
   }
 }
 

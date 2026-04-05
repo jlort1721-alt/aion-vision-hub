@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://ai.gateway.lovable.dev https://api.elevenlabs.io https://graph.facebook.com https://*.coolkit.cc http://localhost:* ws://localhost:* wss://localhost:*; media-src 'self' blob: https:; frame-src 'none'; object-src 'none'; base-uri 'self'; worker-src 'self'; form-action 'self'; upgrade-insecure-requests;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' wss://*.aionseg.co wss://aionseg.co https://api.openai.com https://api.anthropic.com https://api.elevenlabs.io https://*.coolkit.cc http://localhost:* ws://localhost:* wss://localhost:*; media-src 'self' blob: https:; frame-src 'self'; object-src 'none'; base-uri 'self'; worker-src 'self' blob:; form-action 'self';" />
     <title>Clave Seguridad — Centro de Monitoreo y Control</title>
     <meta name="description" content="Plataforma centralizada de monitoreo, control de acceso, videovigilancia y operaciones de seguridad con IA.">
     <meta name="author" content="Clave Seguridad" />
@@ -22,7 +22,7 @@
   <meta property="og:description" content="Plataforma centralizada de monitoreo, control de acceso, videovigilancia y operaciones de seguridad con IA.">
   <meta name="twitter:description" content="Plataforma centralizada de monitoreo, control de acceso, videovigilancia y operaciones de seguridad con IA.">
   <meta name="twitter:card" content="summary_large_image">
-  <script src="/go2rtc/video-rtc.js"></script>
+  <!-- go2rtc video delivery uses fMP4 stream.mp4 (no video-rtc.js needed) -->
 </head>
   <body>
     <div id="root"></div>

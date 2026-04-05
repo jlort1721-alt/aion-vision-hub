@@ -188,7 +188,7 @@ export interface CallStats {
 
 // ── Backend API Client ────────────────────────────────────
 
-const BACKEND_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+const BACKEND_BASE = import.meta.env.VITE_API_URL || '/api';
 
 function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem('aion_token');
@@ -200,7 +200,7 @@ function getAuthHeaders(): Record<string, string> {
 
 async function intercomFetch<T = unknown>(path: string, options?: RequestInit): Promise<T> {
   const headers = getAuthHeaders();
-  const resp = await fetch(`${BACKEND_BASE}/intercom-api${path}`, {
+  const resp = await fetch(`${BACKEND_BASE}/intercom${path}`, {
     ...options,
     headers: { ...headers, ...(options?.headers || {}) },
   });

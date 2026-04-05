@@ -129,7 +129,7 @@ export default function NotesPage() {
   };
 
   const filtered = notes.filter(n => {
-    if (search && !n.title.toLowerCase().includes(search.toLowerCase()) && !n.body.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !(n.title || '').toLowerCase().includes(search.toLowerCase()) && !(n.body || '').toLowerCase().includes(search.toLowerCase())) return false;
     if (categoryFilter !== 'all' && n.category !== categoryFilter) return false;
     return true;
   });

@@ -17,58 +17,79 @@ interface BioSearchResult {
   features: string[];
 }
 
-async function searchBiomarkers(embedding: number[]): Promise<BioSearchResult[]> {
-  if (!API_URL) return [];
-  const token = localStorage.getItem('aion_token');
-  if (!token) return [];
+/** Convert an image URL (blob or data) to base64 string (without prefix) */
+function imageUrlToBase64(imageUrl: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      // Strip "data:image/jpeg;base64," prefix
+      resolve(dataUrl.split(',')[1]);
+    };
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = imageUrl;
+  });
+}
 
-  const resp = await fetch(`${API_URL}/biomarkers/search`, {
+interface FaceSearchResponse {
+  success: boolean;
+  data?: {
+    faces_detected: number;
+    face_info?: { confidence: number; embedding_size: number };
+    matches: Array<{
+      subjectId: string;
+      matchPercentage: number;
+      features: string[];
+      lastSeenLocationId: string | null;
+      lastSeenAt: string | null;
+      metadata?: Record<string, unknown>;
+    }>;
+    message: string;
+  };
+  error?: string;
+}
+
+async function searchByFaceImage(imageBase64: string): Promise<{ results: BioSearchResult[]; facesDetected: number; message: string }> {
+  if (!API_URL) return { results: [], facesDetected: 0, message: 'API URL not configured.' };
+  const token = localStorage.getItem('aion_token');
+  if (!token) return { results: [], facesDetected: 0, message: 'Not authenticated.' };
+
+  // Try the real InsightFace-backed endpoint first
+  const resp = await fetch(`${API_URL}/face-recognition/search`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ targetEmbedding: embedding }),
+    body: JSON.stringify({ image: imageBase64 }),
   });
 
-  if (!resp.ok) return [];
-  const hits = await resp.json();
-  return hits.map((h: any) => ({
-    id: h.subjectId,
-    match: h.matchPercentage,
-    location: h.lastSeenLocationId || 'Unknown',
-    time: h.lastSeenAt ? new Date(h.lastSeenAt).toLocaleString('es-CO') : 'N/A',
-    features: h.features || [],
+  if (!resp.ok) {
+    // Fallback to legacy biomarkers/search with dummy embedding
+    return { results: [], facesDetected: 0, message: `Face recognition service returned ${resp.status}.` };
+  }
+
+  const json: FaceSearchResponse = await resp.json();
+  if (!json.success || !json.data) {
+    return { results: [], facesDetected: 0, message: json.error || 'Unknown error.' };
+  }
+
+  const { faces_detected, matches, message } = json.data;
+  const mapped = (matches || []).map((m) => ({
+    id: m.subjectId,
+    match: m.matchPercentage,
+    location: m.lastSeenLocationId || 'Unknown',
+    time: m.lastSeenAt ? new Date(m.lastSeenAt).toLocaleString('es-CO') : 'N/A',
+    features: m.features || [],
   }));
-}
 
-// Generate a simple feature embedding from an image using canvas pixel sampling
-function extractBasicEmbedding(imageUrl: string): Promise<number[]> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 64;
-      canvas.height = 64;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0, 64, 64);
-      const data = ctx.getImageData(0, 0, 64, 64).data;
-      // Downsample to 128-dim vector (average blocks of pixels)
-      const embedding: number[] = [];
-      const blockSize = Math.floor(data.length / 128);
-      for (let i = 0; i < 128; i++) {
-        let sum = 0;
-        for (let j = 0; j < blockSize && (i * blockSize + j) < data.length; j++) {
-          sum += data[i * blockSize + j];
-        }
-        embedding.push(parseFloat((sum / blockSize / 255).toFixed(4)));
-      }
-      resolve(embedding);
-    };
-    img.onerror = () => resolve(Array.from({ length: 128 }, () => Math.random()));
-    img.src = imageUrl;
-  });
+  return { results: mapped, facesDetected: faces_detected, message };
 }
 
 export default function BiogeneticSearchPage() {
@@ -103,20 +124,22 @@ export default function BiogeneticSearchPage() {
     }, 300);
 
     try {
-      const embedding = await extractBasicEmbedding(uploadedImage);
-      setScanProgress(70);
+      const imageBase64 = await imageUrlToBase64(uploadedImage);
+      setScanProgress(50);
 
-      const backendResults = await searchBiomarkers(embedding);
+      const { results: backendResults, facesDetected, message } = await searchByFaceImage(imageBase64);
       clearInterval(progressInterval);
       setScanProgress(100);
 
-      if (backendResults.length > 0) {
-        setResults(backendResults);
-        toast.success('Search Complete', { description: `${backendResults.length} matches found in database.` });
-      } else {
-        // No backend results — show empty state (no mock data)
+      if (facesDetected === 0) {
         setResults([]);
-        toast.info('Search Complete', { description: 'No matches found. Database may be empty or backend unavailable.' });
+        toast.info('No Face Detected', { description: message || 'Could not detect a face in the uploaded image.' });
+      } else if (backendResults.length > 0) {
+        setResults(backendResults);
+        toast.success('Search Complete', { description: `${backendResults.length} matches found (${facesDetected} face(s) detected).` });
+      } else {
+        setResults([]);
+        toast.info('Search Complete', { description: message || 'Face detected but no matches in database.' });
       }
     } catch (err) {
       clearInterval(progressInterval);
@@ -283,7 +306,7 @@ export default function BiogeneticSearchPage() {
                     </div>
 
                     <div className="mt-3 sm:mt-0 flex flex-wrap gap-1 w-full sm:w-auto justify-end">
-                      {r.features.map((f: string, j: number) => (
+                      {(r.features || []).map((f: string, j: number) => (
                         <Badge key={j} variant="outline" className="text-[9px] bg-black/40 border-muted-foreground/30">{f}</Badge>
                       ))}
                     </div>

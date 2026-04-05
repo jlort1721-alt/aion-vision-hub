@@ -250,7 +250,7 @@ export default function EventsPage() {
                       <TableCell>
                         <div>
                           <p className="text-sm font-medium">{event.title}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{event.event_type.replace(/_/g, ' ')}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{(event.event_type || 'unknown').replace(/_/g, ' ')}</p>
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-xs">{device?.name}</TableCell>

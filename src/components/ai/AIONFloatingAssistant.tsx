@@ -183,7 +183,7 @@ export function AIONFloatingAssistant() {
 
     // Try to find a Spanish voice
     const voices = window.speechSynthesis.getVoices();
-    const spanishVoice = voices.find(v => v.lang.startsWith('es'));
+    const spanishVoice = voices.find(v => (v.lang || '').startsWith('es'));
     if (spanishVoice) utterance.voice = spanishVoice;
 
     window.speechSynthesis.speak(utterance);

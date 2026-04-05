@@ -1,0 +1,132 @@
+{
+  "version": 2,
+  "defaults": {
+    "security": "deny",
+    "ask": "always",
+    "askFallback": "deny",
+    "autoAllowSkills": false
+  },
+  "agents": {
+    "global": {
+      "security": "deny",
+      "ask": "always",
+      "askFallback": "deny",
+      "autoAllowSkills": false,
+      "allowlist": []
+    },
+    "aion-reader": {
+      "security": "allowlist",
+      "ask": "never",
+      "askFallback": "deny",
+      "autoAllowSkills": false,
+      "allowlist": [
+        { "pattern": "/usr/local/sbin/aion-status" },
+        { "pattern": "/usr/local/sbin/aion-health" },
+        { "pattern": "/usr/local/sbin/aion-health *" },
+        { "pattern": "/usr/local/sbin/aion-logs" },
+        { "pattern": "/usr/local/sbin/aion-logs *" },
+        { "pattern": "/usr/local/sbin/aion-disk-usage" },
+        { "pattern": "/usr/local/sbin/aion-redis-ping" },
+        { "pattern": "/usr/local/sbin/aion-pg-status" },
+        { "pattern": "/usr/local/sbin/aion-go2rtc-status" },
+        { "pattern": "/usr/local/sbin/aion-nginx-test" },
+        { "pattern": "/usr/local/sbin/aion-api-query" },
+        { "pattern": "/usr/local/sbin/aion-api-query *" },
+        { "pattern": "/usr/local/sbin/aion-mqtt-read" },
+        { "pattern": "/usr/local/sbin/aion-mqtt-read *" },
+        { "pattern": "/usr/local/sbin/aion-asterisk-status" },
+        { "pattern": "/usr/local/sbin/aion-db-query" },
+        { "pattern": "/usr/local/sbin/aion-db-query *" }
+      ]
+    },
+    "aion-ops": {
+      "security": "allowlist",
+      "ask": "always",
+      "askFallback": "deny",
+      "autoAllowSkills": false,
+      "allowlist": [
+        { "pattern": "/usr/local/sbin/aion-status" },
+        { "pattern": "/usr/local/sbin/aion-health" },
+        { "pattern": "/usr/local/sbin/aion-health *" },
+        { "pattern": "/usr/local/sbin/aion-logs" },
+        { "pattern": "/usr/local/sbin/aion-logs *" },
+        { "pattern": "/usr/local/sbin/aion-restart" },
+        { "pattern": "/usr/local/sbin/aion-restart *" },
+        { "pattern": "/usr/local/sbin/aion-nginx-test" },
+        { "pattern": "/usr/local/sbin/aion-disk-usage" },
+        { "pattern": "/usr/local/sbin/aion-redis-ping" },
+        { "pattern": "/usr/local/sbin/aion-pg-status" },
+        { "pattern": "/usr/local/sbin/aion-go2rtc-status" },
+        { "pattern": "/usr/local/sbin/aion-db-backup" },
+        { "pattern": "/usr/local/sbin/aion-db-backup *" },
+        { "pattern": "/usr/local/sbin/aion-api-query" },
+        { "pattern": "/usr/local/sbin/aion-api-query *" }
+      ]
+    },
+    "aion-db-reader": {
+      "security": "allowlist",
+      "ask": "always",
+      "askFallback": "deny",
+      "autoAllowSkills": false,
+      "allowlist": [
+        { "pattern": "/usr/local/sbin/aion-db-query" },
+        { "pattern": "/usr/local/sbin/aion-db-query *" }
+      ]
+    },
+    "aion-devops": {
+      "security": "allowlist",
+      "ask": "always",
+      "askFallback": "deny",
+      "autoAllowSkills": false,
+      "allowlist": [
+        { "pattern": "/usr/local/sbin/aion-git" },
+        { "pattern": "/usr/local/sbin/aion-git *" },
+        { "pattern": "/usr/local/sbin/aion-build" },
+        { "pattern": "/usr/local/sbin/aion-build *" },
+        { "pattern": "/usr/local/sbin/aion-test" },
+        { "pattern": "/usr/local/sbin/aion-test *" },
+        { "pattern": "/usr/local/sbin/aion-deploy" },
+        { "pattern": "/usr/local/sbin/aion-deploy *" },
+        { "pattern": "/usr/local/sbin/aion-rollback" },
+        { "pattern": "/usr/local/sbin/aion-rollback *" },
+        { "pattern": "/usr/local/sbin/aion-health" },
+        { "pattern": "/usr/local/sbin/aion-health *" },
+        { "pattern": "/usr/local/sbin/aion-status" },
+        { "pattern": "/usr/local/sbin/aion-logs" },
+        { "pattern": "/usr/local/sbin/aion-logs *" }
+      ]
+    },
+    "aion-automator": {
+      "security": "allowlist",
+      "ask": "always",
+      "askFallback": "deny",
+      "autoAllowSkills": false,
+      "allowlist": [
+        { "pattern": "/usr/local/sbin/aion-automation" },
+        { "pattern": "/usr/local/sbin/aion-automation *" },
+        { "pattern": "/usr/local/sbin/aion-internal-agent" },
+        { "pattern": "/usr/local/sbin/aion-internal-agent *" },
+        { "pattern": "/usr/local/sbin/aion-api-query" },
+        { "pattern": "/usr/local/sbin/aion-api-query *" },
+        { "pattern": "/usr/local/sbin/aion-health" },
+        { "pattern": "/usr/local/sbin/aion-health *" },
+        { "pattern": "/usr/local/sbin/aion-status" },
+        { "pattern": "/usr/local/sbin/aion-logs" },
+        { "pattern": "/usr/local/sbin/aion-logs *" },
+        { "pattern": "/usr/local/sbin/aion-mqtt-read" },
+        { "pattern": "/usr/local/sbin/aion-mqtt-read *" },
+        { "pattern": "/usr/local/sbin/aion-db-query" },
+        { "pattern": "/usr/local/sbin/aion-db-query *" }
+      ]
+    },
+    "aion-improver": {
+      "security": "allowlist",
+      "ask": "always",
+      "askFallback": "deny",
+      "autoAllowSkills": false,
+      "allowlist": [
+        { "pattern": "/usr/local/sbin/aion-*" }
+      ]
+    }
+  }
+}

@@ -247,7 +247,7 @@ export default function DevicesPage() {
           {selected.tags && selected.tags.length > 0 && (
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">{t('devices.tags')}</CardTitle></CardHeader>
-              <CardContent><div className="flex flex-wrap gap-1">{selected.tags.map((tag: string) => <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>)}</div></CardContent>
+              <CardContent><div className="flex flex-wrap gap-1">{(selected.tags || []).map((tag: string) => <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>)}</div></CardContent>
             </Card>
           )}
           {selected.notes && (

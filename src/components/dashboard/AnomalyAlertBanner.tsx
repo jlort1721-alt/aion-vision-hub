@@ -47,7 +47,7 @@ export default function AnomalyAlertBanner() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
-                {anomaly.type.replace('_', ' ')}
+                {(anomaly.type || 'unknown').replace('_', ' ')}
               </Badge>
               <Badge variant={anomaly.severity === 'critical' ? 'destructive' : 'secondary'} className="text-[10px]">
                 {anomaly.severity}

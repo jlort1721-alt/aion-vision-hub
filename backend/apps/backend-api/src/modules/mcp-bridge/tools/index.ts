@@ -54,6 +54,9 @@ import { knowledgeTools } from './knowledge-tools.js';
 import { automationQueryTools } from './automation-query-tools.js';
 import { aiSummaryTools } from './ai-summary-tools.js';
 import { hikvisionISAPITools } from './hikvision-isapi-tools.js';
+import { cameraStreamTools } from './camera-stream-tools.js';
+import { systemHealthTools } from './system-health-tools.js';
+import { remoteAccessTools } from './remote-access-tools.js';
 
 // ── Tool Registry ────────────────────────────────────────────
 
@@ -81,6 +84,9 @@ const allTools: MCPServerTool[] = [
   ...automationQueryTools,
   ...aiSummaryTools,
   ...hikvisionISAPITools,
+  ...cameraStreamTools,
+  ...systemHealthTools,
+  ...remoteAccessTools,
 ];
 
 // Populate the registry

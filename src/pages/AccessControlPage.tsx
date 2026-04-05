@@ -509,7 +509,7 @@ export default function AccessControlPage() {
                               key={i}
                               className={cn(
                                 'w-5 h-5 rounded text-[9px] flex items-center justify-center font-medium',
-                                sched.dayOfWeek.includes(i)
+                                (sched.dayOfWeek || []).includes(i)
                                   ? 'bg-primary text-primary-foreground'
                                   : 'bg-muted text-muted-foreground',
                               )}

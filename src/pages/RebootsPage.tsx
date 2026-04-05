@@ -97,7 +97,7 @@ export default function RebootsPage() {
         : '\nNo hay dispositivos offline actualmente.';
       const resp = await aiApi.chat([
         { role: 'system', content: 'Eres un experto en diagnostico de sistemas de videovigilancia y seguridad electronica. Responde en espanol, de forma concisa y tecnica.' },
-        { role: 'user', content: `Diagnostica el siguiente escenario para el procedimiento "${procedure.title}":\nPasos del procedimiento: ${procedure.steps.join(' -> ')}${offlineInfo}\n\nProporciona un diagnostico breve con posibles causas y estado estimado.` },
+        { role: 'user', content: `Diagnostica el siguiente escenario para el procedimiento "${procedure.title}":\nPasos del procedimiento: ${(procedure.steps || []).join(' -> ')}${offlineInfo}\n\nProporciona un diagnostico breve con posibles causas y estado estimado.` },
       ], { temperature: 0.4, maxTokens: 1024 });
       setAiResult(resp.data.content);
     } catch (err: any) {
@@ -250,7 +250,7 @@ export default function RebootsPage() {
               <div className="border-t p-3 space-y-2">
                 <p className="text-xs font-semibold">{procedure.title}</p>
                 <div className="space-y-1.5">
-                  {procedure.steps.map((step, i) => (
+                  {(procedure.steps || []).map((step, i) => (
                     <div key={i} className="flex items-start gap-2">
                       <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><span className="text-[9px] font-bold text-primary">{i + 1}</span></div>
                       <p className="text-[11px] text-muted-foreground pt-0.5">{step}</p>

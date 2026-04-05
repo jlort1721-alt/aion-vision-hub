@@ -162,7 +162,7 @@ export function useEWeLinkToggle() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ deviceId, on }: { deviceId: string; on: boolean }) => {
-      return apiClient.post(`/domotics/ewelink/${deviceId}/toggle`, { on });
+      return apiClient.post(`/domotics/ewelink/${deviceId}/control`, { outlet: 0, switch: on ? 'on' : 'off' });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ewelink-devices'] });

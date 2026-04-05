@@ -44,7 +44,7 @@ export default function EventDetailPanel({ event, devices, sites, actionLoading,
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">Details</CardTitle></CardHeader>
         <CardContent className="space-y-1 text-sm">
-          <div className="flex justify-between"><span className="text-muted-foreground">Type</span><span className="capitalize">{event.event_type.replace(/_/g, ' ')}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Type</span><span className="capitalize">{(event.event_type || 'unknown').replace(/_/g, ' ')}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Device</span><span>{devices.find(d => d.id === event.device_id)?.name}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Site</span><span>{sites.find(s => s.id === event.site_id)?.name?.split('—')[0]?.trim()}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Created</span><span>{new Date(event.created_at).toLocaleString()}</span></div>

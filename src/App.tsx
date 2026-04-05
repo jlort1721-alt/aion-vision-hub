@@ -99,12 +99,16 @@ const DocumentsPage = lazy(() => import("@/pages/DocumentsPage"));
 const MinutaPage = lazy(() => import("@/pages/MinutaPage"));
 const PhonePanelPage = lazy(() => import("@/pages/PhonePanelPage"));
 const NetworkPage = lazy(() => import("@/pages/NetworkPage"));
+const RemoteAccessPage = lazy(() => import("@/pages/RemoteAccessPage"));
 const OperationsPanelPage = lazy(() => import("@/pages/OperationsPanelPage"));
 const GuardMobilePage = lazy(() => import("@/pages/GuardMobilePage"));
 const OnboardingWizardPage = lazy(() => import("@/pages/OnboardingWizardPage"));
 const OperationalDashboardPage = lazy(() => import("@/pages/OperationalDashboardPage"));
 const ResidentsAdminPage = lazy(() => import("@/pages/ResidentsAdminPage"));
 const UserManualPage = lazy(() => import("@/pages/UserManualPage"));
+const FloorPlanPage = lazy(() => import("@/pages/FloorPlanPage"));
+const SkillsPage = lazy(() => import("@/pages/SkillsPage"));
+const CameraHealthPage = lazy(() => import("@/pages/CameraHealthPage"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage"));
 const TermsPage = lazy(() => import("@/pages/TermsPage"));
@@ -171,6 +175,7 @@ function AppRoutes() {
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route path="dashboard" element={<ModuleGuard module="dashboard"><DashboardPage /></ModuleGuard>} />
           <Route path="live-view" element={<ModuleGuard module="live_view"><LiveViewPage /></ModuleGuard>} />
+          <Route path="floor-plan" element={<ModuleGuard module="live_view"><FloorPlanPage /></ModuleGuard>} />
           <Route path="immersive" element={<ModuleGuard module="live_view"><Immersive3DPage /></ModuleGuard>} />
           <Route path="biogenetic-search" element={<ModuleGuard module="analytics"><BiogeneticSearchPage /></ModuleGuard>} />
           <Route path="predictive-criminology" element={<ModuleGuard module="analytics"><PredictiveCriminologyPage /></ModuleGuard>} />
@@ -206,12 +211,15 @@ function AppRoutes() {
           <Route path="keys" element={<ModuleGuard module="keys"><KeysPage /></ModuleGuard>} />
           <Route path="compliance" element={<ModuleGuard module="compliance"><CompliancePage /></ModuleGuard>} />
           <Route path="training" element={<ModuleGuard module="training"><TrainingPage /></ModuleGuard>} />
+          <Route path="skills" element={<SkillsPage />} />
           <Route path="posts" element={<ModuleGuard module="posts"><PostsPage /></ModuleGuard>} />
           <Route path="notes" element={<ModuleGuard module="notes"><NotesPage /></ModuleGuard>} />
           <Route path="documents" element={<ModuleGuard module="documents"><DocumentsPage /></ModuleGuard>} />
           <Route path="minuta" element={<ModuleGuard module="minuta"><MinutaPage /></ModuleGuard>} />
           <Route path="phone" element={<ModuleGuard module="phone"><PhonePanelPage /></ModuleGuard>} />
           <Route path="network" element={<ModuleGuard module="system"><NetworkPage /></ModuleGuard>} />
+          <Route path="remote-access" element={<ModuleGuard module="system"><RemoteAccessPage /></ModuleGuard>} />
+          <Route path="camera-health" element={<ModuleGuard module="live_view"><CameraHealthPage /></ModuleGuard>} />
           <Route path="operations" element={<ModuleGuard module="operations"><OperationsPanelPage /></ModuleGuard>} />
           <Route path="admin/dashboard" element={<OperationalDashboardPage />} />
           <Route path="admin/residents" element={<ResidentsAdminPage />} />

@@ -32,7 +32,7 @@ export default function AnalyticsPage() {
 
   const { data: trendsData, isLoading: loadingTrends } = useQuery({
     queryKey: ["analytics", "events", "trends"],
-    queryFn: () => analyticsEventsApi.trends({ from: thirtyDaysAgo, to: today, period: "day" }),
+    queryFn: () => analyticsEventsApi.trends({ from: thirtyDaysAgo, to: today, period: "daily" }),
   });
 
   // ── Top Event Types ──────────────────────────────────────

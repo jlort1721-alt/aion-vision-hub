@@ -1,0 +1,30 @@
+[Unit]
+Description=AION Event Bridge to OpenClaw
+After=network.target redis-server.service
+Wants=redis-server.service
+
+[Service]
+Type=simple
+User=openclaw
+Group=openclaw
+EnvironmentFile=/home/openclaw/.openclaw/.env
+ExecStart=/bin/bash /home/openclaw/aion-event-bridge.sh
+Restart=on-failure
+RestartSec=10
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/openclaw/.openclaw/
+PrivateTmp=true
+PrivateDevices=true
+
+# Logging
+StandardOutput=append:/home/openclaw/.openclaw/event-bridge.log
+StandardError=append:/home/openclaw/.openclaw/event-bridge-error.log
+
+[Install]
+WantedBy=multi-user.target

@@ -108,11 +108,11 @@ function isWidgetEnabled(widgets: WidgetConfig[], id: string): boolean {
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
-  critical: 'hsl(0, 84%, 60%)',
-  high: 'hsl(25, 95%, 53%)',
-  medium: 'hsl(48, 96%, 53%)',
-  low: 'hsl(142, 71%, 45%)',
-  info: 'hsl(217, 91%, 60%)',
+  critical: 'hsl(var(--destructive))',
+  high: 'hsl(var(--warning))',
+  medium: 'hsl(43, 96%, 56%)',
+  low: 'hsl(var(--success))',
+  info: 'hsl(var(--info))',
 };
 
 const statusIcon = (status: string) => {

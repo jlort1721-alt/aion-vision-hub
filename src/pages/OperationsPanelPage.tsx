@@ -811,7 +811,7 @@ function DatabaseSearchCard() {
                 </div>
                 {record.tags && record.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {record.tags.slice(0, 3).map((tag: string) => (
+                    {(record.tags || []).slice(0, 3).map((tag: string) => (
                       <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{tag}</span>
                     ))}
                   </div>

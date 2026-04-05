@@ -31,7 +31,7 @@ export default function Logo({ variant = 'dark', width, height, className = '', 
   };
 
   const h = height || defaultHeights[variant] || 60;
-  const w = width || 'auto';
+  const w = width || undefined;
 
   return (
     <a
@@ -50,7 +50,7 @@ export default function Logo({ variant = 'dark', width, height, className = '', 
   );
 }
 
-function IconVariant({ width, height }: { width: string | number; height: string | number }) {
+function IconVariant({ width, height }: { width?: string | number; height: string | number }) {
   return (
     <svg width={width} height={height} viewBox="0 0 96 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Clave Seguridad CTA">
       <defs>
@@ -73,7 +73,7 @@ function IconVariant({ width, height }: { width: string | number; height: string
   );
 }
 
-function CompactVariant({ width, height }: { width: string | number; height: string | number }) {
+function CompactVariant({ width, height }: { width?: string | number; height: string | number }) {
   return (
     <svg width={width} height={height} viewBox="0 0 300 50" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Clave Seguridad CTA">
       <defs>
@@ -92,7 +92,7 @@ function CompactVariant({ width, height }: { width: string | number; height: str
   );
 }
 
-function MinimalVariant({ width, height }: { width: string | number; height: string | number }) {
+function MinimalVariant({ width, height }: { width?: string | number; height: string | number }) {
   return (
     <svg width={width} height={height} viewBox="0 0 238 52" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Clave Seguridad CTA">
       <defs>
@@ -110,7 +110,7 @@ function MinimalVariant({ width, height }: { width: string | number; height: str
   );
 }
 
-function DarkVariant({ width, height }: { width: string | number; height: string | number }) {
+function DarkVariant({ width, height }: { width?: string | number; height: string | number }) {
   return (
     <svg width={width} height={height} viewBox="0 0 440 108" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Clave Seguridad CTA">
       <defs>
@@ -177,7 +177,7 @@ function DarkVariant({ width, height }: { width: string | number; height: string
   );
 }
 
-function LightVariant({ width, height }: { width: string | number; height: string | number }) {
+function LightVariant({ width, height }: { width?: string | number; height: string | number }) {
   return (
     <svg width={width} height={height} viewBox="0 0 440 108" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Clave Seguridad CTA">
       <defs>

@@ -8,19 +8,19 @@ import { apiClient } from '@/lib/api-client';
 
 export const shiftsApi = {
   list: (filters?: { isActive?: string; page?: number; perPage?: number }) =>
-    apiClient.get<{ success: boolean; data: Record<string, unknown>[]; meta: Record<string, unknown> }>('/shifts/shifts', filters as Record<string, string | number | boolean | undefined>),
+    apiClient.get<{ success: boolean; data: Record<string, unknown>[]; meta: Record<string, unknown> }>('/shifts', filters as Record<string, string | number | boolean | undefined>),
 
   get: (id: string) =>
-    apiClient.get<{ success: boolean; data: Record<string, unknown> }>(`/shifts/shifts/${id}`),
+    apiClient.get<{ success: boolean; data: Record<string, unknown> }>(`/shifts/${id}`),
 
   create: (shift: Record<string, unknown>) =>
-    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/shifts/shifts', shift),
+    apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/shifts', shift),
 
   update: (id: string, updates: Record<string, unknown>) =>
-    apiClient.patch<{ success: boolean; data: Record<string, unknown> }>(`/shifts/shifts/${id}`, updates),
+    apiClient.patch<{ success: boolean; data: Record<string, unknown> }>(`/shifts/${id}`, updates),
 
   delete: (id: string) =>
-    apiClient.delete<void>(`/shifts/shifts/${id}`),
+    apiClient.delete<void>(`/shifts/${id}`),
 };
 
 // ── Shift Assignments ─────────────────────────────────────

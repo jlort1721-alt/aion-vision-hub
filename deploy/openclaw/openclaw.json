@@ -1,0 +1,482 @@
+{
+  "gateway": {
+    "mode": "local",
+    "bind": "loopback",
+    "auth": {
+      "mode": "token",
+      "token": "${OPENCLAW_GATEWAY_TOKEN}",
+      "allowTailscale": false
+    },
+    "reload": {
+      "mode": "hybrid",
+      "debounceMs": 300
+    }
+  },
+
+  "session": {
+    "dmScope": "per-channel-peer",
+    "reset": {
+      "mode": "daily",
+      "atHour": 4,
+      "idleMinutes": 120
+    }
+  },
+
+  "tools": {
+    "profile": "messaging",
+    "deny": [
+      "group:automation",
+      "group:runtime",
+      "group:fs",
+      "gateway",
+      "cron",
+      "sessions_spawn",
+      "sessions_send"
+    ],
+    "fs": {
+      "workspaceOnly": true
+    },
+    "exec": {
+      "security": "deny",
+      "ask": "always",
+      "strictInlineEval": true
+    },
+    "elevated": {
+      "enabled": false
+    }
+  },
+
+  "channels": {
+    "whatsapp": {
+      "dmPolicy": "pairing",
+      "allowFrom": ["+57REEMPLAZA_TU_NUMERO"],
+      "groups": {
+        "*": {
+          "requireMention": true
+        }
+      }
+    }
+  },
+
+  "agents": {
+    "defaults": {
+      "workspace": "~/.openclaw/workspace",
+      "heartbeat": {
+        "every": "0m"
+      },
+      "sandbox": {
+        "mode": "all",
+        "backend": "docker",
+        "scope": "agent",
+        "docker": {
+          "image": "openclaw-sandbox:bookworm-slim",
+          "network": "none",
+          "resources": {
+            "cpus": "1.0",
+            "memory": "512m",
+            "pidsLimit": 256,
+            "readonlyRootfs": true,
+            "tmpfsSize": "64m"
+          }
+        }
+      }
+    },
+    "list": [
+      {
+        "id": "global",
+        "description": "Asistente general AION — mensajeria, consultas, reportes",
+        "workspace": "~/.openclaw/workspace",
+        "systemPrompt": "Eres el asistente AI de AION, la plataforma de seguridad de Clave Seguridad. Tu rol es responder consultas generales sobre el sistema, explicar funcionalidades, y ayudar con dudas operativas. NO tienes acceso a ejecutar comandos ni modificar el sistema. Responde en espanol. Si te piden algo operativo, sugiere usar el agente aion-reader o aion-ops.",
+        "tools": {
+          "profile": "messaging",
+          "deny": [
+            "group:automation",
+            "group:runtime",
+            "group:fs",
+            "gateway",
+            "cron",
+            "sessions_spawn",
+            "sessions_send"
+          ],
+          "exec": {
+            "security": "deny"
+          },
+          "elevated": {
+            "enabled": false
+          }
+        }
+      },
+      {
+        "id": "aion-reader",
+        "description": "Monitor AION — lee estado, logs, health, metricas, API, MQTT",
+        "workspace": "~/.openclaw/workspace-aion-reader",
+        "systemPrompt": "Eres el monitor de AION. Tu trabajo es observar el estado de la plataforma sin modificarla. Puedes ejecutar wrappers de lectura para consultar: estado de PM2, health checks, logs de servicios, estado de Redis/PostgreSQL/go2rtc/Nginx/Asterisk/MQTT, consultas SQL read-only, y endpoints GET del API. Responde en espanol con datos concretos. Cuando detectes problemas, reportalos con severidad (info/warn/crit) y sugiere acciones pero NO las ejecutes — eso es trabajo del agente aion-ops. Nunca inventes datos; si un comando falla, di que fallo.",
+        "tools": {
+          "profile": "messaging",
+          "deny": [
+            "group:automation",
+            "group:runtime",
+            "gateway",
+            "cron",
+            "sessions_spawn",
+            "sessions_send"
+          ],
+          "fs": {
+            "workspaceOnly": true,
+            "readPaths": [
+              "/opt/aion/logs/*.log"
+            ]
+          },
+          "exec": {
+            "security": "allowlist",
+            "ask": "never",
+            "askFallback": "deny",
+            "allowlist": [
+              "/usr/local/sbin/aion-status",
+              "/usr/local/sbin/aion-health",
+              "/usr/local/sbin/aion-health *",
+              "/usr/local/sbin/aion-logs",
+              "/usr/local/sbin/aion-logs *",
+              "/usr/local/sbin/aion-disk-usage",
+              "/usr/local/sbin/aion-redis-ping",
+              "/usr/local/sbin/aion-pg-status",
+              "/usr/local/sbin/aion-go2rtc-status",
+              "/usr/local/sbin/aion-nginx-test",
+              "/usr/local/sbin/aion-api-query",
+              "/usr/local/sbin/aion-api-query *",
+              "/usr/local/sbin/aion-mqtt-read",
+              "/usr/local/sbin/aion-mqtt-read *",
+              "/usr/local/sbin/aion-asterisk-status",
+              "/usr/local/sbin/aion-db-query",
+              "/usr/local/sbin/aion-db-query *"
+            ]
+          },
+          "elevated": {
+            "enabled": false
+          }
+        },
+        "sandbox": {
+          "mode": "all",
+          "backend": "docker",
+          "scope": "agent",
+          "docker": {
+            "image": "openclaw-sandbox:bookworm-slim",
+            "network": "none",
+            "resources": {
+              "cpus": "0.5",
+              "memory": "256m",
+              "pidsLimit": 128
+            }
+          }
+        }
+      },
+      {
+        "id": "aion-ops",
+        "description": "Operador AION — restart, backup, acciones con aprobacion",
+        "workspace": "~/.openclaw/workspace-aion-ops",
+        "systemPrompt": "Eres el operador de AION. Puedes ejecutar acciones que modifican el sistema: reiniciar servicios PM2 y crear backups de PostgreSQL. TODAS las acciones requieren aprobacion explicita del usuario. Antes de reiniciar un servicio, siempre ejecuta aion-health para verificar el estado actual. Despues de reiniciar, ejecuta aion-health de nuevo para confirmar que el servicio volvio a estar online. Responde en espanol. Nunca reinicies multiples servicios a la vez sin confirmacion explicita. Si algo falla, NO reintentes automaticamente — reporta y espera instrucciones.",
+        "tools": {
+          "profile": "messaging",
+          "deny": [
+            "group:automation",
+            "group:runtime",
+            "gateway",
+            "cron",
+            "sessions_spawn",
+            "sessions_send"
+          ],
+          "fs": {
+            "workspaceOnly": true
+          },
+          "exec": {
+            "security": "allowlist",
+            "ask": "always",
+            "askFallback": "deny",
+            "allowlist": [
+              "/usr/local/sbin/aion-status",
+              "/usr/local/sbin/aion-health",
+              "/usr/local/sbin/aion-health *",
+              "/usr/local/sbin/aion-logs",
+              "/usr/local/sbin/aion-logs *",
+              "/usr/local/sbin/aion-restart",
+              "/usr/local/sbin/aion-restart *",
+              "/usr/local/sbin/aion-nginx-test",
+              "/usr/local/sbin/aion-disk-usage",
+              "/usr/local/sbin/aion-redis-ping",
+              "/usr/local/sbin/aion-pg-status",
+              "/usr/local/sbin/aion-go2rtc-status",
+              "/usr/local/sbin/aion-db-backup",
+              "/usr/local/sbin/aion-db-backup *",
+              "/usr/local/sbin/aion-api-query",
+              "/usr/local/sbin/aion-api-query *"
+            ]
+          },
+          "elevated": {
+            "enabled": true,
+            "allowFrom": {
+              "whatsapp": ["+57REEMPLAZA_TU_NUMERO"]
+            }
+          }
+        },
+        "sandbox": {
+          "mode": "all",
+          "backend": "docker",
+          "scope": "agent",
+          "docker": {
+            "image": "openclaw-sandbox:bookworm-slim",
+            "network": "none",
+            "resources": {
+              "cpus": "1.0",
+              "memory": "512m",
+              "pidsLimit": 256
+            }
+          }
+        }
+      },
+      {
+        "id": "aion-db-reader",
+        "description": "Analista SQL AION — consultas read-only contra PostgreSQL",
+        "workspace": "~/.openclaw/workspace-aion-reader",
+        "systemPrompt": "Eres el analista de datos de AION. Puedes ejecutar consultas SQL SELECT contra la base de datos aionseg_prod usando un usuario read-only. La base tiene tablas como: sites, devices, cameras, residents, vehicles, events, incidents, alert_instances, notification_log, audit_logs, access_logs, visitors, shifts, patrols, contracts, whatsapp_messages, entre otras. Responde en espanol con datos tabulares claros. No inventes datos si la query falla. Las queries tienen timeout de 10s y limite de 1000 filas. No puedes ejecutar INSERT/UPDATE/DELETE/DROP ni ninguna operacion de escritura.",
+        "tools": {
+          "profile": "messaging",
+          "deny": [
+            "group:automation",
+            "group:runtime",
+            "group:fs",
+            "gateway",
+            "cron"
+          ],
+          "exec": {
+            "security": "allowlist",
+            "ask": "always",
+            "askFallback": "deny",
+            "allowlist": [
+              "/usr/local/sbin/aion-db-query",
+              "/usr/local/sbin/aion-db-query *"
+            ]
+          },
+          "elevated": {
+            "enabled": false
+          }
+        }
+      },
+      {
+        "id": "aion-devops",
+        "description": "DevOps AION — desarrollo, build, test, deploy con rollback automatico",
+        "workspace": "~/.openclaw/workspace-aion-ops",
+        "systemPrompt": "Eres el ingeniero DevOps de AION. Tienes capacidad completa de desarrollo: leer codigo, modificarlo, hacer build, ejecutar tests, deployar a produccion y hacer rollback si algo falla.\n\nTu ciclo de trabajo es:\n1. ANALIZAR: Usa aion-git grep/read/find para entender el problema\n2. MODIFICAR: Usa aion-git edit/write para aplicar el fix\n3. BUILD: Usa aion-build para compilar\n4. TEST: Usa aion-test para verificar que no rompes nada\n5. DEPLOY: Usa aion-deploy que incluye pre-checks, snapshot de rollback, post-deploy health check, y rollback automatico si falla\n\nREGLAS CRITICAS:\n- NUNCA deploys sin correr tests primero\n- NUNCA modifiques archivos .env o credenciales\n- NUNCA hagas mas de 3 deploys por hora\n- Cada commit debe tener prefijo [openclaw]\n- Si el deploy falla y el rollback automatico no funciona, PARA y reporta inmediatamente\n- Prefiere cambios pequenos e incrementales sobre refactors masivos\n- Responde en espanol\n- Antes de modificar codigo, siempre lee el archivo completo para entender el contexto",
+        "tools": {
+          "profile": "messaging",
+          "deny": [
+            "gateway",
+            "cron",
+            "sessions_spawn"
+          ],
+          "fs": {
+            "workspaceOnly": false,
+            "readPaths": [
+              "/home/openclaw/devops/staging/**",
+              "/opt/aion/logs/*.log"
+            ],
+            "writePaths": [
+              "/home/openclaw/devops/**"
+            ]
+          },
+          "exec": {
+            "security": "allowlist",
+            "ask": "always",
+            "askFallback": "deny",
+            "allowlist": [
+              "/usr/local/sbin/aion-git",
+              "/usr/local/sbin/aion-git *",
+              "/usr/local/sbin/aion-build",
+              "/usr/local/sbin/aion-build *",
+              "/usr/local/sbin/aion-test",
+              "/usr/local/sbin/aion-test *",
+              "/usr/local/sbin/aion-deploy",
+              "/usr/local/sbin/aion-deploy *",
+              "/usr/local/sbin/aion-rollback",
+              "/usr/local/sbin/aion-rollback *",
+              "/usr/local/sbin/aion-health",
+              "/usr/local/sbin/aion-health *",
+              "/usr/local/sbin/aion-status",
+              "/usr/local/sbin/aion-logs",
+              "/usr/local/sbin/aion-logs *"
+            ]
+          },
+          "elevated": {
+            "enabled": true,
+            "allowFrom": {
+              "whatsapp": ["+57REEMPLAZA_TU_NUMERO"]
+            }
+          }
+        },
+        "sandbox": {
+          "mode": "tools",
+          "backend": "docker",
+          "scope": "agent",
+          "docker": {
+            "image": "openclaw-sandbox:bookworm-slim",
+            "network": "none",
+            "resources": {
+              "cpus": "2.0",
+              "memory": "1g",
+              "pidsLimit": 512
+            }
+          }
+        }
+      },
+      {
+        "id": "aion-automator",
+        "description": "Automator AION — automation rules, internal agent, event bus, MCP tools",
+        "workspace": "~/.openclaw/workspace-aion-ops",
+        "systemPrompt": "Eres el automatizador de AION. Tu trabajo es gestionar el cerebro automatico de la plataforma:\n\n1. AUTOMATION RULES: Crear, modificar, activar/desactivar reglas de automatizacion. Triggers disponibles: event, schedule, device_status, threshold, device_offline, manual. Acciones: ewelink_toggle, ewelink_siren, ewelink_door, send_notification, send_alert, create_incident, send_whatsapp, webhook, toggle_device, activate_protocol.\n\n2. INTERNAL AGENT: Consultar el agente interno de AION que corre cada 5 minutos. Puedes ver health reports, proactive alerts, predictive intelligence, y forzar analisis inmediatos.\n\n3. MCP TOOLS: Ejecutar las 22+ herramientas MCP de AION: db-read, incident management, device commands, notifications, reports, eWeLink, events, access control, alerts, emergency, operations, visitors, management, compliance, anomalies, knowledge base, automation queries, AI summaries, Hikvision ISAPI, camera streams, system health, remote access.\n\n4. EVENTS: Consultar eventos recientes, alertas activas, incidentes abiertos, y el resumen AI de turno.\n\nREGLAS:\n- Antes de crear una regla, verifica que no exista una similar\n- Las reglas de tipo emergency requieren confirmacion\n- No desactives todas las reglas a la vez\n- Responde en espanol con datos concretos\n- Cuando ejecutes MCP tools, reporta el resultado completo",
+        "tools": {
+          "profile": "messaging",
+          "deny": [
+            "group:runtime",
+            "gateway",
+            "cron",
+            "sessions_spawn"
+          ],
+          "fs": {
+            "workspaceOnly": true
+          },
+          "exec": {
+            "security": "allowlist",
+            "ask": "always",
+            "askFallback": "deny",
+            "allowlist": [
+              "/usr/local/sbin/aion-automation",
+              "/usr/local/sbin/aion-automation *",
+              "/usr/local/sbin/aion-internal-agent",
+              "/usr/local/sbin/aion-internal-agent *",
+              "/usr/local/sbin/aion-api-query",
+              "/usr/local/sbin/aion-api-query *",
+              "/usr/local/sbin/aion-health",
+              "/usr/local/sbin/aion-health *",
+              "/usr/local/sbin/aion-status",
+              "/usr/local/sbin/aion-logs",
+              "/usr/local/sbin/aion-logs *",
+              "/usr/local/sbin/aion-mqtt-read",
+              "/usr/local/sbin/aion-mqtt-read *",
+              "/usr/local/sbin/aion-db-query",
+              "/usr/local/sbin/aion-db-query *"
+            ]
+          },
+          "elevated": {
+            "enabled": true,
+            "allowFrom": {
+              "whatsapp": ["+57REEMPLAZA_TU_NUMERO"]
+            }
+          }
+        },
+        "sandbox": {
+          "mode": "all",
+          "backend": "docker",
+          "scope": "agent",
+          "docker": {
+            "image": "openclaw-sandbox:bookworm-slim",
+            "network": "none",
+            "resources": {
+              "cpus": "1.0",
+              "memory": "512m",
+              "pidsLimit": 256
+            }
+          }
+        }
+      },
+      {
+        "id": "aion-improver",
+        "description": "Mejora continua 24/7 — analiza, planifica, implementa, verifica",
+        "workspace": "~/.openclaw/workspace-aion-ops",
+        "systemPrompt": "Eres el agente de mejora continua de AION. Operas 24/7 recibiendo reportes automaticos del sistema de monitoreo continuo.\n\nCuando recibes un reporte de analisis:\n1. DIAGNOSTICA: Identifica la causa raiz del problema usando logs, health checks, y estado del sistema\n2. EVALUA: Determina si el problema requiere un fix de codigo, un cambio de configuracion, o solo una accion operativa (restart, cleanup)\n3. PLANIFICA: Escribe un plan concreto de accion\n4. IMPLEMENTA: Para acciones operativas, usa aion-ops wrappers directamente. Para fixes de codigo, coordina con el agente aion-devops\n5. VERIFICA: Tras implementar, verifica que el problema se resolvio\n6. REPORTA: Envia resumen de lo que se hizo y el resultado\n\nPRIORIDADES:\n- P0 (actuar inmediato): Servicios caidos, health critical, errores 500 masivos\n- P1 (actuar en minutos): Servicios inestables (restarts altos), disco >85%, RAM >90%\n- P2 (planificar): Errores recurrentes en logs, metricas degradadas\n- P3 (backlog): Mejoras de performance, optimizaciones, cleanup\n\nREGLAS:\n- NUNCA hagas cambios destructivos sin verificar primero\n- Para P0/P1, intenta restart del servicio antes de modificar codigo\n- Para P2/P3, crea un plan detallado antes de implementar\n- Responde en espanol\n- Si no puedes resolver algo, escala reportando por WhatsApp",
+        "tools": {
+          "profile": "messaging",
+          "deny": [
+            "gateway",
+            "cron",
+            "sessions_spawn"
+          ],
+          "fs": {
+            "workspaceOnly": false,
+            "readPaths": [
+              "/home/openclaw/devops/**",
+              "/opt/aion/logs/*.log"
+            ],
+            "writePaths": [
+              "/home/openclaw/devops/plans/**",
+              "/home/openclaw/devops/reports/**"
+            ]
+          },
+          "exec": {
+            "security": "allowlist",
+            "ask": "always",
+            "askFallback": "deny",
+            "allowlist": [
+              "/usr/local/sbin/aion-status",
+              "/usr/local/sbin/aion-health",
+              "/usr/local/sbin/aion-health *",
+              "/usr/local/sbin/aion-logs",
+              "/usr/local/sbin/aion-logs *",
+              "/usr/local/sbin/aion-restart",
+              "/usr/local/sbin/aion-restart *",
+              "/usr/local/sbin/aion-disk-usage",
+              "/usr/local/sbin/aion-redis-ping",
+              "/usr/local/sbin/aion-pg-status",
+              "/usr/local/sbin/aion-go2rtc-status",
+              "/usr/local/sbin/aion-nginx-test",
+              "/usr/local/sbin/aion-internal-agent",
+              "/usr/local/sbin/aion-internal-agent *",
+              "/usr/local/sbin/aion-automation",
+              "/usr/local/sbin/aion-automation *",
+              "/usr/local/sbin/aion-api-query",
+              "/usr/local/sbin/aion-api-query *",
+              "/usr/local/sbin/aion-git",
+              "/usr/local/sbin/aion-git *",
+              "/usr/local/sbin/aion-build",
+              "/usr/local/sbin/aion-build *",
+              "/usr/local/sbin/aion-test",
+              "/usr/local/sbin/aion-test *",
+              "/usr/local/sbin/aion-deploy",
+              "/usr/local/sbin/aion-deploy *",
+              "/usr/local/sbin/aion-rollback",
+              "/usr/local/sbin/aion-rollback *",
+              "/usr/local/sbin/aion-db-backup",
+              "/usr/local/sbin/aion-db-backup *",
+              "/usr/local/sbin/aion-db-query",
+              "/usr/local/sbin/aion-db-query *"
+            ]
+          },
+          "elevated": {
+            "enabled": true,
+            "allowFrom": {
+              "whatsapp": ["+57REEMPLAZA_TU_NUMERO"]
+            }
+          }
+        },
+        "sandbox": {
+          "mode": "tools",
+          "backend": "docker",
+          "scope": "agent",
+          "docker": {
+            "image": "openclaw-sandbox:bookworm-slim",
+            "network": "none",
+            "resources": {
+              "cpus": "2.0",
+              "memory": "1g",
+              "pidsLimit": 512
+            }
+          }
+        }
+      }
+    ]
+  },
+
+  "logging": {
+    "level": "info"
+  },
+
+  "_agents_devops": "=== AGENTS BELOW ARE FOR DEVOPS/AUTOMATOR MODE ==="
+}

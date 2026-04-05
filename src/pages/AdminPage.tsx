@@ -58,8 +58,11 @@ export default function AdminPage() {
   const { data: users = [], isLoading, isError, error, refetch } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
-      const data = await apiClient.get<UserWithRoles[]>('/users');
-      return data;
+      const data = await apiClient.get<UserWithRoles[] | { items: UserWithRoles[]; meta?: unknown }>('/users');
+      // Handle both flat array and { items, meta } envelope formats
+      if (Array.isArray(data)) return data;
+      if (data && typeof data === 'object' && 'items' in data && Array.isArray(data.items)) return data.items;
+      return [];
     },
     enabled: isAdmin,
   });
@@ -67,7 +70,7 @@ export default function AdminPage() {
   const PAGE_SIZE = 25;
 
   const filtered = users.filter(u =>
-    !search || u.full_name.toLowerCase().includes(search.toLowerCase())
+    !search || (u.full_name || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
@@ -237,13 +240,13 @@ export default function AdminPage() {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">{users.filter(u => u.roles.includes('tenant_admin') || u.roles.includes('super_admin')).length}</p>
+            <p className="text-2xl font-bold">{users.filter(u => (u.roles || []).includes('tenant_admin') || (u.roles || []).includes('super_admin')).length}</p>
             <p className="text-xs text-muted-foreground">Admins</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">{users.filter(u => u.roles.includes('operator')).length}</p>
+            <p className="text-2xl font-bold">{users.filter(u => (u.roles || []).includes('operator')).length}</p>
             <p className="text-xs text-muted-foreground">Operators</p>
           </CardContent>
         </Card>
@@ -284,7 +287,7 @@ export default function AdminPage() {
                   <TableBody>
                     {paginatedUsers.map(user => {
                       const initials = user.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || '??';
-                      const primaryRole = user.roles[0] || 'viewer';
+                      const primaryRole = (user.roles || [])[0] || 'viewer';
                       const isSelf = user.user_id === profile?.user_id;
 
                       return (
@@ -296,7 +299,7 @@ export default function AdminPage() {
                               </Avatar>
                               <div>
                                 <p className="text-sm font-medium">{user.full_name} {isSelf && <span className="text-xs text-muted-foreground">(you)</span>}</p>
-                                <p className="text-xs text-muted-foreground">{user.user_id.slice(0, 8)}...</p>
+                                <p className="text-xs text-muted-foreground">{(user.user_id || user.id || '').slice(0, 8)}...</p>
                               </div>
                             </div>
                           </TableCell>

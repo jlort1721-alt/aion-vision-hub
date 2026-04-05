@@ -101,7 +101,7 @@ export default function WhatsAppConversations() {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
-      conv.wa_contact_phone.toLowerCase().includes(q) ||
+      (conv.wa_contact_phone || '').toLowerCase().includes(q) ||
       (conv.wa_contact_name && conv.wa_contact_name.toLowerCase().includes(q))
     );
   });
@@ -273,7 +273,7 @@ export default function WhatsAppConversations() {
                       </span>
                       <Badge variant={STATUS_COLORS[conv.status]} className="gap-1 text-[10px] px-1.5">
                         {STATUS_ICONS[conv.status]}
-                        {conv.status.replace('_', ' ')}
+                        {(conv.status || '').replace('_', ' ')}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -328,7 +328,7 @@ export default function WhatsAppConversations() {
                       {selectedConv && (
                         <Badge variant={STATUS_COLORS[selectedConv.status]} className="gap-1 text-[10px] px-1.5">
                           {STATUS_ICONS[selectedConv.status]}
-                          {selectedConv.status.replace('_', ' ')}
+                          {(selectedConv?.status || '').replace('_', ' ')}
                         </Badge>
                       )}
                     </div>

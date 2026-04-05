@@ -1,0 +1,415 @@
+{
+  "_version": "1.0",
+  "_description": "Maps every AION menu item to API endpoints, wrappers, and known issues",
+  "_usage": "Used by aion-improver and aion-devops to understand the full platform",
+
+  "modules": [
+    {
+      "menu": "Panel Principal",
+      "page": "DashboardPage.tsx",
+      "api_prefix": "/operations",
+      "endpoints": ["/operations/overview", "/operations/sites-status"],
+      "backend_module": "operations",
+      "status": "full",
+      "issues": ["Widget persistence uses localStorage (not synced across devices)"]
+    },
+    {
+      "menu": "Vista en Vivo",
+      "page": "LiveViewPage.tsx",
+      "api_prefix": "/cameras",
+      "endpoints": ["/cameras/by-site", "/cameras/sync-status", "/streams"],
+      "backend_module": "cameras,streams,live-view",
+      "status": "full",
+      "issues": ["Silent stream failure fallback", "5s stall timeout could be shorter"]
+    },
+    {
+      "menu": "Plano Interactivo",
+      "page": "InteractiveMapPage.tsx",
+      "api_prefix": "/sites",
+      "endpoints": ["/sites", "/devices"],
+      "backend_module": "sites,devices",
+      "status": "partial",
+      "issues": ["May not have actual floor plan rendering"]
+    },
+    {
+      "menu": "Reproduccion",
+      "page": "PlaybackPage.tsx",
+      "api_prefix": "/streams",
+      "endpoints": ["/streams/playback-requests", "/streams/playback"],
+      "backend_module": "streams",
+      "status": "partial",
+      "issues": ["CRITICAL: Uses SIMULATED recording segments (hardcoded mock data)", "No actual video playback integration"]
+    },
+    {
+      "menu": "Eventos",
+      "page": "EventsPage.tsx",
+      "api_prefix": "/events",
+      "endpoints": ["/events", "/events/stats", "/camera-events/recent"],
+      "backend_module": "events,camera-events",
+      "status": "full",
+      "issues": ["Bulk operations continue on individual failures", "No confirmation for destructive actions"]
+    },
+    {
+      "menu": "Alertas",
+      "page": "AlertsPage.tsx",
+      "api_prefix": "/alerts",
+      "endpoints": ["/alerts", "/alerts/rules", "/alerts/escalation-policies"],
+      "backend_module": "alerts",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Incidentes",
+      "page": "IncidentsPage.tsx",
+      "api_prefix": "/incidents",
+      "endpoints": ["/incidents", "/evidence"],
+      "backend_module": "incidents,evidence",
+      "status": "full",
+      "issues": ["Comment editing not implemented", "Evidence panel external dependency"]
+    },
+    {
+      "menu": "Dispositivos",
+      "page": "DevicesPage.tsx",
+      "api_prefix": "/devices",
+      "endpoints": ["/devices", "/devices/test", "/devices/register-stream"],
+      "backend_module": "devices,cloud-accounts",
+      "status": "full",
+      "issues": ["Test connection uses direct fetch without auth headers"]
+    },
+    {
+      "menu": "Sitios",
+      "page": "SitesPage.tsx",
+      "api_prefix": "/sites",
+      "endpoints": ["/sites"],
+      "backend_module": "sites",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Domoticos",
+      "page": "DomoticsPage.tsx",
+      "api_prefix": "/domotics",
+      "endpoints": ["/domotics", "/ewelink", "/relay"],
+      "backend_module": "domotics,ewelink,relay",
+      "status": "full",
+      "issues": ["eWeLink health check incomplete", "No real-time state updates"]
+    },
+    {
+      "menu": "Control Acceso",
+      "page": "AccessControlPage.tsx",
+      "api_prefix": "/access-control",
+      "endpoints": ["/access-control", "/lpr", "/zkteco"],
+      "backend_module": "access-control,lpr,zkteco",
+      "status": "partial",
+      "issues": ["Access schedules in localStorage NOT database", "LPR may be empty without integration"]
+    },
+    {
+      "menu": "Reinicios",
+      "page": "RebotsPage.tsx",
+      "api_prefix": "/reboots",
+      "endpoints": ["/reboots"],
+      "backend_module": "reboots",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Citofonia IP",
+      "page": "IntercomPage.tsx",
+      "api_prefix": "/intercom",
+      "endpoints": ["/intercom"],
+      "backend_module": "intercom",
+      "status": "full",
+      "issues": ["AMI not implemented — ARI is the path"]
+    },
+    {
+      "menu": "Turnos y Guardias",
+      "page": "ShiftsPage.tsx",
+      "api_prefix": "/shifts",
+      "endpoints": ["/shifts"],
+      "backend_module": "shifts",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Patrullas",
+      "page": "PatrolsPage.tsx",
+      "api_prefix": "/patrols",
+      "endpoints": ["/patrols"],
+      "backend_module": "patrols",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Puestos",
+      "page": "OperationsPanelPage.tsx",
+      "api_prefix": "/operations",
+      "endpoints": ["/operations/overview"],
+      "backend_module": "operations",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Visitantes",
+      "page": "VisitorsPage.tsx",
+      "api_prefix": "/visitors",
+      "endpoints": ["/visitors", "/pre-registrations"],
+      "backend_module": "visitors,visitor-preregistration",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Emergencias",
+      "page": "EmergencyPage.tsx",
+      "api_prefix": "/emergency",
+      "endpoints": ["/emergency"],
+      "backend_module": "emergency",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Gestion SLA",
+      "page": "SLAPage.tsx",
+      "api_prefix": "/sla",
+      "endpoints": ["/sla/definitions"],
+      "backend_module": "sla",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Automatizacion",
+      "page": "AutomationPage.tsx",
+      "api_prefix": "/automation",
+      "endpoints": ["/automation/rules", "/automation/system/status", "/automation/stats", "/automation/executions"],
+      "backend_module": "automation",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Minuta de Turno",
+      "page": "MinutaPage.tsx",
+      "api_prefix": "/database-records",
+      "endpoints": ["/database-records", "/ai/shift-summary"],
+      "backend_module": "database-records,ai-bridge",
+      "status": "full",
+      "issues": ["Print uses window.open with inline HTML"]
+    },
+    {
+      "menu": "Panel Telefonico",
+      "page": "PhonePanelPage.tsx",
+      "api_prefix": "/voice",
+      "endpoints": ["/voice", "/intercom/calls", "/access-control/people"],
+      "backend_module": "voice,intercom",
+      "status": "partial",
+      "issues": ["Transfer not fully implemented", "Emergency contacts are placeholders", "SIP auto-reconnect missing"]
+    },
+    {
+      "menu": "Asistente IA",
+      "page": "AIAssistantPage.tsx",
+      "api_prefix": "/ai",
+      "endpoints": ["/ai/chat", "/ai/feedback", "/ai/conversations", "/mcp/tools", "/mcp/execute"],
+      "backend_module": "ai-bridge,mcp-bridge",
+      "status": "full",
+      "issues": ["SSE parsing buffer issues", "Model list hardcoded"]
+    },
+    {
+      "menu": "Analiticas",
+      "page": "AnalyticsPage.tsx",
+      "api_prefix": "/analytics",
+      "endpoints": ["/analytics/summary", "/anomalies", "/analytics/heatmap"],
+      "backend_module": "analytics,anomaly-detection,heat-mapping",
+      "status": "partial",
+      "issues": ["Heat mapping is routes-only stub"]
+    },
+    {
+      "menu": "Reportes",
+      "page": "ReportsPage.tsx",
+      "api_prefix": "/reports",
+      "endpoints": ["/reports"],
+      "backend_module": "reports",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Reportes Programados",
+      "page": "ScheduledReportsPage.tsx",
+      "api_prefix": "/scheduled-reports",
+      "endpoints": ["/scheduled-reports"],
+      "backend_module": "scheduled-reports",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Base de Datos",
+      "page": "DatabasePage.tsx",
+      "api_prefix": "/database-records",
+      "endpoints": ["/database-records"],
+      "backend_module": "database-records,data-import",
+      "status": "full",
+      "issues": ["No batch import from CSV visible", "Sorting not implemented"]
+    },
+    {
+      "menu": "Notas Operativas",
+      "page": "NotesPage.tsx",
+      "api_prefix": "/database-records",
+      "endpoints": ["/database-records"],
+      "backend_module": "database-records",
+      "status": "full",
+      "issues": ["Pinned notes not sorted to top"]
+    },
+    {
+      "menu": "Documentos",
+      "page": "DocumentsPage.tsx",
+      "api_prefix": "/database-records",
+      "endpoints": ["/database-records"],
+      "backend_module": "database-records",
+      "status": "full",
+      "issues": ["CRITICAL: Files stored as base64 in DB (should be S3/disk)", "PDF preview via iframe (XSS risk)"]
+    },
+    {
+      "menu": "Contratos",
+      "page": "ContractsPage.tsx",
+      "api_prefix": "/contracts",
+      "endpoints": ["/contracts"],
+      "backend_module": "contracts",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Gestion de Llaves",
+      "page": "KeysPage.tsx",
+      "api_prefix": "/keys",
+      "endpoints": ["/keys"],
+      "backend_module": "keys",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Cumplimiento",
+      "page": "CompliancePage.tsx",
+      "api_prefix": "/compliance",
+      "endpoints": ["/compliance", "/gdpr"],
+      "backend_module": "compliance,gdpr",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Capacitacion",
+      "page": "TrainingPage.tsx",
+      "api_prefix": "/training",
+      "endpoints": ["/training"],
+      "backend_module": "training",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "WhatsApp",
+      "page": "WhatsAppPage.tsx",
+      "api_prefix": "/whatsapp",
+      "endpoints": ["/whatsapp/health", "/whatsapp/conversations", "/whatsapp/templates"],
+      "backend_module": "whatsapp",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Integraciones",
+      "page": "IntegrationsPage.tsx",
+      "api_prefix": "/integrations",
+      "endpoints": ["/integrations", "/cloud-accounts", "/notification-templates"],
+      "backend_module": "integrations,cloud-accounts,notification-templates",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Auditoria",
+      "page": "AuditPage.tsx",
+      "api_prefix": "/audit",
+      "endpoints": ["/audit"],
+      "backend_module": "audit",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Salud del Sistema",
+      "page": "SystemHealthPage.tsx",
+      "api_prefix": "/health",
+      "endpoints": ["/health", "/health/ready", "/internal-agent/status"],
+      "backend_module": "health,internal-agent",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Configuracion",
+      "page": "SettingsPage.tsx",
+      "api_prefix": "/extensions",
+      "endpoints": ["/extensions"],
+      "backend_module": "extensions",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Administracion",
+      "page": "AdminPage.tsx",
+      "api_prefix": "/users",
+      "endpoints": ["/users", "/roles", "/api-keys", "/backup"],
+      "backend_module": "users,roles,api-keys,backup",
+      "status": "full",
+      "issues": ["Password sent in response on invite"]
+    },
+    {
+      "menu": "Centro de Red",
+      "page": "NetworkPage.tsx",
+      "api_prefix": "/network",
+      "endpoints": ["/network"],
+      "backend_module": "network",
+      "status": "full",
+      "issues": ["Uses direct fetch instead of apiClient in some endpoints"]
+    },
+    {
+      "menu": "Acceso Remoto",
+      "page": "RemoteAccessPage.tsx",
+      "api_prefix": "/remote-access",
+      "endpoints": ["/remote-access"],
+      "backend_module": "remote-access",
+      "status": "full",
+      "issues": []
+    },
+    {
+      "menu": "Salud de Camaras",
+      "page": "CameraHealthPage.tsx",
+      "api_prefix": "/cameras",
+      "endpoints": ["/cameras", "/devices?type=camera"],
+      "backend_module": "cameras,devices",
+      "status": "full",
+      "issues": []
+    }
+  ],
+
+  "priority_fixes": {
+    "P0_critical": [
+      "PlaybackPage: Replace simulated recording segments with real go2rtc/MediaMTX playback integration",
+      "DocumentsPage: Migrate base64 DB storage to filesystem or S3 storage"
+    ],
+    "P1_important": [
+      "AccessControlPage: Move schedules from localStorage to database",
+      "PhonePanelPage: Implement call transfer functionality",
+      "DevicesPage: Fix test connection to use apiClient with auth headers",
+      "LoginPage: Add password complexity requirements and rate limiting",
+      "SMTP provider: Install nodemailer or document as unsupported"
+    ],
+    "P2_should_fix": [
+      "EventsPage: Add confirmation dialogs for destructive actions (dismiss/resolve)",
+      "NotesPage: Sort pinned notes to top",
+      "LiveViewPage: Reduce stall timeout from 5s to 2s",
+      "AIAssistantPage: Fix SSE buffer parsing for incomplete JSON",
+      "Heat-mapping: Complete backend service implementation",
+      "Face-recognition: Implement actual ML-based recognition"
+    ],
+    "P3_nice_to_have": [
+      "DashboardPage: Sync widget preferences to database",
+      "IncidentsPage: Add comment editing/deletion",
+      "DomoticsPage: Add real-time device state via WebSocket",
+      "DatabasePage: Implement CSV batch import",
+      "MinutaPage: Improve print quality with proper PDF generation"
+    ]
+  }
+}

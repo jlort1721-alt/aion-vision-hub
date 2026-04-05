@@ -35,6 +35,7 @@ const DEVICES: ImouDevice[] = [
   { serial: 'AJ00421PAZF2E60', name: 'danubios', user: 'admin' },
   { serial: 'AH0306CPAZ5EA1A', name: 'danubios2', user: 'CLAVE' },
   { serial: 'AL02505PAJ638AA', name: 'terrazzino', user: 'admin' },
+  { serial: 'AH0306CPAZ5E9FA', name: 'terrazzino2', user: 'admin' },
   { serial: 'AH1020EPAZ39E67', name: 'quintas', user: 'admin' },
   { serial: 'AB081E4PAZD6D5B', name: 'santana', user: 'admin' },
   { serial: 'AE01C60PAZA4D94', name: 'hospital', user: 'admin' },

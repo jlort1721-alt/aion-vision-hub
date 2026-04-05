@@ -328,7 +328,7 @@ export default function ShiftsPage() {
                 </div>
                 <div className="space-y-1"><Label className="text-xs">Days of Week</Label>
                   <div className="flex flex-wrap gap-2">{DAYS.map(d => (
-                    <label key={d} className="flex items-center gap-1 text-xs"><Checkbox checked={newShift.daysOfWeek.includes(d)} onCheckedChange={c => setNewShift(s => ({ ...s, daysOfWeek: c ? [...s.daysOfWeek, d] : s.daysOfWeek.filter(x => x !== d) }))} />{d}</label>
+                    <label key={d} className="flex items-center gap-1 text-xs"><Checkbox checked={(newShift.daysOfWeek || []).includes(d)} onCheckedChange={c => setNewShift(s => ({ ...s, daysOfWeek: c ? [...(s.daysOfWeek || []), d] : (s.daysOfWeek || []).filter(x => x !== d) }))} />{d}</label>
                   ))}</div>
                 </div>
                 <div className="space-y-1"><Label className="text-xs">Max Guards</Label><Input type="number" min={1} value={newShift.maxGuards} onChange={e => setNewShift(s => ({ ...s, maxGuards: parseInt(e.target.value) || 1 }))} /></div>

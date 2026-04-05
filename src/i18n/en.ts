@@ -397,11 +397,34 @@ const en: Record<string, string> = {
   'nav.notes': 'Operational Notes',
   'nav.documents': 'Documents',
   'nav.network': 'Network Center',
+  'nav.floorPlan': 'Floor Plan',
+  'nav.remoteAccess': 'Remote Access',
+  'nav.cameraHealth': 'Camera Health',
   'nav.posts': 'Guard Posts',
   'nav.minuta': 'Shift Logbook',
   'nav.phone': 'Phone Panel',
   'nav.predictive_crime': 'Predictive Criminology',
   'nav.biogenetic_search': 'Biogenetic Search',
+
+  // Floor Plan
+  'floorPlan.title': 'Floor Plan',
+  'floorPlan.subtitle': 'Interactive site map with device locations',
+  'floorPlan.selectSite': 'Site',
+  'floorPlan.chooseSite': 'Select a site...',
+  'floorPlan.noSiteSelected': 'Select a site to view its floor plan',
+  'floorPlan.noDevices': 'No devices at this site',
+  'floorPlan.legend': 'Legend',
+  'floorPlan.cameras': 'Cameras',
+  'floorPlan.doors': 'Doors / Access',
+  'floorPlan.sirens': 'Sirens / Alarms',
+  'floorPlan.sensors': 'Sensors',
+  'floorPlan.viewLive': 'View Live',
+  'floorPlan.openDoor': 'Open Door',
+  'floorPlan.activateSiren': 'Activate Siren',
+  'floorPlan.openingStream': 'Opening live stream',
+  'floorPlan.doorCommand': 'Door open command sent',
+  'floorPlan.sirenActivated': 'Siren activated',
+  'floorPlan.actionFailed': 'Action failed',
 
   // Domotics
   'domotics.title': 'Domotics',
@@ -600,6 +623,13 @@ const en: Record<string, string> = {
   'access.day_thu': 'Thu',
   'access.day_fri': 'Fri',
   'access.day_sat': 'Sat',
+
+  // Camera Health
+  'cameraHealth.subtitle': 'Real-time camera health monitoring',
+  'cameraHealth.total': 'Total Cameras',
+  'cameraHealth.uptime': 'Uptime',
+  'cameraHealth.search': 'Search by name, IP, brand...',
+  'cameraHealth.lastSeen': 'Last seen',
 };
 
 export default en;

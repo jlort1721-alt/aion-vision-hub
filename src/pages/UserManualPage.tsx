@@ -788,7 +788,7 @@ export default function UserManualPage() {
   const filteredSections = useMemo(() => {
     if (!search.trim()) return sections;
     const q = search.toLowerCase().trim();
-    return sections.filter((s) => s.title.toLowerCase().includes(q));
+    return sections.filter((s) => (s.title || '').toLowerCase().includes(q));
   }, [search, sections]);
 
   /* Keep activeSection valid when filtering */

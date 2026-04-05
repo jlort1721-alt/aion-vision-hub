@@ -1,0 +1,31 @@
+[Unit]
+Description=AION Continuous Improvement Agent (OpenClaw)
+After=network.target aion-event-bridge.service
+Wants=aion-event-bridge.service
+
+[Service]
+Type=simple
+User=openclaw
+Group=openclaw
+EnvironmentFile=/home/openclaw/.openclaw/.env
+ExecStart=/bin/bash /home/openclaw/aion-continuous-improvement.sh
+Restart=on-failure
+RestartSec=300
+StartLimitBurst=3
+StartLimitIntervalSec=3600
+
+# Resource limits for the improvement loop
+CPUQuota=50%
+MemoryMax=1G
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/openclaw/
+PrivateTmp=true
+
+StandardOutput=append:/home/openclaw/.openclaw/improvement.log
+StandardError=append:/home/openclaw/.openclaw/improvement-error.log
+
+[Install]
+WantedBy=multi-user.target

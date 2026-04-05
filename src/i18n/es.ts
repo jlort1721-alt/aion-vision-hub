@@ -397,10 +397,33 @@ const es: Record<string, string> = {
   'nav.notes': 'Notas Operativas',
   'nav.documents': 'Documentos',
   'nav.network': 'Centro de Red',
+  'nav.floorPlan': 'Plano Interactivo',
+  'nav.remoteAccess': 'Acceso Remoto',
+  'nav.cameraHealth': 'Salud de Camaras',
   'nav.minuta': 'Minuta de Turno',
   'nav.phone': 'Panel Telefónico',
   'nav.predictive_crime': 'Criminología Predictiva',
   'nav.biogenetic_search': 'Búsqueda Biogenética',
+
+  // Floor Plan
+  'floorPlan.title': 'Plano Interactivo',
+  'floorPlan.subtitle': 'Mapa interactivo del sitio con ubicación de dispositivos',
+  'floorPlan.selectSite': 'Sitio',
+  'floorPlan.chooseSite': 'Seleccionar un sitio...',
+  'floorPlan.noSiteSelected': 'Seleccione un sitio para ver su plano',
+  'floorPlan.noDevices': 'No hay dispositivos en este sitio',
+  'floorPlan.legend': 'Leyenda',
+  'floorPlan.cameras': 'Cámaras',
+  'floorPlan.doors': 'Puertas / Accesos',
+  'floorPlan.sirens': 'Sirenas / Alarmas',
+  'floorPlan.sensors': 'Sensores',
+  'floorPlan.viewLive': 'Ver en Vivo',
+  'floorPlan.openDoor': 'Abrir Puerta',
+  'floorPlan.activateSiren': 'Activar Sirena',
+  'floorPlan.openingStream': 'Abriendo transmisión en vivo',
+  'floorPlan.doorCommand': 'Comando de apertura enviado',
+  'floorPlan.sirenActivated': 'Sirena activada',
+  'floorPlan.actionFailed': 'Acción fallida',
 
   // Domotics
   'domotics.title': 'Domóticos',
@@ -645,6 +668,13 @@ const es: Record<string, string> = {
   'access.day_thu': 'Jue',
   'access.day_fri': 'Vie',
   'access.day_sat': 'Sáb',
+
+  // Camera Health
+  'cameraHealth.subtitle': 'Monitoreo de salud de camaras en tiempo real',
+  'cameraHealth.total': 'Total Camaras',
+  'cameraHealth.uptime': 'Disponibilidad',
+  'cameraHealth.search': 'Buscar por nombre, IP, marca...',
+  'cameraHealth.lastSeen': 'Ultima vez visto',
 };
 
 export default es;

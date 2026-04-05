@@ -315,7 +315,7 @@ export default function EWeLinkCloudPanel() {
                               </div>
                               {device.params?.switches && device.params.switches.length > 1 && (
                                 <div className="flex gap-1 mt-1.5">
-                                  {device.params.switches.map((sw, i) => (
+                                  {(device.params.switches || []).map((sw, i) => (
                                     <Badge key={i} variant={sw.switch === 'on' ? 'default' : 'secondary'} className="text-[9px]">
                                       CH{sw.outlet}: {sw.switch}
                                     </Badge>

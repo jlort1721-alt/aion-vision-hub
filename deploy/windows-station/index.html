@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AION Station Installer - Clave Seguridad</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0e1a;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .container{max-width:800px;width:100%}
+  .card{background:rgba(15,23,42,0.9);border:1px solid rgba(99,102,241,0.3);border-radius:16px;padding:40px;backdrop-filter:blur(10px);margin-bottom:24px}
+  h1{font-size:32px;font-weight:700;color:#818cf8;margin-bottom:4px}
+  .subtitle{color:#94a3b8;margin-bottom:32px;font-size:16px}
+  .platforms{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:32px}
+  .platform{background:rgba(30,41,59,0.8);border:1px solid rgba(148,163,184,0.2);border-radius:12px;padding:24px;text-align:center;transition:all 0.2s}
+  .platform:hover{border-color:#6366f1;transform:translateY(-2px);box-shadow:0 8px 24px rgba(99,102,241,0.2)}
+  .platform-icon{font-size:48px;margin-bottom:12px}
+  .platform h3{font-size:18px;color:#c7d2fe;margin-bottom:8px}
+  .platform p{font-size:13px;color:#94a3b8;margin-bottom:16px}
+  .btn{display:inline-block;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;transition:all 0.2s}
+  .btn:hover{box-shadow:0 4px 16px rgba(99,102,241,0.4)}
+  .btn-outline{background:transparent;border:1px solid #6366f1;color:#a5b4fc}
+  .btn-outline:hover{background:rgba(99,102,241,0.1)}
+  .features{list-style:none;margin-bottom:24px;columns:2;column-gap:24px}
+  .features li{padding:6px 0;display:flex;align-items:center;gap:8px;font-size:14px;break-inside:avoid}
+  .features li::before{content:"";display:inline-block;width:6px;height:6px;background:#22c55e;border-radius:50%;flex-shrink:0}
+  .install-steps{margin-top:24px}
+  .install-steps h3{color:#818cf8;font-size:16px;margin-bottom:12px}
+  .step{display:flex;gap:12px;margin-bottom:12px;padding:12px;background:rgba(0,0,0,0.2);border-radius:8px}
+  .step-num{background:#6366f1;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+  .step-text{font-size:14px;color:#cbd5e1}
+  .step code{background:rgba(99,102,241,0.2);padding:2px 6px;border-radius:4px;font-family:monospace;color:#c7d2fe;font-size:13px}
+  .cmd-block{background:rgba(0,0,0,0.4);border-radius:8px;padding:16px;margin:16px 0;font-family:monospace;font-size:13px;color:#a5b4fc;overflow-x:auto;position:relative}
+  .cmd-block .copy-btn{position:absolute;top:8px;right:8px;background:rgba(99,102,241,0.3);border:none;color:#c7d2fe;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px}
+  .cmd-block .copy-btn:hover{background:rgba(99,102,241,0.5)}
+  .footer{text-align:center;color:#64748b;font-size:12px;margin-top:16px}
+  @media(max-width:600px){.features{columns:1}.platforms{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h1>AION Station Installer</h1>
+    <p class="subtitle">Configurador de estacion de monitoreo 24/7 — Clave Seguridad CTA</p>
+
+    <div class="platforms">
+      <div class="platform">
+        <div class="platform-icon">&#x1F5A5;</div>
+        <h3>Windows 10/11</h3>
+        <p>PowerShell script con instalacion automatica de Chrome, watchdog y auto-inicio</p>
+        <a href="Install-AionStation.ps1" class="btn" download>Descargar .ps1</a>
+      </div>
+      <div class="platform">
+        <div class="platform-icon">&#x1F34E;</div>
+        <h3>macOS</h3>
+        <p>Shell script con LaunchAgent, perfil Chrome dedicado y watchdog nativo</p>
+        <a href="Install-AionStation-Mac.sh" class="btn" download>Descargar .sh</a>
+      </div>
+      <div class="platform">
+        <div class="platform-icon">&#x1F427;</div>
+        <h3>Linux</h3>
+        <p>Ubuntu, Debian, Fedora, Arch. Systemd service con auto-inicio y watchdog</p>
+        <a href="Install-AionStation-Linux.sh" class="btn" download>Descargar .sh</a>
+      </div>
+    </div>
+
+    <h3 style="color:#818cf8;margin-bottom:12px">Que incluye cada instalador:</h3>
+    <ul class="features">
+      <li>Chrome con perfil dedicado AION</li>
+      <li>Permisos de camara y microfono</li>
+      <li>SO configurado 24/7 (sin sleep)</li>
+      <li>Screensaver desactivado</li>
+      <li>Auto-inicio al encender</li>
+      <li>Watchdog de conectividad (2 min)</li>
+      <li>Chrome se reabre si se cierra</li>
+      <li>Restart Chrome si >8GB RAM</li>
+      <li>Firewall rules WebRTC</li>
+      <li>Accesos directos: Dashboard, Kiosk, LiveView</li>
+      <li>Updates no reinician automaticamente</li>
+      <li>Script de desinstalacion incluido</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="install-steps">
+      <h3>Windows — Instrucciones</h3>
+      <div class="step"><div class="step-num">1</div><div class="step-text">Descargar <code>Install-AionStation.ps1</code></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Click derecho sobre el archivo → <strong>"Ejecutar con PowerShell"</strong></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Si pide permisos de administrador, aceptar</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Reiniciar cuando lo solicite</div></div>
+      <div class="cmd-block">
+# Opciones avanzadas (PowerShell como Admin):
+.\Install-AionStation.ps1 -DualMonitor              # Segundo monitor
+.\Install-AionStation.ps1 -KioskMode                 # Pantalla completa
+.\Install-AionStation.ps1 -StationName "CCTV-01"     # Nombre personalizado
+      </div>
+    </div>
+
+    <div class="install-steps" style="margin-top:24px">
+      <h3>macOS — Instrucciones</h3>
+      <div class="step"><div class="step-num">1</div><div class="step-text">Abrir Terminal</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Ejecutar el comando de abajo</div></div>
+      <div class="cmd-block">
+curl -sL https://aionseg.co/installer/Install-AionStation-Mac.sh | bash
+      </div>
+      <div class="cmd-block">
+# Con opciones:
+DUAL_MONITOR=true STATION_NAME="CCTV-MAC-01" bash Install-AionStation-Mac.sh
+      </div>
+    </div>
+
+    <div class="install-steps" style="margin-top:24px">
+      <h3>Linux — Instrucciones</h3>
+      <div class="step"><div class="step-num">1</div><div class="step-text">Abrir Terminal</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Ejecutar con sudo</div></div>
+      <div class="cmd-block">
+curl -sL https://aionseg.co/installer/Install-AionStation-Linux.sh | sudo bash
+      </div>
+    </div>
+  </div>
+
+  <p class="footer">v1.0.0 — Clave Seguridad CTA — Abril 2026 — <a href="https://aionseg.co" style="color:#6366f1">aionseg.co</a></p>
+</div>
+</body>
+</html>

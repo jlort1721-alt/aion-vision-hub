@@ -13,14 +13,9 @@ interface ClaveStatus {
 }
 
 async function fetchClaveStatus(): Promise<ClaveStatus | null> {
-  try {
-    // CLAVE runs on same VPS, proxied through /clave-api/
-    const resp = await fetch('/clave-api/v1/bridge/status', { signal: AbortSignal.timeout(3000) });
-    if (!resp.ok) return null;
-    return resp.json();
-  } catch {
-    return null;
-  }
+  // Bridge status endpoint removed — it was returning 502 errors.
+  // Return null so the widget shows "Offline" gracefully.
+  return null;
 }
 
 export default function ClaveAssistantWidget() {

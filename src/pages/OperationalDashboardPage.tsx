@@ -340,22 +340,22 @@ export default function OperationalDashboardPage() {
                 <StatCard
                   title="Residentes"
                   icon={<Users className="h-5 w-5" />}
-                  value={stats.residents.total.toLocaleString('es-CO')}
-                  subtitle={`${stats.residents.active.toLocaleString('es-CO')} activos`}
+                  value={(stats?.residents?.total || 0).toLocaleString('es-CO')}
+                  subtitle={`${(stats?.residents?.active || 0).toLocaleString('es-CO')} activos`}
                   badge={{ label: `${Math.round((stats.residents.active / Math.max(stats.residents.total, 1)) * 100)}%`, variant: 'default' }}
                   href="/admin/residents"
                 />
                 <StatCard
                   title="Vehiculos"
                   icon={<Car className="h-5 w-5" />}
-                  value={stats.vehicles.total.toLocaleString('es-CO')}
+                  value={(stats?.vehicles?.total || 0).toLocaleString('es-CO')}
                   subtitle="Placas registradas"
                   href="/admin/vehicles"
                 />
                 <StatCard
                   title="Biometricos"
                   icon={<Fingerprint className="h-5 w-5" />}
-                  value={stats.biometric.total.toLocaleString('es-CO')}
+                  value={(stats?.biometric?.total || 0).toLocaleString('es-CO')}
                   subtitle={`Cobertura: ${stats.biometric.coveragePercent}%`}
                   badge={{
                     label: `${stats.biometric.coveragePercent}%`,

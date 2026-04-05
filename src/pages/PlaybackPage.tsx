@@ -13,7 +13,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useDevices, useSites, useEventsLegacy } from '@/hooks/use-supabase-data';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { apiClient } from '@/lib/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -204,13 +203,22 @@ function InteractiveTimeline({
 
 // ── Main Page ───────────────────────────────────────────────
 export default function PlaybackPage() {
-  const { data: devices = [], isLoading, isError, error, refetch } = useDevices();
+  const { data: devices = [], isLoading: devLoading } = useDevices();
   const { data: sites = [] } = useSites();
   const { data: events = [] } = useEventsLegacy();
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
 
-  const cameras = devices.filter(d => d.type === 'camera');
+  // Cameras come from /cameras endpoint via react-query
+  const { data: camerasRaw = [], isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['cameras-playback'],
+    queryFn: async () => {
+      const resp = await apiClient.get<any>('/cameras', { limit: '500' });
+      return Array.isArray(resp) ? resp : (resp?.items ?? resp?.data ?? []);
+    },
+    enabled: !!profile,
+  });
+  const cameras = Array.isArray(camerasRaw) ? camerasRaw : [];
   const [selectedDevice, setSelectedDevice] = useState('');
   const [selectedChannel, setSelectedChannel] = useState('1');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
@@ -225,14 +233,15 @@ export default function PlaybackPage() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [eventSearchQuery, setEventSearchQuery] = useState('');
 
-  const device = cameras.find(d => d.id === selectedDevice) || cameras[0];
+  const device = cameras.find((d: any) => d.id === selectedDevice) || cameras[0];
   const segments = useMemo(() => generateRecordingSegments(), []);
 
   // Filter events for the selected device and date
   const deviceEvents = useMemo(() => {
     if (!device) return [];
-    return events.filter(e => {
-      const eventDate = e.created_at.slice(0, 10);
+    return events.filter((e: any) => {
+      const ts = e.createdAt || e.created_at || '';
+      const eventDate = typeof ts === 'string' ? ts.slice(0, 10) : '';
       return e.device_id === device.id && eventDate === selectedDate;
     });
   }, [events, device, selectedDate]);
@@ -261,13 +270,11 @@ export default function PlaybackPage() {
   const { data: playbackRequests = [] } = useQuery({
     queryKey: ['playback_requests'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('playback_requests')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      return data;
+      const data = await apiClient.get<Record<string, unknown>[]>('/streams/playback-requests', {
+        limit: '20',
+        order: 'created_at:desc',
+      });
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!profile,
   });
@@ -345,7 +352,7 @@ export default function PlaybackPage() {
               <Select value={selectedDevice || device?.id || ''} onValueChange={setSelectedDevice}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select camera" /></SelectTrigger>
                 <SelectContent>
-                  {cameras.map(d => (
+                  {cameras.map((d: any) => (
                     <SelectItem key={d.id} value={d.id}>
                       <div className="flex items-center gap-2">
                         {d.status === 'online' ? <Wifi className="h-3 w-3 text-success" /> : <WifiOff className="h-3 w-3 text-destructive" />}

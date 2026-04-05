@@ -449,17 +449,17 @@ export default function EscalationConfigPanel() {
 
   function toggleChannel(stepIndex: number, channel: NotificationChannel) {
     const step = form.steps[stepIndex];
-    const newChannels = step.channels.includes(channel)
-      ? step.channels.filter((c) => c !== channel)
-      : [...step.channels, channel];
+    const newChannels = (step.channels || []).includes(channel)
+      ? (step.channels || []).filter((c) => c !== channel)
+      : [...(step.channels || []), channel];
     updateStep(stepIndex, { channels: newChannels });
   }
 
   function toggleRole(stepIndex: number, role: RecipientRole) {
     const step = form.steps[stepIndex];
-    const newRoles = step.notifyRoles.includes(role)
-      ? step.notifyRoles.filter((r) => r !== role)
-      : [...step.notifyRoles, role];
+    const newRoles = (step.notifyRoles || []).includes(role)
+      ? (step.notifyRoles || []).filter((r) => r !== role)
+      : [...(step.notifyRoles || []), role];
     updateStep(stepIndex, { notifyRoles: newRoles });
   }
 
@@ -886,7 +886,7 @@ function StepEditor({
           <div className="flex flex-wrap gap-3">
             {NOTIFICATION_CHANNELS.map((channel) => {
               const Icon = channelIcons[channel];
-              const isChecked = step.channels.includes(channel);
+              const isChecked = (step.channels || []).includes(channel);
               return (
                 <label
                   key={channel}
@@ -916,7 +916,7 @@ function StepEditor({
           </Label>
           <div className="flex flex-wrap gap-3">
             {RECIPIENT_ROLES.map((role) => {
-              const isChecked = step.notifyRoles.includes(role);
+              const isChecked = (step.notifyRoles || []).includes(role);
               return (
                 <label
                   key={role}
@@ -988,7 +988,7 @@ function InlineTimeline({ steps }: { steps: EscalationStep[] }) {
             >
               L{i + 1}: {step.notifyRoles.map((r) => roleLabels[r as RecipientRole] ?? r).join(", ") || "No recipients"}
               <span className="opacity-75">
-                ({step.channels.map((c) => channelLabels[c]).join(", ") || "No channels"})
+                ({(step.channels || []).map((c) => channelLabels[c]).join(", ") || "No channels"})
               </span>
             </div>
           </div>
@@ -1186,7 +1186,7 @@ function SimulationView({ form }: { form: PolicyFormData }) {
                     )}
                     {event.channels.length > 0 && (
                       <div className="flex items-center gap-1 flex-wrap">
-                        {event.channels.map((c) => {
+                        {(event.channels || []).map((c) => {
                           const Icon = channelIcons[c];
                           return (
                             <Badge key={c} variant="secondary" className="text-xs gap-1">

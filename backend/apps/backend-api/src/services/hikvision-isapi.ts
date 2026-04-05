@@ -234,7 +234,7 @@ export class HikvisionISAPIService {
     const results = await db.execute(sql`
       SELECT id, name FROM devices
       WHERE tenant_id = ${tenantId}
-        AND (brand ILIKE '%hikvision%' OR brand ILIKE '%hik%' OR manufacturer ILIKE '%hikvision%')
+        AND (brand ILIKE '%hikvision%' OR brand ILIKE '%hik%')
       ORDER BY name
     `);
     const devices = results as unknown as Array<{ id: string; name: string }>;

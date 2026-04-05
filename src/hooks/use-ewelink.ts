@@ -20,7 +20,6 @@ import { ewelink } from '@/services/integrations/ewelink';
 import type { EWeLinkDeviceAction } from '@/services/integrations/ewelink';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const QUERY_KEYS = {
@@ -199,7 +198,7 @@ export function useEWeLinkSync() {
       // Sync devices via Fastify backend
       if (syncResult.devices.length > 0) {
         await apiClient.post('/ewelink/sync', {
-          devices: syncResult.devices.map((device: Record<string, unknown>) => ({
+          devices: (syncResult.devices || []).map((device: Record<string, unknown>) => ({
             id: device.deviceId,
             name: device.name,
             type: inferDeviceType(device.productModel),
@@ -259,13 +258,14 @@ export function useEWeLinkSectionMapping() {
   const loadMappings = useCallback(async () => {
     if (!profile?.tenant_id) return;
 
-    const { data } = await supabase
-      .from('domotic_devices' as unknown as 'profiles')
-      .select('id, section_id')
-      .eq('tenant_id', profile.tenant_id)
-      .not('section_id', 'is', null);
+    const raw = await apiClient.get<Record<string, unknown>[]>('/domotics/devices', {
+      fields: 'id,section_id',
+      tenant_id: profile.tenant_id,
+      has_section: 'true',
+    });
+    const data = Array.isArray(raw) ? raw : [];
 
-    if (data) {
+    if (data.length > 0) {
       ewelink.loadSectionMappings(
         data.map((d: Record<string, unknown>) => ({ deviceId: d.id as string, sectionId: d.section_id as string })),
       );

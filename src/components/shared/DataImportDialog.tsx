@@ -288,7 +288,7 @@ export default function DataImportDialog({
 
             <div className="flex justify-between items-center">
               <div className="text-xs text-muted-foreground">
-                Required: {expectedCols.required.map((c) => (
+                Required: {(expectedCols.required || []).map((c) => (
                   <Badge key={c} variant="default" className="mr-1 text-[10px]">{c}</Badge>
                 ))}
               </div>
@@ -339,10 +339,10 @@ export default function DataImportDialog({
                     Columns marked with ? are not recognized and will be ignored.
                   </p>
                 )}
-                {expectedCols.required.some((r) => !columns.includes(r)) && (
+                {(expectedCols.required || []).some((r) => !columns.includes(r)) && (
                   <p className="text-[10px] text-destructive mt-2">
                     Missing required columns:{' '}
-                    {expectedCols.required.filter((r) => !columns.includes(r)).join(', ')}
+                    {(expectedCols.required || []).filter((r) => !columns.includes(r)).join(', ')}
                   </p>
                 )}
               </CardContent>
@@ -391,7 +391,7 @@ export default function DataImportDialog({
               </Button>
               <Button
                 onClick={handleImport}
-                disabled={expectedCols.required.some((r) => !columns.includes(r))}
+                disabled={(expectedCols.required || []).some((r) => !columns.includes(r))}
               >
                 <Upload className="mr-1 h-4 w-4" /> Import {records.length} Records
               </Button>
@@ -467,7 +467,7 @@ export default function DataImportDialog({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {importResult.errors.slice(0, 20).map((err, idx) => (
+                      {(importResult.errors || []).slice(0, 20).map((err, idx) => (
                         <TableRow key={idx}>
                           <TableCell className="text-xs font-mono">{err.row}</TableCell>
                           <TableCell className="text-xs text-destructive">{err.reason}</TableCell>
@@ -476,9 +476,9 @@ export default function DataImportDialog({
                     </TableBody>
                   </Table>
                 </div>
-                {importResult.errors.length > 20 && (
+                {(importResult.errors || []).length > 20 && (
                   <p className="text-xs text-muted-foreground text-center">
-                    Showing 20 of {importResult.errors.length} errors. Download the full report.
+                    Showing 20 of {(importResult.errors || []).length} errors. Download the full report.
                   </p>
                 )}
               </div>

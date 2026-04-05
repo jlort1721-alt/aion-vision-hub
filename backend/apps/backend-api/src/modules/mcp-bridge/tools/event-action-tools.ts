@@ -5,7 +5,7 @@
  * security events. All operations are tenant-scoped.
  */
 
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { db } from '../../../db/client.js';
 import { events } from '../../../db/schema/index.js';
 import type { MCPServerTool } from './index.js';
@@ -105,7 +105,7 @@ export const bulkAcknowledgeEvents: MCPServerTool = {
           eq(events.tenantId, context.tenantId),
           eq(events.status, 'new'),
           eq(events.severity, severity),
-          sql`${events.id} = ANY(${ids}::uuid[])`,
+          inArray(events.id, ids),
         ),
       );
 

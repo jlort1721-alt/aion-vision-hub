@@ -169,7 +169,7 @@ export default function MinutaPage() {
       await apiClient.patch(`/database-records/${editEntry.id}`, {
         entry_time: editForm.entry_time,
         entry_type: editForm.entry_type,
-        description: editForm.description.trim(),
+        description: (editForm.description || '').trim(),
         priority: editForm.priority,
       });
     },
@@ -216,7 +216,7 @@ export default function MinutaPage() {
     return entries.filter((e) => {
       if (filterType !== 'all' && e.entry_type !== filterType) return false;
       if (filterPriority !== 'all' && e.priority !== filterPriority) return false;
-      if (searchText && !e.description.toLowerCase().includes(searchText.toLowerCase())) return false;
+      if (searchText && !(e.description || '').toLowerCase().includes(searchText.toLowerCase())) return false;
       return true;
     });
   }, [entries, filterType, filterPriority, searchText]);

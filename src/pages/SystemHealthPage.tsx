@@ -224,7 +224,7 @@ export default function SystemHealthPage() {
     });
     // Merge with any errors from the status endpoint
     if (statusData?.errors && Array.isArray(statusData.errors)) {
-      statusData.errors.forEach((e: any, i: number) => {
+      (statusData.errors || []).forEach((e: any, i: number) => {
         errors.push({
           id: e.id || `status-err-${i}`,
           timestamp: e.timestamp || new Date().toISOString(),
@@ -242,7 +242,7 @@ export default function SystemHealthPage() {
   const uptimeData: UptimeDataPoint[] = useMemo(() => {
     // Use historical data from status endpoint if available
     if (statusData?.uptimeHistory && Array.isArray(statusData.uptimeHistory)) {
-      return statusData.uptimeHistory.map((p: any) => ({
+      return (statusData.uptimeHistory || []).map((p: any) => ({
         time: p.time || p.hour || '',
         uptime: p.uptime ?? 100,
         latency: p.latency ?? 0,
@@ -293,8 +293,8 @@ export default function SystemHealthPage() {
   function getCheckForService(key: string): HealthCheck | undefined {
     // Try exact match first, then fuzzy match
     return (
-      checks.find(c => c.component.toLowerCase() === key) ||
-      checks.find(c => c.component.toLowerCase().includes(key))
+      checks.find(c => (c.component || '').toLowerCase() === key) ||
+      checks.find(c => (c.component || '').toLowerCase().includes(key))
     );
   }
 

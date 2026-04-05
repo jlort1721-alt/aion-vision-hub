@@ -10,6 +10,7 @@ import { config } from './config/env.js';
 import authPlugin from './plugins/auth.js';
 import tenantPlugin from './plugins/tenant.js';
 import auditPlugin from './plugins/audit.js';
+import eventEmitterPlugin from './plugins/event-emitter.js';
 import { registerErrorHandler } from './middleware/error-handler.js';
 import { registerRequestId } from './middleware/request-id.js';
 import { registerRateLimiter } from './middleware/rate-limiter.js';
@@ -86,6 +87,7 @@ import { registerImouRoutes } from './modules/imou/routes.js';
 import { registerHikConnectRoutes } from './modules/hikconnect/routes.js';
 import { registerFaceRecognitionRoutes } from './modules/face-recognition/routes.js';
 import { registerHeatMappingRoutes } from './modules/heat-mapping/routes.js';
+import { registerRemoteAccessRoutes } from './modules/remote-access/routes.js';
 import websocketPlugin from './plugins/websocket.js';
 import { cameraEvents } from './services/camera-events.js';
 
@@ -187,6 +189,7 @@ export async function buildApp() {
   await app.register(authPlugin);
   await app.register(tenantPlugin);
   await app.register(auditPlugin);
+  await app.register(eventEmitterPlugin);
 
   // Routes (health first — no auth required)
   await app.register(registerHealthRoutes, { prefix: '/health' });
@@ -265,6 +268,8 @@ export async function buildApp() {
   await app.register(registerDeviceControlRoutes, { prefix: '/device-control' });
   // Network scanner, VPN profiles, diagnostics
   await app.register(registerNetworkRoutes, { prefix: '/network' });
+  // Remote access proxy (HTTP reverse proxy, connectivity testing, port forwarding)
+  await app.register(registerRemoteAccessRoutes, { prefix: '/remote-access' });
   // API key management (service-to-service authentication)
   await app.register(registerApiKeyRoutes, { prefix: '/api-keys' });
   // Evidence pipeline (snapshots, clips, documents, notes attached to incidents)

@@ -142,7 +142,7 @@ export class WhatsAppService {
 
     const payload: Record<string, unknown> = {
       messaging_product: 'whatsapp',
-      to: message.to.replace(/[^0-9+]/g, ''),
+      to: (message.to || '').replace(/[^0-9+]/g, ''),
       type: message.type,
     };
 
@@ -216,7 +216,7 @@ export class WhatsAppService {
 
     const text = [
       `[${severityEmoji[params.severity] || '*'}] AION Alert: ${params.title}`,
-      `Severity: ${params.severity.toUpperCase()}`,
+      `Severity: ${(params.severity || 'info').toUpperCase()}`,
       params.description,
       params.siteId ? `Site: ${params.siteId}` : '',
       `Time: ${new Date().toLocaleString()}`,

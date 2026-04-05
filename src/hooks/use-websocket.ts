@@ -58,9 +58,16 @@ export function useWebSocket() {
       return;
     }
 
-    const wsUrl = API_URL.replace(/^http/, 'ws');
+    // Build WebSocket URL: for relative paths like /api, use window.location
+    let wsFullUrl: string;
+    if (API_URL.startsWith('http')) {
+      wsFullUrl = API_URL.replace(/^http/, 'ws') + '/ws';
+    } else {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsFullUrl = `${proto}//${window.location.host}/ws`;
+    }
     // Auth via first message instead of query param to avoid token in server logs
-    const ws = new WebSocket(`${wsUrl}/ws`);
+    const ws = new WebSocket(wsFullUrl);
     wsRef.current = ws;
     setStatus('connecting');
 

@@ -121,7 +121,7 @@ export default function CommandPalette() {
     if (!search) return PAGES;
     const q = search.toLowerCase();
     return PAGES.filter(
-      p => p.label.toLowerCase().includes(q) || p.keywords.toLowerCase().includes(q)
+      p => (p.label || '').toLowerCase().includes(q) || (p.keywords || '').toLowerCase().includes(q)
     );
   }, [search]);
 

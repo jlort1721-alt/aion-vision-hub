@@ -49,7 +49,7 @@ export default function IncidentsPage() {
   }, [incidents, selected]);
 
   const handleCreate = async () => {
-    if (!newIncident.title.trim()) { toast.error(t('incidents.title_label') + ' required'); return; }
+    if (!(newIncident.title || '').trim()) { toast.error(t('incidents.title_label') + ' required'); return; }
     setActionLoading('create');
     try {
       await apiClient.edgeFunction('incidents-api', undefined, { method: 'POST', body: JSON.stringify({ title: newIncident.title, description: newIncident.description, priority: newIncident.priority, site_id: newIncident.site_id || null }) });

@@ -73,7 +73,7 @@ export function DomoticsHeader({
             >
               <Cloud className="mr-1 h-3 w-3" /> eWeLink
               {ewelinkAuth.activeAccount && (
-                <span className="ml-1 opacity-70">({ewelinkAuth.activeAccount.replace('account_', '#')})</span>
+                <span className="ml-1 opacity-70">({(ewelinkAuth.activeAccount || '').replace('account_', '#')})</span>
               )}
             </Badge>
           )}
@@ -87,9 +87,9 @@ export function DomoticsHeader({
                 <SelectValue placeholder="Cuenta" />
               </SelectTrigger>
               <SelectContent>
-                {ewelinkAuth.storedAccounts.map((acc: { label: string; email: string }) => (
+                {(ewelinkAuth.storedAccounts || []).map((acc: { label: string; email: string }) => (
                   <SelectItem key={acc.label} value={acc.label} className="text-xs">
-                    {acc.label.replace('account_', 'Cuenta #')} ({acc.email})
+                    {(acc.label || '').replace('account_', 'Cuenta #')} ({acc.email})
                   </SelectItem>
                 ))}
               </SelectContent>

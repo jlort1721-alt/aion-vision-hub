@@ -57,7 +57,7 @@ export function Go2RTCPlayer({
     setErrorMsg('');
 
     // Determine WebSocket URL
-    const wsBase = go2rtcUrl.replace(/^http/, 'ws');
+    const wsBase = (go2rtcUrl || '').replace(/^http/, 'ws');
     const wsUrl = `${wsBase}/api/ws?src=${streamName}`;
 
     try {

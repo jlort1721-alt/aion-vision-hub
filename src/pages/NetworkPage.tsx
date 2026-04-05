@@ -382,7 +382,7 @@ function NetworkScannerTab({ toast }: { toast: any }) {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {host.ports.map(port => (
+                        {(host.ports || []).map(port => (
                           <Badge key={port} variant="outline" className="text-xs font-mono px-1.5 py-0">
                             {port}
                             {portLabels[port] && <span className="ml-1 opacity-60">{portLabels[port]}</span>}
@@ -502,7 +502,7 @@ function VpnTab({ sites, sitesLoading, toast }: { sites: any[]; sitesLoading: bo
     try {
       const result = await apiCall<{ reachable: boolean; latency?: number }>('/ping', {
         method: 'POST',
-        body: JSON.stringify({ host: profile.endpoint.split(':')[0], port: parseInt(profile.endpoint.split(':')[1]) || 51820 }),
+        body: JSON.stringify({ host: (profile.endpoint || '').split(':')[0], port: parseInt((profile.endpoint || '').split(':')[1]) || 51820 }),
       });
       setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, status: result.reachable ? 'connected' : 'disconnected' } : p));
       toast({
@@ -726,7 +726,7 @@ function DeviceControlTab({ devices, sites, devicesLoading, toast }: { devices: 
     try {
       for (const device of filteredDevices) {
         if (device.remote_address) {
-          const [host] = device.remote_address.split(':');
+          const [host] = (device.remote_address || '').split(':');
           await apiCall('/ping', { method: 'POST', body: JSON.stringify({ host, port: device.port || 80 }) });
         }
       }
@@ -1208,7 +1208,7 @@ function DiagnosticsTab({ toast }: { toast: any }) {
                   {portScanResult.openPorts.length} puerto(s) abierto(s) en {portScanResult.host}
                 </p>
                 <div className="flex flex-wrap gap-1">
-                  {portScanResult.openPorts.map(p => (
+                  {(portScanResult.openPorts || []).map(p => (
                     <Badge key={p.port} variant="outline" className="font-mono text-xs gap-1">
                       {p.port} <span className="opacity-60">{p.service}</span>
                     </Badge>

@@ -270,7 +270,7 @@ export default function DomoticsPage() {
     if (sectionFilter !== 'all' && row.section_id !== sectionFilter) return false;
     if (typeFilter !== 'all' && row.type !== typeFilter) return false;
     if (!searchStr) return true;
-    return row.name.toLowerCase().includes(searchStr.toLowerCase()) ||
+    return (row.name || '').toLowerCase().includes(searchStr.toLowerCase()) ||
            (row.brand && row.brand.toLowerCase().includes(searchStr.toLowerCase()));
   };
 

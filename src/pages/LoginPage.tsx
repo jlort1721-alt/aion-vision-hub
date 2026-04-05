@@ -69,14 +69,16 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center mb-8">
-          <Logo variant="icon" height={64} className="mb-4" />
-          <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-heading)' }}>Clave Seguridad</h1>
-          <p className="text-sm text-muted-foreground mt-1">Centro de Monitoreo y Control</p>
+      <div className="w-full max-w-sm space-y-6">
+        <div className="flex flex-col items-center gap-2">
+          <div className="rounded-2xl bg-card p-4 shadow-lg border">
+            <Logo variant="icon" height={56} />
+          </div>
+          <h1 className="text-2xl font-bold font-heading tracking-tight mt-2">Clave Seguridad</h1>
+          <p className="text-sm text-muted-foreground">Centro de Monitoreo y Control</p>
         </div>
 
-        <Card>
+        <Card className="shadow-lg">
           <Tabs value={tab} onValueChange={setTab}>
             <CardHeader className="pb-2">
               <TabsList className="grid grid-cols-2 w-full">
@@ -157,15 +159,17 @@ export default function LoginPage() {
           </Tabs>
         </Card>
 
-        <div className="mt-3 flex flex-col items-center gap-1 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
             <Shield className="h-3 w-3" />
-            <span>Clave Seguridad — Plataforma Protegida</span>
+            <span>Plataforma Protegida</span>
           </div>
           <nav className="flex items-center gap-3">
-            <a href="/privacy" className="hover:underline">Privacidad</a>
-            <a href="/terms" className="hover:underline">Términos</a>
-            <a href="/cookies" className="hover:underline">Cookies</a>
+            <a href="/privacy" className="hover:underline transition-colors hover:text-foreground">Privacidad</a>
+            <span className="text-border">&middot;</span>
+            <a href="/terms" className="hover:underline transition-colors hover:text-foreground">Términos</a>
+            <span className="text-border">&middot;</span>
+            <a href="/cookies" className="hover:underline transition-colors hover:text-foreground">Cookies</a>
           </nav>
         </div>
       </div>

@@ -280,7 +280,7 @@ export default function CloudAccountsPanel() {
                         </div>
                         {device.channelList.length > 1 && (
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {device.channelList.map(ch => (
+                            {(device.channelList || []).map(ch => (
                               <Badge key={String(ch.id)} variant={ch.status === 'online' ? 'default' : 'secondary'} className="text-[8px]">
                                 {ch.name}
                               </Badge>

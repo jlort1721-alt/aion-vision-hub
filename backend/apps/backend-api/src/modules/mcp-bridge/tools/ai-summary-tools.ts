@@ -35,7 +35,7 @@ const generateIncidentSummary: MCPServerTool = {
 
     // Get related events
     const eventRows = await db.execute(
-      sql`SELECT type, severity, description, created_at FROM events WHERE tenant_id = ${context.tenantId}::uuid AND metadata->>'incident_id' = ${incidentId} ORDER BY created_at LIMIT 20`,
+      sql`SELECT event_type, severity, description, created_at FROM events WHERE tenant_id = ${context.tenantId}::uuid AND metadata->>'incident_id' = ${incidentId} ORDER BY created_at LIMIT 20`,
     );
     const eventsList = eventRows as unknown as Record<string, unknown>[];
 
