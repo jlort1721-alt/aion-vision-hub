@@ -1193,5 +1193,229 @@ sudo tail -f /var/log/nginx/error.log
 
 ---
 
+# 20. INFORME OPERATIVO — DATOS REALES DE TODOS LOS PUESTOS
+
+> Datos extraídos en vivo de la base de datos PostgreSQL (aionseg_prod) el 6 de abril de 2026.
+
+## Totales Generales
+
+| Métrica | Cantidad |
+|---------|----------|
+| Sitios/Puestos | 25 |
+| Cámaras | 312 |
+| Dispositivos | 318 |
+| Residentes activos | 1,823 |
+| Vehículos registrados | 971 |
+| Eventos registrados | 390 |
+| Incidentes | 60 |
+| Comunicaciones enviadas | 428 |
+| Reglas de automatización | 34 |
+| Skills operativas | 26 |
+| Registros biométricos | 1,410 |
+| Consignas de seguridad | 12 |
+| Horarios de guardia | 17 |
+| Inventario de puertas | 36 |
+| Información ascensores | 10 |
+| Reinicios de equipo | 10 |
+| Pruebas de sirena | 16 |
+| Descripciones CCTV | 7 |
+| Administradores de sitio | 37 |
+| Capacitaciones operador | 5 |
+
+## Detalle por Puesto (25 Sitios)
+
+| # | Puesto | Dirección | Cámaras | Dispositivos | Residentes | Vehículos |
+|---|--------|-----------|---------|-------------|------------|-----------|
+| 1 | Alborada 9-10 | Dg 93 #39-60, Santa Monica | 1 | 9 | 217 | 170 |
+| 2 | Altagracia | Carrera 39 #48-19 | 33 | 20 | 182 | 0 |
+| 3 | Altos del Rosario | Cra. 84 #34B-110, Laureles | 16 | 8 | 94 | 30 |
+| 4 | Aparta Casas | Carrera 53B #84A-03 Itagüí | 0 | 0 | 1 | 0 |
+| 5 | Brescia | Calle 47 #19 Sur 40 | 17 | 31 | 75 | 62 |
+| 6 | Central de Monitoreo | Central de monitoreo | 0 | 15 | 0 | 0 |
+| 7 | Danubios | Cl. 47D #72-183, Laureles | 9 | 16 | 169 | 155 |
+| 8 | Doña Oliva | Medellín | 0 | 0 | 0 | 0 |
+| 9 | Edificio La Palencia | CR46 #50-28 Medellín | 16 | 8 | 0 | 0 |
+| 10 | Hospital San Jerónimo | San Jerónimo, Antioquia | 16 | 5 | 0 | 0 |
+| 11 | Hotel Eutopiq/Factory | Cra 69 # Circular 1-32, UPB | 0 | 7 | 0 | 0 |
+| 12 | Los Pisquines | CR 43 #23-29 | 32 | 23 | 77 | 0 |
+| 13 | Lubeck | Calle 36 #64A-29, Laureles | 0 | 9 | 132 | 6 |
+| 14 | Manzanares | Medellín | 0 | 0 | 0 | 0 |
+| 15 | Patio Bonito | Tv. 5A #45-163, El Poblado | 12 | 11 | 44 | 66 |
+| 16 | Portal Plaza | Cra. 39 #48-11, La Candelaria | 0 | 20 | 131 | 44 |
+| 17 | Portalegre | Cl 45F #70A-75, Laureles | 20 | 21 | 86 | 26 |
+| 18 | Propiedad Terrabamba | Vía MDE-STA FÉ | 19 | 7 | 30 | 24 |
+| 19 | Quintas de Santa María | Cra. 10, San Jerónimo | 8 | 8 | 56 | 6 |
+| 20 | San Nicolás | Cl. 35 #58-10, Rionegro | 17 | 11 | 115 | 178 |
+| 21 | San Sebastián | Carrera 79 #34-26, Laureles | 16 | 23 | 85 | 23 |
+| 22 | Santa Ana de los Caballeros | Transversal 74 #2-15 | 7 | 6 | 0 | 0 |
+| 23 | Senderos de Calasanz | Cra 81A #49-89, La América | 12 | 8 | 102 | 64 |
+| 24 | Terrazzino | Cl. 22A Sur #46-34, Envigado | 18 | 10 | 61 | 63 |
+| 25 | Torre Lucia | Calle 75 Sur #34-280, Sabaneta | 24 | 42 | 166 | 54 |
+| | **TOTALES** | | **312** | **318** | **1,823** | **971** |
+
+## Promedios por Puesto
+
+| Métrica | Promedio |
+|---------|----------|
+| Cámaras por sitio | 12.5 |
+| Dispositivos por sitio | 12.7 |
+| Residentes por sitio | 72.9 |
+| Vehículos por sitio | 38.8 |
+
+## Estado de Cámaras por Sitio
+
+| Puesto | Online | Offline | Total | Uptime % |
+|--------|--------|---------|-------|----------|
+| Altagracia | 33 | 0 | 33 | 100% |
+| Los Pisquines | 32 | 0 | 32 | 100% |
+| Torre Lucia | 24 | 0 | 24 | 100% |
+| Portalegre | 20 | 0 | 20 | 100% |
+| San Nicolás | 17 | 0 | 17 | 100% |
+| Brescia | 17 | 0 | 17 | 100% |
+| La Palencia | 16 | 0 | 16 | 100% |
+| San Sebastián | 16 | 0 | 16 | 100% |
+| Altos del Rosario | 16 | 0 | 16 | 100% |
+| Propiedad Terrabamba | 0 | 19 | 19 | 0% |
+| Terrazzino | 0 | 18 | 18 | 0% |
+| Hospital San Jerónimo | 0 | 16 | 16 | 0% |
+| Patio Bonito | 0 | 12 | 12 | 0% |
+| Senderos de Calasanz | 0 | 12 | 12 | 0% |
+| Danubios | 0 | 9 | 9 | 0% |
+| Quintas de Santa María | 0 | 8 | 8 | 0% |
+| Santa Ana | 0 | 7 | 7 | 0% |
+| Alborada 9-10 | 0 | 1 | 1 | 0% |
+| **TOTALES** | **191** | **102** | **312** | **61.2%** |
+
+> **Nota:** Los sitios con 0% uptime probablemente requieren configuración de port forwarding o ISUP/Platform Access. Consultar `GUIA_CONFIGURACION_DISPOSITIVOS.md`.
+
+## Inventario de Dispositivos por Tipo
+
+| Tipo | Total | Online | Offline | Otros |
+|------|-------|--------|---------|-------|
+| camera | 65 | 29 | 35 | 1 |
+| domotic (IoT/eWeLink) | 41 | — | — | 41 |
+| access_control | 30 | 10 | 13 | 7 |
+| intercom | 26 | — | — | 26 |
+| network_wan | 22 | — | — | 22 |
+| network_lan | 22 | — | — | 22 |
+| cloud_account_ewelink | 20 | — | — | 20 |
+| router | 18 | 4 | 5 | 9 |
+| other | 18 | 2 | 10 | 6 |
+| dvr | 17 | 9 | 5 | 3 |
+| xvr | 14 | 1 | 3 | 10 |
+| cloud_account_hik | 14 | — | — | 14 |
+| nvr | 9 | 6 | 3 | 0 |
+| server | 1 | — | — | 1 |
+| access_point | 1 | — | — | 1 |
+| **TOTAL** | **318** | **61** | **74** | **183** |
+
+## Cobertura Telefónica de Residentes
+
+| Puesto | Residentes | Con Teléfono | Sin Teléfono | Cobertura |
+|--------|------------|--------------|--------------|-----------|
+| Propiedad Terrabamba | 30 | 28 | 2 | 93.3% |
+| San Sebastián | 85 | 74 | 11 | 87.1% |
+| Quintas de Santa María | 56 | 48 | 8 | 85.7% |
+| Portalegre | 86 | 72 | 14 | 83.7% |
+| Patio Bonito | 44 | 36 | 8 | 81.8% |
+| Danubios | 169 | 137 | 32 | 81.1% |
+| Alborada 9-10 | 217 | 163 | 54 | 75.1% |
+| Los Pisquines | 77 | 56 | 21 | 72.7% |
+| Senderos de Calasanz | 102 | 74 | 28 | 72.5% |
+| Terrazzino | 61 | 43 | 18 | 70.5% |
+| Portal Plaza | 131 | 92 | 39 | 70.2% |
+| Brescia | 75 | 51 | 24 | 68.0% |
+| San Nicolás | 115 | 68 | 47 | 59.1% |
+| Torre Lucia | 166 | 94 | 72 | 56.6% |
+| Altagracia | 182 | 99 | 83 | 54.4% |
+| Altos del Rosario | 94 | 39 | 55 | 41.5% |
+| Lubeck | 132 | 0 | 132 | 0.0% |
+| **PROMEDIO** | | | | **66.5%** |
+
+> **Acción requerida:** Lubeck tiene 0% cobertura telefónica — necesita actualizar datos de residentes.
+
+## Eventos (Últimos 30 Días)
+
+| Tipo | Severidad | Cantidad |
+|------|-----------|----------|
+| device_offline | high | 175 |
+| device_online | info | 140 |
+| system | info | 27 |
+| security_alert | critical | 25 |
+| panic | critical | 13 |
+| resident_report | low | 5 |
+| visitor_authorization | info | 1 |
+| audit_check | info | 1 |
+| **TOTAL** | | **390** |
+
+## Incidentes
+
+| Estado | Cantidad |
+|--------|----------|
+| Abiertos | 59 |
+| En investigación | 1 |
+| **TOTAL** | **60** |
+
+> **Alerta:** 59 incidentes abiertos sin resolver. Requiere atención inmediata del equipo operativo.
+
+## Comunicaciones (Twilio)
+
+| Canal | Dirección | Estado | Total |
+|-------|-----------|--------|-------|
+| WhatsApp | Saliente | Enviado | 397 |
+| WhatsApp | Saliente | Fallido | 18 |
+| WhatsApp | Entrante | Recibido | 3 |
+| Voz | Saliente | Iniciada | 3 |
+| SMS | Saliente | Enviado | 3 |
+| SMS | Saliente | Fallido | 3 |
+| Emergencia | Saliente | Iniciada | 1 |
+| **TOTAL** | | | **428** |
+
+**Tasa de éxito WhatsApp:** 95.7% (397/415)
+
+## Datos Operativos Complementarios
+
+| Dato | Registros |
+|------|-----------|
+| Turnos registrados | 3 |
+| Registros biométricos | 1,410 |
+| Consignas de seguridad | 12 |
+| Horarios de guardia | 17 |
+| Puertas inventariadas | 36 |
+| Ascensores registrados | 10 |
+| Reinicios de equipo | 10 |
+| Pruebas de sirena | 16 |
+| Credenciales de monitoreo | 0 |
+| Descripciones CCTV | 7 |
+| Capacitaciones de operador | 5 |
+| Administradores de sitio | 37 |
+
+## Puestos Sin Equipamiento (Requieren Acción)
+
+Los siguientes puestos NO tienen cámaras ni dispositivos registrados:
+
+| Puesto | Estado | Acción Requerida |
+|--------|--------|-----------------|
+| Aparta Casas | 0 cámaras, 0 dispositivos | Instalar equipamiento o remover del sistema |
+| Doña Oliva | 0 cámaras, 0 dispositivos | Instalar equipamiento o remover del sistema |
+| Manzanares | 0 cámaras, 0 dispositivos | Instalar equipamiento o remover del sistema |
+| Lubeck | 0 cámaras, 9 dispositivos | Instalar cámaras, actualizar datos residentes |
+| Portal Plaza | 0 cámaras, 20 dispositivos | Instalar/registrar cámaras |
+| Hotel Eutopiq/Factory | 0 cámaras, 7 dispositivos | Instalar/registrar cámaras |
+
+## Top 5 Puestos por Tamaño
+
+| # | Puesto | Cámaras | Dispositivos | Residentes | Vehículos | Score |
+|---|--------|---------|-------------|------------|-----------|-------|
+| 1 | Altagracia | 33 | 20 | 182 | 0 | Alto |
+| 2 | Los Pisquines | 32 | 23 | 77 | 0 | Alto |
+| 3 | Torre Lucia | 24 | 42 | 166 | 54 | Alto |
+| 4 | Portalegre | 20 | 21 | 86 | 26 | Alto |
+| 5 | Alborada 9-10 | 1 | 9 | 217 | 170 | Bajo (1 cámara) |
+
+> **Nota:** Alborada 9-10 tiene el mayor número de residentes (217) y vehículos (170) pero solo 1 cámara registrada. Requiere validación.
+
+---
+
 **Documento generado automáticamente por AION Platform — 6 de abril de 2026**
-**Versión 1.0 — Entrega completa del proyecto**
+**Versión 1.1 — Entrega completa con datos operativos reales**
