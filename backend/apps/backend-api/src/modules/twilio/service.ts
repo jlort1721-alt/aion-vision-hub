@@ -67,14 +67,13 @@ export async function broadcastWhatsApp(
 ) {
   // Look up residents with phone numbers for this site
   const rows = await db.execute(sql`
-    SELECT data->>'full_name' as full_name, data->>'phone' as phone, data->>'apartment' as apartment, data->>'site_name' as site_name
-    FROM database_records
-    WHERE tenant_id = ${tenantId}
-      AND type = 'residents'
-      AND data->>'site_id' = ${siteId}
-      AND data->>'phone' IS NOT NULL
-      AND data->>'phone' != ''
-      ${filter?.apartment ? sql`AND data->>'apartment' = ${filter.apartment}` : sql``}
+    SELECT full_name, COALESCE(phone_primary, phone_mobile) as phone, unit_number as apartment, site_name
+    FROM residents
+    WHERE tenant_id = ${tenantId}::uuid
+      AND site_id = ${siteId}::uuid
+      AND status = 'active'
+      AND (phone_primary IS NOT NULL AND phone_primary != '' OR phone_mobile IS NOT NULL AND phone_mobile != '')
+      ${filter?.apartment ? sql`AND unit_number = ${filter.apartment}` : sql``}
   `);
 
   if (!rows.length) {
