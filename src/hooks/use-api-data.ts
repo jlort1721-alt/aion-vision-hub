@@ -1,3 +1,6 @@
+// NOTE: Despite the filename, this module uses apiClient (local Fastify backend),
+// NOT Supabase. The name is historical. All data fetching goes through /api endpoints.
+
 // ═══════════════════════════════════════════════════════════
 // AION VISION HUB — Data Hooks (migrated to Fastify backend)
 // These hooks route through apiClient → Fastify for proper

@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { GestureRecognizer, FilesetResolver } from '@mediapipe/tasks-vision';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useDevices, useSites } from '@/hooks/use-supabase-data';
+import { useDevices, useSites } from '@/hooks/use-api-data';
 import { useDigitalTwinMQTT } from '@/hooks/use-digital-twin';
 import { Hand, Eye, Loader2, ArrowLeft, RefreshCw, Crosshair, AlertTriangle, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

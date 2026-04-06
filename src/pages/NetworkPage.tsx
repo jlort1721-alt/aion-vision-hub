@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useDevices, useSites } from '@/hooks/use-supabase-data';
+import { useDevices, useSites } from '@/hooks/use-api-data';
 import { useToast } from '@/hooks/use-toast';
 import {
   Network, Wifi, WifiOff, Search, Scan, Shield, Server, Router, Monitor,

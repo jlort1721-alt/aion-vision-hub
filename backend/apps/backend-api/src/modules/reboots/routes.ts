@@ -5,13 +5,13 @@ import { createRebootTaskSchema, completeRebootSchema, rebootFiltersSchema } fro
 import type { CreateRebootTaskInput, CompleteRebootInput, RebootFilters } from './schemas.js';
 
 export async function registerRebootRoutes(app: FastifyInstance) {
-  app.get<{ Querystring: RebootFilters }>('/', async (request, reply) => {
+  app.get<{ Querystring: RebootFilters }>('/', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const filters = rebootFiltersSchema.parse(request.query);
     const data = await rebootService.list(request.tenantId, filters);
     return reply.send({ success: true, data });
   });
 
-  app.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
+  app.get<{ Params: { id: string } }>('/:id', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const data = await rebootService.getById(request.params.id, request.tenantId);
     return reply.send({ success: true, data });
   });

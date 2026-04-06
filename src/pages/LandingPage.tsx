@@ -910,14 +910,15 @@ export default function LandingPage() {
             {/* Social icons */}
             <div className="flex gap-3">
               {[Facebook, Instagram, Linkedin, Twitter].map((Icon, i) => (
-                <a
+                <button
                   key={i}
-                  href="#"
+                  type="button"
                   className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-200 hover:bg-white/10"
                   style={{ background: `${NAVY_700}`, border: `1px solid ${NAVY_600}` }}
+                  aria-label={['Facebook', 'Instagram', 'LinkedIn', 'Twitter'][i]}
                 >
                   <Icon className="w-4 h-4" style={{ color: GRAY_400 }} />
-                </a>
+                </button>
               ))}
             </div>
           </div>
@@ -1007,13 +1008,13 @@ export default function LandingPage() {
                   <p className="text-sm text-white group-hover:underline">contacto@claveseguridad.mx</p>
                 </div>
               </a>
-              <a href="#" className="flex items-start gap-3 group">
+              <span className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: GRAY_500 }} />
                 <div>
                   <p className="text-sm text-white">Av. Insurgentes Sur 1234</p>
                   <p className="text-xs" style={{ color: GRAY_400 }}>Col. Del Valle, CDMX 03100</p>
                 </div>
-              </a>
+              </span>
             </div>
           </div>
         </div>
@@ -1027,12 +1028,12 @@ export default function LandingPage() {
             &copy; {new Date().getFullYear()} Clave Seguridad. Todos los derechos reservados.
           </p>
           <div className="flex gap-6">
-            <a href="#" className="text-xs hover:text-white transition-colors" style={{ color: GRAY_500 }}>
+            <button type="button" className="text-xs hover:text-white transition-colors" style={{ color: GRAY_500 }}>
               Aviso de Privacidad
-            </a>
-            <a href="#" className="text-xs hover:text-white transition-colors" style={{ color: GRAY_500 }}>
+            </button>
+            <button type="button" className="text-xs hover:text-white transition-colors" style={{ color: GRAY_500 }}>
               Terminos y Condiciones
-            </a>
+            </button>
           </div>
         </div>
       </div>

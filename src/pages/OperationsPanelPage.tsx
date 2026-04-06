@@ -28,7 +28,7 @@ import { deviceControlApi } from '@/services/device-control-api';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   useDevices,
-} from '@/hooks/use-supabase-data';
+} from '@/hooks/use-api-data';
 import {
   useDomoticDevices,
   useIntercomDevices,

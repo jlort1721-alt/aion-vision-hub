@@ -87,9 +87,16 @@ import { registerImouRoutes } from './modules/imou/routes.js';
 import { registerHikConnectRoutes } from './modules/hikconnect/routes.js';
 import { registerFaceRecognitionRoutes } from './modules/face-recognition/routes.js';
 import { registerHeatMappingRoutes } from './modules/heat-mapping/routes.js';
+import { registerTwilioRoutes, registerTwilioWebhookRoutes } from './modules/twilio/routes.js';
 import { registerRemoteAccessRoutes } from './modules/remote-access/routes.js';
+import { registerFloorPlanRoutes } from './modules/floor-plans/routes.js';
+import { registerClipRoutes } from './modules/clips/routes.js';
+import { registerPlaybackRoutes } from './modules/playback/routes.js';
+import { registerOperatorAssignmentRoutes } from './modules/operator-assignments/routes.js';
 import websocketPlugin from './plugins/websocket.js';
 import { cameraEvents } from './services/camera-events.js';
+import { imouEventPoller } from './services/imou-event-poller.js';
+import { twilioNotificationWorker } from './workers/twilio-notifications.js';
 
 const loggerOpts = { name: 'aion-api', level: config.LOG_LEVEL };
 
@@ -301,6 +308,18 @@ export async function buildApp() {
   // Heat Mapping — Traffic analysis and zone activity visualization
   await app.register(registerHeatMappingRoutes, { prefix: '/analytics/heatmap' });
 
+  // Floor Plans — Upload and manage site floor plan images
+  await app.register(registerFloorPlanRoutes, { prefix: '/floor-plans' });
+  // Video Clips — Export and download camera recording clips
+  await app.register(registerClipRoutes, { prefix: '/clips' });
+  // Playback — Camera recording playback (ranges + stream URLs)
+  await app.register(registerPlaybackRoutes, { prefix: '/playback' });
+  // Operator Site Assignments — Assign operators to specific sites
+  await app.register(registerOperatorAssignmentRoutes, { prefix: '/operator-assignments' });
+
+  // Twilio — WhatsApp, SMS, Voice calls (Colombian PSTN via Twilio)
+  await app.register(registerTwilioRoutes, { prefix: '/twilio' });
+
   // CLAVE bidirectional bridge (voice commands, event push, status)
   await app.register(registerClaveBridgeRoutes, { prefix: '/clave' });
 
@@ -310,8 +329,16 @@ export async function buildApp() {
   // Public webhook routes (no JWT — Meta sends requests without auth)
   await app.register(registerWebhookRoutes, { prefix: '/webhooks/whatsapp' });
 
+  // Public Twilio webhook routes (no JWT — Twilio sends requests without auth)
+  await app.register(registerTwilioWebhookRoutes, { prefix: '/webhooks/twilio' });
+
   // WebSocket for real-time updates (JWT via query param)
   await app.register(websocketPlugin);
+
+  // ═══ Consolidated VPS Plugins (skills, VMS, wall, webhooks, platform) ═══
+  const { registerVPSPlugins, registerWallSystem } = await import('./modules/vps-plugins/index.js');
+  await registerVPSPlugins(app);
+  await app.register(registerWallSystem, { prefix: '/wall-sys' });
 
   // Start internal monitoring agent (5 min interval)
   internalAgent.start(300000);
@@ -319,10 +346,18 @@ export async function buildApp() {
   // Start camera event poller (1 min interval)
   cameraEvents.start(60000);
 
+  // Start IMOU cloud event poller (1 min interval, configurable via IMOU_POLL_INTERVAL_MS)
+  imouEventPoller.start();
+
+  // Start Twilio scheduled notifications (15 min interval)
+  twilioNotificationWorker.start(900_000);
+
   // Graceful shutdown
   app.addHook('onClose', async () => {
     internalAgent.stop();
     cameraEvents.stop();
+    imouEventPoller.stop();
+    twilioNotificationWorker.stop();
   });
 
   return app;

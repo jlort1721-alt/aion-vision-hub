@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useDevices } from '@/hooks/use-supabase-data';
+import { useDevices } from '@/hooks/use-api-data';
 import { useMutation } from '@tanstack/react-query';
 import { deviceControlApi } from '@/services/device-control-api';
 import { toast } from 'sonner';

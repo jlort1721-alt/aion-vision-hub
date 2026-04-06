@@ -13,7 +13,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { reportsApi } from '@/services/reports-api';
-import { useSites } from '@/hooks/use-supabase-data';
+import { useSites } from '@/hooks/use-api-data';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';

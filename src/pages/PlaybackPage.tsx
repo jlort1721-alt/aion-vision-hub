@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { useDevices, useSites, useEventsLegacy } from '@/hooks/use-supabase-data';
+import { useDevices, useSites, useEventsLegacy } from '@/hooks/use-api-data';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';

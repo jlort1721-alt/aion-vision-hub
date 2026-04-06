@@ -44,6 +44,7 @@ export const ALL_MODULES: ModulePermission[] = [
   { module: 'documents', label: 'Documents', icon: 'FolderOpen', path: '/documents' },
   { module: 'minuta', label: 'Minuta', icon: 'ClipboardList', path: '/minuta' },
   { module: 'phone', label: 'Phone Panel', icon: 'Smartphone', path: '/phone' },
+  { module: 'communications', label: 'Communications', icon: 'MessageSquare', path: '/communications' },
   { module: 'operations', label: 'Operations Panel', icon: 'LayoutGrid', path: '/operations' },
   { module: 'settings', label: 'Settings', icon: 'Settings', path: '/settings' },
   { module: 'admin', label: 'Admin', icon: 'Users', path: '/admin' },
@@ -59,7 +60,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
     'shifts', 'sla', 'emergency', 'patrols',
     'automation', 'visitors', 'analytics',
     'contracts', 'keys', 'training', 'posts',
-    'notes', 'documents', 'minuta', 'phone', 'operations',
+    'notes', 'documents', 'minuta', 'phone', 'communications', 'operations',
   ],
   viewer: [
     'dashboard', 'live_view', 'playback', 'events', 'reports',

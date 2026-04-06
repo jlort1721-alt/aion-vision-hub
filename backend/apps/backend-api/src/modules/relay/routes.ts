@@ -133,6 +133,7 @@ export async function registerRelayRoutes(app: FastifyInstance) {
   app.get(
     '/backends',
     {
+      preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')],
       schema: {
         tags: ['Relay Control'],
         summary: 'List all supported relay control backends',

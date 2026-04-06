@@ -52,7 +52,7 @@ const mockConnectors = [
   },
 ];
 
-vi.mock("@/hooks/use-supabase-data", () => ({
+vi.mock("@/hooks/use-api-data", () => ({
   useIntegrations: () => ({ data: mockIntegrations, isLoading: false }),
   useMcpConnectors: () => ({ data: mockConnectors, isLoading: false }),
 }));

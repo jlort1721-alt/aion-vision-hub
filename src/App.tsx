@@ -1,6 +1,5 @@
-import { lazy, Suspense, Component } from "react";
-import type { ReactNode, ErrorInfo } from "react";
-import { Sentry } from "@/lib/sentry";
+import { lazy, Suspense } from "react";
+import type { ReactNode } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -12,45 +11,8 @@ import { BrandingProvider } from "@/contexts/BrandingContext";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { hasModuleAccess } from "@/lib/permissions";
 import AppLayout from "@/components/layout/AppLayout";
-
-
-// ── Error Boundary ──
-interface ErrorBoundaryProps { children: ReactNode; fallback?: ReactNode }
-interface ErrorBoundaryState { hasError: boolean; error: Error | null }
-
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('[ErrorBoundary]', error, info.componentStack);
-    Sentry.captureException(error, { extra: { componentStack: info.componentStack } });
-  }
-  render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) return this.props.fallback;
-      return (
-        <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 p-8 text-center">
-          <div className="text-destructive text-lg font-semibold">Something went wrong</div>
-          <p className="text-sm text-muted-foreground max-w-md">
-            {this.state.error?.message || 'An unexpected error occurred.'}
-          </p>
-          <button
-            className="mt-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
-            onClick={() => this.setState({ hasError: false, error: null })}
-          >
-            Try again
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
+import CookieConsentBanner from "@/components/CookieConsentBanner";
+import ErrorBoundary from "@/components/ErrorBoundary";
 // Route-level code splitting: each page loads on-demand
 const PWAUpdateNotification = lazy(() => import("@/components/pwa/PWAUpdateNotification").then(m => ({ default: m.PWAUpdateNotification })));
 const PWAInstallPrompt = lazy(() => import("@/components/pwa/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
@@ -109,10 +71,16 @@ const UserManualPage = lazy(() => import("@/pages/UserManualPage"));
 const FloorPlanPage = lazy(() => import("@/pages/FloorPlanPage"));
 const SkillsPage = lazy(() => import("@/pages/SkillsPage"));
 const CameraHealthPage = lazy(() => import("@/pages/CameraHealthPage"));
+const AgentView = lazy(() => import("@/features/agent/components/AgentView"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage"));
 const TermsPage = lazy(() => import("@/pages/TermsPage"));
 const CookiePolicyPage = lazy(() => import("@/pages/CookiePolicyPage"));
+const WallPage = lazy(() => import("@/pages/WallPage"));
+const SitePortalPage = lazy(() => import("@/pages/SitePortalPage"));
+const TVDashboardPage = lazy(() => import("@/pages/TVDashboardPage"));
+const OperationalReportsPage = lazy(() => import("@/pages/OperationalReportsPage"));
+const CommunicationsPage = lazy(() => import("@/pages/CommunicationsPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = createQueryClient();
@@ -211,22 +179,28 @@ function AppRoutes() {
           <Route path="keys" element={<ModuleGuard module="keys"><KeysPage /></ModuleGuard>} />
           <Route path="compliance" element={<ModuleGuard module="compliance"><CompliancePage /></ModuleGuard>} />
           <Route path="training" element={<ModuleGuard module="training"><TrainingPage /></ModuleGuard>} />
-          <Route path="skills" element={<SkillsPage />} />
+          <Route path="skills" element={<ModuleGuard module="ai"><SkillsPage /></ModuleGuard>} />
+          <Route path="agent" element={<ModuleGuard module="ai"><AgentView /></ModuleGuard>} />
           <Route path="posts" element={<ModuleGuard module="posts"><PostsPage /></ModuleGuard>} />
           <Route path="notes" element={<ModuleGuard module="notes"><NotesPage /></ModuleGuard>} />
           <Route path="documents" element={<ModuleGuard module="documents"><DocumentsPage /></ModuleGuard>} />
           <Route path="minuta" element={<ModuleGuard module="minuta"><MinutaPage /></ModuleGuard>} />
           <Route path="phone" element={<ModuleGuard module="phone"><PhonePanelPage /></ModuleGuard>} />
+          <Route path="communications" element={<ModuleGuard module="communications"><CommunicationsPage /></ModuleGuard>} />
           <Route path="network" element={<ModuleGuard module="system"><NetworkPage /></ModuleGuard>} />
           <Route path="remote-access" element={<ModuleGuard module="system"><RemoteAccessPage /></ModuleGuard>} />
           <Route path="camera-health" element={<ModuleGuard module="live_view"><CameraHealthPage /></ModuleGuard>} />
           <Route path="operations" element={<ModuleGuard module="operations"><OperationsPanelPage /></ModuleGuard>} />
-          <Route path="admin/dashboard" element={<OperationalDashboardPage />} />
-          <Route path="admin/residents" element={<ResidentsAdminPage />} />
+          <Route path="admin/dashboard" element={<ModuleGuard module="admin"><OperationalDashboardPage /></ModuleGuard>} />
+          <Route path="admin/residents" element={<ModuleGuard module="admin"><ResidentsAdminPage /></ModuleGuard>} />
+          <Route path="operational-reports" element={<ModuleGuard module="operations"><OperationalReportsPage /></ModuleGuard>} />
           <Route path="manual" element={<UserManualPage />} />
           <Route path="guard" element={<GuardMobilePage />} />
           <Route path="onboarding" element={<OnboardingWizardPage />} />
         </Route>
+        <Route path="wall/:screenNumber" element={<ProtectedRoute><WallPage /></ProtectedRoute>} />
+        <Route path="tv" element={<ProtectedRoute><TVDashboardPage /></ProtectedRoute>} />
+        <Route path="portal/:siteCode" element={<SitePortalPage />} />
         <Route path="privacy" element={<PrivacyPolicyPage />} />
         <Route path="terms" element={<TermsPage />} />
         <Route path="cookies" element={<CookiePolicyPage />} />
@@ -258,6 +232,7 @@ const App = () => (
                 <ErrorBoundary>
                   <ThemeWrapper>
                     <AppRoutes />
+                    <CookieConsentBanner />
                   </ThemeWrapper>
                 </ErrorBoundary>
               </ThemeProvider>

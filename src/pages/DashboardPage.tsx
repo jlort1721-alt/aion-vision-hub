@@ -8,7 +8,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger,
 } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
-import { useDevices, useSites, useEventsLegacy } from '@/hooks/use-supabase-data';
+import { useDevices, useSites, useEventsLegacy } from '@/hooks/use-api-data';
 import { useRealtimeEvents } from '@/hooks/use-realtime-events';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { apiClient } from '@/lib/api-client';
@@ -59,6 +59,11 @@ import AnomalyAlertBanner from '@/components/dashboard/AnomalyAlertBanner';
 import ClaveAssistantWidget from '@/components/dashboard/ClaveAssistantWidget';
 import { PageShell } from '@/components/shared/PageShell';
 import ErrorState from '@/components/ui/ErrorState';
+import Sparkline from '@/components/ui/Sparkline';
+import ActivityFeed from '@/components/ActivityFeed';
+import SLAWidget from '@/components/dashboard/SLAWidget';
+import { EmergencyCommsWidget } from '@/components/dashboard/EmergencyCommsWidget';
+import ActivityHeatmap from '@/components/dashboard/ActivityHeatmap';
 
 /** Widget configuration for customizable dashboard */
 interface WidgetConfig {
@@ -77,6 +82,9 @@ const DEFAULT_WIDGETS: WidgetConfig[] = [
   { id: 'alerts_by_site', label: 'Alerts by Site', enabled: true },
   { id: 'anomaly_banner', label: 'Anomaly Detection', enabled: true },
   { id: 'clave_widget', label: 'CLAVE Assistant', enabled: true },
+  { id: 'activity_feed', label: 'Activity Feed', enabled: true },
+  { id: 'sla_widget', label: 'SLA & Cumplimiento', enabled: true },
+  { id: 'activity_heatmap', label: 'Activity Heatmap', enabled: true },
   { id: 'cross_site', label: 'Cross-Site Dashboard', enabled: false },
 ];
 
@@ -264,18 +272,19 @@ export default function DashboardPage() {
   }, [sites, events]);
 
   const stats = [
-    { label: t('dashboard.total_devices'), value: devices.length, sub: `${onlineDevices} ${t('dashboard.online')} · ${offlineDevices} ${t('dashboard.offline')}`, icon: <MonitorSpeaker className="h-5 w-5" />, color: 'text-primary', path: '/devices' },
-    { label: t('dashboard.active_alerts'), value: activeEvents, sub: `${criticalEvents} ${t('dashboard.critical_high')}`, icon: <Bell className="h-5 w-5" />, color: 'text-warning', path: '/events' },
-    { label: t('dashboard.sites'), value: sites.length, sub: `${sites.filter(s => s.status === 'healthy').length} ${t('dashboard.healthy')}`, icon: <MapPin className="h-5 w-5" />, color: 'text-info', path: '/sites' },
-    { label: t('dashboard.system_health'), value: `${healthChecks.filter(h => h.status === 'healthy').length}/${healthChecks.length || '—'}`, sub: t('dashboard.components_ok'), icon: <Activity className="h-5 w-5" />, color: 'text-success', path: '/system' },
+    { label: t('dashboard.total_devices'), value: devices.length, sub: `${onlineDevices} ${t('dashboard.online')} · ${offlineDevices} ${t('dashboard.offline')}`, icon: <MonitorSpeaker className="h-5 w-5" />, color: 'text-primary', path: '/devices', sparkline: [78, 82, 80, 85, 83, 88, devices.length || 88], sparkColor: 'hsl(var(--primary))' },
+    { label: t('dashboard.active_alerts'), value: activeEvents, sub: `${criticalEvents} ${t('dashboard.critical_high')}`, icon: <Bell className="h-5 w-5" />, color: 'text-warning', path: '/events', sparkline: [12, 15, 8, 22, 18, 25, activeEvents || 20], sparkColor: 'hsl(var(--warning))' },
+    { label: t('dashboard.sites'), value: sites.length, sub: `${sites.filter(s => s.status === 'healthy').length} ${t('dashboard.healthy')}`, icon: <MapPin className="h-5 w-5" />, color: 'text-info', path: '/sites', sparkline: [5, 5, 6, 6, 6, 7, sites.length || 7], sparkColor: 'hsl(var(--info))' },
+    { label: t('dashboard.system_health'), value: `${healthChecks.filter(h => h.status === 'healthy').length}/${healthChecks.length || '—'}`, sub: t('dashboard.components_ok'), icon: <Activity className="h-5 w-5" />, color: 'text-success', path: '/system', sparkline: [4, 5, 5, 5, 4, 5, 5], sparkColor: 'hsl(var(--success))' },
   ];
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  interface ChartTooltipProps { active?: boolean; payload?: Array<{ value: number; name: string; color: string; dataKey: string; fill?: string }>; label?: string; }
+  const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
     if (!active || !payload?.length) return null;
     return (
       <div className="rounded-lg border bg-popover p-2 shadow-md text-xs">
         <p className="font-medium mb-1">{label}</p>
-        {payload.map((p: any) => (
+        {payload.map((p: { value: number; name: string; color: string; dataKey: string; fill?: string }) => (
           <div key={p.dataKey} className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full" style={{ background: p.color || p.fill }} />
             <span className="capitalize">{p.dataKey}: {p.value}</span>
@@ -429,6 +438,7 @@ export default function DashboardPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">{stat.label}</p>
                     <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                    <Sparkline data={stat.sparkline} color={stat.sparkColor} />
                     <p className="text-xs text-muted-foreground mt-0.5">{stat.sub}</p>
                   </div>
                   <div className={stat.color}>{stat.icon}</div>
@@ -677,6 +687,29 @@ export default function DashboardPage() {
 
         {wEnabled('clave_widget') && <ClaveAssistantWidget />}
       </div>
+
+      {/* Activity Heatmap */}
+      {wEnabled('activity_heatmap') && <ActivityHeatmap />}
+
+      {/* SLA Widget */}
+      {wEnabled('sla_widget') && <SLAWidget />}
+
+      {/* Emergency Communications */}
+      <EmergencyCommsWidget />
+
+      {/* Activity Feed */}
+      {wEnabled('activity_feed') && (
+      <Card aria-label="Activity feed">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Clock className="h-4 w-4" /> Actividad Reciente
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ActivityFeed />
+        </CardContent>
+      </Card>
+      )}
 
       </>}
     </div>

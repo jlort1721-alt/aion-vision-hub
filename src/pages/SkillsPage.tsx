@@ -8,9 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowLeft, Play, FileText, Clock, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
+import DOMPurify from 'dompurify';
 // Simple markdown-to-HTML for rendering skill output
 function SimpleMarkdown({ children }: { children: string }) {
-  const html = children
+  const raw = children
     .replace(/^### (.*$)/gm, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')
     .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mt-5 mb-2">$1</h2>')
     .replace(/^\*\*(.*?)\*\*/gm, '<strong>$1</strong>')
@@ -21,6 +22,10 @@ function SimpleMarkdown({ children }: { children: string }) {
     .replace(/^---$/gm, '<hr class="my-4 border-border"/>')
     .replace(/\n\n/g, '<br/><br/>')
     .replace(/\n/g, '<br/>');
+  const html = DOMPurify.sanitize(raw, {
+    ALLOWED_TAGS: ['h2', 'h3', 'strong', 'em', 'b', 'i', 'div', 'span', 'input', 'li', 'ul', 'ol', 'hr', 'br', 'p', 'a', 'code', 'pre'],
+    ALLOWED_ATTR: ['class', 'type', 'checked', 'disabled', 'href', 'target', 'rel'],
+  });
   return <div dangerouslySetInnerHTML={{ __html: html }} />;
 }
 

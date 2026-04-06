@@ -123,35 +123,39 @@ function sleep(ms: number): Promise<void> {
 
 // ── Database lookups ─────────────────────────────────────
 
+// SECURITY: parametrized query — fixed SQL injection
 async function findResident(apartment: string, siteId?: string): Promise<Record<string, unknown> | null> {
-  const conditions = [`unit_number = '${apartment.replace(/'/g, '')}' AND is_active = true`];
-  if (siteId) conditions.push(`site_id = '${siteId}'`);
-
-  const result = await db.execute(
-    sql.raw(`SELECT * FROM residents WHERE ${conditions.join(' AND ')} LIMIT 1`)
-  );
+  const result = siteId
+    ? await db.execute(
+        sql`SELECT * FROM residents WHERE unit_number = ${apartment} AND is_active = true AND site_id = ${siteId} LIMIT 1`
+      )
+    : await db.execute(
+        sql`SELECT * FROM residents WHERE unit_number = ${apartment} AND is_active = true LIMIT 1`
+      );
   const rows = result as unknown as Record<string, unknown>[];
   return rows[0] || null;
 }
 
+// SECURITY: parametrized query — fixed SQL injection
 async function findVehicleByPlate(plate: string): Promise<Record<string, unknown> | null> {
   const normalized = plate.toUpperCase().replace(/[\s-]/g, '');
   const result = await db.execute(
-    sql.raw(`SELECT v.*, r.full_name as owner_name, r.unit_number, r.phone_primary
-             FROM vehicles v
-             LEFT JOIN residents r ON r.id = v.resident_id
-             WHERE REPLACE(UPPER(v.plate), '-', '') = '${normalized}'
-             AND v.is_active = true LIMIT 1`)
+    sql`SELECT v.*, r.full_name as owner_name, r.unit_number, r.phone_primary
+        FROM vehicles v
+        LEFT JOIN residents r ON r.id = v.resident_id
+        WHERE REPLACE(UPPER(v.plate), '-', '') = ${normalized}
+        AND v.is_active = true LIMIT 1`
   );
   const rows = result as unknown as Record<string, unknown>[];
   return rows[0] || null;
 }
 
+// SECURITY: parametrized query — fixed SQL injection
 async function findDoorDevice(siteId: string, doorType: 'pedestrian' | 'vehicular'): Promise<string | null> {
   const typeFilter = doorType === 'pedestrian' ? 'door_pedestrian' : 'door_vehicular';
   const result = await db.execute(
-    sql.raw(`SELECT ewelink_device_id FROM ewelink_device_mappings
-             WHERE site_id = '${siteId}' AND device_type = '${typeFilter}' LIMIT 1`)
+    sql`SELECT ewelink_device_id FROM ewelink_device_mappings
+        WHERE site_id = ${siteId} AND device_type = ${typeFilter} LIMIT 1`
   );
   const rows = result as unknown as Record<string, unknown>[];
   return (rows[0]?.ewelink_device_id as string) || null;

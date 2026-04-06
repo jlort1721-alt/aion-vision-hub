@@ -28,6 +28,7 @@ export async function registerPushRoutes(app: FastifyInstance) {
 
   app.post<{ Body: SubscribeInput }>(
     '/subscribe',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const { subscription } = subscribeSchema.parse(request.body);
       const userAgent = request.headers['user-agent'];
@@ -45,6 +46,7 @@ export async function registerPushRoutes(app: FastifyInstance) {
 
   app.post<{ Body: UnsubscribeInput }>(
     '/unsubscribe',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const { endpoint } = unsubscribeSchema.parse(request.body);
       const data = await pushService.unsubscribe(
@@ -60,6 +62,7 @@ export async function registerPushRoutes(app: FastifyInstance) {
 
   app.get(
     '/subscriptions',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await pushService.getSubscriptions(
         request.tenantId,

@@ -205,7 +205,7 @@ export function useOfflineCache(): OfflineCacheResult {
 
       await setMeta('lastRefresh', new Date().toISOString());
     } catch (err) {
-      console.warn('[OfflineCache] Failed to refresh cache:', err);
+      if (import.meta.env.DEV) console.warn('[OfflineCache] Failed to refresh cache:', err);
     }
   }, []);
 
@@ -327,7 +327,7 @@ export function useOfflineCache(): OfflineCacheResult {
         } catch {
           // Retry later if we haven't exceeded max retries
           if (m.retries >= MAX_SYNC_RETRIES) {
-            console.error('[OfflineCache] Dropping mutation after max retries:', m);
+            if (import.meta.env.DEV) console.error('[OfflineCache] Dropping mutation after max retries:', m);
             if (m.queueId != null) await dequeueMutation(m.queueId);
             pendingRef.current = Math.max(0, pendingRef.current - 1);
           } else {

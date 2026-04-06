@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useIntegrations, useMcpConnectors } from '@/hooks/use-supabase-data';
+import { useIntegrations, useMcpConnectors } from '@/hooks/use-api-data';
 import { apiClient } from '@/lib/api-client';
 import { MCP_CONNECTOR_CATALOG } from '@/services/mcp-registry';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';

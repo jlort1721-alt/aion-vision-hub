@@ -7,16 +7,17 @@ const CommandPalette = lazy(() => import('@/components/CommandPalette'));
 const AlarmVideoPopup = lazy(() => import('@/components/alarms/AlarmVideoPopup'));
 const AIONFloatingAssistant = lazy(() => import('@/components/ai/AIONFloatingAssistant').then(m => ({ default: m.AIONFloatingAssistant })));
 const PanicButton = lazy(() => import('@/components/emergency/PanicButton'));
+const OnboardingWizard = lazy(() => import('@/components/OnboardingWizard'));
 import { useI18n } from '@/contexts/I18nContext';
 import { useBranding } from '@/contexts/BrandingContext';
 import { useNetworkStatus } from '@/hooks/use-network-status';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   LayoutDashboard, Video, Play, Bell, MonitorSpeaker, MapPin, Puzzle, Bot,
   Settings, ScrollText, FileBarChart, Activity, ChevronLeft, Search,
@@ -33,6 +34,10 @@ import { apiClient } from '@/lib/api-client';
 import Logo from '@/components/brand/Logo';
 import { VoiceAssistant } from '@/components/VoiceAssistant';
 import { OperatorStatusBar } from '@/components/OperatorStatusBar';
+import NotificationPanel from '@/components/NotificationPanel';
+const AutoReminders = lazy(() => import('@/components/AutoReminders'));
+const ShiftChecklist = lazy(() => import('@/components/ShiftChecklist'));
+const LogbookEntry = lazy(() => import('@/components/LogbookEntry'));
 
 // ── Navigation with categories ─────────────────────────────
 
@@ -88,6 +93,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { labelKey: 'nav.automation', path: '/automation', icon: <Cog size={18} /> },
       { labelKey: 'nav.minuta', path: '/minuta', icon: <ClipboardList size={18} /> },
       { labelKey: 'nav.phone', path: '/phone', icon: <PhoneCall size={18} /> },
+      { labelKey: 'nav.communications', path: '/communications', icon: <MessageSquare size={18} /> },
     ],
   },
   {
@@ -132,6 +138,7 @@ const NAV_CATEGORIES: NavCategory[] = [
 ];
 
 export default function AppLayout() {
+  useKeyboardShortcuts();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
@@ -144,8 +151,6 @@ export default function AppLayout() {
 
   // ── Badge counts for sidebar nav ──────────────────────────
   interface PaginatedEnvelope { meta?: { total?: number }; items?: unknown[]; data?: unknown[]; count?: number }
-  interface NotificationEvent { id: string; title?: string; description?: string; severity?: string; created_at?: string }
-
   const { data: eventCount = 0 } = useQuery({
     queryKey: ['sidebar-event-count'],
     queryFn: async () => {
@@ -181,20 +186,6 @@ export default function AppLayout() {
     alerts: alertCount as number,
     incidents: incidentCount as number,
   }), [eventCount, alertCount, incidentCount]);
-
-  // ── Recent events for notification bell ───────────────────
-  const { data: recentNotifications = [] } = useQuery({
-    queryKey: ['header-notifications'],
-    queryFn: async () => {
-      const resp = await apiClient.get<PaginatedEnvelope>('/events', { limit: '5', status: 'new' });
-      const items = Array.isArray(resp) ? resp : (resp?.items ?? resp?.data ?? []);
-      return items as NotificationEvent[];
-    },
-    refetchInterval: 30000,
-    enabled: isAuthenticated,
-  });
-
-  const totalUnread = eventCount as number;
 
   const openCommandPalette = useCallback(() => {
     document.dispatchEvent(new CustomEvent('open-command-palette'));
@@ -304,7 +295,7 @@ export default function AppLayout() {
                     aria-current={isActive ? 'page' : undefined}
                   >
                     <span className="shrink-0">{item.icon}</span>
-                    {!collapsed && (
+                    {!collapsed ? (
                       <>
                         <span className="truncate">{label}</span>
                         {item.badgeKey && badgeCounts[item.badgeKey] > 0 && (
@@ -313,6 +304,10 @@ export default function AppLayout() {
                           </span>
                         )}
                       </>
+                    ) : (
+                      item.badgeKey && badgeCounts[item.badgeKey] > 0 && (
+                        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-destructive" />
+                      )
                     )}
                   </button>
                 );
@@ -408,56 +403,8 @@ export default function AppLayout() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-4 w-4" />
-                  {totalUnread > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center h-4 min-w-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1">
-                      {totalUnread > 99 ? '99+' : totalUnread}
-                    </span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-80 p-0" {...(totalUnread > 0 ? { role: 'alert' as const } : {})}>
-                <div className="flex items-center justify-between px-4 py-3 border-b">
-                  <p className="text-sm font-semibold">{t('common.notifications') || 'Notifications'}</p>
-                  {totalUnread > 0 && (
-                    <Badge variant="destructive" className="text-[10px]">{totalUnread} {t('common.new') || 'new'}</Badge>
-                  )}
-                </div>
-                <div className="max-h-72 overflow-y-auto">
-                  {recentNotifications.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">{t('common.no_notifications') || 'No new notifications'}</p>
-                  ) : (
-                    recentNotifications.map((evt) => (
-                      <button
-                        key={evt.id}
-                        className="flex items-start gap-3 w-full px-4 py-2.5 text-left hover:bg-muted/50 transition-colors border-b last:border-b-0"
-                        onClick={() => navigate('/events')}
-                      >
-                        <span className="mt-0.5 shrink-0">
-                          {evt.severity === 'critical' ? <AlertTriangle className="h-4 w-4 text-destructive" /> :
-                           evt.severity === 'high' ? <AlertTriangle className="h-4 w-4 text-warning" /> :
-                           <Bell className="h-4 w-4 text-muted-foreground" />}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{evt.title || evt.description || 'Event'}</p>
-                          {evt.created_at && (
-                            <p className="text-[11px] text-muted-foreground">{new Date(evt.created_at).toLocaleString()}</p>
-                          )}
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-                <div className="border-t px-4 py-2">
-                  <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => navigate('/events')}>
-                    {t('dashboard.view_all') || 'View all'} &rarr;
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <Suspense fallback={null}><ShiftChecklist /></Suspense>
+            <NotificationPanel />
           </div>
         </header>
 
@@ -484,6 +431,15 @@ export default function AppLayout() {
       </Suspense>
       <Suspense fallback={null}>
         <PanicButton />
+      </Suspense>
+      <Suspense fallback={null}>
+        <OnboardingWizard />
+      </Suspense>
+      <Suspense fallback={null}>
+        <AutoReminders />
+      </Suspense>
+      <Suspense fallback={null}>
+        <LogbookEntry />
       </Suspense>
       {/* Operator status bar — always visible at bottom */}
       <OperatorStatusBar />

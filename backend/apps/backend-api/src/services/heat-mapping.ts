@@ -76,6 +76,96 @@ export class HeatMappingService {
       return [];
     }
   }
+
+  /** Get event density by site zones -- group by site_id and hour of day */
+  async getZoneDensity(tenantId: string, days = 7): Promise<Record<string, unknown>[]> {
+    try {
+      const results = await db.execute(sql`
+        SELECT s.id as site_id, s.name as site_name,
+               EXTRACT(HOUR FROM e.created_at)::int as hour,
+               count(*)::int as event_count
+        FROM events e
+        JOIN sites s ON e.site_id = s.id
+        WHERE e.tenant_id = ${tenantId}
+          AND e.created_at > NOW() - ${days + ' days'}::interval
+        GROUP BY s.id, s.name, EXTRACT(HOUR FROM e.created_at)
+        ORDER BY s.name, hour
+      `);
+      return results as unknown as Record<string, unknown>[];
+    } catch (err) {
+      logger.error({ err }, 'Failed to get zone density');
+      return [];
+    }
+  }
+
+  /** Get 24-hour activity pattern -- events per hour across all sites */
+  async getHourlyPattern(tenantId: string, days = 7): Promise<Record<string, unknown>[]> {
+    try {
+      const results = await db.execute(sql`
+        SELECT EXTRACT(HOUR FROM e.created_at)::int as hour,
+               count(*)::int as event_count,
+               count(DISTINCT e.site_id)::int as active_sites,
+               count(DISTINCT e.device_id)::int as active_devices
+        FROM events e
+        WHERE e.tenant_id = ${tenantId}
+          AND e.created_at > NOW() - ${days + ' days'}::interval
+        GROUP BY EXTRACT(HOUR FROM e.created_at)
+        ORDER BY hour
+      `);
+      return results as unknown as Record<string, unknown>[];
+    } catch (err) {
+      logger.error({ err }, 'Failed to get hourly pattern');
+      return [];
+    }
+  }
+
+  /** Get 7-day weekly pattern -- events per day of week */
+  async getWeeklyPattern(tenantId: string, weeks = 4): Promise<Record<string, unknown>[]> {
+    try {
+      const results = await db.execute(sql`
+        SELECT EXTRACT(DOW FROM e.created_at)::int as day_of_week,
+               CASE EXTRACT(DOW FROM e.created_at)::int
+                 WHEN 0 THEN 'Sunday' WHEN 1 THEN 'Monday' WHEN 2 THEN 'Tuesday'
+                 WHEN 3 THEN 'Wednesday' WHEN 4 THEN 'Thursday' WHEN 5 THEN 'Friday'
+                 WHEN 6 THEN 'Saturday'
+               END as day_name,
+               count(*)::int as event_count,
+               round(count(*)::numeric / ${weeks}, 1)::float as avg_per_week
+        FROM events e
+        WHERE e.tenant_id = ${tenantId}
+          AND e.created_at > NOW() - ${weeks * 7 + ' days'}::interval
+        GROUP BY EXTRACT(DOW FROM e.created_at)
+        ORDER BY day_of_week
+      `);
+      return results as unknown as Record<string, unknown>[];
+    } catch (err) {
+      logger.error({ err }, 'Failed to get weekly pattern');
+      return [];
+    }
+  }
+
+  /** Get access log density by hour and site */
+  async getAccessTraffic(tenantId: string, days = 30): Promise<Record<string, unknown>[]> {
+    try {
+      const results = await db.execute(sql`
+        SELECT s.id as site_id, s.name as site_name,
+               EXTRACT(HOUR FROM al.created_at)::int as hour,
+               count(*)::int as total,
+               count(*) FILTER (WHERE al.direction = 'in')::int as entries,
+               count(*) FILTER (WHERE al.direction = 'out')::int as exits
+        FROM access_logs al
+        JOIN sites s ON al.site_id = s.id
+        WHERE al.tenant_id = ${tenantId}
+          AND al.created_at > NOW() - ${days + ' days'}::interval
+        GROUP BY s.id, s.name, EXTRACT(HOUR FROM al.created_at)
+        ORDER BY s.name, hour
+      `);
+      return results as unknown as Record<string, unknown>[];
+    } catch (err) {
+      logger.error({ err }, 'Failed to get access traffic');
+      return [];
+    }
+  }
 }
 
 export const heatMapping = new HeatMappingService();

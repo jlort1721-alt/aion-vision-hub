@@ -12,6 +12,7 @@ export const profiles = pgTable('profiles', {
   emailVerified: boolean('email_verified').default(false),
   resetToken: text('reset_token'),
   resetTokenExpires: timestamp('reset_token_expires', { withTimezone: true }),
+  status: varchar('status', { length: 32 }).notNull().default('active'),
   isActive: boolean('is_active').notNull().default(true),
   lastLoginAt: timestamp('last_login', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

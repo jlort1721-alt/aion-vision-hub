@@ -28,14 +28,15 @@ const PUBLIC_ROUTES = [
   '/health/ready',
   '/health/metrics',
   '/webhooks/whatsapp',
+  '/webhooks/n8n',
+  '/webhooks/twilio',
   '/ws',
   '/push/vapid-public-key',
   '/auth/login',
-  '/auth/register',
   '/auth/refresh',
   '/auth/reset-password',
   '/auth/reset-password/confirm',
-  '/provisioning',
+  // SECURITY: /provisioning removed from public routes — requires JWT auth + requireRole
 ];
 
 /**

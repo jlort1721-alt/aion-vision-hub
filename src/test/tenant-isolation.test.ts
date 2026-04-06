@@ -48,7 +48,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 describe("Tenant Isolation - Architecture", () => {
   it("all data hooks are scoped to authenticated users only", async () => {
     // Import hooks - they should all check isAuthenticated before fetching
-    const hooks = await import("@/hooks/use-supabase-data");
+    const hooks = await import("@/hooks/use-api-data");
     const moduleHooks = await import("@/hooks/use-module-data");
 
     // Verify hook exports exist

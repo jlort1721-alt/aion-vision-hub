@@ -5,6 +5,7 @@
  */
 import crypto from 'crypto';
 import { createLogger } from '@aion/common-utils';
+import { fetchWithTimeout } from '../lib/http-client.js';
 
 const logger = createLogger({ name: 'hikconnect' });
 
@@ -38,7 +39,7 @@ export class HikConnectService {
     const body = JSON.stringify({ pageNo, pageSize });
     const headers = this.sign('POST', path, body);
     try {
-      const resp = await fetch(`${this.baseUrl}${path}`, {
+      const resp = await fetchWithTimeout(`${this.baseUrl}${path}`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body,
@@ -56,7 +57,7 @@ export class HikConnectService {
     const body = JSON.stringify({ cameraIndexCode, protocol, streamType: 0, transmode: 1 });
     const headers = this.sign('POST', path, body);
     try {
-      const resp = await fetch(`${this.baseUrl}${path}`, {
+      const resp = await fetchWithTimeout(`${this.baseUrl}${path}`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body,
@@ -74,7 +75,7 @@ export class HikConnectService {
     const body = JSON.stringify({ cameraIndexCode, action, speed });
     const headers = this.sign('PUT', path, body);
     try {
-      await fetch(`${this.baseUrl}${path}`, {
+      await fetchWithTimeout(`${this.baseUrl}${path}`, {
         method: 'PUT',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body,

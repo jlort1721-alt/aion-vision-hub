@@ -448,7 +448,7 @@ class Orchestrator {
                 'open',
                 ${priority},
                 ${createdBy},
-                ${sql.raw(`ARRAY['${event.id}']::uuid[]`)},
+                ${sql`ARRAY[${event.id}]::uuid[]`},
                 '[]'::jsonb,
                 NOW(),
                 NOW()

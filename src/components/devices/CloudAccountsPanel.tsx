@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useSites } from '@/hooks/use-supabase-data';
+import { useSites } from '@/hooks/use-api-data';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Cloud, CloudOff, RefreshCw, Download, Check, X, Eye, Video,

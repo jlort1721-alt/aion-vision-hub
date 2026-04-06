@@ -5,6 +5,8 @@
  * for the intercom greeting/extension system.
  */
 
+import { fetchWithTimeout } from '../lib/http-client.js';
+
 const ELEVENLABS_API = 'https://api.elevenlabs.io/v1';
 
 function getApiKey(): string {
@@ -38,7 +40,7 @@ export interface ElevenLabsSubscription {
  */
 export async function listVoices(): Promise<{ voices: ElevenLabsVoice[]; error?: string }> {
   try {
-    const resp = await fetch(`${ELEVENLABS_API}/voices`, { headers: getHeaders() });
+    const resp = await fetchWithTimeout(`${ELEVENLABS_API}/voices`, { headers: getHeaders() });
     if (!resp.ok) return { voices: [], error: `HTTP ${resp.status}` };
     const data = await resp.json() as { voices: ElevenLabsVoice[] };
     return { voices: data.voices || [] };
@@ -59,7 +61,7 @@ export async function synthesize(
   const model = modelId || process.env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2';
 
   try {
-    const resp = await fetch(`${ELEVENLABS_API}/text-to-speech/${voice}`, {
+    const resp = await fetchWithTimeout(`${ELEVENLABS_API}/text-to-speech/${voice}`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({
@@ -91,7 +93,7 @@ export async function synthesize(
  */
 export async function getSubscription(): Promise<{ subscription: ElevenLabsSubscription | null; error?: string }> {
   try {
-    const resp = await fetch(`${ELEVENLABS_API}/user/subscription`, { headers: getHeaders() });
+    const resp = await fetchWithTimeout(`${ELEVENLABS_API}/user/subscription`, { headers: getHeaders() });
     if (!resp.ok) return { subscription: null, error: `HTTP ${resp.status}` };
     const data = await resp.json() as ElevenLabsSubscription;
     return { subscription: data };

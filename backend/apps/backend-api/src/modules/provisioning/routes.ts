@@ -1,11 +1,11 @@
 import type { FastifyInstance } from 'fastify';
+import { requireRole } from '../../plugins/auth.js';
 import { db } from '../../db/client.js';
 import { sql } from 'drizzle-orm';
 
 export async function registerProvisioningRoutes(app: FastifyInstance) {
   // Serve Fanvil config by MAC address
-  // GET /provisioning/:mac.cfg — no auth required (phones can't authenticate)
-  app.get('/:filename', async (request, reply) => {
+  app.get('/:filename', { preHandler: [requireRole('tenant_admin', 'super_admin')] }, async (request, reply) => {
     const { filename } = request.params as { filename: string };
     const mac = filename.replace('.cfg', '').replace(/[^a-fA-F0-9]/g, '').toLowerCase();
 
@@ -80,7 +80,7 @@ Label = AION
 DisplayName = AION Phone
 UserName = ${mac.slice(-4)}
 AuthName = ${mac.slice(-4)}
-Password = aion2026
+Password = ${process.env.SIP_DEFAULT_PASSWORD || ''}
 SIPServerAddr = ${process.env.SIP_SERVER_ADDR || '0.0.0.0'}
 SIPServerPort = 5061
 TransportType = 4

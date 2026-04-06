@@ -146,15 +146,6 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/api\//, /^\/rest\//, /^\/go2rtc\//, /^\/provisioning\//],
 
         runtimeCaching: [
-          // Supabase: never cache
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: "NetworkOnly",
-          },
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.in\/.*/i,
-            handler: "NetworkOnly",
-          },
           // AI APIs: never cache
           {
             urlPattern: /^https:\/\/api\.openai\.com\/.*/i,
@@ -229,10 +220,6 @@ export default defineConfig(({ mode }) => ({
           // React Query — used across app
           if (id.includes("@tanstack/react-query")) {
             return "vendor-query";
-          }
-          // Supabase — used across app, separate for caching
-          if (id.includes("@supabase/")) {
-            return "vendor-supabase";
           }
           // HLS.js — only loaded with LiveView (522KB)
           if (id.includes("hls.js")) {

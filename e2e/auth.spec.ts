@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-const EMAIL = 'jlort1721@gmail.com';
-const PASSWORD = 'Jml1413031.';
+// SECURITY: Credentials from environment variables, never hardcoded
+const EMAIL = process.env.E2E_USER_EMAIL ?? '';
+const PASSWORD = process.env.E2E_USER_PASSWORD ?? '';
 
 test.describe('Authentication', () => {
   test('login page loads correctly', async ({ page }) => {
@@ -13,6 +14,7 @@ test.describe('Authentication', () => {
   });
 
   test('login with valid credentials redirects to dashboard', async ({ page }) => {
+    test.skip(!EMAIL || !PASSWORD, 'E2E_USER_EMAIL and E2E_USER_PASSWORD env vars required');
     await page.goto('/login');
     await page.getByLabel('Correo Electrónico').fill(EMAIL);
     await page.getByLabel('Contraseña').fill(PASSWORD);

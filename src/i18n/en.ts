@@ -630,6 +630,63 @@ const en: Record<string, string> = {
   'cameraHealth.uptime': 'Uptime',
   'cameraHealth.search': 'Search by name, IP, brand...',
   'cameraHealth.lastSeen': 'Last seen',
+
+  // Cookie Consent
+  'cookie.banner_title': 'Cookie & Data Protection Policy',
+  'cookie.banner_text': 'This platform uses essential cookies for the security system operation. By continuing, you accept our data processing policy in compliance with Colombian Law 1581 of 2012.',
+  'cookie.accept_all': 'Accept all',
+  'cookie.essential_only': 'Essential only',
+  'cookie.configure': 'Configure',
+  'cookie.privacy_link': 'Privacy Policy',
+  'cookie.cookie_link': 'Cookie Policy',
+  'cookie.essential_title': 'Essential Cookies',
+  'cookie.essential_desc': 'Required for system operation. Cannot be disabled.',
+  'cookie.analytics_title': 'Analytics Cookies',
+  'cookie.analytics_desc': 'Help us improve the platform through usage statistics.',
+  'cookie.save_preferences': 'Save preferences',
+
+  // Form
+  'form.required': 'This field is required',
+  'form.invalid_email': 'Enter a valid email',
+  'form.password_weak': 'Password is too weak',
+  'form.password_hint': 'At least 8 characters, uppercase, numbers and special characters',
+  'form.min_chars': 'Minimum {{count}} characters',
+  'form.max_chars': 'Maximum {{count}} characters',
+  'form.scroll_right': '← Scroll to see more →',
+  'form.no_results': 'No results found',
+  'form.clear_filters': 'Clear filters',
+  'form.confirm_delete': 'Are you sure you want to delete this item?',
+  'form.confirm_action': 'Confirm this action?',
+  'form.remember_me': 'Remember session',
+  'form.undo': 'Undo',
+
+  // Legal
+  'legal.data_protection': 'I accept the data processing policy',
+  'legal.data_protection_required': 'You must accept the data policy to continue',
+  'legal.ley_1581': 'In compliance with Colombian Law 1581 of 2012',
+
+  // Portal
+  'portal.title': 'AION Security',
+  'portal.system_operational': 'System Operational',
+  'portal.cameras_monitoring': 'Active cameras monitoring 24/7',
+  'portal.report_title': 'Report Issue',
+  'portal.name_placeholder': 'Full name',
+  'portal.unit_placeholder': 'Unit / apartment number',
+  'portal.description_placeholder': 'Describe the issue...',
+  'portal.submit': 'Send Report',
+  'portal.report_sent': 'Report Sent',
+  'portal.report_sent_desc': 'Your report has been received by the monitoring center.',
+  'portal.fill_all_fields': 'Please fill all fields',
+  'portal.send_error': 'Error sending report',
+  'portal.central_247': '24/7 Center',
+  'portal.company': 'Clave Seguridad CTA — Medellín, Colombia',
+
+  // Password strength
+  'password.very_weak': 'Very weak',
+  'password.weak': 'Weak',
+  'password.acceptable': 'Acceptable',
+  'password.strong': 'Strong',
+  'password.very_strong': 'Very strong',
 };
 
 export default en;

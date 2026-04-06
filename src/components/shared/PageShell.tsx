@@ -44,7 +44,7 @@ export function PageShell({
           )}
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold tracking-tight truncate">{title}</h1>
+              <h1 className="text-2xl font-bold tracking-tight truncate">{title}</h1>
               {badge}
             </div>
             {description && (

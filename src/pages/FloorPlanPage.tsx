@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useSites, useDevices } from '@/hooks/use-supabase-data';
+import { useSites, useDevices } from '@/hooks/use-api-data';
 import { apiClient } from '@/lib/api-client';
 import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';

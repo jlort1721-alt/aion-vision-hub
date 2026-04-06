@@ -1,7 +1,19 @@
 import { Page, expect } from '@playwright/test';
 
-const EMAIL = 'jlort1721@gmail.com';
-const PASSWORD = 'Jml1413031.';
+// SECURITY: Load credentials from environment, never hardcode
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(
+      `E2E tests require ${name} environment variable.\n` +
+      'Set E2E_USER_EMAIL and E2E_USER_PASSWORD in your CI environment or shell before running tests.'
+    );
+  }
+  return value;
+}
+
+const EMAIL = requireEnv('E2E_USER_EMAIL');
+const PASSWORD = requireEnv('E2E_USER_PASSWORD');
 
 /** Login and navigate to dashboard. Reusable across all test suites. */
 export async function loginAsOperator(page: Page): Promise<void> {

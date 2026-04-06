@@ -36,6 +36,25 @@ const SKIP_TYPES = new Set([
   'domotic',
 ]);
 
+const CONCURRENCY = 20; // Max simultaneous TCP pings
+
+/** Run tasks with a concurrency limit */
+async function withConcurrency<T>(tasks: (() => Promise<T>)[], limit: number): Promise<PromiseSettledResult<T>[]> {
+  const results: PromiseSettledResult<T>[] = [];
+  const executing = new Set<Promise<void>>();
+
+  for (const task of tasks) {
+    const p = task().then(
+      (value) => { results.push({ status: 'fulfilled', value }); },
+      (reason) => { results.push({ status: 'rejected', reason }); },
+    ).finally(() => executing.delete(p));
+    executing.add(p);
+    if (executing.size >= limit) await Promise.race(executing);
+  }
+  await Promise.all(executing);
+  return results;
+}
+
 // ---------------------------------------------------------------------------
 // TCP ping helper
 // ---------------------------------------------------------------------------
@@ -75,6 +94,7 @@ function tcpPing(
 // ---------------------------------------------------------------------------
 
 async function runHealthCheck(db: Database): Promise<void> {
+  const sweepStart = Date.now();
   const checkedAt = new Date();
 
   // 1. Query all sites that have a WAN IP set
@@ -107,90 +127,83 @@ async function runHealthCheck(db: Database): Promise<void> {
 
     // Filter out non-checkable types
     const checkable = deviceRows.filter((d) => !SKIP_TYPES.has(d.type));
+    totalDevices += checkable.length;
 
-    // 3. Check each device individually, catching errors per-device
-    for (const device of checkable) {
-      totalDevices++;
+    // 3. Check devices in parallel with concurrency limit
+    const tasks = checkable.map((device) => async () => {
+      const ping = await tcpPing(site.wanIp!, device.port!);
+      const reachable = ping.reachable;
 
-      try {
-        const ping = await tcpPing(site.wanIp, device.port!);
-        const reachable = ping.reachable;
+      // Build and cache result
+      const hcResult: HealthCheckResult = {
+        deviceId: device.id,
+        reachable,
+        latencyMs: ping.latencyMs,
+        checkedAt,
+      };
+      healthCheckCache.set(device.id, hcResult);
 
-        // Build and cache result
-        const result: HealthCheckResult = {
-          deviceId: device.id,
-          reachable,
-          latencyMs: ping.latencyMs,
-          checkedAt,
-        };
-        healthCheckCache.set(device.id, result);
+      // Determine new status
+      const newStatus = reachable ? 'online' : 'offline';
 
-        // Determine new status
-        const newStatus = reachable ? 'online' : 'offline';
-
-        if (reachable) {
-          onlineCount++;
-        } else {
-          offlineCount++;
-        }
-
-        // 4. Detect state changes and update DB
-        const previousStatus = device.status;
-        if (previousStatus !== newStatus) {
-          logger.info({ deviceName: device.name, deviceId: device.id, previousStatus, newStatus, address: `${site.wanIp}:${device.port}` }, 'Device status changed');
-
-          const updateData: Record<string, unknown> = {
-            status: newStatus,
-            updatedAt: new Date(),
-          };
-
-          // Touch lastSeen when device comes online
-          if (reachable) {
-            updateData.lastSeen = new Date();
-          }
-
-          await db
-            .update(devices)
-            .set(updateData)
-            .where(
-              and(eq(devices.id, device.id), eq(devices.tenantId, device.tenantId)),
-            );
-
-          // Dispatch notification for the state change
-          try {
-            await dispatchDeviceStateChange(db, {
-              deviceId: device.id,
-              deviceName: device.name,
-              siteName: site.name,
-              siteId: site.id,
-              tenantId: device.tenantId,
-              previousStatus,
-              newStatus,
-              wanIp: site.wanIp,
-              port: device.port!,
-            });
-          } catch (dispatchErr) {
-            logger.error({ err: dispatchErr, deviceName: device.name }, 'Notification dispatch failed');
-          }
-        } else if (reachable) {
-          // Still online — just update lastSeen
-          await db
-            .update(devices)
-            .set({ lastSeen: new Date(), updatedAt: new Date() })
-            .where(
-              and(eq(devices.id, device.id), eq(devices.tenantId, device.tenantId)),
-            );
-        }
-      } catch (err) {
-        // One failing device must not stop the whole sweep
-        logger.error({ err, deviceName: device.name, deviceId: device.id }, 'Error checking device');
+      if (reachable) {
+        onlineCount++;
+      } else {
         offlineCount++;
       }
-    }
+
+      // 4. Detect state changes and update DB
+      const previousStatus = device.status;
+      if (previousStatus !== newStatus) {
+        logger.info({ deviceName: device.name, deviceId: device.id, previousStatus, newStatus, address: `${site.wanIp}:${device.port}` }, 'Device status changed');
+
+        const updateData: Record<string, unknown> = {
+          status: newStatus,
+          updatedAt: new Date(),
+        };
+
+        if (reachable) {
+          updateData.lastSeen = new Date();
+        }
+
+        await db
+          .update(devices)
+          .set(updateData)
+          .where(
+            and(eq(devices.id, device.id), eq(devices.tenantId, device.tenantId)),
+          );
+
+        try {
+          await dispatchDeviceStateChange(db, {
+            deviceId: device.id,
+            deviceName: device.name,
+            siteName: site.name,
+            siteId: site.id,
+            tenantId: device.tenantId,
+            previousStatus,
+            newStatus,
+            wanIp: site.wanIp!,
+            port: device.port!,
+          });
+        } catch (dispatchErr) {
+          logger.error({ err: dispatchErr, deviceName: device.name }, 'Notification dispatch failed');
+        }
+      } else if (reachable) {
+        await db
+          .update(devices)
+          .set({ lastSeen: new Date(), updatedAt: new Date() })
+          .where(
+            and(eq(devices.id, device.id), eq(devices.tenantId, device.tenantId)),
+          );
+      }
+    });
+
+    await withConcurrency(tasks, CONCURRENCY);
   }
 
   // 5. Summary log
-  logger.info({ sites: siteRows.length, totalDevices, onlineCount, offlineCount }, 'Health check complete');
+  const sweepMs = Date.now() - sweepStart;
+  logger.info({ sites: siteRows.length, totalDevices, onlineCount, offlineCount, sweepMs }, 'Health check complete');
 }
 
 // ---------------------------------------------------------------------------

@@ -54,7 +54,7 @@ export function useWebSocket() {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     if (!API_URL) {
-      console.warn('[useWebSocket] VITE_API_URL is not set — skipping WebSocket connection.');
+      if (import.meta.env.DEV) console.warn('[useWebSocket] VITE_API_URL is not set — skipping WebSocket connection.');
       return;
     }
 

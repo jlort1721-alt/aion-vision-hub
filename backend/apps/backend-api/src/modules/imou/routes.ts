@@ -65,7 +65,7 @@ export async function registerImouRoutes(app: FastifyInstance) {
         instructions: [
           '1. Login to https://open.imoulife.com',
           '2. Go to Device Management -> Add Device',
-          '3. Enter each serial number below with verification code: admin / Clave.seg2023',
+          '3. Enter each serial number below with the verification code from your IMOU_BIND_PASSWORD env variable',
           '4. After binding, devices will appear in GET /imou/devices',
         ],
         devices: serials,

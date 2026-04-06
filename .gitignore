@@ -24,6 +24,10 @@ backend/**/.env
 gateway/.env
 gateway/**/.env
 
+# E2E test credentials
+e2e/.env.e2e
+e2e/.env
+
 # Credential documents (NEVER commit)
 CREDENTIALS.md
 credentials*.md

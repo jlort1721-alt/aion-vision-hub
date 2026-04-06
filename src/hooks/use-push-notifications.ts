@@ -45,7 +45,7 @@ export function usePushNotifications() {
       setIsSubscribed(true);
       toast.success('Subscribed to critical event notifications');
     } catch (e) {
-      console.error('Push subscribe error:', e);
+      if (import.meta.env.DEV) console.error('Push subscribe error:', e);
     }
   }, [user, profile, permission, requestPermission]);
 

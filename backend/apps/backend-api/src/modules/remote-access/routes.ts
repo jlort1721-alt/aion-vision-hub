@@ -16,6 +16,7 @@
 import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth.js';
 import { remoteAccess } from '../../services/remote-access.js';
+import { isAllowedProxyPath } from '../../lib/ssrf-protection.js';
 
 const ALLOWED_ROLES = ['operator', 'tenant_admin', 'super_admin'] as const;
 
@@ -135,6 +136,14 @@ export async function registerRemoteAccessRoutes(app: FastifyInstance) {
 
       if (!path) {
         return reply.code(400).send({ success: false, error: 'path is required' });
+      }
+
+      // SECURITY: Validate proxy path against allowlist to prevent SSRF
+      if (!isAllowedProxyPath(path)) {
+        return reply.code(403).send({
+          success: false,
+          error: `Path '${path}' is not in the allowed proxy path whitelist (ISAPI, cgi-bin, onvif, api, SDK)`,
+        });
       }
 
       const target = await remoteAccess.resolveTarget(

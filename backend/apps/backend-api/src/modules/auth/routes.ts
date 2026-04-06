@@ -1,10 +1,11 @@
 import type { FastifyInstance } from 'fastify';
+import { requireRole } from '../../plugins/auth.js';
 import { createHash, randomBytes, randomUUID, scrypt, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
 import { eq, and, isNull, gt } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { profiles, userRoles, refreshTokens } from '../../db/schema/index.js';
-import { loginSchema, registerSchema, refreshTokenSchema } from './schemas.js';
+import { loginSchema, registerSchema, refreshTokenSchema, resetPasswordRequestSchema, resetPasswordConfirmSchema, approveUserParamsSchema } from './schemas.js';
 
 const scryptAsync = promisify(scrypt);
 
@@ -65,9 +66,19 @@ async function createRefreshToken(userId: string, tenantId: string, family?: str
 
 export async function registerAuthRoutes(app: FastifyInstance) {
   // ─── POST /auth/register ──────────────────────────────────────
+  // Registration is restricted to authenticated admins (invite-only).
   app.post('/register', {
     config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
   }, async (request, reply) => {
+    // Require authenticated user with admin role
+    const callerRole = request.userRole;
+    if (callerRole !== 'tenant_admin' && callerRole !== 'super_admin') {
+      return reply.code(403).send({
+        success: false,
+        error: 'Registration is restricted to administrators. Contact your admin for an invitation.',
+      });
+    }
+
     const { email, password, fullName } = registerSchema.parse(request.body);
 
     // Check if email already exists
@@ -84,6 +95,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     const userId = randomUUID();
     const tenantId = await getDefaultTenantId();
 
+    // SECURITY: New users get pending_approval status and viewer role
     await db.insert(profiles).values({
       id: userId,
       userId,
@@ -91,30 +103,22 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       email,
       fullName,
       passwordHash,
+      status: 'pending_approval',
       isActive: true,
     });
 
     await db.insert(userRoles).values({
       userId,
       tenantId,
-      role: 'operator',
+      role: 'viewer',
     });
-
-    // Generate JWT
-    const token = app.jwt.sign(
-      { sub: userId, email, role: 'operator', tenant_id: tenantId },
-      { expiresIn: '24h' },
-    );
-
-    const refreshToken = await createRefreshToken(userId, tenantId);
 
     return reply.send({
       success: true,
       data: {
-        accessToken: token,
-        refreshToken,
-        expiresIn: 86400,
-        user: { id: userId, email, fullName, role: 'operator', tenantId },
+        message: 'Registro exitoso. Un administrador revisará tu solicitud.',
+        status: 'pending_approval',
+        user: { id: userId, email, fullName },
       },
     });
   });
@@ -137,6 +141,14 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) {
       return reply.code(401).send({ success: false, error: 'Invalid credentials' });
+    }
+
+    // SECURITY: Check account status before issuing tokens
+    if (user.status === 'pending_approval') {
+      return reply.code(403).send({ success: false, error: 'Tu cuenta está pendiente de aprobación por un administrador.' });
+    }
+    if (user.status === 'suspended' || user.status === 'disabled') {
+      return reply.code(403).send({ success: false, error: 'Tu cuenta ha sido deshabilitada. Contacta al administrador.' });
     }
 
     // Get role
@@ -247,7 +259,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.post('/reset-password', {
     config: { rateLimit: { max: 3, timeWindow: '1 minute' } },
   }, async (request, reply) => {
-    const { email } = request.body as { email: string };
+    const { email } = resetPasswordRequestSchema.parse(request.body);
 
     const [user] = await db.select({ id: profiles.id })
       .from(profiles)
@@ -276,8 +288,10 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   });
 
   // ─── POST /auth/reset-password/confirm ────────────────────────
-  app.post('/reset-password/confirm', async (request, reply) => {
-    const { token, newPassword } = request.body as { token: string; newPassword: string };
+  app.post('/reset-password/confirm', {
+    config: { rateLimit: { max: 5, timeWindow: '15 minutes' } },
+  }, async (request, reply) => {
+    const { token, newPassword } = resetPasswordConfirmSchema.parse(request.body);
 
     const [user] = await db.select({ id: profiles.id })
       .from(profiles)
@@ -327,5 +341,85 @@ export async function registerAuthRoutes(app: FastifyInstance) {
         tenantId: user.tenantId,
       },
     });
+  });
+
+  // ─── GET /auth/pending-users ──────────────────────────────────
+  // SECURITY: Admin-only endpoint to list users awaiting approval
+  app.get('/pending-users', {
+    preHandler: [requireRole('tenant_admin', 'super_admin')],
+  }, async (request, reply) => {
+    const callerRole = request.userRole;
+    if (callerRole !== 'tenant_admin' && callerRole !== 'super_admin') {
+      return reply.code(403).send({ success: false, error: 'Admin access required' });
+    }
+
+    const pending = await db.select({
+      id: profiles.userId,
+      email: profiles.email,
+      fullName: profiles.fullName,
+      createdAt: profiles.createdAt,
+    })
+      .from(profiles)
+      .where(and(
+        eq(profiles.status, 'pending_approval'),
+        eq(profiles.tenantId, request.tenantId),
+      ));
+
+    return reply.send({ success: true, data: pending });
+  });
+
+  // ─── POST /auth/approve-user/:id ─────────────────────────────
+  // SECURITY: Admin-only endpoint to approve pending users
+  app.post('/approve-user/:id', async (request, reply) => {
+    const callerRole = request.userRole;
+    if (callerRole !== 'tenant_admin' && callerRole !== 'super_admin') {
+      return reply.code(403).send({ success: false, error: 'Admin access required' });
+    }
+
+    const { id } = approveUserParamsSchema.parse(request.params);
+
+    const [user] = await db.select()
+      .from(profiles)
+      .where(and(eq(profiles.userId, id), eq(profiles.tenantId, request.tenantId)))
+      .limit(1);
+
+    if (!user) {
+      return reply.code(404).send({ success: false, error: 'User not found' });
+    }
+    if (user.status !== 'pending_approval') {
+      return reply.code(400).send({ success: false, error: `User status is '${user.status}', not 'pending_approval'` });
+    }
+
+    await db.update(profiles)
+      .set({ status: 'active', updatedAt: new Date() })
+      .where(eq(profiles.userId, id));
+
+    return reply.send({ success: true, data: { message: 'User approved', userId: id } });
+  });
+
+  // ─── POST /auth/reject-user/:id ──────────────────────────────
+  // SECURITY: Admin-only endpoint to reject pending users
+  app.post('/reject-user/:id', async (request, reply) => {
+    const callerRole = request.userRole;
+    if (callerRole !== 'tenant_admin' && callerRole !== 'super_admin') {
+      return reply.code(403).send({ success: false, error: 'Admin access required' });
+    }
+
+    const { id } = approveUserParamsSchema.parse(request.params);
+
+    const [user] = await db.select()
+      .from(profiles)
+      .where(and(eq(profiles.userId, id), eq(profiles.tenantId, request.tenantId)))
+      .limit(1);
+
+    if (!user) {
+      return reply.code(404).send({ success: false, error: 'User not found' });
+    }
+
+    await db.update(profiles)
+      .set({ status: 'disabled', updatedAt: new Date() })
+      .where(eq(profiles.userId, id));
+
+    return reply.send({ success: true, data: { message: 'User rejected', userId: id } });
   });
 }

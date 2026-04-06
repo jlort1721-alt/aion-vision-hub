@@ -28,7 +28,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
 import { useToast } from '@/hooks/use-toast';
-import { useSites, useDevices } from '@/hooks/use-supabase-data';
+import { useSites, useDevices } from '@/hooks/use-api-data';
 import {
   Building2, Shield, UserX, AlertTriangle, Video, DoorOpen, Phone, ScrollText,
   Plus, Search, MoreVertical, CheckCircle2, XCircle, AlertCircle, User,

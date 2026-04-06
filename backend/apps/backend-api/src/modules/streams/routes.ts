@@ -8,6 +8,7 @@ export async function registerStreamRoutes(app: FastifyInstance) {
   // ── GET / — List registered streams for tenant ────────────
   app.get(
     '/',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const data = await streamService.list(request.tenantId);
       return reply.send({ success: true, data });
@@ -34,6 +35,7 @@ export async function registerStreamRoutes(app: FastifyInstance) {
   // ── GET /:id/url — Get signed/mediated stream URL ────────
   app.get<{ Params: { id: string }; Querystring: StreamUrlInput }>(
     '/:id/url',
+    { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },
     async (request, reply) => {
       const params = streamUrlSchema.parse(request.query);
       const data = await streamService.getStreamUrl(

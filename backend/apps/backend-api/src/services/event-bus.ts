@@ -161,62 +161,37 @@ class EventBus {
   /**
    * Query persisted event_log with optional filters.
    */
+  // SECURITY: parametrized query — fixed SQL injection
   async getHistory(options: EventHistoryOptions = {}): Promise<{ events: AionEvent[]; total: number }> {
-    const conditions: string[] = ['1=1'];
-    const params: unknown[] = [];
-    let paramIndex = 1;
+    const conditions: ReturnType<typeof sql>[] = [];
 
-    if (options.type) {
-      conditions.push(`type = $${paramIndex++}`);
-      params.push(options.type);
-    }
-    if (options.source) {
-      conditions.push(`source = $${paramIndex++}`);
-      params.push(options.source);
-    }
-    if (options.severity) {
-      conditions.push(`severity = $${paramIndex++}`);
-      params.push(options.severity);
-    }
-    if (options.site_id) {
-      conditions.push(`site_id = $${paramIndex++}`);
-      params.push(options.site_id);
-    }
-    if (options.device_id) {
-      conditions.push(`device_id = $${paramIndex++}`);
-      params.push(options.device_id);
-    }
-    if (options.correlation_id) {
-      conditions.push(`correlation_id = $${paramIndex++}`);
-      params.push(options.correlation_id);
-    }
-    if (options.from) {
-      conditions.push(`timestamp >= $${paramIndex++}`);
-      params.push(options.from);
-    }
-    if (options.to) {
-      conditions.push(`timestamp <= $${paramIndex++}`);
-      params.push(options.to);
-    }
+    if (options.type) conditions.push(sql`type = ${options.type}`);
+    if (options.source) conditions.push(sql`source = ${options.source}`);
+    if (options.severity) conditions.push(sql`severity = ${options.severity}`);
+    if (options.site_id) conditions.push(sql`site_id = ${options.site_id}`);
+    if (options.device_id) conditions.push(sql`device_id = ${options.device_id}`);
+    if (options.correlation_id) conditions.push(sql`correlation_id = ${options.correlation_id}`);
+    if (options.from) conditions.push(sql`timestamp >= ${options.from}`);
+    if (options.to) conditions.push(sql`timestamp <= ${options.to}`);
 
-    const where = conditions.join(' AND ');
+    const whereClause = conditions.length > 0
+      ? sql.join(conditions, sql` AND `)
+      : sql`1=1`;
     const limit = options.limit ?? 50;
     const offset = options.offset ?? 0;
 
     try {
       const countResult = await db.execute(
-        sql.raw(`SELECT count(*)::int AS total FROM event_log WHERE ${where}`),
+        sql`SELECT count(*)::int AS total FROM event_log WHERE ${whereClause}`,
       );
       const total = (countResult as unknown as Array<{ total: number }>)[0]?.total ?? 0;
 
       const rows = await db.execute(
-        sql.raw(
-          `SELECT id, type, source, severity, timestamp, site_id, device_id, data, correlation_id, actor
-           FROM event_log
-           WHERE ${where}
-           ORDER BY timestamp DESC
-           LIMIT ${limit} OFFSET ${offset}`,
-        ),
+        sql`SELECT id, type, source, severity, timestamp, site_id, device_id, data, correlation_id, actor
+            FROM event_log
+            WHERE ${whereClause}
+            ORDER BY timestamp DESC
+            LIMIT ${limit} OFFSET ${offset}`,
       );
 
       const events = (rows as unknown as AionEvent[]).map((row) => ({

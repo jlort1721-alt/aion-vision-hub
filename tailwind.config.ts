@@ -57,6 +57,11 @@ export default {
           muted: "hsl(var(--sidebar-muted))",
         },
       },
+      transitionDuration: {
+        'fast': '100ms',
+        'normal': '200ms',
+        'slow': '300ms',
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

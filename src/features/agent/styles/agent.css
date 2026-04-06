@@ -1,0 +1,916 @@
+/* ============================================================
+   AION AGENT — Complete Stylesheet
+   Brand: Navy #030810/#0D1B2A, Red #C8232A, Gold #D4A017
+   Font: Montserrat
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ─── Design Tokens ─── */
+:root {
+  --aion-navy-900: #030810;
+  --aion-navy-800: #0D1B2A;
+  --aion-navy-700: #1B2838;
+  --aion-navy-600: #243447;
+  --aion-navy-500: #2D4156;
+  --aion-red: #C8232A;
+  --aion-red-light: #E53E3E;
+  --aion-gold: #D4A017;
+  --aion-gold-light: #E8B730;
+  --aion-text: #E2E8F0;
+  --aion-text-dim: #94A3B8;
+  --aion-text-muted: #64748B;
+  --aion-border: rgba(255,255,255,0.08);
+  --aion-surface: rgba(255,255,255,0.04);
+  --aion-surface-hover: rgba(255,255,255,0.08);
+  --aion-glass: rgba(13,27,42,0.85);
+  --aion-radius: 12px;
+  --aion-radius-sm: 8px;
+  --aion-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  --font-display: 'Montserrat', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --sidebar-width: 300px;
+  --topbar-height: 56px;
+  --input-height: 80px;
+}
+
+/* ─── Layout ─── */
+.agent-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  background: var(--aion-navy-900);
+  color: var(--aion-text);
+  font-family: var(--font-display);
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR
+   ═══════════════════════════════════════════════════════════ */
+.agent-sidebar {
+  width: var(--sidebar-width);
+  background: var(--aion-navy-800);
+  border-right: 1px solid var(--aion-border);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, width 0.3s ease;
+  z-index: 20;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--aion-navy-600) transparent;
+}
+
+.agent-sidebar.closed {
+  transform: translateX(-100%);
+  width: 0;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--aion-border);
+  flex-shrink: 0;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  color: var(--aion-gold);
+  display: flex;
+}
+
+.logo-text {
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, var(--aion-gold), var(--aion-gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ─── Context Selector ─── */
+.context-selector {
+  padding: 16px 16px 8px;
+  flex-shrink: 0;
+}
+
+.context-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--aion-text-muted);
+  display: block;
+  margin-bottom: 10px;
+}
+
+.context-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+.context-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border: 1px solid var(--aion-border);
+  border-radius: var(--aion-radius-sm);
+  background: transparent;
+  color: var(--aion-text-dim);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.context-chip:hover {
+  background: var(--aion-surface-hover);
+  border-color: var(--chip-color, var(--aion-gold));
+}
+
+.context-chip.active {
+  background: color-mix(in srgb, var(--chip-color, var(--aion-gold)) 15%, transparent);
+  border-color: var(--chip-color, var(--aion-gold));
+  color: var(--chip-color, var(--aion-gold));
+  font-weight: 700;
+}
+
+.context-chip span:first-child {
+  font-size: 16px;
+}
+
+/* ─── Conversations List ─── */
+.conversations-list {
+  flex: 1;
+  padding: 12px 12px;
+  overflow-y: auto;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--aion-text-muted);
+  margin: 0 0 10px 8px;
+}
+
+.conv-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--aion-radius-sm);
+  background: transparent;
+  color: var(--aion-text);
+  cursor: pointer;
+  font-family: var(--font-display);
+  text-align: left;
+  transition: background 0.15s;
+  margin-bottom: 2px;
+}
+
+.conv-item:hover {
+  background: var(--aion-surface-hover);
+}
+
+.conv-item.active {
+  background: var(--aion-surface-hover);
+  border-left: 3px solid var(--aion-gold);
+}
+
+.conv-icon { font-size: 16px; flex-shrink: 0; }
+
+.conv-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.conv-title {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conv-meta {
+  font-size: 11px;
+  color: var(--aion-text-muted);
+}
+
+.conv-pin { color: var(--aion-gold); display: flex; }
+
+/* ─── Presets ─── */
+.presets-section {
+  padding: 12px 12px;
+  border-top: 1px solid var(--aion-border);
+  flex-shrink: 0;
+}
+
+.preset-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--aion-radius-sm);
+  background: transparent;
+  color: var(--aion-text-dim);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 12px;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.preset-item:hover {
+  background: var(--aion-surface-hover);
+  color: var(--aion-gold);
+}
+
+.preset-icon {
+  color: var(--aion-gold);
+  display: flex;
+  opacity: 0.6;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MAIN AREA
+   ═══════════════════════════════════════════════════════════ */
+.agent-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: linear-gradient(180deg, var(--aion-navy-900) 0%, #050d18 100%);
+}
+
+/* ─── Top Bar ─── */
+.agent-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--topbar-height);
+  padding: 0 20px;
+  border-bottom: 1px solid var(--aion-border);
+  flex-shrink: 0;
+  backdrop-filter: blur(12px);
+  background: var(--aion-glass);
+}
+
+.topbar-info { flex: 1; }
+
+.topbar-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.topbar-mode {
+  font-size: 12px;
+  color: var(--aion-text-muted);
+}
+
+/* ─── Messages ─── */
+.agent-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--aion-navy-600) transparent;
+}
+
+.message-bubble {
+  display: flex;
+  gap: 12px;
+  max-width: 85%;
+  animation: fadeSlideUp 0.3s ease;
+}
+
+.message-bubble.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.message-bubble.assistant {
+  align-self: flex-start;
+}
+
+.bubble-avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--aion-navy-700);
+  border: 1px solid var(--aion-border);
+}
+
+.message-bubble.assistant .bubble-avatar {
+  background: linear-gradient(135deg, var(--aion-navy-700), var(--aion-navy-600));
+  border-color: var(--aion-gold);
+}
+
+.avatar-icon {
+  font-size: 14px;
+  display: flex;
+}
+
+.avatar-icon.pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+  color: var(--aion-gold);
+}
+
+.bubble-content {
+  padding: 12px 16px;
+  border-radius: var(--aion-radius);
+  position: relative;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.message-bubble.user .bubble-content {
+  background: linear-gradient(135deg, var(--aion-navy-600), var(--aion-navy-500));
+  border: 1px solid var(--aion-border);
+  border-top-right-radius: 4px;
+}
+
+.message-bubble.assistant .bubble-content {
+  background: var(--aion-surface);
+  border: 1px solid var(--aion-border);
+  border-top-left-radius: 4px;
+}
+
+.message-bubble.assistant.streaming .bubble-content {
+  border-color: color-mix(in srgb, var(--aion-gold) 40%, transparent);
+}
+
+.typing-cursor {
+  display: inline;
+  animation: blink 0.8s step-end infinite;
+  color: var(--aion-gold);
+  margin-left: 2px;
+}
+
+.bubble-time {
+  display: block;
+  font-size: 10px;
+  color: var(--aion-text-muted);
+  margin-top: 6px;
+}
+
+.bubble-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.message-bubble:hover .bubble-actions {
+  opacity: 1;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  border: 1px solid var(--aion-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--aion-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.action-btn:hover {
+  background: var(--aion-surface-hover);
+  color: var(--aion-text);
+}
+
+.action-btn.active {
+  background: color-mix(in srgb, var(--aion-gold) 20%, transparent);
+  border-color: var(--aion-gold);
+  color: var(--aion-gold);
+}
+
+.msg-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tool-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--aion-gold) 15%, transparent);
+  color: var(--aion-gold-light);
+  border: 1px solid color-mix(in srgb, var(--aion-gold) 30%, transparent);
+}
+
+/* ─── Tool Call Cards ─── */
+.tool-executions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 85%;
+}
+
+.tool-card {
+  border: 1px solid var(--aion-border);
+  border-radius: var(--aion-radius-sm);
+  background: var(--aion-surface);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  animation: fadeSlideUp 0.2s ease;
+}
+
+.tool-card:hover {
+  border-color: var(--aion-text-muted);
+}
+
+.tool-card.success { border-left: 3px solid #10B981; }
+.tool-card.error { border-left: 3px solid var(--aion-red); }
+
+.tool-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.tool-card-icon { font-size: 16px; }
+.tool-card-name { font-weight: 600; flex: 1; }
+.tool-card-time { font-size: 11px; color: var(--aion-text-muted); font-family: var(--font-mono); }
+
+.tool-card-chevron {
+  transition: transform 0.2s;
+  color: var(--aion-text-muted);
+}
+.tool-card-chevron.expanded { transform: rotate(90deg); }
+
+.tool-card-body {
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--aion-border);
+}
+
+.tool-detail {
+  margin-top: 10px;
+}
+
+.detail-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--aion-text-muted);
+  letter-spacing: 1px;
+}
+
+.tool-detail pre {
+  margin: 4px 0 0;
+  padding: 10px;
+  border-radius: 6px;
+  background: var(--aion-navy-900);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  color: var(--aion-text-dim);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* ─── Thinking Dots ─── */
+.thinking-dots {
+  display: flex;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.thinking-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--aion-gold);
+  animation: bounce 1.4s ease-in-out infinite;
+}
+
+.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+/* ─── Error Banner ─── */
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: color-mix(in srgb, var(--aion-red) 15%, var(--aion-navy-900));
+  border: 1px solid var(--aion-red);
+  margin: 0 20px;
+  border-radius: var(--aion-radius-sm);
+  font-size: 13px;
+}
+
+.error-banner button {
+  padding: 4px 12px;
+  border: 1px solid var(--aion-red);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--aion-red-light);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 12px;
+}
+
+/* ─── Suggestions ─── */
+.suggestions-bar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 20px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+
+.suggestion-chip {
+  white-space: nowrap;
+  padding: 6px 14px;
+  border: 1px solid var(--aion-border);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--aion-text-dim);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.suggestion-chip:hover {
+  background: var(--aion-surface-hover);
+  border-color: var(--aion-gold);
+  color: var(--aion-gold);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CHAT INPUT
+   ═══════════════════════════════════════════════════════════ */
+.chat-input-container {
+  padding: 12px 20px 16px;
+  flex-shrink: 0;
+}
+
+.chat-input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--aion-navy-700);
+  border: 1px solid var(--aion-border);
+  border-radius: var(--aion-radius);
+  transition: border-color 0.2s;
+}
+
+.chat-input-wrapper:focus-within {
+  border-color: var(--aion-gold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--aion-gold) 15%, transparent);
+}
+
+.chat-input-wrapper textarea {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--aion-text);
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  max-height: 200px;
+  min-height: 24px;
+}
+
+.chat-input-wrapper textarea::placeholder {
+  color: var(--aion-text-muted);
+}
+
+.btn-send {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--aion-gold), var(--aion-gold-light));
+  color: var(--aion-navy-900);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-send:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--aion-gold) 40%, transparent);
+}
+
+.btn-send:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.btn-send.streaming {
+  background: var(--aion-red);
+  color: white;
+}
+
+.input-hint {
+  font-size: 11px;
+  color: var(--aion-text-muted);
+  text-align: center;
+  margin: 6px 0 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   WELCOME SCREEN
+   ═══════════════════════════════════════════════════════════ */
+.welcome-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 40px;
+}
+
+.welcome-logo {
+  text-align: center;
+}
+
+.welcome-icon-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid var(--aion-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--aion-gold) 10%, transparent), transparent);
+  animation: ringPulse 3s ease-in-out infinite;
+}
+
+.welcome-sparkle {
+  color: var(--aion-gold);
+  display: flex;
+  transform: scale(1.6);
+}
+
+.welcome-logo h1 {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  background: linear-gradient(135deg, var(--aion-gold), var(--aion-gold-light), #fff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.welcome-subtitle {
+  font-size: 14px;
+  color: var(--aion-text-muted);
+  margin-top: 4px;
+}
+
+.welcome-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  max-width: 700px;
+  width: 100%;
+}
+
+.welcome-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--aion-border);
+  border-radius: var(--aion-radius);
+  background: var(--aion-surface);
+  color: var(--aion-text-dim);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 13px;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.welcome-card:hover {
+  background: var(--aion-surface-hover);
+  border-color: var(--aion-gold);
+  color: var(--aion-text);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.card-icon { font-size: 22px; flex-shrink: 0; }
+.card-text { line-height: 1.4; }
+
+/* ═══════════════════════════════════════════════════════════
+   MARKDOWN CONTENT
+   ═══════════════════════════════════════════════════════════ */
+.markdown-content {
+  word-break: break-word;
+}
+
+.markdown-content h2, .markdown-content h3, .markdown-content h4 {
+  margin: 16px 0 8px;
+  font-weight: 700;
+  color: var(--aion-text);
+}
+
+.markdown-content h2 { font-size: 18px; }
+.markdown-content h3 { font-size: 15px; }
+.markdown-content h4 { font-size: 14px; }
+
+.markdown-content p { margin: 4px 0; }
+
+.markdown-content strong {
+  color: var(--aion-gold-light);
+  font-weight: 700;
+}
+
+.markdown-content a {
+  color: var(--aion-gold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.markdown-content .inline-code {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--aion-navy-800);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--aion-gold-light);
+}
+
+.markdown-content .code-block {
+  padding: 14px;
+  border-radius: var(--aion-radius-sm);
+  background: var(--aion-navy-900);
+  border: 1px solid var(--aion-border);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+.markdown-content .table-wrapper {
+  overflow-x: auto;
+  margin: 10px 0;
+  border-radius: var(--aion-radius-sm);
+  border: 1px solid var(--aion-border);
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.markdown-content th {
+  padding: 10px 14px;
+  background: var(--aion-navy-700);
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 1px solid var(--aion-border);
+  color: var(--aion-gold-light);
+}
+
+.markdown-content td {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--aion-border);
+}
+
+.markdown-content tr:hover td {
+  background: var(--aion-surface-hover);
+}
+
+.markdown-content ul, .markdown-content ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.markdown-content li { margin: 4px 0; }
+
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid var(--aion-border);
+  margin: 16px 0;
+}
+
+/* ─── Utility ─── */
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--aion-border);
+  border-radius: var(--aion-radius-sm);
+  background: transparent;
+  color: var(--aion-text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-icon:hover {
+  background: var(--aion-surface-hover);
+  color: var(--aion-text);
+}
+
+.mobile-menu { display: none; }
+
+/* ─── Animations ─── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+@keyframes ringPulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--aion-gold) 30%, transparent); }
+  50% { box-shadow: 0 0 0 12px transparent; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .agent-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 50;
+    box-shadow: var(--aion-shadow);
+  }
+
+  .agent-sidebar.closed {
+    transform: translateX(-100%);
+    width: var(--sidebar-width);
+  }
+
+  .mobile-menu { display: flex; }
+
+  .message-bubble { max-width: 95%; }
+
+  .welcome-grid {
+    grid-template-columns: 1fr;
+    padding: 0 10px;
+  }
+
+  .welcome-logo h1 { font-size: 24px; }
+}

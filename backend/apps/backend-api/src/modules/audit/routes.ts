@@ -8,7 +8,7 @@ export async function registerAuditRoutes(app: FastifyInstance) {
   // ── GET /logs — List audit logs with filters + pagination ───
   app.get(
     '/logs',
-    { preHandler: [requireRole('tenant_admin', 'auditor')] },
+    { preHandler: [requireRole('tenant_admin', 'super_admin', 'auditor')] },
     async (request) => {
       const query = auditQuerySchema.parse(request.query);
       const { items, meta } = await auditService.list(request.tenantId, query);
@@ -20,7 +20,7 @@ export async function registerAuditRoutes(app: FastifyInstance) {
   // ── GET /stats — Audit statistics ───────────────────────────
   app.get(
     '/stats',
-    { preHandler: [requireRole('tenant_admin', 'auditor')] },
+    { preHandler: [requireRole('tenant_admin', 'super_admin', 'auditor')] },
     async (request) => {
       const query = auditStatsQuerySchema.parse(request.query);
       const stats = await auditService.getStats(request.tenantId, query);

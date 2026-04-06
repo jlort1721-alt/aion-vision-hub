@@ -1,6 +1,8 @@
-// Telemetry must be initialized FIRST to instrument all subsequent imports
+// Telemetry and error tracking must be initialized FIRST
 import { initTelemetry, shutdownTelemetry } from './lib/telemetry.js';
+import { initSentry } from './lib/sentry.js';
 initTelemetry();
+initSentry();
 
 import { config } from './config/env.js';
 import { buildApp } from './app.js';

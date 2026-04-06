@@ -5,13 +5,13 @@ import { createRecordSchema, updateRecordSchema, recordFiltersSchema } from './s
 import type { CreateRecordInput, UpdateRecordInput, RecordFilters } from './schemas.js';
 
 export async function registerDatabaseRecordRoutes(app: FastifyInstance) {
-  app.get<{ Querystring: RecordFilters }>('/', async (request, reply) => {
+  app.get<{ Querystring: RecordFilters }>('/', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const filters = recordFiltersSchema.parse(request.query);
     const data = await databaseRecordService.list(request.tenantId, filters);
     return reply.send({ success: true, data });
   });
 
-  app.get<{ Params: { id: string } }>('/:id', async (request, reply) => {
+  app.get<{ Params: { id: string } }>('/:id', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
     const data = await databaseRecordService.getById(request.params.id, request.tenantId);
     return reply.send({ success: true, data });
   });

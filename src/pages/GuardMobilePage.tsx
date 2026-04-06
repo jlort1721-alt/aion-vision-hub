@@ -105,7 +105,8 @@ function PatrolProgress() {
         const resp = await apiClient.get<{
           checkpoints: PatrolCheckpoint[];
         }>("/patrols/current");
-        return resp.data.checkpoints ?? [];
+        const result = resp as unknown as { checkpoints?: PatrolCheckpoint[] };
+        return result.checkpoints ?? [];
       } catch {
         return [] as PatrolCheckpoint[];
       }
@@ -131,7 +132,7 @@ function PatrolProgress() {
     );
   }
 
-  const scanned = checkpoints.filter((c) => c.scanned).length;
+  const scanned = checkpoints.filter((c: PatrolCheckpoint) => c.scanned).length;
   const pct = Math.round((scanned / checkpoints.length) * 100);
 
   return (
@@ -144,7 +145,7 @@ function PatrolProgress() {
       </div>
       <Progress value={pct} className="h-2" />
       <ul className="space-y-1.5">
-        {checkpoints.map((cp) => (
+        {checkpoints.map((cp: PatrolCheckpoint) => (
           <li key={cp.id} className="flex items-center gap-2 text-sm">
             {cp.scanned ? (
               <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
@@ -169,7 +170,8 @@ function RecentEvents({ limit }: { limit: number }) {
         const resp = await apiClient.get<{
           events: RecentEvent[];
         }>(`/events?limit=${limit}&sort=created_at:desc`);
-        return resp.data.events ?? [];
+        const result = resp as unknown as { events?: RecentEvent[] };
+        return result.events ?? [];
       } catch {
         return [] as RecentEvent[];
       }
@@ -204,7 +206,7 @@ function RecentEvents({ limit }: { limit: number }) {
 
   return (
     <ul className="space-y-2">
-      {events.map((ev) => (
+      {events.map((ev: RecentEvent) => (
         <li key={ev.id} className="flex items-start gap-2 text-sm">
           <Badge
             variant={
@@ -233,6 +235,49 @@ function RecentEvents({ limit }: { limit: number }) {
   );
 }
 
+function GateButton({
+  label,
+  deviceId,
+  onClose,
+}: {
+  label: string;
+  deviceId: string;
+  onClose: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const handleOpen = async () => {
+    setLoading(true);
+    try {
+      await apiClient.post(`/domotics/ewelink/${deviceId}/control`, {
+        action: "unlock",
+      });
+      toast.success(`${label} abierta`);
+      onClose();
+    } catch {
+      toast.error(`Error al abrir ${label}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      className="w-full justify-start"
+      onClick={handleOpen}
+      disabled={loading}
+    >
+      {loading ? (
+        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+      ) : (
+        <DoorOpen className="h-4 w-4 mr-2" />
+      )}
+      {label}
+    </Button>
+  );
+}
+
 // ── Main page ──────────────────────────────────────────────
 
 export default function GuardMobilePage() {
@@ -246,7 +291,7 @@ export default function GuardMobilePage() {
   const openIncidentForm = () => setIncidentDialogOpen(true);
   const openGateDialog = () => setGateDialogOpen(true);
   const callCentral = () => {
-    window.location.href = "tel:+573000000000";
+    window.location.href = "tel:+573235297412";
   };
 
   const submitIncident = async () => {
@@ -386,28 +431,16 @@ export default function GuardMobilePage() {
             <p className="text-sm text-muted-foreground">
               Seleccione la puerta o relay a activar
             </p>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => {
-                toast.success("Puerta principal abierta");
-                setGateDialogOpen(false);
-              }}
-            >
-              <DoorOpen className="h-4 w-4 mr-2" />
-              Puerta Principal
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => {
-                toast.success("Puerta vehicular abierta");
-                setGateDialogOpen(false);
-              }}
-            >
-              <DoorOpen className="h-4 w-4 mr-2" />
-              Puerta Vehicular
-            </Button>
+            <GateButton
+              label="Puerta Principal"
+              deviceId="gate-principal"
+              onClose={() => setGateDialogOpen(false)}
+            />
+            <GateButton
+              label="Puerta Vehicular"
+              deviceId="gate-vehicular"
+              onClose={() => setGateDialogOpen(false)}
+            />
           </div>
         </DialogContent>
       </Dialog>

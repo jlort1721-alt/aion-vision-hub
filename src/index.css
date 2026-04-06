@@ -3,6 +3,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* AION Agent styles */
+@import './features/agent/styles/agent.css';
 @layer base {
   :root {
     /* ── Brand Design System — Clave Seguridad ── */
@@ -40,7 +43,7 @@
     --secondary: 215 20% 93%;
     --secondary-foreground: 222 47% 11%;
     --muted: 215 20% 93%;
-    --muted-foreground: 215 16% 47%;
+    --muted-foreground: 215 20% 55%;
     --accent: 215 20% 93%;
     --accent-foreground: 222 47% 11%;
     --destructive: 0 84% 60%;
@@ -80,7 +83,7 @@
     --secondary: 211 54% 11%;       /* navy-700 #0D1B2A */
     --secondary-foreground: 210 40% 96%;
     --muted: 211 54% 11%;
-    --muted-foreground: 215 20% 60%;
+    --muted-foreground: 215 20% 65%;
     --accent: 211 54% 11%;
     --accent-foreground: 210 40% 96%;
     --destructive: 0 84% 60%;
@@ -160,4 +163,23 @@
   .glow-border {
     @apply border border-primary/30 shadow-[0_0_15px_-3px_hsl(var(--primary)/0.3)];
   }
+}
+
+/* ── Theme transition animation ── */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition: background-color 300ms ease, color 200ms ease, border-color 200ms ease !important;
+}
+
+/* ── Shimmer skeleton animation ── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg, transparent 25%, hsl(var(--muted)/0.5) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }

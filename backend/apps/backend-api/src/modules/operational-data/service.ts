@@ -1,5 +1,5 @@
 import { db } from '../../db/client.js';
-import { sql } from 'drizzle-orm';
+import { sql, type SQL } from 'drizzle-orm';
 import { createLogger } from '@aion/common-utils';
 
 const logger = createLogger({ name: 'operational-data-service' });
@@ -37,6 +37,33 @@ function sanitizeOrder(order?: string): string {
   return order === 'desc' ? 'DESC' : 'ASC';
 }
 
+/** Join an array of parameterized SQL conditions with AND */
+function sqlAnd(conditions: SQL[]): SQL {
+  if (conditions.length === 0) return sql`TRUE`;
+  let result = conditions[0];
+  for (let i = 1; i < conditions.length; i++) {
+    result = sql`${result} AND ${conditions[i]}`;
+  }
+  return result;
+}
+
+/** Build a parameterized SET clause from key-value pairs. Keys must be from an allowlist. */
+function sqlSetClauses(entries: Array<{ key: string; value: unknown; isBoolean?: boolean; isNumber?: boolean }>): SQL | null {
+  if (entries.length === 0) return null;
+  const parts: SQL[] = entries.map(({ key, value, isBoolean, isNumber }) => {
+    if (value === null) return sql`${sql.raw(key)} = NULL`;
+    if (isBoolean) return sql`${sql.raw(key)} = ${value === true}`;
+    if (isNumber) return sql`${sql.raw(key)} = ${Number(value)}`;
+    return sql`${sql.raw(key)} = ${String(value)}`;
+  });
+  parts.push(sql`updated_at = NOW()`);
+  let result = parts[0];
+  for (let i = 1; i < parts.length; i++) {
+    result = sql`${result}, ${parts[i]}`;
+  }
+  return result;
+}
+
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 export class OperationalDataService {
@@ -51,16 +78,14 @@ export class OperationalDataService {
     const col = sanitizeSort(sort_by ?? 'full_name', ['full_name', 'unit_number', 'created_at', 'updated_at', 'site_id']);
     const ord = sanitizeOrder(sort_order);
 
-    const conditions: string[] = [`tenant_id = '${tenantId}'`, `deleted_at IS NULL`];
-    if (site_id) conditions.push(`site_id = '${site_id}'`);
-    if (search) conditions.push(`(full_name ILIKE '%${search}%' OR unit_number ILIKE '%${search}%')`);
-    const where = conditions.join(' AND ');
+    const conditions: SQL[] = [sql`tenant_id = ${tenantId}`, sql`deleted_at IS NULL`];
+    if (site_id) conditions.push(sql`site_id = ${site_id}`);
+    if (search) conditions.push(sql`(full_name ILIKE ${'%' + search + '%'} OR unit_number ILIKE ${'%' + search + '%'})`);
+    const where = sqlAnd(conditions);
 
     const [countResult, dataResult] = await Promise.all([
-      db.execute(sql.raw(`SELECT count(*)::int AS total FROM residents WHERE ${where}`)),
-      db.execute(sql.raw(
-        `SELECT * FROM residents WHERE ${where} ORDER BY ${col} ${ord} LIMIT ${limit} OFFSET ${offset}`
-      )),
+      db.execute(sql`SELECT count(*)::int AS total FROM residents WHERE ${where}`),
+      db.execute(sql`SELECT * FROM residents WHERE ${where} ORDER BY ${sql.raw(col)} ${sql.raw(ord)} LIMIT ${limit} OFFSET ${offset}`),
     ]);
 
     const total = (countResult as unknown as Record<string, unknown>[])[0]?.total as number ?? 0;
@@ -101,20 +126,17 @@ export class OperationalDataService {
   }
 
   async residentsUpdate(id: string, tenantId: string, data: Record<string, unknown>) {
-    const sets: string[] = [];
     const allowed = ['full_name', 'unit_number', 'phone', 'email', 'id_number', 'vehicle_plate', 'notes', 'status', 'site_id'];
+    const entries: Array<{ key: string; value: unknown }> = [];
     for (const key of allowed) {
-      if (data[key] !== undefined) {
-        const val = data[key] === null ? 'NULL' : `'${String(data[key]).replace(/'/g, "''")}'`;
-        sets.push(`${key} = ${val}`);
-      }
+      if (data[key] !== undefined) entries.push({ key, value: data[key] === null ? null : String(data[key]) });
     }
-    if (sets.length === 0) return this.residentsGetById(id, tenantId);
-    sets.push(`updated_at = NOW()`);
+    if (entries.length === 0) return this.residentsGetById(id, tenantId);
+    const setCl = sqlSetClauses(entries)!;
 
-    const result = await db.execute(sql.raw(
-      `UPDATE residents SET ${sets.join(', ')} WHERE id = '${id}' AND tenant_id = '${tenantId}' AND deleted_at IS NULL RETURNING *`
-    ));
+    const result = await db.execute(
+      sql`UPDATE residents SET ${setCl} WHERE id = ${id} AND tenant_id = ${tenantId} AND deleted_at IS NULL RETURNING *`
+    );
     const rows = result as unknown as Record<string, unknown>[];
     if (rows.length === 0) return null;
     logger.info(`residents.update tenant=${tenantId} id=${id}`);
@@ -181,16 +203,14 @@ export class OperationalDataService {
     const col = sanitizeSort(sort_by ?? 'plate', ['plate', 'brand', 'model', 'color', 'created_at', 'resident_id']);
     const ord = sanitizeOrder(sort_order);
 
-    const conditions: string[] = [`tenant_id = '${tenantId}'`, `deleted_at IS NULL`];
-    if (site_id) conditions.push(`site_id = '${site_id}'`);
-    if (search) conditions.push(`(plate ILIKE '%${search}%' OR brand ILIKE '%${search}%' OR model ILIKE '%${search}%')`);
-    const where = conditions.join(' AND ');
+    const conditions: SQL[] = [sql`tenant_id = ${tenantId}`, sql`deleted_at IS NULL`];
+    if (site_id) conditions.push(sql`site_id = ${site_id}`);
+    if (search) conditions.push(sql`(plate ILIKE ${'%' + search + '%'} OR brand ILIKE ${'%' + search + '%'} OR model ILIKE ${'%' + search + '%'})`);
+    const where = sqlAnd(conditions);
 
     const [countResult, dataResult] = await Promise.all([
-      db.execute(sql.raw(`SELECT count(*)::int AS total FROM vehicles WHERE ${where}`)),
-      db.execute(sql.raw(
-        `SELECT * FROM vehicles WHERE ${where} ORDER BY ${col} ${ord} LIMIT ${limit} OFFSET ${offset}`
-      )),
+      db.execute(sql`SELECT count(*)::int AS total FROM vehicles WHERE ${where}`),
+      db.execute(sql`SELECT * FROM vehicles WHERE ${where} ORDER BY ${sql.raw(col)} ${sql.raw(ord)} LIMIT ${limit} OFFSET ${offset}`),
     ]);
 
     const total = (countResult as unknown as Record<string, unknown>[])[0]?.total as number ?? 0;
@@ -242,25 +262,23 @@ export class OperationalDataService {
   }
 
   async vehiclesUpdate(id: string, tenantId: string, data: Record<string, unknown>) {
-    const sets: string[] = [];
     const allowed = ['plate', 'brand', 'model', 'color', 'vehicle_type', 'notes', 'status', 'site_id', 'resident_id'];
+    const entries: Array<{ key: string; value: unknown }> = [];
     for (const key of allowed) {
       if (data[key] !== undefined) {
         if (key === 'plate') {
-          const val = `'${String(data[key]).toUpperCase().trim().replace(/'/g, "''")}'`;
-          sets.push(`${key} = ${val}`);
+          entries.push({ key, value: data[key] === null ? null : String(data[key]).toUpperCase().trim() });
         } else {
-          const val = data[key] === null ? 'NULL' : `'${String(data[key]).replace(/'/g, "''")}'`;
-          sets.push(`${key} = ${val}`);
+          entries.push({ key, value: data[key] === null ? null : String(data[key]) });
         }
       }
     }
-    if (sets.length === 0) return this.vehiclesGetById(id, tenantId);
-    sets.push(`updated_at = NOW()`);
+    if (entries.length === 0) return this.vehiclesGetById(id, tenantId);
+    const setCl = sqlSetClauses(entries)!;
 
-    const result = await db.execute(sql.raw(
-      `UPDATE vehicles SET ${sets.join(', ')} WHERE id = '${id}' AND tenant_id = '${tenantId}' AND deleted_at IS NULL RETURNING *`
-    ));
+    const result = await db.execute(
+      sql`UPDATE vehicles SET ${setCl} WHERE id = ${id} AND tenant_id = ${tenantId} AND deleted_at IS NULL RETURNING *`
+    );
     const rows = result as unknown as Record<string, unknown>[];
     if (rows.length === 0) return null;
     logger.info(`vehicles.update tenant=${tenantId} id=${id}`);
@@ -289,16 +307,14 @@ export class OperationalDataService {
     const col = sanitizeSort(sort_by ?? 'created_at', ['created_at', 'resident_name', 'biometric_type', 'site_id']);
     const ord = sanitizeOrder(sort_order);
 
-    const conditions: string[] = [`tenant_id = '${tenantId}'`];
-    if (site_id) conditions.push(`site_id = '${site_id}'`);
-    if (search) conditions.push(`(resident_name ILIKE '%${search}%')`);
-    const where = conditions.join(' AND ');
+    const conditions: SQL[] = [sql`tenant_id = ${tenantId}`];
+    if (site_id) conditions.push(sql`site_id = ${site_id}`);
+    if (search) conditions.push(sql`(resident_name ILIKE ${'%' + search + '%'})`);
+    const where = sqlAnd(conditions);
 
     const [countResult, dataResult] = await Promise.all([
-      db.execute(sql.raw(`SELECT count(*)::int AS total FROM biometric_records WHERE ${where}`)),
-      db.execute(sql.raw(
-        `SELECT * FROM biometric_records WHERE ${where} ORDER BY ${col} ${ord} LIMIT ${limit} OFFSET ${offset}`
-      )),
+      db.execute(sql`SELECT count(*)::int AS total FROM biometric_records WHERE ${where}`),
+      db.execute(sql`SELECT * FROM biometric_records WHERE ${where} ORDER BY ${sql.raw(col)} ${sql.raw(ord)} LIMIT ${limit} OFFSET ${offset}`),
     ]);
 
     const total = (countResult as unknown as Record<string, unknown>[])[0]?.total as number ?? 0;
@@ -327,20 +343,17 @@ export class OperationalDataService {
   }
 
   async biometricRecordsUpdate(id: string, tenantId: string, data: Record<string, unknown>) {
-    const sets: string[] = [];
     const allowed = ['status', 'notes', 'biometric_type', 'device_id'];
+    const entries: Array<{ key: string; value: unknown }> = [];
     for (const key of allowed) {
-      if (data[key] !== undefined) {
-        const val = data[key] === null ? 'NULL' : `'${String(data[key]).replace(/'/g, "''")}'`;
-        sets.push(`${key} = ${val}`);
-      }
+      if (data[key] !== undefined) entries.push({ key, value: data[key] === null ? null : String(data[key]) });
     }
-    if (sets.length === 0) return null;
-    sets.push(`updated_at = NOW()`);
+    if (entries.length === 0) return null;
+    const setCl = sqlSetClauses(entries)!;
 
-    const result = await db.execute(sql.raw(
-      `UPDATE biometric_records SET ${sets.join(', ')} WHERE id = '${id}' AND tenant_id = '${tenantId}' RETURNING *`
-    ));
+    const result = await db.execute(
+      sql`UPDATE biometric_records SET ${setCl} WHERE id = ${id} AND tenant_id = ${tenantId} RETURNING *`
+    );
     const rows = result as unknown as Record<string, unknown>[];
     return rows.length > 0 ? rows[0] : null;
   }
@@ -373,17 +386,15 @@ export class OperationalDataService {
     const col = sanitizeSort(sort_by ?? 'created_at', ['created_at', 'unit_number', 'priority', 'status', 'site_id']);
     const ord = sanitizeOrder(sort_order);
 
-    const conditions: string[] = [`tenant_id = '${tenantId}'`, `deleted_at IS NULL`];
-    if (site_id) conditions.push(`site_id = '${site_id}'`);
-    if (unit_number) conditions.push(`unit_number = '${unit_number.replace(/'/g, "''")}'`);
-    if (search) conditions.push(`(description ILIKE '%${search}%' OR unit_number ILIKE '%${search}%')`);
-    const where = conditions.join(' AND ');
+    const conditions: SQL[] = [sql`tenant_id = ${tenantId}`, sql`deleted_at IS NULL`];
+    if (site_id) conditions.push(sql`site_id = ${site_id}`);
+    if (unit_number) conditions.push(sql`unit_number = ${unit_number}`);
+    if (search) conditions.push(sql`(description ILIKE ${'%' + search + '%'} OR unit_number ILIKE ${'%' + search + '%'})`);
+    const where = sqlAnd(conditions);
 
     const [countResult, dataResult] = await Promise.all([
-      db.execute(sql.raw(`SELECT count(*)::int AS total FROM consignas WHERE ${where}`)),
-      db.execute(sql.raw(
-        `SELECT * FROM consignas WHERE ${where} ORDER BY ${col} ${ord} LIMIT ${limit} OFFSET ${offset}`
-      )),
+      db.execute(sql`SELECT count(*)::int AS total FROM consignas WHERE ${where}`),
+      db.execute(sql`SELECT * FROM consignas WHERE ${where} ORDER BY ${sql.raw(col)} ${sql.raw(ord)} LIMIT ${limit} OFFSET ${offset}`),
     ]);
 
     const total = (countResult as unknown as Record<string, unknown>[])[0]?.total as number ?? 0;
@@ -413,20 +424,17 @@ export class OperationalDataService {
   }
 
   async consignasUpdate(id: string, tenantId: string, data: Record<string, unknown>) {
-    const sets: string[] = [];
     const allowed = ['unit_number', 'description', 'priority', 'status', 'site_id', 'valid_from', 'valid_until'];
+    const entries: Array<{ key: string; value: unknown }> = [];
     for (const key of allowed) {
-      if (data[key] !== undefined) {
-        const val = data[key] === null ? 'NULL' : `'${String(data[key]).replace(/'/g, "''")}'`;
-        sets.push(`${key} = ${val}`);
-      }
+      if (data[key] !== undefined) entries.push({ key, value: data[key] === null ? null : String(data[key]) });
     }
-    if (sets.length === 0) return null;
-    sets.push(`updated_at = NOW()`);
+    if (entries.length === 0) return null;
+    const setCl = sqlSetClauses(entries)!;
 
-    const result = await db.execute(sql.raw(
-      `UPDATE consignas SET ${sets.join(', ')} WHERE id = '${id}' AND tenant_id = '${tenantId}' AND deleted_at IS NULL RETURNING *`
-    ));
+    const result = await db.execute(
+      sql`UPDATE consignas SET ${setCl} WHERE id = ${id} AND tenant_id = ${tenantId} AND deleted_at IS NULL RETURNING *`
+    );
     const rows = result as unknown as Record<string, unknown>[];
     return rows.length > 0 ? rows[0] : null;
   }
@@ -473,16 +481,14 @@ export class OperationalDataService {
     const col = sanitizeSort(sort_by ?? 'full_name', ['full_name', 'role', 'created_at', 'site_id']);
     const ord = sanitizeOrder(sort_order);
 
-    const conditions: string[] = [`tenant_id = '${tenantId}'`];
-    if (site_id) conditions.push(`site_id = '${site_id}'`);
-    if (search) conditions.push(`(full_name ILIKE '%${search}%' OR email ILIKE '%${search}%')`);
-    const where = conditions.join(' AND ');
+    const conditions: SQL[] = [sql`tenant_id = ${tenantId}`];
+    if (site_id) conditions.push(sql`site_id = ${site_id}`);
+    if (search) conditions.push(sql`(full_name ILIKE ${'%' + search + '%'} OR email ILIKE ${'%' + search + '%'})`);
+    const where = sqlAnd(conditions);
 
     const [countResult, dataResult] = await Promise.all([
-      db.execute(sql.raw(`SELECT count(*)::int AS total FROM site_administrators WHERE ${where}`)),
-      db.execute(sql.raw(
-        `SELECT * FROM site_administrators WHERE ${where} ORDER BY ${col} ${ord} LIMIT ${limit} OFFSET ${offset}`
-      )),
+      db.execute(sql`SELECT count(*)::int AS total FROM site_administrators WHERE ${where}`),
+      db.execute(sql`SELECT * FROM site_administrators WHERE ${where} ORDER BY ${sql.raw(col)} ${sql.raw(ord)} LIMIT ${limit} OFFSET ${offset}`),
     ]);
 
     const total = (countResult as unknown as Record<string, unknown>[])[0]?.total as number ?? 0;
@@ -512,20 +518,17 @@ export class OperationalDataService {
   }
 
   async siteAdministratorsUpdate(id: string, tenantId: string, data: Record<string, unknown>) {
-    const sets: string[] = [];
     const allowed = ['full_name', 'phone', 'email', 'role', 'id_number', 'notes', 'status', 'site_id'];
+    const entries: Array<{ key: string; value: unknown }> = [];
     for (const key of allowed) {
-      if (data[key] !== undefined) {
-        const val = data[key] === null ? 'NULL' : `'${String(data[key]).replace(/'/g, "''")}'`;
-        sets.push(`${key} = ${val}`);
-      }
+      if (data[key] !== undefined) entries.push({ key, value: data[key] === null ? null : String(data[key]) });
     }
-    if (sets.length === 0) return null;
-    sets.push(`updated_at = NOW()`);
+    if (entries.length === 0) return null;
+    const setCl = sqlSetClauses(entries)!;
 
-    const result = await db.execute(sql.raw(
-      `UPDATE site_administrators SET ${sets.join(', ')} WHERE id = '${id}' AND tenant_id = '${tenantId}' RETURNING *`
-    ));
+    const result = await db.execute(
+      sql`UPDATE site_administrators SET ${setCl} WHERE id = ${id} AND tenant_id = ${tenantId} RETURNING *`
+    );
     const rows = result as unknown as Record<string, unknown>[];
     return rows.length > 0 ? rows[0] : null;
   }
@@ -550,18 +553,16 @@ export class OperationalDataService {
     const col = sanitizeSort(sort_by ?? 'tested_at', ['tested_at', 'site_id', 'result', 'created_at']);
     const ord = sanitizeOrder(sort_order);
 
-    const conditions: string[] = [`tenant_id = '${tenantId}'`];
-    if (site_id) conditions.push(`site_id = '${site_id}'`);
-    if (testResult) conditions.push(`result = '${testResult.replace(/'/g, "''")}'`);
-    if (date_from) conditions.push(`tested_at >= '${date_from}'`);
-    if (date_to) conditions.push(`tested_at <= '${date_to}'`);
-    const where = conditions.join(' AND ');
+    const conditions: SQL[] = [sql`tenant_id = ${tenantId}`];
+    if (site_id) conditions.push(sql`site_id = ${site_id}`);
+    if (testResult) conditions.push(sql`result = ${testResult}`);
+    if (date_from) conditions.push(sql`tested_at >= ${date_from}`);
+    if (date_to) conditions.push(sql`tested_at <= ${date_to}`);
+    const where = sqlAnd(conditions);
 
     const [countResult, dataResult] = await Promise.all([
-      db.execute(sql.raw(`SELECT count(*)::int AS total FROM siren_tests WHERE ${where}`)),
-      db.execute(sql.raw(
-        `SELECT * FROM siren_tests WHERE ${where} ORDER BY ${col} ${ord} LIMIT ${limit} OFFSET ${offset}`
-      )),
+      db.execute(sql`SELECT count(*)::int AS total FROM siren_tests WHERE ${where}`),
+      db.execute(sql`SELECT * FROM siren_tests WHERE ${where} ORDER BY ${sql.raw(col)} ${sql.raw(ord)} LIMIT ${limit} OFFSET ${offset}`),
     ]);
 
     const total = (countResult as unknown as Record<string, unknown>[])[0]?.total as number ?? 0;
@@ -614,17 +615,15 @@ export class OperationalDataService {
     const col = sanitizeSort(sort_by ?? 'restarted_at', ['restarted_at', 'site_id', 'equipment_name', 'created_at']);
     const ord = sanitizeOrder(sort_order);
 
-    const conditions: string[] = [`tenant_id = '${tenantId}'`];
-    if (site_id) conditions.push(`site_id = '${site_id}'`);
-    if (date_from) conditions.push(`restarted_at >= '${date_from}'`);
-    if (date_to) conditions.push(`restarted_at <= '${date_to}'`);
-    const where = conditions.join(' AND ');
+    const conditions: SQL[] = [sql`tenant_id = ${tenantId}`];
+    if (site_id) conditions.push(sql`site_id = ${site_id}`);
+    if (date_from) conditions.push(sql`restarted_at >= ${date_from}`);
+    if (date_to) conditions.push(sql`restarted_at <= ${date_to}`);
+    const where = sqlAnd(conditions);
 
     const [countResult, dataResult] = await Promise.all([
-      db.execute(sql.raw(`SELECT count(*)::int AS total FROM equipment_restarts WHERE ${where}`)),
-      db.execute(sql.raw(
-        `SELECT * FROM equipment_restarts WHERE ${where} ORDER BY ${col} ${ord} LIMIT ${limit} OFFSET ${offset}`
-      )),
+      db.execute(sql`SELECT count(*)::int AS total FROM equipment_restarts WHERE ${where}`),
+      db.execute(sql`SELECT * FROM equipment_restarts WHERE ${where} ORDER BY ${sql.raw(col)} ${sql.raw(ord)} LIMIT ${limit} OFFSET ${offset}`),
     ]);
 
     const total = (countResult as unknown as Record<string, unknown>[])[0]?.total as number ?? 0;
@@ -677,16 +676,14 @@ export class OperationalDataService {
     const col = sanitizeSort(sort_by ?? 'door_name', ['door_name', 'door_type', 'floor', 'created_at', 'site_id']);
     const ord = sanitizeOrder(sort_order);
 
-    const conditions: string[] = [`tenant_id = '${tenantId}'`];
-    if (site_id) conditions.push(`site_id = '${site_id}'`);
-    if (search) conditions.push(`(door_name ILIKE '%${search}%' OR location_description ILIKE '%${search}%')`);
-    const where = conditions.join(' AND ');
+    const conditions: SQL[] = [sql`tenant_id = ${tenantId}`];
+    if (site_id) conditions.push(sql`site_id = ${site_id}`);
+    if (search) conditions.push(sql`(door_name ILIKE ${'%' + search + '%'} OR location_description ILIKE ${'%' + search + '%'})`);
+    const where = sqlAnd(conditions);
 
     const [countResult, dataResult] = await Promise.all([
-      db.execute(sql.raw(`SELECT count(*)::int AS total FROM site_door_inventory WHERE ${where}`)),
-      db.execute(sql.raw(
-        `SELECT * FROM site_door_inventory WHERE ${where} ORDER BY ${col} ${ord} LIMIT ${limit} OFFSET ${offset}`
-      )),
+      db.execute(sql`SELECT count(*)::int AS total FROM site_door_inventory WHERE ${where}`),
+      db.execute(sql`SELECT * FROM site_door_inventory WHERE ${where} ORDER BY ${sql.raw(col)} ${sql.raw(ord)} LIMIT ${limit} OFFSET ${offset}`),
     ]);
 
     const total = (countResult as unknown as Record<string, unknown>[])[0]?.total as number ?? 0;
@@ -717,24 +714,23 @@ export class OperationalDataService {
   }
 
   async siteDoorInventoryUpdate(id: string, tenantId: string, data: Record<string, unknown>) {
-    const sets: string[] = [];
     const allowed = ['door_name', 'door_type', 'floor', 'location_description', 'access_control_type', 'has_camera', 'notes', 'status', 'site_id'];
+    const entries: Array<{ key: string; value: unknown; isBoolean?: boolean }> = [];
     for (const key of allowed) {
       if (data[key] !== undefined) {
         if (key === 'has_camera') {
-          sets.push(`${key} = ${data[key] === true ? 'TRUE' : 'FALSE'}`);
+          entries.push({ key, value: data[key] === true, isBoolean: true });
         } else {
-          const val = data[key] === null ? 'NULL' : `'${String(data[key]).replace(/'/g, "''")}'`;
-          sets.push(`${key} = ${val}`);
+          entries.push({ key, value: data[key] === null ? null : String(data[key]) });
         }
       }
     }
-    if (sets.length === 0) return null;
-    sets.push(`updated_at = NOW()`);
+    if (entries.length === 0) return null;
+    const setCl = sqlSetClauses(entries)!;
 
-    const result = await db.execute(sql.raw(
-      `UPDATE site_door_inventory SET ${sets.join(', ')} WHERE id = '${id}' AND tenant_id = '${tenantId}' RETURNING *`
-    ));
+    const result = await db.execute(
+      sql`UPDATE site_door_inventory SET ${setCl} WHERE id = ${id} AND tenant_id = ${tenantId} RETURNING *`
+    );
     const rows = result as unknown as Record<string, unknown>[];
     return rows.length > 0 ? rows[0] : null;
   }
@@ -749,16 +745,14 @@ export class OperationalDataService {
     const col = sanitizeSort(sort_by ?? 'elevator_name', ['elevator_name', 'brand', 'last_maintenance', 'created_at', 'site_id']);
     const ord = sanitizeOrder(sort_order);
 
-    const conditions: string[] = [`tenant_id = '${tenantId}'`];
-    if (site_id) conditions.push(`site_id = '${site_id}'`);
-    if (search) conditions.push(`(elevator_name ILIKE '%${search}%' OR brand ILIKE '%${search}%')`);
-    const where = conditions.join(' AND ');
+    const conditions: SQL[] = [sql`tenant_id = ${tenantId}`];
+    if (site_id) conditions.push(sql`site_id = ${site_id}`);
+    if (search) conditions.push(sql`(elevator_name ILIKE ${'%' + search + '%'} OR brand ILIKE ${'%' + search + '%'})`);
+    const where = sqlAnd(conditions);
 
     const [countResult, dataResult] = await Promise.all([
-      db.execute(sql.raw(`SELECT count(*)::int AS total FROM elevator_info WHERE ${where}`)),
-      db.execute(sql.raw(
-        `SELECT * FROM elevator_info WHERE ${where} ORDER BY ${col} ${ord} LIMIT ${limit} OFFSET ${offset}`
-      )),
+      db.execute(sql`SELECT count(*)::int AS total FROM elevator_info WHERE ${where}`),
+      db.execute(sql`SELECT * FROM elevator_info WHERE ${where} ORDER BY ${sql.raw(col)} ${sql.raw(ord)} LIMIT ${limit} OFFSET ${offset}`),
     ]);
 
     const total = (countResult as unknown as Record<string, unknown>[])[0]?.total as number ?? 0;
@@ -792,20 +786,17 @@ export class OperationalDataService {
   }
 
   async elevatorInfoUpdate(id: string, tenantId: string, data: Record<string, unknown>) {
-    const sets: string[] = [];
     const allowed = ['elevator_name', 'brand', 'model', 'capacity', 'floors_served', 'last_maintenance', 'next_maintenance', 'maintenance_company', 'emergency_phone', 'notes', 'status', 'site_id'];
+    const entries: Array<{ key: string; value: unknown }> = [];
     for (const key of allowed) {
-      if (data[key] !== undefined) {
-        const val = data[key] === null ? 'NULL' : `'${String(data[key]).replace(/'/g, "''")}'`;
-        sets.push(`${key} = ${val}`);
-      }
+      if (data[key] !== undefined) entries.push({ key, value: data[key] === null ? null : String(data[key]) });
     }
-    if (sets.length === 0) return null;
-    sets.push(`updated_at = NOW()`);
+    if (entries.length === 0) return null;
+    const setCl = sqlSetClauses(entries)!;
 
-    const result = await db.execute(sql.raw(
-      `UPDATE elevator_info SET ${sets.join(', ')} WHERE id = '${id}' AND tenant_id = '${tenantId}' RETURNING *`
-    ));
+    const result = await db.execute(
+      sql`UPDATE elevator_info SET ${setCl} WHERE id = ${id} AND tenant_id = ${tenantId} RETURNING *`
+    );
     const rows = result as unknown as Record<string, unknown>[];
     return rows.length > 0 ? rows[0] : null;
   }
@@ -820,16 +811,14 @@ export class OperationalDataService {
     const col = sanitizeSort(sort_by ?? 'guard_name', ['guard_name', 'shift_start', 'shift_end', 'day_of_week', 'created_at', 'site_id']);
     const ord = sanitizeOrder(sort_order);
 
-    const conditions: string[] = [`tenant_id = '${tenantId}'`];
-    if (site_id) conditions.push(`site_id = '${site_id}'`);
-    if (search) conditions.push(`(guard_name ILIKE '%${search}%')`);
-    const where = conditions.join(' AND ');
+    const conditions: SQL[] = [sql`tenant_id = ${tenantId}`];
+    if (site_id) conditions.push(sql`site_id = ${site_id}`);
+    if (search) conditions.push(sql`(guard_name ILIKE ${'%' + search + '%'})`);
+    const where = sqlAnd(conditions);
 
     const [countResult, dataResult] = await Promise.all([
-      db.execute(sql.raw(`SELECT count(*)::int AS total FROM guard_schedules WHERE ${where}`)),
-      db.execute(sql.raw(
-        `SELECT * FROM guard_schedules WHERE ${where} ORDER BY ${col} ${ord} LIMIT ${limit} OFFSET ${offset}`
-      )),
+      db.execute(sql`SELECT count(*)::int AS total FROM guard_schedules WHERE ${where}`),
+      db.execute(sql`SELECT * FROM guard_schedules WHERE ${where} ORDER BY ${sql.raw(col)} ${sql.raw(ord)} LIMIT ${limit} OFFSET ${offset}`),
     ]);
 
     const total = (countResult as unknown as Record<string, unknown>[])[0]?.total as number ?? 0;
@@ -861,20 +850,17 @@ export class OperationalDataService {
   }
 
   async guardSchedulesUpdate(id: string, tenantId: string, data: Record<string, unknown>) {
-    const sets: string[] = [];
     const allowed = ['guard_name', 'guard_id_number', 'shift_start', 'shift_end', 'day_of_week', 'post_location', 'phone', 'company', 'notes', 'site_id'];
+    const entries: Array<{ key: string; value: unknown }> = [];
     for (const key of allowed) {
-      if (data[key] !== undefined) {
-        const val = data[key] === null ? 'NULL' : `'${String(data[key]).replace(/'/g, "''")}'`;
-        sets.push(`${key} = ${val}`);
-      }
+      if (data[key] !== undefined) entries.push({ key, value: data[key] === null ? null : String(data[key]) });
     }
-    if (sets.length === 0) return null;
-    sets.push(`updated_at = NOW()`);
+    if (entries.length === 0) return null;
+    const setCl = sqlSetClauses(entries)!;
 
-    const result = await db.execute(sql.raw(
-      `UPDATE guard_schedules SET ${sets.join(', ')} WHERE id = '${id}' AND tenant_id = '${tenantId}' RETURNING *`
-    ));
+    const result = await db.execute(
+      sql`UPDATE guard_schedules SET ${setCl} WHERE id = ${id} AND tenant_id = ${tenantId} RETURNING *`
+    );
     const rows = result as unknown as Record<string, unknown>[];
     return rows.length > 0 ? rows[0] : null;
   }
@@ -889,16 +875,14 @@ export class OperationalDataService {
     const col = sanitizeSort(sort_by ?? 'service_name', ['service_name', 'platform', 'created_at', 'site_id']);
     const ord = sanitizeOrder(sort_order);
 
-    const conditions: string[] = [`tenant_id = '${tenantId}'`];
-    if (site_id) conditions.push(`site_id = '${site_id}'`);
-    if (search) conditions.push(`(service_name ILIKE '%${search}%' OR platform ILIKE '%${search}%')`);
-    const where = conditions.join(' AND ');
+    const conditions: SQL[] = [sql`tenant_id = ${tenantId}`];
+    if (site_id) conditions.push(sql`site_id = ${site_id}`);
+    if (search) conditions.push(sql`(service_name ILIKE ${'%' + search + '%'} OR platform ILIKE ${'%' + search + '%'})`);
+    const where = sqlAnd(conditions);
 
     const [countResult, dataResult] = await Promise.all([
-      db.execute(sql.raw(`SELECT count(*)::int AS total FROM monitoring_credentials WHERE ${where}`)),
-      db.execute(sql.raw(
-        `SELECT id, tenant_id, site_id, service_name, platform, username, url, port, notes, status, created_at, updated_at FROM monitoring_credentials WHERE ${where} ORDER BY ${col} ${ord} LIMIT ${limit} OFFSET ${offset}`
-      )),
+      db.execute(sql`SELECT count(*)::int AS total FROM monitoring_credentials WHERE ${where}`),
+      db.execute(sql`SELECT id, tenant_id, site_id, service_name, platform, username, url, port, notes, status, created_at, updated_at FROM monitoring_credentials WHERE ${where} ORDER BY ${sql.raw(col)} ${sql.raw(ord)} LIMIT ${limit} OFFSET ${offset}`),
     ]);
 
     const total = (countResult as unknown as Record<string, unknown>[])[0]?.total as number ?? 0;
@@ -929,20 +913,17 @@ export class OperationalDataService {
   }
 
   async monitoringCredentialsUpdate(id: string, tenantId: string, data: Record<string, unknown>) {
-    const sets: string[] = [];
     const allowed = ['service_name', 'platform', 'username', 'password', 'url', 'port', 'notes', 'status', 'site_id'];
+    const entries: Array<{ key: string; value: unknown }> = [];
     for (const key of allowed) {
-      if (data[key] !== undefined) {
-        const val = data[key] === null ? 'NULL' : `'${String(data[key]).replace(/'/g, "''")}'`;
-        sets.push(`${key} = ${val}`);
-      }
+      if (data[key] !== undefined) entries.push({ key, value: data[key] === null ? null : String(data[key]) });
     }
-    if (sets.length === 0) return null;
-    sets.push(`updated_at = NOW()`);
+    if (entries.length === 0) return null;
+    const setCl = sqlSetClauses(entries)!;
 
-    const result = await db.execute(sql.raw(
-      `UPDATE monitoring_credentials SET ${sets.join(', ')} WHERE id = '${id}' AND tenant_id = '${tenantId}' RETURNING id, tenant_id, site_id, service_name, platform, username, url, port, notes, status, created_at, updated_at`
-    ));
+    const result = await db.execute(
+      sql`UPDATE monitoring_credentials SET ${setCl} WHERE id = ${id} AND tenant_id = ${tenantId} RETURNING id, tenant_id, site_id, service_name, platform, username, url, port, notes, status, created_at, updated_at`
+    );
     const rows = result as unknown as Record<string, unknown>[];
     return rows.length > 0 ? rows[0] : null;
   }
@@ -957,16 +938,14 @@ export class OperationalDataService {
     const col = sanitizeSort(sort_by ?? 'training_date', ['training_date', 'operator_name', 'topic', 'created_at', 'site_id']);
     const ord = sanitizeOrder(sort_order);
 
-    const conditions: string[] = [`tenant_id = '${tenantId}'`];
-    if (site_id) conditions.push(`site_id = '${site_id}'`);
-    if (search) conditions.push(`(operator_name ILIKE '%${search}%' OR topic ILIKE '%${search}%')`);
-    const where = conditions.join(' AND ');
+    const conditions: SQL[] = [sql`tenant_id = ${tenantId}`];
+    if (site_id) conditions.push(sql`site_id = ${site_id}`);
+    if (search) conditions.push(sql`(operator_name ILIKE ${'%' + search + '%'} OR topic ILIKE ${'%' + search + '%'})`);
+    const where = sqlAnd(conditions);
 
     const [countResult, dataResult] = await Promise.all([
-      db.execute(sql.raw(`SELECT count(*)::int AS total FROM operator_trainings WHERE ${where}`)),
-      db.execute(sql.raw(
-        `SELECT * FROM operator_trainings WHERE ${where} ORDER BY ${col} ${ord} LIMIT ${limit} OFFSET ${offset}`
-      )),
+      db.execute(sql`SELECT count(*)::int AS total FROM operator_trainings WHERE ${where}`),
+      db.execute(sql`SELECT * FROM operator_trainings WHERE ${where} ORDER BY ${sql.raw(col)} ${sql.raw(ord)} LIMIT ${limit} OFFSET ${offset}`),
     ]);
 
     const total = (countResult as unknown as Record<string, unknown>[])[0]?.total as number ?? 0;
@@ -1007,16 +986,14 @@ export class OperationalDataService {
     const col = sanitizeSort(sort_by ?? 'camera_name', ['camera_name', 'location', 'camera_type', 'created_at', 'site_id']);
     const ord = sanitizeOrder(sort_order);
 
-    const conditions: string[] = [`tenant_id = '${tenantId}'`];
-    if (site_id) conditions.push(`site_id = '${site_id}'`);
-    if (search) conditions.push(`(camera_name ILIKE '%${search}%' OR location ILIKE '%${search}%')`);
-    const where = conditions.join(' AND ');
+    const conditions: SQL[] = [sql`tenant_id = ${tenantId}`];
+    if (site_id) conditions.push(sql`site_id = ${site_id}`);
+    if (search) conditions.push(sql`(camera_name ILIKE ${'%' + search + '%'} OR location ILIKE ${'%' + search + '%'})`);
+    const where = sqlAnd(conditions);
 
     const [countResult, dataResult] = await Promise.all([
-      db.execute(sql.raw(`SELECT count(*)::int AS total FROM site_cctv_description WHERE ${where}`)),
-      db.execute(sql.raw(
-        `SELECT * FROM site_cctv_description WHERE ${where} ORDER BY ${col} ${ord} LIMIT ${limit} OFFSET ${offset}`
-      )),
+      db.execute(sql`SELECT count(*)::int AS total FROM site_cctv_description WHERE ${where}`),
+      db.execute(sql`SELECT * FROM site_cctv_description WHERE ${where} ORDER BY ${sql.raw(col)} ${sql.raw(ord)} LIMIT ${limit} OFFSET ${offset}`),
     ]);
 
     const total = (countResult as unknown as Record<string, unknown>[])[0]?.total as number ?? 0;
@@ -1051,27 +1028,25 @@ export class OperationalDataService {
   }
 
   async siteCctvDescriptionUpdate(id: string, tenantId: string, data: Record<string, unknown>) {
-    const sets: string[] = [];
     const allowed = ['camera_name', 'location', 'camera_type', 'brand', 'model', 'resolution', 'has_night_vision', 'has_audio', 'recording_mode', 'storage_days', 'notes', 'status', 'site_id'];
+    const entries: Array<{ key: string; value: unknown; isBoolean?: boolean; isNumber?: boolean }> = [];
     for (const key of allowed) {
       if (data[key] !== undefined) {
         if (key === 'has_night_vision' || key === 'has_audio') {
-          sets.push(`${key} = ${data[key] === true ? 'TRUE' : 'FALSE'}`);
+          entries.push({ key, value: data[key] === true, isBoolean: true });
         } else if (key === 'storage_days') {
-          const val = data[key] === null ? 'NULL' : String(data[key]);
-          sets.push(`${key} = ${val}`);
+          entries.push({ key, value: data[key] === null ? null : data[key], isNumber: true });
         } else {
-          const val = data[key] === null ? 'NULL' : `'${String(data[key]).replace(/'/g, "''")}'`;
-          sets.push(`${key} = ${val}`);
+          entries.push({ key, value: data[key] === null ? null : String(data[key]) });
         }
       }
     }
-    if (sets.length === 0) return null;
-    sets.push(`updated_at = NOW()`);
+    if (entries.length === 0) return null;
+    const setCl = sqlSetClauses(entries)!;
 
-    const result = await db.execute(sql.raw(
-      `UPDATE site_cctv_description SET ${sets.join(', ')} WHERE id = '${id}' AND tenant_id = '${tenantId}' RETURNING *`
-    ));
+    const result = await db.execute(
+      sql`UPDATE site_cctv_description SET ${setCl} WHERE id = ${id} AND tenant_id = ${tenantId} RETURNING *`
+    );
     const rows = result as unknown as Record<string, unknown>[];
     return rows.length > 0 ? rows[0] : null;
   }

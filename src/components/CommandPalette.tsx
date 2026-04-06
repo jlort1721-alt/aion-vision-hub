@@ -4,7 +4,7 @@ import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator,
 } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
-import { useDevices, useSites, useEventsLegacy } from '@/hooks/use-supabase-data';
+import { useDevices, useSites, useEventsLegacy } from '@/hooks/use-api-data';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,8 +12,17 @@ import {
   MonitorSpeaker, MapPin, Bell, LayoutDashboard, Video, Play,
   AlertTriangle, Bot, Puzzle, FileBarChart, ScrollText, Activity, Settings,
   Users, Car, DoorOpen, Shield, Calendar, ClipboardList, Siren,
-  Search, Hash, User, Wifi, WifiOff,
+  Search, Hash, User, Wifi, WifiOff, Plus, Monitor, FileText,
 } from 'lucide-react';
+
+const QUICK_ACTIONS = [
+  { label: 'Crear nuevo incidente', path: '/incidents?action=new', icon: <Plus className="mr-2 h-4 w-4" />, keywords: 'nuevo incidente crear new incident' },
+  { label: 'Buscar residente', path: '/access-control?focus=search', icon: <Search className="mr-2 h-4 w-4" />, keywords: 'residente resident buscar search' },
+  { label: 'Buscar vehiculo', path: '/access-control?tab=vehicles&focus=search', icon: <Search className="mr-2 h-4 w-4" />, keywords: 'vehiculo vehicle buscar search placa' },
+  { label: 'Ver alertas activas', path: '/alerts?status=active', icon: <AlertTriangle className="mr-2 h-4 w-4" />, keywords: 'alertas activas active alerts' },
+  { label: 'Abrir Video Wall', path: '/wall/1', icon: <Monitor className="mr-2 h-4 w-4" />, keywords: 'video wall muro pantalla' },
+  { label: 'Generar reporte', path: '/reports?action=new', icon: <FileText className="mr-2 h-4 w-4" />, keywords: 'reporte report generar generate' },
+];
 
 const PAGES = [
   { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard className="mr-2 h-4 w-4" />, keywords: 'home panel principal' },
@@ -116,6 +125,15 @@ export default function CommandPalette() {
     setSearch('');
   };
 
+  // Filter quick actions by search including keywords
+  const filteredActions = useMemo(() => {
+    if (!search) return QUICK_ACTIONS;
+    const q = search.toLowerCase();
+    return QUICK_ACTIONS.filter(
+      a => (a.label || '').toLowerCase().includes(q) || (a.keywords || '').toLowerCase().includes(q)
+    );
+  }, [search]);
+
   // Filter pages by search including keywords
   const filteredPages = useMemo(() => {
     if (!search) return PAGES;
@@ -177,6 +195,7 @@ export default function CommandPalette() {
   }, [accessPeople, search]);
 
   const hasResults =
+    filteredActions.length > 0 ||
     filteredPages.length > 0 ||
     filteredDevices.length > 0 ||
     filteredIncidents.length > 0 ||
@@ -193,6 +212,16 @@ export default function CommandPalette() {
       />
       <CommandList className="max-h-[420px]">
         {!hasResults && <CommandEmpty>No results found.</CommandEmpty>}
+
+        {filteredActions.length > 0 && (
+          <CommandGroup heading="Acciones Rapidas">
+            {filteredActions.map(a => (
+              <CommandItem key={a.path} onSelect={() => go(a.path)} value={`action-${a.label}-${a.keywords}`}>
+                {a.icon}{a.label}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
 
         {filteredPages.length > 0 && (
           <CommandGroup heading="Pages">

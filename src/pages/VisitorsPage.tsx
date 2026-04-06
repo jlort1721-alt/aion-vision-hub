@@ -332,7 +332,7 @@ export default function VisitorsPage() {
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       {visitor.photo ? (
-                        <img src={visitor.photo} alt="" className="w-10 h-10 rounded-full object-cover border" />
+                        <img src={visitor.photo} alt="Foto del visitante" className="w-10 h-10 rounded-full object-cover border" />
                       ) : (
                         <UserCheck className={`h-5 w-5 ${visitor.blacklisted ? 'text-destructive' : 'text-muted-foreground'}`} />
                       )}

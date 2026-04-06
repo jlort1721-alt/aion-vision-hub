@@ -1,6 +1,7 @@
 import { createLogger } from '@aion/common-utils';
 import { db } from '../db/client.js';
 import { sql } from 'drizzle-orm';
+import { fetchWithTimeout } from '../lib/http-client.js';
 
 const logger = createLogger({ name: 'camera-events' });
 
@@ -38,7 +39,7 @@ export class CameraEventService {
   private async checkCameraStatus() {
     try {
       // Check go2rtc for camera status changes
-      const resp = await fetch('http://localhost:1984/api/streams');
+      const resp = await fetchWithTimeout('http://localhost:1984/api/streams', { timeout: 5000 });
       const streams = await resp.json() as Record<string, Record<string, unknown>>;
 
       let onlineCount = 0;

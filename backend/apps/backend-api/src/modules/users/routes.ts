@@ -14,7 +14,7 @@ export async function registerUserRoutes(app: FastifyInstance) {
   });
 
   // Get the requesting user's own profile
-  app.get('/me', async (request) => {
+  app.get('/me', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request) => {
     const data = await service.getMe(request.userId);
     return { success: true, data };
   });

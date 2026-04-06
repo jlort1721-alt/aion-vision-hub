@@ -8,6 +8,7 @@
 import { createLogger } from '@aion/common-utils';
 import { db } from '../db/client.js';
 import { sql } from 'drizzle-orm';
+import { sendAlert } from '../lib/telegram-alerter.js';
 
 const logger = createLogger({ name: 'system-watchdog' });
 
@@ -268,11 +269,13 @@ class SystemWatchdogService {
                 { service: svc.name, responseMs: result.ms, error: result.message },
                 'CRITICAL service went DOWN',
               );
+              void sendAlert('critical', `${svc.name} DOWN`, `Service failed health check: ${result.message}`);
             } else {
               logger.warn(
                 { service: svc.name, responseMs: result.ms, error: result.message },
                 'Non-critical service went DOWN',
               );
+              void sendAlert('warning', `${svc.name} degraded`, `Non-critical service down: ${result.message}`);
             }
           } else {
             // Service recovered
@@ -280,6 +283,7 @@ class SystemWatchdogService {
               { service: svc.name, responseMs: result.ms },
               'Service recovered — now healthy',
             );
+            void sendAlert('info', `${svc.name} recovered`, `Service is healthy again (${result.ms}ms)`);
           }
         } else if (previouslyHealthy === undefined && !result.ok) {
           // First check and already down
@@ -288,6 +292,7 @@ class SystemWatchdogService {
               { service: svc.name, responseMs: result.ms, error: result.message },
               'CRITICAL service is DOWN on first check',
             );
+            void sendAlert('critical', `${svc.name} DOWN on startup`, `Service unavailable: ${result.message}`);
           } else {
             logger.warn(
               { service: svc.name, responseMs: result.ms, error: result.message },

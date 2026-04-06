@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useDevices, useSites } from '@/hooks/use-supabase-data';
+import { useDevices, useSites } from '@/hooks/use-api-data';
 import { useI18n } from '@/contexts/I18nContext';
 import DeviceFormDialog from '@/components/devices/DeviceFormDialog';
 import DeleteDeviceDialog from '@/components/devices/DeleteDeviceDialog';
@@ -17,7 +17,7 @@ const EWeLinkCloudPanel = lazy(() => import('@/components/devices/EWeLinkCloudPa
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Plus, Search, Upload, Wifi, WifiOff, AlertCircle, MoreHorizontal,
-  RefreshCw, Settings, Eye, Pencil, Trash2, Video, PlayCircle,
+  RefreshCw, Settings, Eye, Pencil, Trash2, Video, PlayCircle, Monitor,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { PageShell } from '@/components/shared/PageShell';
 import ErrorState from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function DevicesPage() {
   const { t } = useI18n();
@@ -137,11 +138,12 @@ export default function DevicesPage() {
           {isLoading ? (
             <div className="p-4 space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
           ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <Settings className="h-8 w-8 mb-2 opacity-30" />
-              <p className="text-sm">{t('devices.no_devices')}</p>
-              <Button variant="link" size="sm" onClick={openAdd}>{t('devices.add_first')}</Button>
-            </div>
+            <EmptyState
+              icon={<Monitor className="h-12 w-12" />}
+              title={t('devices.no_devices') || "No hay dispositivos"}
+              description="Agrega tu primer dispositivo para comenzar"
+              action={{ label: t('devices.add_first') || "Agregar dispositivo", onClick: openAdd }}
+            />
           ) : (
             <Table>
               <TableHeader>

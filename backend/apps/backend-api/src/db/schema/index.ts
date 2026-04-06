@@ -37,6 +37,7 @@ export { biomarkers } from './biomarkers.js';
 export { apiKeys } from '../../modules/api-keys/schema.js';
 export { evidence } from './evidence.js';
 export { knowledgeBase } from './knowledge-base.js';
+export { communicationLogs, twilioNotificationRules } from './communication-logs.js';
 
 import { pgTable, uuid, text, boolean, integer, timestamp, jsonb, varchar, index } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';

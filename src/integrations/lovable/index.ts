@@ -28,7 +28,10 @@ export const lovable = {
       }
 
       try {
-        await supabase.auth.setSession(result.tokens);
+        // supabase client is null (migrated to JWT) — skip session sync
+        if (supabase?.auth) {
+          await supabase.auth.setSession(result.tokens);
+        }
       } catch (e) {
         return { error: e instanceof Error ? e : new Error(String(e)) };
       }

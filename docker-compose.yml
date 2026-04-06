@@ -47,7 +47,7 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgres://${DB_USER:-clave}:${DB_PASSWORD}@clave-postgres:5432/${DB_NAME:-clave_db}
-      - REDIS_URL=redis://clave-redis:6379
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-changeme}@clave-redis:6379
       - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:8080}
       - MEDIAMTX_API_URL=http://clave-mediamtx:9997/v3
@@ -84,7 +84,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME:-clave_db}
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       - clave_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -116,10 +116,23 @@ services:
       - "8889:8889"  # WebRTC
     volumes:
       - clave_media_storage:/var/lib/mediamtx
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:9997/v3/paths/list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 512M
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
+        max-size: "50m"
         max-file: "3"
     restart: unless-stopped
     networks:
@@ -130,13 +143,21 @@ services:
   # ==========================================
   clave-redis:
     image: redis:7-alpine
-    command: redis-server --save 60 1 --loglevel warning
+    command: >
+      redis-server
+      --save 60 1
+      --loglevel warning
+      --requirepass ${REDIS_PASSWORD:-changeme}
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - clave_redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5

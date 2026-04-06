@@ -3,6 +3,7 @@
  * Uses Streamable HTTP MCP transport with SSE responses
  */
 import { createLogger } from '@aion/common-utils';
+import { fetchWithTimeout } from '../lib/http-client.js';
 
 const logger = createLogger({ name: 'ewelink-mcp' });
 
@@ -37,7 +38,7 @@ export class EwelinkMCPClient {
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
 
-    const resp = await fetch(EWELINK_MCP_URL, {
+    const resp = await fetchWithTimeout(EWELINK_MCP_URL, { timeout: 5000,
       method: 'POST',
       headers,
       body: JSON.stringify(body),

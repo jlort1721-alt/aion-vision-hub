@@ -201,6 +201,26 @@ export async function recordConsent(userId: string, tenantId: string, input: Rec
   return consentRecord;
 }
 
+export async function hasBiometricConsent(tenantId: string, _subjectName: string): Promise<boolean> {
+  // Check if there's a granted biometric consent for this tenant
+  // We check at tenant level since individual resident consent is recorded per subject
+  const [latest] = await db
+    .select({ action: auditLogs.action })
+    .from(auditLogs)
+    .where(
+      and(
+        eq(auditLogs.tenantId, tenantId),
+        eq(auditLogs.entityType, 'consent'),
+        eq(auditLogs.entityId, 'biometric'),
+      ),
+    )
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(1);
+
+  // If no consent record exists, or the latest action is withdrawal, return false
+  return latest?.action === 'consent.granted';
+}
+
 export async function listConsents(userId: string, tenantId: string) {
   const consents = await db
     .select()

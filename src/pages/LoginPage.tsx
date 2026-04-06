@@ -6,9 +6,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, Shield, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useI18n } from '@/contexts/I18nContext';
+import { cn } from '@/lib/utils';
 import Logo from '@/components/brand/Logo';
+
+const getPasswordStrength = (pwd: string): number => {
+  let score = 0;
+  if (pwd.length >= 8) score++;
+  if (pwd.length >= 12) score++;
+  if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+  return Math.min(score, 4);
+};
+const strengthColors: Record<number, string> = { 0: "bg-destructive", 1: "bg-destructive", 2: "bg-yellow-500", 3: "bg-green-500", 4: "bg-green-600" };
 
 export default function LoginPage() {
   const [tab, setTab] = useState('login');
@@ -18,12 +32,21 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [dataAccepted, setDataAccepted] = useState(false);
+  const [dataError, setDataError] = useState(false);
   const { login, signup, resetPassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useI18n();
+  const strengthLevel = getPasswordStrength(password);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!dataAccepted) {
+      setDataError(true);
+      return;
+    }
+    setDataError(false);
     setLoading(true);
     try {
       await login(email, password);
@@ -90,11 +113,11 @@ export default function LoginPage() {
               <TabsContent value="login" className="mt-0">
                 <form onSubmit={handleLogin} className="space-y-4" aria-label="Login form">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">Correo Electrónico</Label>
+                    <Label htmlFor="login-email">Correo Electrónico<span className="text-destructive ml-0.5">*</span></Label>
                     <Input id="login-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="usuario@empresa.com" required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Contraseña</Label>
+                    <Label htmlFor="login-password">Contraseña<span className="text-destructive ml-0.5">*</span></Label>
                     <div className="relative">
                       <Input id="login-password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required />
                       <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-full px-3 hover:bg-transparent" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
@@ -102,7 +125,29 @@ export default function LoginPage() {
                       </Button>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <div className="space-y-1.5">
+                    <div className="flex items-start gap-2">
+                      <Checkbox
+                        id="data-protection"
+                        checked={dataAccepted}
+                        onCheckedChange={(checked) => {
+                          setDataAccepted(checked === true);
+                          if (checked) setDataError(false);
+                        }}
+                        className="mt-0.5"
+                      />
+                      <label htmlFor="data-protection" className="text-xs text-muted-foreground leading-relaxed cursor-pointer">
+                        {t('legal.data_protection')}{' '}
+                        <a href="/privacy" className="text-primary underline underline-offset-2 hover:text-primary/80" onClick={(e) => e.stopPropagation()}>
+                          {t('cookie.privacy_link')}
+                        </a>
+                      </label>
+                    </div>
+                    {dataError && (
+                      <p className="text-xs text-destructive pl-6">{t('legal.data_protection_required')}</p>
+                    )}
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading || !dataAccepted}>
                     {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                   </Button>
                   <Button type="button" variant="link" className="w-full text-xs" onClick={() => setTab('reset')}>
@@ -114,17 +159,36 @@ export default function LoginPage() {
               <TabsContent value="signup" className="mt-0">
                 <form onSubmit={handleSignup} className="space-y-4" aria-label="Sign up form">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">Nombre Completo</Label>
+                    <Label htmlFor="signup-name">Nombre Completo<span className="text-destructive ml-0.5">*</span></Label>
                     <Input id="signup-name" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Juan Pérez" required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Correo Electrónico</Label>
+                    <Label htmlFor="signup-email">Correo Electrónico<span className="text-destructive ml-0.5">*</span></Label>
                     <Input id="signup-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="usuario@empresa.com" required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Contraseña</Label>
+                    <Label htmlFor="signup-password">Contraseña<span className="text-destructive ml-0.5">*</span></Label>
                     <Input id="signup-password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" required />
                   </div>
+                  {/* Password strength indicator */}
+                  {tab === 'signup' && password && (
+                    <div className="space-y-1">
+                      <div className="flex gap-1">
+                        {[1,2,3,4].map(i => (
+                          <div key={i} className={cn("h-1 flex-1 rounded-full transition-all",
+                            i <= strengthLevel ? strengthColors[strengthLevel] : "bg-muted"
+                          )} />
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {strengthLevel === 0 && t('password.very_weak')}
+                        {strengthLevel === 1 && t('password.weak')}
+                        {strengthLevel === 2 && t('password.acceptable')}
+                        {strengthLevel === 3 && t('password.strong')}
+                        {strengthLevel === 4 && t('password.very_strong')}
+                      </p>
+                    </div>
+                  )}
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
                   </Button>
@@ -143,7 +207,7 @@ export default function LoginPage() {
                   <form onSubmit={handleReset} className="space-y-4" aria-label="Password reset form">
                     <p className="text-sm text-muted-foreground">Ingresa tu correo para recibir un enlace de recuperación de contraseña.</p>
                     <div className="space-y-2">
-                      <Label htmlFor="reset-email">Correo Electrónico</Label>
+                      <Label htmlFor="reset-email">Correo Electrónico<span className="text-destructive ml-0.5">*</span></Label>
                       <Input id="reset-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
                     </div>
                     <Button type="submit" className="w-full" disabled={loading}>

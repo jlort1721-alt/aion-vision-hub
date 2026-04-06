@@ -15,7 +15,7 @@
 
 import { createLogger } from '@aion/common-utils';
 import { db } from '../db/client.js';
-import { sql } from 'drizzle-orm';
+import { sql, type SQL } from 'drizzle-orm';
 import crypto from 'crypto';
 import type { AionEvent } from './event-bus.js';
 
@@ -568,22 +568,28 @@ class RulesEngine {
 
   async update(id: string, input: RuleUpdateInput): Promise<AutomationRule | null> {
     try {
-      const setClauses: string[] = ['updated_at = NOW()'];
+      const setParts: SQL[] = [sql`updated_at = NOW()`];
 
-      if (input.name !== undefined) setClauses.push(`name = '${input.name.replace(/'/g, "''")}'`);
-      if (input.description !== undefined) setClauses.push(`description = '${(input.description ?? '').replace(/'/g, "''")}'`);
-      if (input.trigger !== undefined) setClauses.push(`trigger = '${JSON.stringify(input.trigger)}'::jsonb`);
-      if (input.conditions !== undefined) setClauses.push(`conditions = '${JSON.stringify(input.conditions)}'::jsonb`);
-      if (input.actions !== undefined) setClauses.push(`actions = '${JSON.stringify(input.actions)}'::jsonb`);
-      if (input.priority !== undefined) setClauses.push(`priority = ${input.priority}`);
-      if (input.cooldown_minutes !== undefined) setClauses.push(`cooldown_minutes = ${input.cooldown_minutes}`);
-      if (input.is_active !== undefined) setClauses.push(`is_active = ${input.is_active}`);
+      if (input.name !== undefined) setParts.push(sql`name = ${input.name}`);
+      if (input.description !== undefined) setParts.push(sql`description = ${input.description ?? null}`);
+      if (input.trigger !== undefined) setParts.push(sql`trigger = ${JSON.stringify(input.trigger)}::jsonb`);
+      if (input.conditions !== undefined) setParts.push(sql`conditions = ${JSON.stringify(input.conditions)}::jsonb`);
+      if (input.actions !== undefined) setParts.push(sql`actions = ${JSON.stringify(input.actions)}::jsonb`);
+      if (input.priority !== undefined) setParts.push(sql`priority = ${input.priority}`);
+      if (input.cooldown_minutes !== undefined) setParts.push(sql`cooldown_minutes = ${input.cooldown_minutes}`);
+      if (input.is_active !== undefined) setParts.push(sql`is_active = ${input.is_active}`);
 
-      await db.execute(sql.raw(`
+      // Join SET clauses with commas
+      let setClause = setParts[0];
+      for (let i = 1; i < setParts.length; i++) {
+        setClause = sql`${setClause}, ${setParts[i]}`;
+      }
+
+      await db.execute(sql`
         UPDATE automation_rules
-        SET ${setClauses.join(', ')}
-        WHERE id = '${id}'
-      `));
+        SET ${setClause}
+        WHERE id = ${id}
+      `);
 
       // Reload cache to pick up changes
       await this.loadRules();
@@ -614,26 +620,30 @@ class RulesEngine {
     total: number;
   }> {
     try {
-      const conditions: string[] = ['1=1'];
+      const conditions: SQL[] = [sql`TRUE`];
 
-      if (options.rule_id) conditions.push(`rule_id = '${options.rule_id}'`);
-      if (options.tenant_id) conditions.push(`tenant_id = '${options.tenant_id}'`);
-      if (options.status) conditions.push(`status = '${options.status}'`);
-      if (options.from) conditions.push(`created_at >= '${options.from}'`);
-      if (options.to) conditions.push(`created_at <= '${options.to}'`);
+      if (options.rule_id) conditions.push(sql`rule_id = ${options.rule_id}`);
+      if (options.tenant_id) conditions.push(sql`tenant_id = ${options.tenant_id}`);
+      if (options.status) conditions.push(sql`status = ${options.status}`);
+      if (options.from) conditions.push(sql`created_at >= ${options.from}`);
+      if (options.to) conditions.push(sql`created_at <= ${options.to}`);
 
-      const where = conditions.join(' AND ');
+      let where = conditions[0];
+      for (let i = 1; i < conditions.length; i++) {
+        where = sql`${where} AND ${conditions[i]}`;
+      }
+
       const limit = options.limit ?? 50;
       const offset = options.offset ?? 0;
 
-      const countResult = await db.execute(sql.raw(
-        `SELECT count(*)::int AS total FROM automation_executions WHERE ${where}`,
-      ));
+      const countResult = await db.execute(
+        sql`SELECT count(*)::int AS total FROM automation_executions WHERE ${where}`,
+      );
       const total = (countResult as unknown as Array<{ total: number }>)[0]?.total ?? 0;
 
-      const rows = await db.execute(sql.raw(
-        `SELECT * FROM automation_executions WHERE ${where} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`,
-      ));
+      const rows = await db.execute(
+        sql`SELECT * FROM automation_executions WHERE ${where} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`,
+      );
 
       return {
         executions: rows as unknown as Array<Record<string, unknown>>,

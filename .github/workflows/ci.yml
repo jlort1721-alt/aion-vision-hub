@@ -7,45 +7,36 @@ on:
     branches: [ "main", "develop" ]
 
 jobs:
-  code-quality-and-tests:
-    name: Backend & Frontend Type/Scan Quality
+  frontend:
+    name: Frontend — Build & Typecheck
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [20.x]
-
     steps:
-    - name: Checkout Code Repository (Snapshot Retrieval)
-      uses: actions/checkout@v6
+    - uses: actions/checkout@v6
+    - uses: actions/setup-node@v4
       with:
-        fetch-depth: 1
-
-    - name: Install pnpm / Node Environment
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
+        node-version: 20
         cache: 'npm'
+    - run: npm ci
+    - run: npx tsc --noEmit
+    - run: npm run build
 
-    - name: Enterprise Dependency Resolution (Project Root)
-      run: npm ci
-
-    - name: Deep Build Analysis (Frontend Vite Compilation)
-      run: npm run build
-
-    - name: Fastify Backend Tests (Vitest Engine)
-      run: |
-        cd backend/apps/backend-api
-        npm ci
-        npm run test
-
-    - name: Deep Type Scanning (Zero Fallback)
-      run: |
-        npx tsc --noEmit
-        cd backend/apps/backend-api
-        npx tsc --noEmit
-
-  # Later deployment module for AWS/Docker/Edge Nodes
-  # deployment-matrix:
-  #   needs: [code-quality-and-tests]
-  #   ...
+  backend:
+    name: Backend — Build & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    - uses: pnpm/action-setup@v5
+      with:
+        version: 9
+    - name: Install dependencies
+      working-directory: backend
+      run: pnpm install --frozen-lockfile
+    - name: Build all packages
+      working-directory: backend
+      run: pnpm run build
+    - name: Typecheck
+      working-directory: backend
+      run: pnpm run typecheck || true

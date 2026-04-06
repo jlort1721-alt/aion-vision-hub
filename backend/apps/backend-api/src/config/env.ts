@@ -101,6 +101,52 @@ export const envSchema = z.object({
   IMOU_APP_ID: z.string().default(''),
   IMOU_APP_SECRET: z.string().default(''),
 
+  // go2rtc stream gateway
+  GO2RTC_URL: z.string().default('http://localhost:1984'),
+
+  // HikConnect Cloud
+  HIKCONNECT_AK: z.string().optional(),
+  HIKCONNECT_SK: z.string().optional(),
+  HIKCONNECT_URL: z.string().default('https://open.hikvision.com'),
+
+  // Face Recognition service
+  FACE_RECOGNITION_URL: z.string().default('http://localhost:5050'),
+
+  // VLLM / local AI
+  VLLM_API_URL: z.string().optional(),
+  VLLM_MODEL: z.string().optional(),
+
+  // Asterisk / ARI
+  ASTERISK_AMI_PORT: z.coerce.number().default(5038),
+
+  // SIP provisioning
+  SIP_DEFAULT_PASSWORD: z.string().optional(),
+  SIP_SERVER_ADDR: z.string().default('0.0.0.0'),
+
+  // eWeLink MCP endpoint
+  EWELINK_MCP_URL: z.string().optional(),
+
+  // Nginx health check
+  NGINX_HEALTH_URL: z.string().default('http://localhost:80'),
+
+  // CLAVE bridge
+  CLAVE_API_URL: z.string().default('http://localhost:8002/api/v1'),
+
+  // Telegram alerts
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_ALERT_CHAT_ID: z.string().optional(),
+
+  // Sentry error tracking
+  SENTRY_DSN: z.string().optional(),
+
+  // Twilio phone (voice) & TwiML
+  TWILIO_PHONE_NUMBER: z.string().optional(),
+  TWILIO_TWIML_APP_SID: z.string().optional(),
+  TWILIO_WEBHOOK_BASE: z.string().url().optional(),
+
+  // Webhook secret
+  WEBHOOK_SECRET: z.string().optional(),
+
   // Logging
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 

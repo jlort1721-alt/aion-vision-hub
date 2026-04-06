@@ -93,7 +93,7 @@ vi.mock("@/contexts/I18nContext", () => ({
 }));
 
 // Mock hooks that fetch data
-vi.mock("@/hooks/use-supabase-data", () => ({
+vi.mock("@/hooks/use-api-data", () => ({
   useDevices: () => ({ data: [], isLoading: false }),
   useSites: () => ({ data: [], isLoading: false }),
   useEventsLegacy: () => ({ data: [], isLoading: false }),

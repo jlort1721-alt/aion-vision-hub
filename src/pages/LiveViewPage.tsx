@@ -114,6 +114,14 @@ interface DomoticDevice {
   sectionId?: string;
 }
 
+interface GateDevice {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  [key: string]: unknown;
+}
+
 interface RecentEvent {
   id: string;
   severity: string;
@@ -388,17 +396,17 @@ function DoorControlPanel() {
   const [reason, setReason] = useState('');
   const [confirming, setConfirming] = useState(false);
 
-  const { data: devices = [] } = useQuery<any[]>({
+  const { data: devices = [] } = useQuery<GateDevice[]>({
     queryKey: ['devices-for-gate'],
     queryFn: () => apiClient.get('/devices'),
-    select: (raw: any) => {
-      const items = Array.isArray(raw) ? raw : raw?.items ?? [];
+    select: (raw: Record<string, unknown> | GateDevice[]) => {
+      const items = Array.isArray(raw) ? raw : ((raw as Record<string, unknown>)?.items ?? []) as GateDevice[];
       return items.filter(
-        (d: any) =>
+        (d: GateDevice) =>
           d.status === 'online' &&
           (d.type === 'access_control' ||
             d.type === 'intercom' ||
-            /gate|puerta|door|barrera|acceso|portería/i.test(d.name || ''))
+            /gate|puerta|door|barrera|acceso|portería/i.test((d.name as string) || ''))
       );
     },
   });
@@ -406,9 +414,9 @@ function DoorControlPanel() {
   const { data: relays = [] } = useQuery<DomoticDevice[]>({
     queryKey: ['domotics-relays'],
     queryFn: () => apiClient.get('/domotics/devices'),
-    select: (raw: any) => {
+    select: (raw: Record<string, unknown> | DomoticDevice[]) => {
       const items = Array.isArray(raw) ? raw : [];
-      return items.filter((d: any) => d.type === 'relay' && d.status === 'online');
+      return items.filter((d: DomoticDevice) => d.type === 'relay' && d.status === 'online');
     },
   });
 
@@ -438,7 +446,7 @@ function DoorControlPanel() {
         <p className="text-xs text-muted-foreground text-center py-2">No hay dispositivos de acceso online</p>
       ) : (
         <div className="space-y-1">
-          {devices.slice(0, 6).map((d: any) => (
+          {devices.slice(0, 6).map((d: GateDevice) => (
             <div key={d.id} className="flex items-center justify-between gap-2">
               <span className="text-xs truncate flex-1">{d.name}</span>
               <Button
@@ -492,7 +500,7 @@ function DoorControlPanel() {
               Confirmar apertura
             </DialogTitle>
             <DialogDescription>
-              {devices.find((d: any) => d.id === selectedDevice)?.name}
+              {devices.find((d: GateDevice) => d.id === selectedDevice)?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
@@ -749,6 +757,15 @@ export default function LiveViewPage() {
   // State
   const [selectedSite, setSelectedSite] = useState<string>('all');
   const [gridSize, setGridSize] = useState<GridSize>(9);
+
+  // Auto-detect optimal grid size on mount based on viewport width
+  useEffect(() => {
+    const w = window.innerWidth;
+    if (w < 768) setGridSize(4);       // mobile: 2x2
+    else if (w < 1280) setGridSize(9); // tablet: 3x3
+    // desktop keeps default or user choice
+  }, []);
+
   const [currentPage, setCurrentPage] = useState(0);
   const [autoRotate, setAutoRotate] = useState(false);
   const [opsOpen, setOpsOpen] = useState(true);

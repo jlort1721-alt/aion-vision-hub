@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useDevices } from '@/hooks/use-supabase-data';
+import { useDevices } from '@/hooks/use-api-data';
 import { evidenceApi, type EvidenceRecord } from '@/services/evidence-api';
 import { toast } from 'sonner';
 import {

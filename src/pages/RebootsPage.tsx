@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useI18n } from '@/contexts/I18nContext';
-import { useDevices } from '@/hooks/use-supabase-data';
+import { useDevices } from '@/hooks/use-api-data';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { rebootsApi, aiApi } from '@/services/reboots-api';
 import {

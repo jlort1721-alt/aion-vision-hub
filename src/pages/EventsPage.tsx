@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useEvents, useDevices, useSites, type EventFilters } from '@/hooks/use-supabase-data';
+import { useEvents, useDevices, useSites, type EventFilters } from '@/hooks/use-api-data';
 import { useRealtimeEvents } from '@/hooks/use-realtime-events';
 import { useAudioAlerts } from '@/hooks/use-audio-alerts';
 import { apiClient } from '@/lib/api-client';
@@ -24,6 +24,8 @@ import EventFiltersBar from '@/components/events/EventFiltersBar';
 import EventDetailPanel from '@/components/events/EventDetailPanel';
 import { PageShell } from '@/components/shared/PageShell';
 import ErrorState from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonTable } from '@/components/ui/SkeletonVariants';
 
 const severityConfig: Record<string, { icon: React.ReactNode; color: string }> = {
   critical: { icon: <XCircle className="h-4 w-4" />, color: 'text-destructive' },
@@ -209,10 +211,42 @@ export default function EventsPage() {
         </div>
         <div className="flex-1 overflow-auto">
           {isLoading ? (
-            <div className="p-4 space-y-3">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+            <div className="p-4"><SkeletonTable rows={8} /></div>
           ) : events.length === 0 ? (
-            <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">{t('events.no_match')}</div>
+            <EmptyState
+              icon={<AlertTriangle className="h-12 w-12" />}
+              title={t('events.no_events') || "No hay eventos"}
+              description="Los eventos aparecerán aquí cuando se detecten"
+            />
           ) : (
+            <>
+            {/* Mobile card view */}
+            <div className="md:hidden space-y-2 p-3">
+              {events.map(event => {
+                const sev = severityConfig[event.severity] || severityConfig.info;
+                const device = devices.find(d => d.id === event.device_id);
+                return (
+                  <div
+                    key={event.id}
+                    className={cn("bg-card rounded-lg p-3 border cursor-pointer transition-colors hover:bg-muted/50", selected === event.id && "ring-1 ring-primary")}
+                    onClick={() => setSelected(event.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={sev.color}>{sev.icon}</span>
+                        <Badge variant={event.status === 'new' ? 'destructive' : event.status === 'resolved' ? 'secondary' : 'outline'} className="text-[10px] capitalize">{event.status}</Badge>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{new Date(event.created_at).toLocaleString()}</span>
+                    </div>
+                    <p className="text-sm font-medium mt-1.5">{event.title}</p>
+                    <p className="text-xs text-muted-foreground truncate capitalize">{(event.event_type || 'unknown').replace(/_/g, ' ')}{device ? ` — ${device.name}` : ''}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden md:block">
             <Table aria-label="Events list">
               <TableHeader>
                 <TableRow>
@@ -285,6 +319,8 @@ export default function EventsPage() {
                 })}
               </TableBody>
             </Table>
+            </div>
+            </>
           )}
         </div>
         <div className="px-4 py-2 border-t flex items-center justify-between text-sm">

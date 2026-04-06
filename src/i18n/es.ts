@@ -675,6 +675,63 @@ const es: Record<string, string> = {
   'cameraHealth.uptime': 'Disponibilidad',
   'cameraHealth.search': 'Buscar por nombre, IP, marca...',
   'cameraHealth.lastSeen': 'Ultima vez visto',
+
+  // Cookie Consent
+  'cookie.banner_title': 'Política de Cookies y Datos Personales',
+  'cookie.banner_text': 'Esta plataforma utiliza cookies esenciales para el funcionamiento del sistema de seguridad. Al continuar, aceptas nuestra política de tratamiento de datos personales conforme a la Ley 1581 de 2012.',
+  'cookie.accept_all': 'Aceptar todo',
+  'cookie.essential_only': 'Solo esenciales',
+  'cookie.configure': 'Configurar',
+  'cookie.privacy_link': 'Política de Privacidad',
+  'cookie.cookie_link': 'Política de Cookies',
+  'cookie.essential_title': 'Cookies Esenciales',
+  'cookie.essential_desc': 'Necesarias para el funcionamiento del sistema. No se pueden desactivar.',
+  'cookie.analytics_title': 'Cookies de Análisis',
+  'cookie.analytics_desc': 'Nos ayudan a mejorar la plataforma mediante estadísticas de uso.',
+  'cookie.save_preferences': 'Guardar preferencias',
+
+  // Legal
+  // Form
+  'form.required': 'Este campo es obligatorio',
+  'form.invalid_email': 'Ingrese un email válido',
+  'form.password_weak': 'La contraseña es muy débil',
+  'form.password_hint': 'Mínimo 8 caracteres, mayúsculas, números y caracteres especiales',
+  'form.min_chars': 'Mínimo {{count}} caracteres',
+  'form.max_chars': 'Máximo {{count}} caracteres',
+  'form.scroll_right': '← Desliza para ver más →',
+  'form.no_results': 'No se encontraron resultados',
+  'form.clear_filters': 'Limpiar filtros',
+  'form.confirm_delete': '¿Estás seguro de eliminar este elemento?',
+  'form.confirm_action': '¿Confirmar esta acción?',
+  'form.remember_me': 'Recordar sesión',
+  'form.undo': 'Deshacer',
+
+  'legal.data_protection': 'Acepto la política de tratamiento de datos personales',
+  'legal.data_protection_required': 'Debe aceptar la política de datos para continuar',
+  'legal.ley_1581': 'Conforme a la Ley 1581 de 2012 de Colombia',
+
+  // Portal
+  'portal.title': 'AION Seguridad',
+  'portal.system_operational': 'Sistema Operativo',
+  'portal.cameras_monitoring': 'Cámaras activas monitoreando 24/7',
+  'portal.report_title': 'Reportar Novedad',
+  'portal.name_placeholder': 'Nombre completo',
+  'portal.unit_placeholder': 'Número de unidad / apartamento',
+  'portal.description_placeholder': 'Describa la novedad...',
+  'portal.submit': 'Enviar Reporte',
+  'portal.report_sent': 'Reporte Enviado',
+  'portal.report_sent_desc': 'Su reporte ha sido recibido por la central de monitoreo.',
+  'portal.fill_all_fields': 'Complete todos los campos',
+  'portal.send_error': 'Error al enviar',
+  'portal.central_247': 'Central 24/7',
+  'portal.company': 'Clave Seguridad CTA — Medellín, Colombia',
+
+  // Password strength
+  'password.very_weak': 'Muy débil',
+  'password.weak': 'Débil',
+  'password.acceptable': 'Aceptable',
+  'password.strong': 'Fuerte',
+  'password.very_strong': 'Muy fuerte',
 };
 
 export default es;

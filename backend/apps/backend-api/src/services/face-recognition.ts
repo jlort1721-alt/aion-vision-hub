@@ -4,6 +4,7 @@
  * Activates when FACE_RECOGNITION_URL is configured
  */
 import { createLogger } from '@aion/common-utils';
+import { fetchWithTimeout } from '../lib/http-client.js';
 
 const logger = createLogger({ name: 'face-recognition' });
 
@@ -25,7 +26,7 @@ export class FaceRecognitionService {
     try {
       const formData = new FormData();
       formData.append('image', new Blob([new Uint8Array(imageBuffer)]), 'frame.jpg');
-      const resp = await fetch(`${this.apiUrl}/v1/vision/face`, { method: 'POST', body: formData });
+      const resp = await fetchWithTimeout(`${this.apiUrl}/v1/vision/face`, { method: 'POST', body: formData });
       const data = await resp.json() as Record<string, unknown>;
       return (data.predictions || []) as Record<string, unknown>[];
     } catch (err) {
@@ -39,7 +40,7 @@ export class FaceRecognitionService {
     try {
       const formData = new FormData();
       formData.append('image', new Blob([new Uint8Array(imageBuffer)]), 'frame.jpg');
-      const resp = await fetch(`${this.apiUrl}/v1/vision/face/recognize`, { method: 'POST', body: formData });
+      const resp = await fetchWithTimeout(`${this.apiUrl}/v1/vision/face/recognize`, { method: 'POST', body: formData });
       return await resp.json() as Record<string, unknown>;
     } catch {
       return null;
@@ -53,7 +54,7 @@ export class FaceRecognitionService {
       formData.append('image', new Blob([new Uint8Array(imageBuffer)]), 'face.jpg');
       formData.append('userid', personId);
       formData.append('name', name);
-      const resp = await fetch(`${this.apiUrl}/v1/vision/face/register`, { method: 'POST', body: formData });
+      const resp = await fetchWithTimeout(`${this.apiUrl}/v1/vision/face/register`, { method: 'POST', body: formData });
       return (await resp.json() as Record<string, unknown>).success === true;
     } catch {
       return false;

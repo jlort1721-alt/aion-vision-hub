@@ -7,7 +7,7 @@ export async function registerTenantRoutes(app: FastifyInstance) {
   const service = new TenantService();
 
   // /current MUST be before /:id to avoid "current" being treated as UUID
-  app.get('/current', async (request) => {
+  app.get('/current', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request) => {
     try {
       if (request.tenantId) {
         const data = await service.getById(request.tenantId, request.tenantId, request.userRole);
@@ -33,7 +33,7 @@ export async function registerTenantRoutes(app: FastifyInstance) {
     return { success: true, data };
   });
 
-  app.get('/:id', async (request) => {
+  app.get('/:id', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request) => {
     const { id } = request.params as { id: string };
     // Validate UUID format
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
@@ -66,7 +66,7 @@ export async function registerTenantRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
-  app.get('/:id/settings', async (request) => {
+  app.get('/:id/settings', { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] }, async (request) => {
     const { id } = request.params as { id: string };
     const data = await service.getSettings(id, request.tenantId, request.userRole);
     return { success: true, data };

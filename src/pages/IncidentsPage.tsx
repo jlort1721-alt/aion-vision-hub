@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useIncidents, useSites } from '@/hooks/use-supabase-data';
+import { useIncidents, useSites } from '@/hooks/use-api-data';
 import { apiClient } from '@/lib/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/contexts/I18nContext';
@@ -23,6 +23,8 @@ import { sanitizeText } from '@/lib/sanitize';
 import EvidencePanel from '@/components/incidents/EvidencePanel';
 import { PageShell } from '@/components/shared/PageShell';
 import ErrorState from '@/components/ui/ErrorState';
+import { EmptyState } from '@/components/ui/EmptyState';
+import EvidenceExport from '@/components/EvidenceExport';
 
 const priorityColors: Record<string, string> = {
   critical: 'text-destructive', high: 'text-warning', medium: 'text-info', low: 'text-muted-foreground',
@@ -109,6 +111,8 @@ export default function IncidentsPage() {
       description="Track and resolve security incidents"
       icon={<AlertTriangle className="h-5 w-5" />}
       actions={
+        <>
+        <EvidenceExport incidents={incidents as any} />
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button size="sm"><Plus className="mr-1 h-3 w-3" /> {t('common.new')}</Button>
@@ -154,6 +158,7 @@ export default function IncidentsPage() {
             </div>
           </DialogContent>
         </Dialog>
+        </>
       }
     >
     <div className="flex flex-col md:flex-row h-full">
@@ -168,7 +173,12 @@ export default function IncidentsPage() {
           {isLoading ? (
             <div className="p-3 space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
           ) : filtered.length === 0 ? (
-            <div className="p-6 text-center text-sm text-muted-foreground">{t('incidents.no_incidents')}</div>
+            <EmptyState
+              icon={<Plus className="h-12 w-12" />}
+              title={t('incidents.no_incidents') || "No hay incidentes"}
+              description="Los incidentes aparecerán aquí cuando se creen"
+              action={{ label: "Crear incidente", onClick: () => setCreateOpen(true) }}
+            />
           ) : filtered.map(inc => (
             <button key={inc.id} className={cn("w-full text-left px-3 py-3 border-b hover:bg-muted/50 transition-colors", selected === inc.id && "bg-muted/50")} onClick={() => setSelected(inc.id)}>
               <div className="flex items-start gap-2">
