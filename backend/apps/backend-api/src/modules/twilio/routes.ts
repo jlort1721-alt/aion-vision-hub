@@ -227,6 +227,24 @@ export async function registerTwilioRoutes(app: FastifyInstance) {
 
 export async function registerTwilioWebhookRoutes(app: FastifyInstance) {
 
+  // Twilio sends webhooks as application/x-www-form-urlencoded
+  app.addContentTypeParser(
+    'application/x-www-form-urlencoded',
+    { parseAs: 'string' },
+    (_req: any, body: string, done: (err: Error | null, result?: unknown) => void) => {
+      try {
+        const parsed: Record<string, string> = {};
+        for (const pair of body.split('&')) {
+          const [key, ...rest] = pair.split('=');
+          parsed[decodeURIComponent(key)] = decodeURIComponent(rest.join('='));
+        }
+        done(null, parsed);
+      } catch (err) {
+        done(err as Error);
+      }
+    },
+  );
+
   // ── Inbound WhatsApp ───────────────────────────────────────
   app.post('/whatsapp-incoming', async (request, reply) => {
     const body = request.body as Record<string, string>;
