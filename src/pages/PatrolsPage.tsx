@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { patrolRoutesApi, patrolCheckpointsApi, patrolLogsApi } from "@/services/patrols-api";
 import { useSites } from "@/hooks/use-api-data";
 import ErrorState from "@/components/ui/ErrorState";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,9 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+// Collapsible available if needed
 import { useToast } from "@/hooks/use-toast";
-import { Map, MapPin, Navigation, CheckCircle, Plus, Radar, ShieldAlert, Timer, Crosshair, ChevronDown, MapPinOff, Loader2, QrCode } from "lucide-react";
+import { Map, MapPin, Navigation, CheckCircle, Plus, Radar, ShieldAlert, Timer, Crosshair, Loader2, QrCode } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -101,7 +101,7 @@ function PatrolRouteMap({ routes, allCheckpoints }: {
       const lineColor = routeColors[rIdx % routeColors.length];
 
       geoPoints.forEach((cp) => {
-        const pos = L.latLng(cp.latitude, cp.longitude);
+        const pos = L.latLng(cp.latitude as number, cp.longitude as number);
         allPositions.push(pos);
         polylineCoords.push(pos);
 
@@ -110,8 +110,8 @@ function PatrolRouteMap({ routes, allCheckpoints }: {
         marker.bindPopup(`
           <div style="font-size:12px;font-family:sans-serif;">
             <strong>${cp.name}</strong><br/>
-            Route: ${route.name}<br/>
-            Status: <span style="color:${checkpointStatusColors[status] || '#eab308'};font-weight:bold;">${status}</span>
+            Ruta: ${route.name}<br/>
+            Estado: <span style="color:${checkpointStatusColors[status] || '#eab308'};font-weight:bold;">${status === 'completed' ? 'Completado' : status === 'missed' ? 'Perdido' : 'Pendiente'}</span>
           </div>
         `);
         group.addLayer(marker);
@@ -175,7 +175,7 @@ export default function PatrolsPage() {
 
   const handleQrDetected = useCallback(async (rawValue: string) => {
     if (!selectedRouteId) {
-      toast({ title: "Select a route first", variant: "destructive" });
+      toast({ title: "Seleccione una ruta primero", variant: "destructive" });
       return;
     }
     try {
@@ -184,11 +184,11 @@ export default function PatrolsPage() {
         checkpointQr: rawValue,
         timestamp: new Date().toISOString(),
       });
-      toast({ title: "Checkpoint scanned", description: rawValue });
+      toast({ title: "Punto de control escaneado", description: rawValue });
       queryClient.invalidateQueries({ queryKey: ["patrols", "logs"] });
       setQrDialogOpen(false);
     } catch (err) {
-      toast({ title: "Error logging checkpoint", description: (err as Error).message, variant: "destructive" });
+      toast({ title: "Error al registrar punto de control", description: (err as Error).message, variant: "destructive" });
     }
   }, [selectedRouteId, toast, queryClient]);
 
@@ -218,7 +218,7 @@ export default function PatrolsPage() {
       }
     } catch {
       setScanning(false);
-      toast({ title: "Camera not available", description: "Use manual input instead", variant: "destructive" });
+      toast({ title: "Cámara no disponible", description: "Use la entrada manual", variant: "destructive" });
     }
   }, [stopScan, handleQrDetected, toast]);
 
@@ -233,7 +233,7 @@ export default function PatrolsPage() {
       patrolRoutesApi.update(id, { isActive }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patrols", "routes"] });
-      toast({ title: "Route updated" });
+      toast({ title: "Ruta actualizada" });
     },
   });
 
@@ -258,7 +258,7 @@ export default function PatrolsPage() {
 
   const { data: sites = [] } = useSites();
 
-  // ── Create Route ───────────────────────────────────────
+  // ── Crear Ruta ───────────────────────────────────────
   const [routeDialogOpen, setRouteDialogOpen] = useState(false);
   const [routeForm, setRouteForm] = useState({ name: "", siteId: "", estimatedMinutes: "" });
   const createRouteMutation = useMutation({
@@ -266,14 +266,14 @@ export default function PatrolsPage() {
       patrolRoutesApi.create({ name: data.name, siteId: data.siteId || undefined, estimatedMinutes: data.estimatedMinutes ? Number(data.estimatedMinutes) : undefined }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patrols", "routes"] });
-      toast({ title: "Route created" });
+      toast({ title: "Ruta creada" });
       setRouteDialogOpen(false);
       setRouteForm({ name: "", siteId: "", estimatedMinutes: "" });
     },
     onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
   });
 
-  // ── Create Checkpoint ──────────────────────────────────
+  // ── Crear Punto ──────────────────────────────────
   const [cpDialogOpen, setCpDialogOpen] = useState(false);
   const [cpForm, setCpForm] = useState({ name: "", latitude: "", longitude: "", order: "", qrCode: "" });
   const createCpMutation = useMutation({
@@ -287,17 +287,17 @@ export default function PatrolsPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patrols", "checkpoints"] });
-      toast({ title: "Checkpoint created" });
+      toast({ title: "Punto de control creado" });
       setCpDialogOpen(false);
       setCpForm({ name: "", latitude: "", longitude: "", order: "", qrCode: "" });
     },
     onError: (err: Error) => { toast({ title: "Error", description: err.message, variant: "destructive" }); },
   });
 
-  const routes = routesData?.data ?? [];
-  const checkpoints = checkpointsData?.data ?? [];
-  const logs = logsData?.data ?? [];
-  const stats = statsData?.data;
+  const routes: any[] = routesData?.data ?? [];
+  const checkpoints: any[] = checkpointsData?.data ?? [];
+  const logs: any[] = logsData?.data ?? [];
+  const stats = statsData?.data as any;
 
   if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
@@ -308,10 +308,10 @@ export default function PatrolsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Map className="h-6 w-6" />
-            Patrol Management
+            Gestión de Patrullas
           </h1>
           <p className="text-muted-foreground">
-            Manage patrol routes, checkpoints, and track compliance
+            Administre rutas de patrulla, puntos de control y cumplimiento
           </p>
         </div>
       </div>
@@ -322,7 +322,7 @@ export default function PatrolsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Routes</p>
+                <p className="text-sm text-muted-foreground">Rutas Totales</p>
                 <p className="text-3xl font-bold">{stats?.totalRoutes ?? 0}</p>
               </div>
               <Navigation className="h-8 w-8 text-primary" />
@@ -333,7 +333,7 @@ export default function PatrolsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Compliance Rate</p>
+                <p className="text-sm text-muted-foreground">Cumplimiento</p>
                 <p className="text-3xl font-bold text-success">{stats?.complianceRate ?? 0}%</p>
               </div>
               <CheckCircle className="h-8 w-8 text-success" />
@@ -344,7 +344,7 @@ export default function PatrolsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Completed Today</p>
+                <p className="text-sm text-muted-foreground">Completadas Hoy</p>
                 <p className="text-3xl font-bold text-success">{stats?.completedToday ?? 0}</p>
               </div>
               <Map className="h-8 w-8 text-success" />
@@ -355,7 +355,7 @@ export default function PatrolsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Missed Today</p>
+                <p className="text-sm text-muted-foreground">Perdidas Hoy</p>
                 <p className="text-3xl font-bold text-destructive">{stats?.missedToday ?? 0}</p>
               </div>
               <MapPin className="h-8 w-8 text-destructive" />
@@ -368,7 +368,7 @@ export default function PatrolsPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="live_tracking" className="gap-1 text-primary data-[state=active]:bg-primary/20">
-            <Radar className="h-4 w-4" /> Live SLA Tracking
+            <Radar className="h-4 w-4" /> Seguimiento SLA en Vivo
           </TabsTrigger>
           <TabsTrigger value="routes" className="gap-1">
             <Navigation className="h-4 w-4" /> Routes
@@ -381,7 +381,7 @@ export default function PatrolsPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* ── Live SLA Tracking Tab ─────────────────────────── */}
+        {/* ── Seguimiento SLA en Vivo Tab ─────────────────────────── */}
         <TabsContent value="live_tracking" className="space-y-4">
            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
              
@@ -389,10 +389,10 @@ export default function PatrolsPage() {
              <Card className="lg:col-span-2 flex flex-col overflow-hidden border-primary/30 relative shadow-[0_0_20px_rgba(0,180,216,0.1)]">
                <CardHeader className="bg-background/80 backdrop-blur-sm z-10 border-b absolute top-0 w-full flex flex-row items-center justify-between py-3">
                  <CardTitle className="text-sm tracking-widest font-bold flex items-center gap-2 text-primary">
-                    <Map className="h-4 w-4" /> SITE GRID TOPOGRAPHY
+                    <Map className="h-4 w-4" /> TOPOGRAFÍA DEL SITIO
                  </CardTitle>
                  <Badge variant="outline" className="border-success text-success bg-success/10 animate-pulse">
-                   GPS LINK ACTIVE
+                   GPS ACTIVO
                  </Badge>
                </CardHeader>
                <CardContent className="p-0 flex-1 relative bg-[#0a0f12] flex items-center justify-center pt-14">
@@ -422,7 +422,7 @@ export default function PatrolsPage() {
                       <ShieldAlert className="h-5 w-5 text-red-100" />
                    </div>
                    <div className="mt-1 bg-red-950 px-2 py-1 rounded text-[10px] text-destructive font-mono border border-destructive font-bold whitespace-nowrap">
-                     UNIT-04 (Echo) - OFF ROUTE
+                     UNIT-04 (Echo) - FUERA DE RUTA
                    </div>
                  </div>
 
@@ -436,13 +436,13 @@ export default function PatrolsPage() {
 
              {/* SLA Timers & Telemetry */}
              <div className="space-y-4 overflow-y-auto">
-               <h3 className="uppercase text-xs font-bold text-muted-foreground mb-2 flex items-center gap-2"><Timer className="h-4 w-4" /> Service Level Agreements</h3>
+               <h3 className="uppercase text-xs font-bold text-muted-foreground mb-2 flex items-center gap-2"><Timer className="h-4 w-4" /> Acuerdos de Nivel de Servicio</h3>
                
                {/* SLA Block 1 */}
                <Card className="border-success/30 bg-success/5">
                  <CardContent className="p-4 flex flex-col gap-2">
                    <div className="flex justify-between items-center">
-                     <Badge variant="outline" className="text-success border-success/50 bg-success/10 font-mono">ON SCHEDULE</Badge>
+                     <Badge variant="outline" className="text-success border-success/50 bg-success/10 font-mono">EN HORARIO</Badge>
                      <span className="text-2xl font-mono font-bold text-success">04:12</span>
                    </div>
                    <div>
@@ -462,7 +462,7 @@ export default function PatrolsPage() {
                <Card className="border-warning/30 bg-warning/5">
                  <CardContent className="p-4 flex flex-col gap-2">
                    <div className="flex justify-between items-center">
-                     <Badge variant="outline" className="text-warning border-warning/50 bg-warning/10 font-mono animate-pulse">AT RISK</Badge>
+                     <Badge variant="outline" className="text-warning border-warning/50 bg-warning/10 font-mono animate-pulse">EN RIESGO</Badge>
                      <span className="text-2xl font-mono font-bold text-warning">00:45</span>
                    </div>
                    <div>
@@ -482,7 +482,7 @@ export default function PatrolsPage() {
                <Card className="border-destructive shadow-[0_0_15px_rgba(255,0,0,0.15)] bg-red-950/20">
                  <CardContent className="p-4 flex flex-col gap-2">
                    <div className="flex justify-between items-center">
-                     <Badge variant="destructive" className="font-mono animate-pulse">SLA BREACHED</Badge>
+                     <Badge variant="destructive" className="font-mono animate-pulse">SLA INCUMPLIDO</Badge>
                      <span className="text-2xl font-mono font-bold text-destructive">-05:22</span>
                    </div>
                    <div>
@@ -496,7 +496,7 @@ export default function PatrolsPage() {
                      <div className="absolute w-full h-full bg-destructive/20"></div>
                      <div className="bg-destructive h-1 rounded-full w-[100%] animate-pulse"></div>
                    </div>
-                   <Button size="sm" variant="destructive" className="w-full mt-2 text-xs h-7">Dispatch Backup</Button>
+                   <Button size="sm" variant="destructive" className="w-full mt-2 text-xs h-7">Enviar Refuerzo</Button>
                  </CardContent>
                </Card>
              </div>
@@ -507,7 +507,7 @@ export default function PatrolsPage() {
         <TabsContent value="routes" className="space-y-4">
           <div className="flex justify-end">
             <Button className="gap-1" onClick={() => setRouteDialogOpen(true)}>
-              <Plus className="h-4 w-4" /> New Route
+              <Plus className="h-4 w-4" /> Nueva Ruta
             </Button>
           </div>
           {loadingRoutes ? (
@@ -523,8 +523,8 @@ export default function PatrolsPage() {
             <Card>
               <CardContent className="py-12 text-center">
                 <Map className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium">No patrol routes configured</p>
-                <p className="text-sm text-muted-foreground mt-1">Create your first patrol route to get started</p>
+                <p className="text-lg font-medium">Sin rutas de patrulla configuradas</p>
+                <p className="text-sm text-muted-foreground mt-1">Cree su primera ruta de patrulla para comenzar</p>
               </CardContent>
             </Card>
           ) : (
@@ -551,7 +551,7 @@ export default function PatrolsPage() {
                             setActiveTab("checkpoints");
                           }}
                         >
-                          View Checkpoints
+                          Ver Puntos de Control
                         </Button>
                       </div>
                     </div>
@@ -581,14 +581,14 @@ export default function PatrolsPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="sm" onClick={() => setSelectedRouteId(null)}>
-                    Back
+                    Volver
                   </Button>
                   <span className="text-sm text-muted-foreground">
                     Route: {routes.find((r: any) => r.id === selectedRouteId)?.name || selectedRouteId}
                   </span>
                 </div>
                 <Button className="gap-1" onClick={() => setCpDialogOpen(true)}>
-                  <Plus className="h-4 w-4" /> New Checkpoint
+                  <Plus className="h-4 w-4" /> Nuevo Punto de Control
                 </Button>
               </div>
               {loadingCheckpoints ? (
@@ -599,8 +599,8 @@ export default function PatrolsPage() {
                 <Card>
                   <CardContent className="py-12 text-center">
                     <MapPin className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-lg font-medium">No checkpoints</p>
-                    <p className="text-sm text-muted-foreground mt-1">Add checkpoints to this patrol route</p>
+                    <p className="text-lg font-medium">Sin puntos de control</p>
+                    <p className="text-sm text-muted-foreground mt-1">Agregue puntos de control a esta ruta</p>
                   </CardContent>
                 </Card>
               ) : (
@@ -615,7 +615,7 @@ export default function PatrolsPage() {
                           <div>
                             <h3 className="font-semibold">{cp.name}</h3>
                             <p className="text-sm text-muted-foreground mt-1">
-                              {cp.description || 'No description'}
+                              {cp.description || 'Sin descripción'}
                               {cp.latitude && cp.longitude && ` | Location: ${cp.latitude}, ${cp.longitude}`}
                             </p>
                           </div>
@@ -645,8 +645,8 @@ export default function PatrolsPage() {
             <Card>
               <CardContent className="py-12 text-center">
                 <CheckCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium">No patrol logs</p>
-                <p className="text-sm text-muted-foreground mt-1">Patrol logs will appear here as guards complete their rounds</p>
+                <p className="text-lg font-medium">Sin registros de patrulla</p>
+                <p className="text-sm text-muted-foreground mt-1">Los registros aparecerán aquí cuando los guardias completen sus rondas</p>
               </CardContent>
             </Card>
           ) : (
@@ -664,11 +664,11 @@ export default function PatrolsPage() {
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Guard: {log.guardName || log.userId || 'Unknown'}
+                          Guardia: {log.guardName || log.userId || 'Unknown'}
                           {log.checkpointsVisited !== undefined && ` | Checkpoints: ${log.checkpointsVisited}/${log.totalCheckpoints ?? '?'}`}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Started: {log.startedAt ? new Date(log.startedAt).toLocaleString() : 'N/A'}
+                          Inicio: {log.startedAt ? new Date(log.startedAt).toLocaleString() : 'N/A'}
                           {log.completedAt && ` | Completed: ${new Date(log.completedAt).toLocaleString()}`}
                         </p>
                       </div>
@@ -681,19 +681,19 @@ export default function PatrolsPage() {
         </TabsContent>
       </Tabs>
 
-      {/* New Route Dialog */}
+      {/* Nueva Ruta Dialog */}
       <Dialog open={routeDialogOpen} onOpenChange={setRouteDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>New Patrol Route</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Nueva Ruta de Patrulla</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Name</Label>
-              <Input value={routeForm.name} onChange={(e) => setRouteForm(f => ({ ...f, name: e.target.value }))} placeholder="Route name" />
+              <Input value={routeForm.name} onChange={(e) => setRouteForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre de la ruta" />
             </div>
             <div className="space-y-2">
               <Label>Site</Label>
               <Select value={routeForm.siteId} onValueChange={(v) => setRouteForm(f => ({ ...f, siteId: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select a site" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Seleccionar sitio" /></SelectTrigger>
                 <SelectContent>
                   {sites.map((site: any) => (
                     <SelectItem key={site.id} value={site.id}>{site.name?.split('—')[0]?.trim() || site.id}</SelectItem>
@@ -702,27 +702,27 @@ export default function PatrolsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Estimated Duration (minutes)</Label>
+              <Label>Duración Estimada (minutos)</Label>
               <Input type="number" value={routeForm.estimatedMinutes} onChange={(e) => setRouteForm(f => ({ ...f, estimatedMinutes: e.target.value }))} placeholder="30" />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRouteDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setRouteDialogOpen(false)}>Cancelar</Button>
             <Button onClick={() => createRouteMutation.mutate(routeForm)} disabled={!routeForm.name || createRouteMutation.isPending}>
-              {createRouteMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Create Route
+              {createRouteMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Crear Ruta
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* New Checkpoint Dialog */}
+      {/* Nuevo Punto de Control Dialog */}
       <Dialog open={cpDialogOpen} onOpenChange={setCpDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>New Checkpoint</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Nuevo Punto de Control</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Name</Label>
-              <Input value={cpForm.name} onChange={(e) => setCpForm(f => ({ ...f, name: e.target.value }))} placeholder="Checkpoint name" />
+              <Input value={cpForm.name} onChange={(e) => setCpForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre del punto" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -746,9 +746,9 @@ export default function PatrolsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCpDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setCpDialogOpen(false)}>Cancelar</Button>
             <Button onClick={() => createCpMutation.mutate(cpForm)} disabled={!cpForm.name || createCpMutation.isPending}>
-              {createCpMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Create Checkpoint
+              {createCpMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Crear Punto
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -757,7 +757,7 @@ export default function PatrolsPage() {
       {/* QR Scanner Dialog */}
       <Dialog open={qrDialogOpen} onOpenChange={(open) => { if (!open) { stopScan(); setManualQr(""); } setQrDialogOpen(open); }}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Scan QR Checkpoint</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Escanear Punto QR</DialogTitle></DialogHeader>
 
           {/* Route selector */}
           <div className="space-y-2">
@@ -765,7 +765,7 @@ export default function PatrolsPage() {
             <Select value={selectedRouteId ?? ""} onValueChange={(v) => setSelectedRouteId(v)}>
               <SelectTrigger><SelectValue placeholder="Select a route" /></SelectTrigger>
               <SelectContent>
-                {routes.map((r: PatrolRoute) => (
+                {routes.map((r: any) => (
                   <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -779,34 +779,34 @@ export default function PatrolsPage() {
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                 <div className="absolute inset-0 border-2 border-dashed border-primary/50 pointer-events-none" />
                 <Button size="sm" variant="destructive" className="absolute bottom-2 right-2" onClick={stopScan}>
-                  Stop
+                  Detener
                 </Button>
               </div>
             ) : (
               <Button className="w-full gap-2" onClick={startScan} disabled={!selectedRouteId}>
-                <QrCode className="h-4 w-4" /> Start Camera Scan
+                <QrCode className="h-4 w-4" /> Iniciar Escaneo
               </Button>
             )}
 
             {"BarcodeDetector" in window ? null : (
-              <p className="text-xs text-muted-foreground">BarcodeDetector not available in this browser. Use manual input below.</p>
+              <p className="text-xs text-muted-foreground">BarcodeDetector no disponible en este navegador. Use la entrada manual.</p>
             )}
 
             {/* Manual fallback */}
             <div className="space-y-2">
-              <Label>Manual QR Code</Label>
+              <Label>Código QR Manual</Label>
               <div className="flex gap-2">
                 <Input
                   value={manualQr}
                   onChange={(e) => setManualQr(e.target.value)}
-                  placeholder="Enter QR code value"
+                  placeholder="Ingrese el código QR"
                   onKeyDown={(e) => { if (e.key === "Enter" && manualQr.trim()) handleQrDetected(manualQr.trim()); }}
                 />
                 <Button
                   disabled={!manualQr.trim() || !selectedRouteId}
                   onClick={() => handleQrDetected(manualQr.trim())}
                 >
-                  Submit
+                  Enviar
                 </Button>
               </div>
             </div>
