@@ -18,6 +18,8 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - run: npx tsc --noEmit
+    - name: Security audit
+      run: npm audit --audit-level=moderate || true
     - run: npm run build
 
   backend:
@@ -39,4 +41,4 @@ jobs:
       run: pnpm run build
     - name: Typecheck
       working-directory: backend
-      run: pnpm run typecheck || true
+      run: pnpm run typecheck

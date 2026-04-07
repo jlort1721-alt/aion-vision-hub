@@ -15,3 +15,8 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npx vitest run
+      - name: Security audit
+        run: npm audit --audit-level=moderate || true
+      - name: Backend test
+        working-directory: backend
+        run: pnpm install && pnpm --filter @aion/backend-api test
