@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense, Fragment } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,12 +12,11 @@ import { Label } from '@/components/ui/label';
 import { useI18n } from '@/contexts/I18nContext';
 import { useSections, useIntercomDevices, useIntercomCalls, useIntercomMutations } from '@/hooks/use-module-data';
 import {
-  Phone, PhoneCall, PhoneOff, MessageSquare, Bot, Mic, Volume2,
-  Search, Plus, Settings, Wifi, WifiOff, Clock, Users,
-  Send, RefreshCw, Activity, Radio, CheckCircle, XCircle, AlertTriangle, Play, Loader2, Headphones,
+  Phone, PhoneCall, MessageSquare, Bot, Mic, Volume2,
+  Plus, Settings, Wifi, Users,
+  RefreshCw, Activity, Radio, CheckCircle, XCircle, AlertTriangle, Play, Loader2, Headphones,
   Download, Square, PhoneIncoming, PhoneOutgoing
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { elevenlabs } from '@/services/integrations/elevenlabs';
 import type { VoiceHealthCheck, VoiceInfo, VoiceConfig, GreetingTemplate } from '@/services/integrations/elevenlabs';
@@ -26,9 +25,12 @@ const OperatorCallDashboard = lazy(() => import('@/components/intercom/OperatorC
 
 export default function IntercomPage() {
   const { t } = useI18n();
-  const { data: sections = [] } = useSections();
-  const { data: devices = [], isLoading } = useIntercomDevices();
-  const { data: calls = [] } = useIntercomCalls();
+  const { data: rawSections = [] } = useSections();
+  const { data: rawDevices = [], isLoading } = useIntercomDevices();
+  const { data: rawCalls = [] } = useIntercomCalls();
+  const sections = rawSections as any[];
+  const devices = rawDevices as any[];
+  const calls = rawCalls as any[];
   const { create } = useIntercomMutations();
 
   const [activeTab, setActiveTab] = useState('devices');
@@ -51,7 +53,7 @@ export default function IntercomPage() {
   const [playingRecordingId, setPlayingRecordingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const handlePlayRecording = (callId: string, recordingUrl: string) => {
+  const handlePlayRecording = (callId: string, _recordingUrl: string) => {
     if (playingRecordingId === callId) {
       // Stop current playback
       if (audioRef.current) {
@@ -119,9 +121,9 @@ export default function IntercomPage() {
     try {
       const result = await elevenlabs.testConnection();
       if (result.success) {
-        toast.success(`Voice OK: ${result.message} (${result.latencyMs}ms)`);
+        toast.success(`Voz OK: ${result.message} (${result.latencyMs}ms)`);
       } else {
-        toast.error(`Voice error: ${result.message}`);
+        toast.error(`Error de voz: ${result.message}`);
       }
       await loadVoiceData();
     } catch (err) {
@@ -150,7 +152,7 @@ export default function IntercomPage() {
     setTestingVoice(true);
     try {
       await elevenlabs.playTTS('Prueba de voz Clave Seguridad. Sistema de citofonía inteligente activo.', selectedVoiceId || undefined);
-      toast.success('TTS playback complete');
+      toast.success('Reproducción TTS completada');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'TTS failed');
     } finally {
@@ -206,7 +208,7 @@ export default function IntercomPage() {
             <Card className="p-2"><div className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('intercom.total_devices')}</p><p className="text-lg font-bold">{devices.length}</p></div></div></Card>
             <Card className="p-2"><div className="flex items-center gap-2"><Wifi className="h-4 w-4 text-success" /><div><p className="text-xs text-muted-foreground">{t('common.online')}</p><p className="text-lg font-bold">{onlineCount}</p></div></div></Card>
             <Card className="p-2"><div className="flex items-center gap-2"><PhoneCall className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('intercom.calls_today')}</p><p className="text-lg font-bold">{calls.length}</p></div></div></Card>
-            <Card className="p-2"><div className="flex items-center gap-2"><Bot className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('intercom.attend_mode')}</p><p className="text-lg font-bold capitalize">{attendMode}</p></div></div></Card>
+            <Card className="p-2"><div className="flex items-center gap-2"><Bot className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('intercom.attend_mode')}</p><p className="text-lg font-bold">{attendMode === 'human' ? 'Humano' : attendMode === 'ai' ? 'IA' : 'Mixto'}</p></div></div></Card>
           </div>
         </div>
 
@@ -217,7 +219,7 @@ export default function IntercomPage() {
               <TabsTrigger value="calls" className="text-xs"><PhoneCall className="mr-1 h-3 w-3" /> {t('intercom.call_history')}</TabsTrigger>
               <TabsTrigger value="whatsapp" className="text-xs"><MessageSquare className="mr-1 h-3 w-3" /> WhatsApp</TabsTrigger>
               <TabsTrigger value="voice_ai" className="text-xs"><Mic className="mr-1 h-3 w-3" /> {t('intercom.voice_ai')}</TabsTrigger>
-              <TabsTrigger value="call_dashboard" className="text-xs"><Headphones className="mr-1 h-3 w-3" /> Call Dashboard</TabsTrigger>
+              <TabsTrigger value="call_dashboard" className="text-xs"><Headphones className="mr-1 h-3 w-3" /> Panel de Llamadas</TabsTrigger>
             </TabsList>
             <div className="ml-auto">
               <Select value={sectionFilter} onValueChange={setSectionFilter}>
@@ -236,12 +238,12 @@ export default function IntercomPage() {
             ) : filteredDevices.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                 <Phone className="h-12 w-12 mb-2 opacity-20" />
-                <p className="text-sm">{devices.length === 0 ? 'No intercom devices configured' : 'No devices match filter'}</p>
-                {devices.length === 0 && <Button variant="outline" size="sm" className="mt-2" onClick={() => setAddOpen(true)}><Plus className="mr-1 h-3 w-3" /> Add Device</Button>}
+                <p className="text-sm">{devices.length === 0 ? 'Sin dispositivos de citofonia configurados' : 'Sin dispositivos que coincidan con el filtro'}</p>
+                {devices.length === 0 && <Button variant="outline" size="sm" className="mt-2" onClick={() => setAddOpen(true)}><Plus className="mr-1 h-3 w-3" /> Agregar Dispositivo</Button>}
               </div>
             ) : (
               <Table>
-                <TableHeader><TableRow><TableHead>{t('common.name')}</TableHead><TableHead>{t('intercom.section')}</TableHead><TableHead>Brand/Model</TableHead><TableHead>IP</TableHead><TableHead>SIP</TableHead><TableHead>{t('common.status')}</TableHead><TableHead className="w-20">Actions</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>{t('common.name')}</TableHead><TableHead>{t('intercom.section')}</TableHead><TableHead>Marca/Modelo</TableHead><TableHead>IP</TableHead><TableHead>SIP</TableHead><TableHead>{t('common.status')}</TableHead><TableHead className="w-20">Acciones</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {filteredDevices.map((d: any) => (
                     <TableRow key={d.id}>
@@ -253,8 +255,8 @@ export default function IntercomPage() {
                       <TableCell><Badge variant={d.status === 'online' ? 'default' : 'secondary'} className="text-[10px] capitalize">{d.status}</Badge></TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toast.info('SIP call initiation requires VoIP gateway configuration')}><PhoneCall className="h-3 w-3" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toast.success('Device status refreshed')}><RefreshCw className="h-3 w-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toast.info('Para llamadas SIP se requiere configurar el gateway VoIP')}><PhoneCall className="h-3 w-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toast.success('Estado del dispositivo actualizado')}><RefreshCw className="h-3 w-3" /></Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -266,24 +268,24 @@ export default function IntercomPage() {
 
           <TabsContent value="calls" className="flex-1 overflow-auto m-0" aria-label="Call history">
             {calls.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground"><PhoneCall className="h-12 w-12 mb-2 opacity-20" /><p className="text-sm">No call history yet</p></div>
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground"><PhoneCall className="h-12 w-12 mb-2 opacity-20" /><p className="text-sm">Sin historial de llamadas</p></div>
             ) : (
               <Table aria-label="Call history table">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Caller</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Type</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Llamante</TableHead>
+                    <TableHead>Duración</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead>{t('common.status')}</TableHead>
-                    <TableHead>Recording</TableHead>
+                    <TableHead>Grabación</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {calls.map((call: any) => (
-                    <React.Fragment key={call.id}>
+                    <Fragment key={call.id}>
                       <TableRow>
-                        <TableCell className="text-xs font-mono">{new Date(call.created_at).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs font-mono">{new Date(call.created_at).toLocaleString('es-CO')}</TableCell>
                         <TableCell className="text-xs">
                           <div>
                             <span className="font-medium">{call.caller_name || call.caller_id || '—'}</span>
@@ -294,7 +296,7 @@ export default function IntercomPage() {
                         <TableCell>
                           <Badge variant={call.direction === 'inbound' ? 'default' : 'secondary'} className="text-[10px] gap-1">
                             {call.direction === 'inbound' ? <PhoneIncoming className="h-3 w-3" /> : <PhoneOutgoing className="h-3 w-3" />}
-                            {call.direction === 'inbound' ? 'Incoming' : 'Outgoing'}
+                            {call.direction === 'inbound' ? 'Entrante' : 'Saliente'}
                           </Badge>
                         </TableCell>
                         <TableCell><Badge variant="outline" className="text-[10px] capitalize">{call.status}</Badge></TableCell>
@@ -321,7 +323,7 @@ export default function IntercomPage() {
                               </Button>
                             </div>
                           ) : (
-                            <span className="text-xs text-muted-foreground">No recording</span>
+                            <span className="text-xs text-muted-foreground">Sin grabación</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -341,7 +343,7 @@ export default function IntercomPage() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </React.Fragment>
+                    </Fragment>
                   ))}
                 </TableBody>
               </Table>
@@ -351,19 +353,19 @@ export default function IntercomPage() {
           <TabsContent value="whatsapp" className="flex-1 overflow-auto m-0 p-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2"><MessageSquare className="h-4 w-4" /> WhatsApp Business API Integration</CardTitle>
+                <CardTitle className="text-sm flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Integración WhatsApp Business</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-xs text-muted-foreground">Connect your WhatsApp Business account to enable messaging with visitors and residents directly from the intercom system.</p>
+                <p className="text-xs text-muted-foreground">Conecta tu cuenta WhatsApp Business para enviar mensajes a visitantes y residentes directamente desde el sistema de citofonia.</p>
                 <div className="space-y-2">
-                  <p className="text-[10px] font-semibold uppercase text-muted-foreground">Capabilities</p>
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground">Capacidades</p>
                   <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                    <li>Send visitor notifications</li>
-                    <li>Receive entrance requests</li>
+                    <li>Enviar notificaciones a visitantes</li>
+                    <li>Recibir solicitudes de ingreso</li>
                     <li>Respuestas automáticas vía IA</li>
                   </ul>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => toast.info('WhatsApp Business API credentials required in Settings > Integrations')}><Settings className="mr-1 h-3 w-3" /> Configure</Button>
+                <Button variant="outline" size="sm" onClick={() => toast.info('Se requieren credenciales WhatsApp Business en Configuración > Integraciones')}><Settings className="mr-1 h-3 w-3" /> Configurar</Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -376,40 +378,40 @@ export default function IntercomPage() {
                 {/* Provider Status + Test */}
                 <div className="grid grid-cols-3 gap-4">
                   <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1"><Bot className="h-4 w-4" /> Provider</CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1"><Bot className="h-4 w-4" /> Proveedor</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
                       <div className="flex items-center gap-2">
                         {voiceStatusIcon(voiceHealth?.status)}
-                        <span className="text-sm font-medium capitalize">{voiceConfig?.provider || 'Not configured'}</span>
+                        <span className="text-sm font-medium capitalize">{voiceConfig?.provider || 'Sin configurar'}</span>
                       </div>
                       <Badge variant={voiceHealth?.status === 'healthy' ? 'default' : 'secondary'} className="text-[10px]">
-                        {voiceHealth?.status === 'healthy' ? 'Connected' : voiceHealth?.status === 'error' ? 'Error' : 'Pending Configuration'}
+                        {voiceHealth?.status === 'healthy' ? 'Conectado' : voiceHealth?.status === 'error' ? 'Error' : 'Pendiente de configuración'}
                       </Badge>
-                      {voiceHealth?.tier && <p className="text-[10px] text-muted-foreground">Tier: {voiceHealth.tier}</p>}
-                      {voiceHealth?.quotaRemaining != null && <p className="text-[10px] text-muted-foreground">Chars remaining: {voiceHealth.quotaRemaining.toLocaleString()}</p>}
-                      {voiceHealth?.latencyMs != null && voiceHealth.latencyMs > 0 && <p className="text-[10px] text-muted-foreground">Latency: {voiceHealth.latencyMs}ms</p>}
+                      {voiceHealth?.tier && <p className="text-[10px] text-muted-foreground">Nivel: {voiceHealth.tier}</p>}
+                      {voiceHealth?.quotaRemaining != null && <p className="text-[10px] text-muted-foreground">Caracteres restantes: {voiceHealth.quotaRemaining.toLocaleString()}</p>}
+                      {voiceHealth?.latencyMs != null && voiceHealth.latencyMs > 0 && <p className="text-[10px] text-muted-foreground">Latencia: {voiceHealth.latencyMs}ms</p>}
                     </CardContent>
                   </Card>
 
                   <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1"><Activity className="h-4 w-4" /> Connection Test</CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1"><Activity className="h-4 w-4" /> Prueba de Conexión</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
-                      <p className="text-xs text-muted-foreground">Verify ElevenLabs API connectivity and run a synthesis test.</p>
+                      <p className="text-xs text-muted-foreground">Verifica conectividad con la API ElevenLabs y ejecuta una prueba de síntesis.</p>
                       <Button variant="outline" size="sm" className="w-full" onClick={handleTestConnection} disabled={testingVoice}>
                         {testingVoice ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-1 h-3 w-3" />}
-                        {testingVoice ? 'Testing...' : 'Test Connection'}
+                        {testingVoice ? 'Probando...' : 'Probar Conexión'}
                       </Button>
                       <Button variant="outline" size="sm" className="w-full" onClick={handleTestTTS} disabled={testingVoice}>
                         {testingVoice ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Play className="mr-1 h-3 w-3" />}
-                        Test TTS Playback
+                        Probar Reproducción TTS
                       </Button>
                     </CardContent>
                   </Card>
 
                   <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1"><Settings className="h-4 w-4" /> Mode</CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1"><Settings className="h-4 w-4" /> Modo</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
-                      <p className="text-xs text-muted-foreground">Current attend mode determines how intercom calls are handled.</p>
+                      <p className="text-xs text-muted-foreground">El modo de atención determina cómo se manejan las llamadas de citofonia.</p>
                       <div className="p-2 rounded bg-muted/50 border">
                         <div className="flex items-center gap-2">
                           {attendMode === 'ai' && <Bot className="h-4 w-4 text-primary" />}
@@ -429,12 +431,12 @@ export default function IntercomPage() {
 
                 {/* Voice Selection */}
                 <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1"><Mic className="h-4 w-4" /> Voice Selection</CardTitle></CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-1"><Mic className="h-4 w-4" /> Selección de Voz</CardTitle></CardHeader>
                   <CardContent>
                     {voices.length > 0 ? (
                       <div className="space-y-2">
                         <Select value={selectedVoiceId} onValueChange={setSelectedVoiceId}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select a voice..." /></SelectTrigger>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Seleccionar voz..." /></SelectTrigger>
                           <SelectContent>
                             {voices.map((v) => (
                               <SelectItem key={v.voiceId} value={v.voiceId}>
@@ -443,11 +445,11 @@ export default function IntercomPage() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <p className="text-[10px] text-muted-foreground">{voices.length} voices available. Select one and use "Test TTS Playback" to preview.</p>
+                        <p className="text-[10px] text-muted-foreground">{voices.length} voces disponibles. Seleccione una y use "Probar Reproducción TTS" para escuchar.</p>
                       </div>
                     ) : (
                       <p className="text-xs text-muted-foreground">
-                        {voiceHealth?.status === 'healthy' ? 'Loading voices...' : 'Configure ElevenLabs API key to load available voices.'}
+                        {voiceHealth?.status === 'healthy' ? 'Cargando voces...' : 'Configure la API key de ElevenLabs para cargar voces disponibles.'}
                       </p>
                     )}
                   </CardContent>
@@ -500,12 +502,12 @@ export default function IntercomPage() {
           <div className="space-y-3">
             <div className="space-y-1"><Label>{t('common.name')} *</Label><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Citófono Portería" /></div>
             <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1"><Label>Brand</Label><Input value={form.brand} onChange={e => setForm(p => ({ ...p, brand: e.target.value }))} /></div>
-              <div className="space-y-1"><Label>Model</Label><Input value={form.model} onChange={e => setForm(p => ({ ...p, model: e.target.value }))} /></div>
+              <div className="space-y-1"><Label>Marca</Label><Input value={form.brand} onChange={e => setForm(p => ({ ...p, brand: e.target.value }))} /></div>
+              <div className="space-y-1"><Label>Modelo</Label><Input value={form.model} onChange={e => setForm(p => ({ ...p, model: e.target.value }))} /></div>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1"><Label>IP Address</Label><Input value={form.ip_address} onChange={e => setForm(p => ({ ...p, ip_address: e.target.value }))} placeholder="192.168.1.201" /></div>
-              <div className="space-y-1"><Label>SIP URI</Label><Input value={form.sip_uri} onChange={e => setForm(p => ({ ...p, sip_uri: e.target.value }))} placeholder="sip:101@pbx" /></div>
+              <div className="space-y-1"><Label>Dirección IP</Label><Input value={form.ip_address} onChange={e => setForm(p => ({ ...p, ip_address: e.target.value }))} placeholder="192.168.1.201" /></div>
+              <div className="space-y-1"><Label>URI SIP</Label><Input value={form.sip_uri} onChange={e => setForm(p => ({ ...p, sip_uri: e.target.value }))} placeholder="sip:101@pbx" /></div>
             </div>
             <div className="space-y-1"><Label>{t('intercom.section')}</Label>
               <Select value={form.section_id} onValueChange={v => setForm(p => ({ ...p, section_id: v }))}><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
