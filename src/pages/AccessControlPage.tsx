@@ -46,6 +46,7 @@ interface AccessSchedule {
   active: boolean;
 }
 
+// Access schedules are stored locally per-operator (lightweight UI config, not operational data)
 const SCHEDULES_KEY = 'aion-access-schedules';
 const DAY_LABEL_KEYS = [
   { key: 'access.day_sun_s', fallback: 'D' },

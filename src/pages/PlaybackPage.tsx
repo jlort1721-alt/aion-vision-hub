@@ -14,6 +14,8 @@ import { Separator } from '@/components/ui/separator';
 import { useDevices, useSites, useEventsLegacy } from '@/hooks/use-api-data';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api-client';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -37,21 +39,17 @@ function formatShortTime(seconds: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }
 
-// Simulated recording segments for a 24h day
-function generateRecordingSegments() {
-  const segments: { start: number; end: number; type: 'continuous' | 'motion' | 'alarm' }[] = [];
-  // Continuous recording blocks
-  segments.push({ start: 0 * 3600, end: 2 * 3600, type: 'continuous' });
-  segments.push({ start: 6 * 3600, end: 9 * 3600, type: 'continuous' });
-  segments.push({ start: 10 * 3600, end: 14 * 3600, type: 'continuous' });
-  segments.push({ start: 16 * 3600, end: 22 * 3600, type: 'continuous' });
-  // Motion events
-  segments.push({ start: 3 * 3600 + 1200, end: 3 * 3600 + 1800, type: 'motion' });
-  segments.push({ start: 5 * 3600 + 600, end: 5 * 3600 + 900, type: 'motion' });
-  segments.push({ start: 15 * 3600, end: 15 * 3600 + 600, type: 'motion' });
-  // Alarm
-  segments.push({ start: 22 * 3600 + 3000, end: 22 * 3600 + 3300, type: 'alarm' });
-  return segments;
+// Convert ISO time segments from API to seconds-of-day format
+function parseApiSegments(apiSegments: Array<{ start: string; end: string }>): Array<{ start: number; end: number; type: 'continuous' | 'motion' | 'alarm' }> {
+  return apiSegments.map(seg => {
+    const startDate = new Date(seg.start);
+    const endDate = new Date(seg.end);
+    return {
+      start: startDate.getHours() * 3600 + startDate.getMinutes() * 60 + startDate.getSeconds(),
+      end: endDate.getHours() * 3600 + endDate.getMinutes() * 60 + endDate.getSeconds(),
+      type: 'continuous' as const,
+    };
+  });
 }
 
 const SPEEDS = [0.25, 0.5, 1, 2, 4, 8, 16];
@@ -234,7 +232,20 @@ export default function PlaybackPage() {
   const [eventSearchQuery, setEventSearchQuery] = useState('');
 
   const device = cameras.find((d: any) => d.id === selectedDevice) || cameras[0];
-  const segments = useMemo(() => generateRecordingSegments(), []);
+
+  // Fetch real recording segments from backend playback API
+  const { data: apiSegments } = useQuery({
+    queryKey: ['playback-segments', selectedDate, device?.id],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.post('/playback/search', { date: selectedDate, cameraId: device?.id });
+        return (res as any)?.data?.segments || (res as any)?.segments || [];
+      } catch { return []; }
+    },
+    enabled: !!device,
+    staleTime: 60000,
+  });
+  const segments = useMemo(() => parseApiSegments(apiSegments || []), [apiSegments]);
 
   // Filter events for the selected device and date
   const deviceEvents = useMemo(() => {

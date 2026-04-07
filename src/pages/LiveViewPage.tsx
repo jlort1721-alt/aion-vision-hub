@@ -754,12 +754,25 @@ export default function LiveViewPage() {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
 
-  // State
-  const [selectedSite, setSelectedSite] = useState<string>('all');
-  const [gridSize, setGridSize] = useState<GridSize>(9);
+  // State — persisted in localStorage so it survives page reload
+  const [selectedSite, setSelectedSite] = useState<string>(() => {
+    try { return localStorage.getItem('aion-lv-site') || 'all'; } catch { return 'all'; }
+  });
+  const [gridSize, setGridSize] = useState<GridSize>(() => {
+    try {
+      const saved = localStorage.getItem('aion-lv-grid');
+      if (saved && [4, 9, 16].includes(Number(saved))) return Number(saved) as GridSize;
+    } catch { /* ignore */ }
+    return 9;
+  });
 
-  // Auto-detect optimal grid size on mount based on viewport width
+  // Persist selections
+  useEffect(() => { try { localStorage.setItem('aion-lv-site', selectedSite); } catch { /* */ } }, [selectedSite]);
+  useEffect(() => { try { localStorage.setItem('aion-lv-grid', String(gridSize)); } catch { /* */ } }, [gridSize]);
+
+  // Auto-detect optimal grid size on first visit only (no saved preference)
   useEffect(() => {
+    if (localStorage.getItem('aion-lv-grid')) return; // respect saved pref
     const w = window.innerWidth;
     if (w < 768) setGridSize(4);       // mobile: 2x2
     else if (w < 1280) setGridSize(9); // tablet: 3x3
