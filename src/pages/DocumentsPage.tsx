@@ -225,7 +225,7 @@ const DocumentsPage = () => {
   function handleFileSelect(file: globalThis.File | null) {
     if (!file) return;
     if (file.size > MAX_FILE_SIZE) {
-      toast.error('Archivo demasiado grande', { description: 'El tamaño maximo es 10 MB.' });
+      toast.error('Archivo demasiado grande', { description: 'El tamaño máximo es 10 MB.' });
       return;
     }
     if (!ACCEPTED_TYPES.includes(file.type) && !file.name.match(/\.(pdf|docx|xlsx|csv|jpg|jpeg|png|txt)$/i)) {
@@ -615,7 +615,7 @@ const DocumentsPage = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar documento</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Eliminar este documento? Esta accion no se puede deshacer.
+              ¿Eliminar este documento? Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
