@@ -64,7 +64,7 @@ export default function CameraHealthPage() {
     return (cameras as Camera[]).map((cam) => ({
       ...cam,
       online: cam.is_online ?? cam.status === 'online' ?? true,
-      siteName: cam.site_name ?? cam.site ?? 'Unknown',
+      siteName: cam.site_name ?? cam.site ?? 'Sin sitio',
     }));
   }, [cameras]);
 
@@ -116,42 +116,42 @@ export default function CameraHealthPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Activity className="h-6 w-6 text-primary" />
-            {t('nav.cameraHealth') || 'Camera Health'}
+            {t('nav.cameraHealth') || 'Salud de Cámaras'}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {t('cameraHealth.subtitle') || 'Real-time camera health monitoring'}
+            {t('cameraHealth.subtitle') || 'Monitoreo de salud de cámaras en tiempo real'}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-1.5">
           <RefreshCw className="h-3.5 w-3.5" />
-          {t('common.refresh') || 'Refresh'}
+          {t('common.refresh') || 'Actualizar'}
         </Button>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <SummaryCard
-          title={t('cameraHealth.total') || 'Total Cameras'}
+          title={t('cameraHealth.total') || 'Total Cámaras'}
           value={totalCameras}
           icon={<Video className="h-4 w-4" />}
           color="text-primary"
         />
         <SummaryCard
-          title={t('common.online') || 'Online'}
+          title={t('common.online') || 'En línea'}
           value={onlineCount}
           icon={<Wifi className="h-4 w-4" />}
           color="text-success"
           badge="success"
         />
         <SummaryCard
-          title={t('common.offline') || 'Offline'}
+          title={t('common.offline') || 'Fuera de línea'}
           value={offlineCount}
           icon={<WifiOff className="h-4 w-4" />}
           color="text-destructive"
           badge="destructive"
         />
         <SummaryCard
-          title={t('cameraHealth.uptime') || 'Uptime'}
+          title={t('cameraHealth.uptime') || 'Disponibilidad'}
           value={`${uptimePercent}%`}
           icon={<Activity className="h-4 w-4" />}
           color={Number(uptimePercent) >= 95 ? 'text-success' : Number(uptimePercent) >= 80 ? 'text-warning' : 'text-destructive'}
@@ -163,7 +163,7 @@ export default function CameraHealthPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder={t('cameraHealth.search') || 'Search by name, IP, brand...'}
+            placeholder={t('cameraHealth.search') || 'Buscar por nombre, IP, marca...'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -171,10 +171,10 @@ export default function CameraHealthPage() {
         </div>
         <Select value={siteFilter} onValueChange={setSiteFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={t('events.site') || 'Site'} />
+            <SelectValue placeholder={t('events.site') || 'Sitio'} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('common.all') || 'All'}</SelectItem>
+            <SelectItem value="all">{t('common.all') || 'Todos'}</SelectItem>
             {sites.map((s) => (
               <SelectItem key={s} value={s}>{s}</SelectItem>
             ))}
@@ -182,12 +182,12 @@ export default function CameraHealthPage() {
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder={t('common.status') || 'Status'} />
+            <SelectValue placeholder={t('common.status') || 'Estado'} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t('common.all') || 'All'}</SelectItem>
-            <SelectItem value="online">{t('common.online') || 'Online'}</SelectItem>
-            <SelectItem value="offline">{t('common.offline') || 'Offline'}</SelectItem>
+            <SelectItem value="all">{t('common.all') || 'Todos'}</SelectItem>
+            <SelectItem value="online">{t('common.online') || 'En línea'}</SelectItem>
+            <SelectItem value="offline">{t('common.offline') || 'Fuera de línea'}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -196,7 +196,7 @@ export default function CameraHealthPage() {
       {isLoading && (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-          <span className="ml-3 text-sm text-muted-foreground">{t('common.loading') || 'Loading...'}</span>
+          <span className="ml-3 text-sm text-muted-foreground">{t('common.loading') || 'Cargando...'}</span>
         </div>
       )}
 
@@ -204,7 +204,7 @@ export default function CameraHealthPage() {
       {!isLoading && grouped.length === 0 && (
         <div className="text-center py-12">
           <Video className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">{t('common.no_data') || 'No cameras found'}</p>
+          <p className="text-sm text-muted-foreground">{t('common.no_data') || 'Sin cámaras encontradas'}</p>
         </div>
       )}
 
@@ -226,7 +226,7 @@ export default function CameraHealthPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{cam.name}</p>
                       <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {cam.brand || 'Unknown'} {cam.model ? `- ${cam.model}` : ''}
+                        {cam.brand || 'Desconocido'} {cam.model ? `- ${cam.model}` : ''}
                       </p>
                     </div>
                     <span
@@ -234,7 +234,7 @@ export default function CameraHealthPage() {
                         'mt-1 h-2.5 w-2.5 shrink-0 rounded-full',
                         cam.online ? 'bg-success' : 'bg-destructive animate-pulse',
                       )}
-                      title={cam.online ? 'Online' : 'Offline'}
+                      title={cam.online ? 'En línea' : 'Fuera de línea'}
                     />
                   </div>
                   {cam.ip_address && (
@@ -242,7 +242,7 @@ export default function CameraHealthPage() {
                   )}
                   {cam.last_seen && (
                     <p className="text-[11px] text-muted-foreground mt-1">
-                      {t('cameraHealth.lastSeen') || 'Last seen'}: {new Date(cam.last_seen).toLocaleString()}
+                      {t('cameraHealth.lastSeen') || 'Última vez visto'}: {new Date(cam.last_seen).toLocaleString('es-CO')}
                     </p>
                   )}
                 </CardContent>
