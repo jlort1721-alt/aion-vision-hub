@@ -1,90 +1,74 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { reportsApi } from '@/services/reports-api';
 import { useSites } from '@/hooks/use-api-data';
 import { useAuth } from '@/contexts/AuthContext';
-import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {
   FileBarChart, Download, Trash2, Loader2, ChevronLeft, ChevronRight,
-  FileText, Clock, CheckCircle2, XCircle, FileSpreadsheet, AlertTriangle,
+  FileText, Clock, CheckCircle2, XCircle,
+  Calendar, Building2, Filter
 } from 'lucide-react';
 import { PageShell } from '@/components/shared/PageShell';
 import ErrorState from '@/components/ui/ErrorState';
+import EmptyState from '@/components/shared/EmptyState';
 
-// ── Constants ─────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// Constants
+// ══════════════════════════════════════════════════════════════
 
 const PAGE_SIZE = 25;
 
 const REPORT_TYPES = [
-  { value: 'all', label: 'All Types' },
-  { value: 'events', label: 'Events' },
-  { value: 'incidents', label: 'Incidents' },
-  { value: 'devices', label: 'Devices' },
-  { value: 'access_logs', label: 'Access Logs' },
-  { value: 'shifts', label: 'Shifts' },
-  { value: 'patrols', label: 'Patrols' },
+  { value: 'all', label: 'Todos los tipos' },
+  { value: 'events', label: 'Eventos' },
+  { value: 'incidents', label: 'Incidentes' },
+  { value: 'devices', label: 'Dispositivos' },
+  { value: 'access', label: 'Control de Acceso' },
 ] as const;
 
+// Backend only supports pdf, csv, json (lowercase)
 const FORMAT_OPTIONS = [
-  { value: 'PDF', label: 'PDF' },
-  { value: 'CSV', label: 'CSV' },
-  { value: 'XLSX', label: 'XLSX' },
+  { value: 'pdf', label: 'PDF' },
+  { value: 'csv', label: 'CSV' },
+  { value: 'json', label: 'JSON' },
 ] as const;
 
-// ── Helpers ───────────────────────────────────────────────
-
-const statusConfig: Record<string, { icon: React.ReactNode; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  completed: { icon: <CheckCircle2 className="h-3 w-3 mr-1" />, variant: 'secondary' },
-  processing: { icon: <Clock className="h-3 w-3 mr-1 animate-spin" />, variant: 'outline' },
-  failed: { icon: <XCircle className="h-3 w-3 mr-1" />, variant: 'destructive' },
+const statusConfig: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
+  completed: { label: 'Completado', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', icon: CheckCircle2 },
+  ready: { label: 'Listo', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30', icon: CheckCircle2 },
+  pending: { label: 'Pendiente', color: 'bg-amber-500/10 text-amber-400 border-amber-500/30', icon: Clock },
+  generating: { label: 'Generando', color: 'bg-blue-500/10 text-blue-400 border-blue-500/30', icon: Loader2 },
+  failed: { label: 'Fallido', color: 'bg-red-500/10 text-red-400 border-red-500/30', icon: XCircle },
 };
 
-const typeColors: Record<string, string> = {
-  events: 'bg-primary/10 text-primary',
-  incidents: 'bg-destructive/10 text-destructive',
-  devices: 'bg-success/10 text-success',
-  access_logs: 'bg-purple-500/10 text-purple-700 dark:text-purple-400',
-  shifts: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
-  patrols: 'bg-teal-500/10 text-teal-700 dark:text-teal-400',
+const typeConfig: Record<string, { label: string; color: string }> = {
+  events: { label: 'Eventos', color: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
+  incidents: { label: 'Incidentes', color: 'bg-red-500/10 text-red-400 border-red-500/30' },
+  devices: { label: 'Dispositivos', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
+  access: { label: 'Acceso', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30' },
+  access_logs: { label: 'Acceso', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30' },
+  audit: { label: 'Auditoría', color: 'bg-slate-500/10 text-slate-400 border-slate-500/30' },
+  custom: { label: 'Personalizado', color: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
 };
-
-function formatFileSize(bytes?: number): string {
-  if (!bytes) return '--';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(dateStr?: string): string {
-  if (!dateStr) return '--';
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: 'numeric', month: 'short', day: 'numeric',
-  });
-}
 
 function formatDateTime(dateStr?: string): string {
-  if (!dateStr) return '--';
-  return new Date(dateStr).toLocaleString(undefined, {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
+  if (!dateStr) return '—';
+  return new Date(dateStr).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-// ── Filters ───────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// Types
+// ══════════════════════════════════════════════════════════════
 
 interface ReportFilters {
   type: string;
@@ -96,36 +80,29 @@ interface ReportFilters {
 }
 
 const defaultFilters: ReportFilters = {
-  type: 'all',
-  site_id: 'all',
-  date_from: '',
-  date_to: '',
-  format: 'PDF',
-  page: 1,
+  type: 'all', site_id: 'all', date_from: '', date_to: '', format: 'pdf', page: 1,
 };
 
-// ── Component ─────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// Main Component
+// ══════════════════════════════════════════════════════════════
 
 export default function ReportsPage() {
-  const { t } = useI18n();
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<ReportFilters>(defaultFilters);
   const [generating, setGenerating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
-  const { data: sites = [] } = useSites();
+  const { data: rawSites = [] } = useSites();
+  const sites = rawSites as any[];
 
-  // ── List Query ────────────────────────────────────────
-
+  // ── List Query ──
   const queryFilters: Record<string, string | number | boolean | undefined> = {
     page: filters.page,
     perPage: PAGE_SIZE,
   };
   if (filters.type !== 'all') queryFilters.type = filters.type;
-  if (filters.site_id !== 'all') queryFilters.site_id = filters.site_id;
-  if (filters.date_from) queryFilters.date_from = filters.date_from;
-  if (filters.date_to) queryFilters.date_to = filters.date_to;
 
   const { data: result, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['reports', queryFilters],
@@ -133,75 +110,44 @@ export default function ReportsPage() {
     enabled: isAuthenticated,
   });
 
-  const reports = result?.data ?? [];
-  const totalCount = result?.meta?.total ?? reports.length;
+  const reports: any[] = (result as any)?.data ?? (Array.isArray(result) ? result : []);
+  const totalCount: number = Number((result as any)?.meta?.total ?? reports.length);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  // ── Stats ─────────────────────────────────────────────
-
-  const totalReports = totalCount;
+  // ── Stats ──
   const todayStr = new Date().toISOString().slice(0, 10);
-  const generatedToday = reports.filter(
-    (r: any) => r.created_at?.slice(0, 10) === todayStr
-  ).length;
-  const pendingCount = reports.filter(
-    (r: any) => r.status === 'processing'
-  ).length;
+  const generatedToday = reports.filter((r: any) => (r.createdAt || r.created_at || '')?.slice(0, 10) === todayStr).length;
+  const pendingCount = reports.filter((r: any) => r.status === 'pending' || r.status === 'generating').length;
 
-  // ── Generate Mutation ─────────────────────────────────
-
+  // ── Generate ──
   const generateMutation = useMutation({
     mutationFn: (params: { type: string; site_id?: string; date_from: string; date_to: string; format: string }) =>
       reportsApi.generate(params),
     onSuccess: () => {
-      toast.success(t('reports.generate_success') || 'Report generation started');
+      toast.success('Reporte generado exitosamente');
       queryClient.invalidateQueries({ queryKey: ['reports'] });
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to generate report');
-    },
+    onError: (err: Error) => toast.error(err.message || 'Error generando reporte'),
   });
 
-  // ── Delete Mutation ───────────────────────────────────
-
+  // ── Delete ──
   const deleteMutation = useMutation({
     mutationFn: (id: string) => reportsApi.delete(id),
-    onSuccess: () => {
-      toast.success(t('reports.delete_success') || 'Report deleted');
-      queryClient.invalidateQueries({ queryKey: ['reports'] });
-      setDeleteTarget(null);
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to delete report');
-    },
+    onSuccess: () => { toast.success('Reporte eliminado'); queryClient.invalidateQueries({ queryKey: ['reports'] }); setDeleteTarget(null); },
+    onError: (err: Error) => toast.error(err.message || 'Error eliminando reporte'),
   });
 
-  // ── Handlers ──────────────────────────────────────────
-
+  // ── Handlers ──
   const updateFilters = useCallback((partial: Partial<ReportFilters>) => {
     setFilters(prev => ({ ...prev, ...partial, ...(partial.page === undefined ? { page: 1 } : {}) }));
   }, []);
 
-  const resetFilters = useCallback(() => setFilters(defaultFilters), []);
-
   const handleGenerate = () => {
-    if (!filters.date_from || !filters.date_to) {
-      toast.error(t('reports.date_required') || 'Please select a date range');
-      return;
-    }
-    if (filters.type === 'all') {
-      toast.error(t('reports.type_required') || 'Please select a report type');
-      return;
-    }
+    if (!filters.date_from || !filters.date_to) { toast.error('Selecciona un rango de fechas'); return; }
+    if (filters.type === 'all') { toast.error('Selecciona un tipo de reporte'); return; }
     setGenerating(true);
     generateMutation.mutate(
-      {
-        type: filters.type,
-        site_id: filters.site_id !== 'all' ? filters.site_id : undefined,
-        date_from: filters.date_from,
-        date_to: filters.date_to,
-        format: filters.format,
-      },
+      { type: filters.type, site_id: filters.site_id !== 'all' ? filters.site_id : undefined, date_from: filters.date_from, date_to: filters.date_to, format: filters.format },
       { onSettled: () => setGenerating(false) }
     );
   };
@@ -212,153 +158,78 @@ export default function ReportsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = report.name || `report-${report.id}.${(report.format || 'pdf').toLowerCase()}`;
+      a.download = report.name || `reporte-${report.type || 'data'}.${report.format || 'pdf'}`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success(t('reports.download_started') || 'Download started');
+      toast.success('Descarga iniciada');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Download failed');
+      toast.error(err instanceof Error ? err.message : 'Error descargando');
     }
   };
-
-  const setPage = useCallback((page: number) => {
-    setFilters(prev => ({ ...prev, page }));
-  }, []);
-
-  // ── Render ────────────────────────────────────────────
 
   if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <PageShell
-      title={t('reports.title')}
-      description={t('reports.subtitle')}
+      title="Reportes"
+      description="Genera y descarga reportes del sistema"
       icon={<FileBarChart className="h-5 w-5" />}
     >
-      <div className="p-6 space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <FileBarChart className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{isLoading ? '--' : totalReports}</p>
-              <p className="text-xs text-muted-foreground">{t('reports.total_reports') || 'Total Reports'}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
-              <CheckCircle2 className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{isLoading ? '--' : generatedToday}</p>
-              <p className="text-xs text-muted-foreground">{t('reports.generated_today') || 'Generated Today'}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{isLoading ? '--' : pendingCount}</p>
-              <p className="text-xs text-muted-foreground">{t('reports.pending') || 'Pending'}</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="p-5 space-y-5">
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <StatCard icon={<FileBarChart className="h-5 w-5 text-blue-400" />} label="Total Reportes" value={isLoading ? '—' : String(totalCount)} color="text-blue-400" />
+        <StatCard icon={<CheckCircle2 className="h-5 w-5 text-emerald-400" />} label="Generados Hoy" value={isLoading ? '—' : String(generatedToday)} color="text-emerald-400" />
+        <StatCard icon={<Clock className="h-5 w-5 text-amber-400" />} label="Pendientes" value={isLoading ? '—' : String(pendingCount)} color="text-amber-400" />
       </div>
 
       {/* Filter Bar */}
-      <Card>
+      <Card className="bg-slate-800/40 border-slate-700/50">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-end gap-3">
-            {/* Report Type */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">{t('reports.type') || 'Report Type'}</label>
-              <Select value={filters.type} onValueChange={(v) => updateFilters({ type: v })}>
-                <SelectTrigger className="w-[160px] h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
+              <label className="text-xs text-slate-400 flex items-center gap-1"><Filter className="h-3 w-3" /> Tipo</label>
+              <Select value={filters.type} onValueChange={v => updateFilters({ type: v })}>
+                <SelectTrigger className="w-[160px] h-8 text-xs bg-slate-900/50 border-slate-700"><SelectValue /></SelectTrigger>
+                <SelectContent>{REPORT_TYPES.map(rt => <SelectItem key={rt.value} value={rt.value}>{rt.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-slate-400 flex items-center gap-1"><Calendar className="h-3 w-3" /> Desde</label>
+              <Input type="date" className="w-[140px] h-8 text-xs bg-slate-900/50 border-slate-700" value={filters.date_from} onChange={e => updateFilters({ date_from: e.target.value })} />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-slate-400 flex items-center gap-1"><Calendar className="h-3 w-3" /> Hasta</label>
+              <Input type="date" className="w-[140px] h-8 text-xs bg-slate-900/50 border-slate-700" value={filters.date_to} onChange={e => updateFilters({ date_to: e.target.value })} />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-slate-400 flex items-center gap-1"><Building2 className="h-3 w-3" /> Sede</label>
+              <Select value={filters.site_id} onValueChange={v => updateFilters({ site_id: v })}>
+                <SelectTrigger className="w-[170px] h-8 text-xs bg-slate-900/50 border-slate-700"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {REPORT_TYPES.map((rt) => (
-                    <SelectItem key={rt.value} value={rt.value}>{rt.label}</SelectItem>
-                  ))}
+                  <SelectItem value="all">Todas las sedes</SelectItem>
+                  {sites.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name?.split('—')[0]?.trim() || s.id}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Date From */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">{t('common.from_date') || 'From'}</label>
-              <Input
-                type="date"
-                className="w-[150px] h-9 text-sm"
-                value={filters.date_from}
-                onChange={(e) => updateFilters({ date_from: e.target.value })}
-              />
-            </div>
-
-            {/* Date To */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">{t('common.to_date') || 'To'}</label>
-              <Input
-                type="date"
-                className="w-[150px] h-9 text-sm"
-                value={filters.date_to}
-                onChange={(e) => updateFilters({ date_to: e.target.value })}
-              />
-            </div>
-
-            {/* Site Filter */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">{t('events.site') || 'Site'}</label>
-              <Select value={filters.site_id} onValueChange={(v) => updateFilters({ site_id: v })}>
-                <SelectTrigger className="w-[180px] h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('common.all') || 'All Sites'}</SelectItem>
-                  {sites.map((site: any) => (
-                    <SelectItem key={site.id} value={site.id}>
-                      {site.name?.split('—')[0]?.trim() || site.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <label className="text-xs text-slate-400">Formato</label>
+              <Select value={filters.format} onValueChange={v => updateFilters({ format: v })}>
+                <SelectTrigger className="w-[90px] h-8 text-xs bg-slate-900/50 border-slate-700"><SelectValue /></SelectTrigger>
+                <SelectContent>{FORMAT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
-            {/* Format */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">{t('reports.format') || 'Format'}</label>
-              <Select value={filters.format} onValueChange={(v) => updateFilters({ format: v })}>
-                <SelectTrigger className="w-[100px] h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FORMAT_OPTIONS.map((f) => (
-                    <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Actions */}
             <div className="flex items-center gap-2 ml-auto">
-              <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={resetFilters}>
-                {t('common.clear') || 'Clear'}
-              </Button>
-              <Button size="sm" className="h-9 text-sm" onClick={handleGenerate} disabled={generating}>
-                {generating ? (
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <FileText className="mr-1.5 h-3.5 w-3.5" />
-                )}
-                {t('reports.generate') || 'Generate Report'}
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setFilters(defaultFilters)}>Limpiar</Button>
+              <Button size="sm" className="h-8 text-xs gap-1.5" onClick={handleGenerate} disabled={generating}>
+                {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+                Generar Reporte
               </Button>
             </div>
           </div>
@@ -366,97 +237,70 @@ export default function ReportsPage() {
       </Card>
 
       {/* Reports Table */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{t('reports.list') || 'Reports'}</CardTitle>
+      <Card className="bg-slate-800/30 border-slate-700/40">
+        <CardHeader className="pb-2 px-4 pt-4">
+          <CardTitle className="text-sm flex items-center gap-1.5"><FileBarChart className="h-4 w-4 text-blue-400" /> Reportes Generados</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="p-4 space-y-3">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
+            <div className="p-4 space-y-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
           ) : reports.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <FileSpreadsheet className="h-12 w-12 mb-3 opacity-40" />
-              <p className="text-sm font-medium">{t('reports.no_reports') || 'No reports found'}</p>
-              <p className="text-xs mt-1">{t('reports.no_reports_desc') || 'Generate a report using the filters above'}</p>
-            </div>
+            <EmptyState
+              icon={FileText}
+              title="No hay reportes disponibles"
+              description="Genera un reporte usando los filtros de arriba para comenzar."
+            />
           ) : (
             <>
               <div className="overflow-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('reports.name') || 'Name'}</TableHead>
-                      <TableHead>{t('reports.type') || 'Type'}</TableHead>
-                      <TableHead className="hidden md:table-cell">{t('reports.date_range') || 'Date Range'}</TableHead>
-                      <TableHead className="hidden sm:table-cell">{t('reports.format') || 'Format'}</TableHead>
-                      <TableHead className="hidden lg:table-cell">{t('reports.created_at') || 'Created'}</TableHead>
-                      <TableHead>{t('common.status') || 'Status'}</TableHead>
-                      <TableHead className="hidden sm:table-cell">{t('reports.size') || 'Size'}</TableHead>
-                      <TableHead className="text-right">{t('common.actions') || 'Actions'}</TableHead>
+                    <TableRow className="border-slate-700/50">
+                      <TableHead className="text-xs">Nombre</TableHead>
+                      <TableHead className="text-xs">Tipo</TableHead>
+                      <TableHead className="text-xs hidden md:table-cell">Formato</TableHead>
+                      <TableHead className="text-xs hidden lg:table-cell">Creado</TableHead>
+                      <TableHead className="text-xs">Estado</TableHead>
+                      <TableHead className="text-xs text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {reports.map((report: any) => {
-                      const statusCfg = statusConfig[report.status] || statusConfig.completed;
-                      const typeColor = typeColors[report.type] || 'bg-muted text-muted-foreground';
+                      const sc = statusConfig[report.status] || statusConfig.pending;
+                      const tc = typeConfig[report.type] || typeConfig.events;
+                      const StatusIcon = sc.icon;
+                      const isDownloadable = report.status === 'completed' || report.status === 'ready';
                       return (
-                        <TableRow key={report.id}>
+                        <TableRow key={report.id} className="border-slate-800">
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span className="text-sm font-medium truncate max-w-[200px]">
-                                {report.name || `${report.type}-report`}
+                              <FileText className="h-4 w-4 text-slate-500 shrink-0" />
+                              <span className="text-sm font-medium text-white truncate max-w-[200px]">
+                                {report.name || `${report.type}-reporte`}
                               </span>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={cn('text-[10px] capitalize', typeColor)}>
-                              {(report.type || '').replace(/_/g, ' ')}
-                            </Badge>
+                            <Badge className={cn("text-[9px] border", tc.color)}>{tc.label}</Badge>
                           </TableCell>
-                          <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                            {formatDate(report.date_from)} - {formatDate(report.date_to)}
+                          <TableCell className="hidden md:table-cell">
+                            <Badge variant="outline" className="text-[9px] font-mono">{(report.format || 'json').toUpperCase()}</Badge>
                           </TableCell>
-                          <TableCell className="hidden sm:table-cell">
-                            <Badge variant="outline" className="text-[10px]">
-                              {(report.format || 'PDF').toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
-                            {formatDateTime(report.created_at)}
+                          <TableCell className="hidden lg:table-cell text-xs text-slate-400">
+                            {formatDateTime(report.createdAt || report.created_at)}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={statusCfg.variant} className="text-[10px] capitalize">
-                              {statusCfg.icon}
-                              {report.status}
+                            <Badge className={cn("text-[9px] border gap-1", sc.color)}>
+                              <StatusIcon className={cn("h-2.5 w-2.5", report.status === 'generating' && "animate-spin")} />
+                              {sc.label}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
-                            {formatFileSize(report.size)}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                disabled={report.status !== 'completed'}
-                                onClick={() => handleDownload(report)}
-                                title={t('common.download') || 'Download'}
-                              >
+                              <Button variant="ghost" size="icon" className="h-7 w-7" disabled={!isDownloadable} onClick={() => handleDownload(report)} title="Descargar">
                                 <Download className="h-3.5 w-3.5" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive hover:text-destructive"
-                                onClick={() => setDeleteTarget({ id: report.id, name: report.name || report.type })}
-                                title={t('common.delete') || 'Delete'}
-                              >
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => setDeleteTarget({ id: report.id, name: report.name || report.type })} title="Eliminar">
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
@@ -469,86 +313,74 @@ export default function ReportsPage() {
               </div>
 
               {/* Pagination */}
-              <div className="px-4 py-2 border-t flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {totalCount} {t('reports.count') || 'reports'} · {t('events.page') || 'Page'} {filters.page} {t('events.of') || 'of'} {totalPages}
-                </span>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7"
-                    disabled={filters.page <= 1}
-                    onClick={() => setPage(filters.page - 1)}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const current = filters.page;
-                    let pageNum: number;
-                    if (totalPages <= 5) pageNum = i + 1;
-                    else if (current <= 3) pageNum = i + 1;
-                    else if (current >= totalPages - 2) pageNum = totalPages - 4 + i;
-                    else pageNum = current - 2 + i;
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={pageNum === current ? 'default' : 'outline'}
-                        size="icon"
-                        className="h-7 w-7 text-xs"
-                        onClick={() => setPage(pageNum)}
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7"
-                    disabled={filters.page >= totalPages}
-                    onClick={() => setPage(filters.page + 1)}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+              {totalPages > 1 && (
+                <div className="px-4 py-2 border-t border-slate-700/50 flex items-center justify-between text-sm">
+                  <span className="text-xs text-slate-500">{totalCount} reportes &bull; Página {filters.page} de {totalPages}</span>
+                  <div className="flex items-center gap-1">
+                    <Button variant="outline" size="icon" className="h-7 w-7" disabled={filters.page <= 1} onClick={() => setFilters(p => ({ ...p, page: p.page - 1 }))}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const p = filters.page;
+                      let num: number;
+                      if (totalPages <= 5) num = i + 1;
+                      else if (p <= 3) num = i + 1;
+                      else if (p >= totalPages - 2) num = totalPages - 4 + i;
+                      else num = p - 2 + i;
+                      return (
+                        <Button key={num} variant={num === p ? 'default' : 'outline'} size="icon" className="h-7 w-7 text-xs" onClick={() => setFilters(prev => ({ ...prev, page: num }))}>
+                          {num}
+                        </Button>
+                      );
+                    })}
+                    <Button variant="outline" size="icon" className="h-7 w-7" disabled={filters.page >= totalPages} onClick={() => setFilters(p => ({ ...p, page: p.page + 1 }))}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      {/* Delete Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={o => !o && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('reports.delete_title') || 'Delete Report'}</DialogTitle>
+            <DialogTitle>Eliminar Reporte</DialogTitle>
             <DialogDescription>
-              {t('reports.delete_confirm') || 'Are you sure you want to delete'}{' '}
-              <span className="font-medium text-foreground">{deleteTarget?.name}</span>?{' '}
-              {t('reports.delete_warning') || 'This action cannot be undone.'}
+              ¿Eliminar <span className="font-medium text-white">{deleteTarget?.name}</span>? Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-              {t('common.cancel') || 'Cancel'}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              {t('common.delete') || 'Delete'}
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} className="gap-1">
+              {deleteMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              Eliminar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
     </PageShell>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// Sub-components
+// ══════════════════════════════════════════════════════════════
+
+function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color: string }) {
+  return (
+    <Card className="bg-slate-800/40 border-slate-700/50">
+      <CardContent className="p-4 flex items-center gap-3">
+        {icon}
+        <div>
+          <p className={cn("text-2xl font-bold", color)}>{value}</p>
+          <p className="text-xs text-slate-400">{label}</p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

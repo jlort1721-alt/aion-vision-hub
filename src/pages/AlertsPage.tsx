@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import EscalationConfigPanel from "@/components/alerts/EscalationConfigPanel";
 import { PageShell } from "@/components/shared/PageShell";
 import ErrorState from "@/components/ui/ErrorState";
+import EmptyState from "@/components/shared/EmptyState";
 
 const severityColors: Record<string, string> = {
   critical: "bg-destructive",
@@ -268,13 +269,11 @@ export default function AlertsPage() {
               {[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
             </div>
           ) : instances.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-success" />
-                <p className="text-lg font-medium">Sin alertas activas</p>
-                <p className="text-sm text-muted-foreground mt-1">Todos los sistemas operativos</p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Bell}
+              title="No hay alertas registradas"
+              description="Todos los sistemas funcionan correctamente. Las alertas apareceran aqui cuando se detecten."
+            />
           ) : (
             instances.map((alert: any) => {
               const StatusIcon = statusIcons[alert.status] ?? Bell;

@@ -49,7 +49,7 @@ export default function CameraHealthPage() {
   const [siteFilter, setSiteFilter] = useState('all');
 
   // Fetch cameras
-  const { data: cameras = [], isLoading, refetch } = useQuery({
+  const { data: cameras = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['camera-health-cameras'],
     queryFn: async () => {
       const resp = await apiClient.get<Camera[] | PaginatedResp>('/cameras', { limit: '500' });
@@ -191,6 +191,11 @@ export default function CameraHealthPage() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Error */}
+      {isError && (
+        <div className="p-6 text-center text-destructive">Error al cargar datos. <Button variant="outline" onClick={() => refetch()}>Reintentar</Button></div>
+      )}
 
       {/* Loading */}
       {isLoading && (

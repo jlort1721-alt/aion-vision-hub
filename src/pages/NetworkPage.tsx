@@ -16,6 +16,7 @@ import {
   Trash2, Power, Radio, CheckCircle2, XCircle, Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PageShell } from '@/components/shared/PageShell';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -101,53 +102,48 @@ async function apiCall<T>(path: string, options?: RequestInit): Promise<T> {
 // ═══════════════════════════════════════════════════════════════
 export default function NetworkPage() {
   const { toast } = useToast();
-  const { data: devices = [], isLoading: devicesLoading } = useDevices(30000);
+  const { data: devices = [], isLoading: devicesLoading, isError, refetch } = useDevices(30000);
   const { data: sites = [], isLoading: sitesLoading } = useSites();
 
+  if (isError) return <div className="p-6 text-center text-destructive">Error al cargar datos. <Button variant="outline" onClick={() => refetch()}>Reintentar</Button></div>;
+
   return (
-    <div className="space-y-6 p-1">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <Network className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Centro de Red</h1>
-            <p className="text-sm text-muted-foreground">
-              Escáner de red, VPN, control de dispositivos y diagnóstico
-            </p>
-          </div>
-        </div>
+    <PageShell
+      title="Centro de Red"
+      description="Escáner de red, VPN, control de dispositivos y diagnóstico"
+      icon={<Network className="h-5 w-5" />}
+      actions={
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1">
+          <Badge variant="outline" className="gap-1 border-slate-700 text-slate-400">
             <Activity className="h-3 w-3" />
-            {devices.length} dispositivos
+            {(devices as any[]).length} dispositivos
           </Badge>
-          <Badge variant="outline" className="gap-1">
+          <Badge variant="outline" className="gap-1 border-slate-700 text-slate-400">
             <Globe className="h-3 w-3" />
-            {sites.length} sedes
+            {(sites as any[]).length} sedes
           </Badge>
         </div>
-      </div>
+      }
+    >
+    <div className="space-y-5 p-5">
 
       {/* Tabs */}
       <Tabs defaultValue="scanner" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="scanner" className="gap-2">
-            <Scan className="h-4 w-4" />
-            Escaneo de Red
+        <TabsList className="bg-slate-800/50 flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="scanner" className="gap-1.5 text-xs">
+            <Scan className="h-3.5 w-3.5" />
+            Escaneo
           </TabsTrigger>
-          <TabsTrigger value="vpn" className="gap-2">
-            <Shield className="h-4 w-4" />
-            Conectividad VPN
+          <TabsTrigger value="vpn" className="gap-1.5 text-xs">
+            <Shield className="h-3.5 w-3.5" />
+            VPN
           </TabsTrigger>
-          <TabsTrigger value="control" className="gap-2">
-            <Settings className="h-4 w-4" />
-            Control de Dispositivos
+          <TabsTrigger value="control" className="gap-1.5 text-xs">
+            <Settings className="h-3.5 w-3.5" />
+            Control
           </TabsTrigger>
-          <TabsTrigger value="diagnostics" className="gap-2">
-            <Activity className="h-4 w-4" />
+          <TabsTrigger value="diagnostics" className="gap-1.5 text-xs">
+            <Activity className="h-3.5 w-3.5" />
             Diagnóstico
           </TabsTrigger>
         </TabsList>
@@ -166,6 +162,7 @@ export default function NetworkPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </PageShell>
   );
 }
 
@@ -695,7 +692,7 @@ function DeviceControlTab({ devices, sites, devicesLoading, toast }: { devices: 
   const [pulseDuration, setPulseDuration] = useState(3);
 
   const filteredDevices = devices.filter((d: any) => {
-    if (siteFilter !== 'all' && d.site_id !== siteFilter) return false;
+    if (siteFilter !== 'all' && (d.siteId || d.site_id) !== siteFilter) return false;
     if (typeFilter !== 'all' && d.type !== typeFilter) return false;
     if (brandFilter !== 'all' && d.brand !== brandFilter) return false;
     if (statusFilter !== 'all' && d.status !== statusFilter) return false;
@@ -725,9 +722,10 @@ function DeviceControlTab({ devices, sites, devicesLoading, toast }: { devices: 
     toast({ title: 'Ping masivo', description: `Enviando ping a ${filteredDevices.length} dispositivos...` });
     try {
       for (const device of filteredDevices) {
-        if (device.remote_address) {
-          const [host] = (device.remote_address || '').split(':');
-          await apiCall('/ping', { method: 'POST', body: JSON.stringify({ host, port: device.port || 80 }) });
+        const addr = device.ipAddress || device.ip_address || device.remote_address || '';
+        if (addr) {
+          const [host] = addr.split(':');
+          await apiCall('/ping', { method: 'POST', body: JSON.stringify({ host, port: 80 }) });
         }
       }
       toast({ title: 'Ping completado', description: 'Se completó el ping a todos los dispositivos.' });
@@ -994,14 +992,14 @@ function DeviceControlTab({ devices, sites, devicesLoading, toast }: { devices: 
                 </div>
 
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  {device.remote_address && (
+                  {(device.remote_address || device.remoteAddress) && (
                     <span className="font-mono flex items-center gap-1">
-                      <Globe className="h-3 w-3" /> {device.remote_address}
+                      <Globe className="h-3 w-3" /> {device.remote_address || device.remoteAddress}
                     </span>
                   )}
-                  {device.ip && (
+                  {(device.ipAddress || device.ip_address) && (
                     <span className="font-mono flex items-center gap-1">
-                      <Network className="h-3 w-3" /> {device.ip}
+                      <Network className="h-3 w-3" /> {device.ipAddress || device.ip_address}
                     </span>
                   )}
                 </div>

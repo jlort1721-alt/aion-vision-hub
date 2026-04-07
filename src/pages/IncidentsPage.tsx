@@ -15,7 +15,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';
 import {
-  AlertTriangle, Plus, Search, MessageSquare, Bot,
+  AlertTriangle, AlertCircle, Plus, Search, MessageSquare, Bot,
   Clock, User, CheckCircle2, Loader2, XCircle, Shield, Filter
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -23,7 +23,7 @@ import { sanitizeText } from '@/lib/sanitize';
 import EvidencePanel from '@/components/incidents/EvidencePanel';
 import { PageShell } from '@/components/shared/PageShell';
 import ErrorState from '@/components/ui/ErrorState';
-import { EmptyState } from '@/components/ui/EmptyState';
+import SharedEmptyState from '@/components/shared/EmptyState';
 import EvidenceExport from '@/components/EvidenceExport';
 
 const priorityColors: Record<string, string> = {
@@ -213,11 +213,12 @@ export default function IncidentsPage() {
           {isLoading ? (
             <div className="p-3 space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
           ) : filtered.length === 0 ? (
-            <EmptyState
-              icon={<Plus className="h-12 w-12" />}
-              title="Sin incidentes"
-              description="Los incidentes aparecerán aquí cuando se creen"
-              action={{ label: "Crear incidente", onClick: () => setCreateOpen(true) }}
+            <SharedEmptyState
+              icon={AlertCircle}
+              title="No hay incidentes registrados"
+              description="Los incidentes apareceran aqui cuando se creen."
+              actionLabel="Crear incidente"
+              onAction={() => setCreateOpen(true)}
             />
           ) : filtered.map((inc: any) => (
             <button key={inc.id} className={cn("w-full text-left px-3 py-3 border-b hover:bg-muted/50 transition-colors", selected === inc.id && "bg-muted/50")} onClick={() => setSelected(inc.id)}>

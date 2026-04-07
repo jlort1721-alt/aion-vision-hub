@@ -105,7 +105,7 @@ function EWeLinkDeviceCard({ device, onToggle, isPending }: {
 export default function DomoticsPage() {
   const { t } = useI18n();
   const { data: rawSections = [], isLoading: sectionsLoading } = useSections();
-  const { data: rawDevices = [], isLoading: devicesLoading, refetch } = useDomoticDevices();
+  const { data: rawDevices = [], isLoading: devicesLoading, isError, refetch } = useDomoticDevices();
   const sections = rawSections as any[];
   const devices = rawDevices as any[];
   const { create, toggleState, remove } = useDomoticMutations();
@@ -282,6 +282,8 @@ export default function DomoticsPage() {
     return (row.name || '').toLowerCase().includes(searchStr.toLowerCase()) ||
            (row.brand && row.brand.toLowerCase().includes(searchStr.toLowerCase()));
   };
+
+  if (isError) return <div className="p-6 text-center text-destructive">Error al cargar datos. <Button variant="outline" onClick={() => refetch()}>Reintentar</Button></div>;
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">

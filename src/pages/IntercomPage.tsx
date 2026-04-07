@@ -26,7 +26,7 @@ const OperatorCallDashboard = lazy(() => import('@/components/intercom/OperatorC
 export default function IntercomPage() {
   const { t } = useI18n();
   const { data: rawSections = [] } = useSections();
-  const { data: rawDevices = [], isLoading } = useIntercomDevices();
+  const { data: rawDevices = [], isLoading, isError, refetch } = useIntercomDevices();
   const { data: rawCalls = [] } = useIntercomCalls();
   const sections = rawSections as any[];
   const devices = rawDevices as any[];
@@ -115,6 +115,8 @@ export default function IntercomPage() {
   useEffect(() => {
     if (activeTab === 'voice_ai') loadVoiceData();
   }, [activeTab, loadVoiceData]);
+
+  if (isError) return <div className="p-6 text-center text-destructive">Error al cargar datos. <Button variant="outline" onClick={() => refetch()}>Reintentar</Button></div>;
 
   const handleTestConnection = async () => {
     setTestingVoice(true);

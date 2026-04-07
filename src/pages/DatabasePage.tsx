@@ -35,7 +35,7 @@ const DEFAULT_PAGE_SIZE = 25;
 export default function DatabasePage() {
   const { t } = useI18n();
   const { data: rawSections = [] } = useSections();
-  const { data: rawRecords = [], isLoading } = useDatabaseRecords();
+  const { data: rawRecords = [], isLoading, isError, refetch } = useDatabaseRecords();
   const sections = rawSections as any[];
   const records = rawRecords as any[];
   const { create, update, remove } = useDatabaseRecordMutations();
@@ -96,6 +96,8 @@ export default function DatabasePage() {
     setPageSize(Number(val));
     setCurrentPage(1);
   };
+
+  if (isError) return <div className="p-6 text-center text-destructive">Error al cargar datos. <Button variant="outline" onClick={() => refetch()}>Reintentar</Button></div>;
 
   const selected: any = selectedRecord ? records.find((r: any) => r.id === selectedRecord) : null;
 
