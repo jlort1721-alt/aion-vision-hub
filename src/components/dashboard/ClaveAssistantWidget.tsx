@@ -2,45 +2,73 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Bot, Mic, Eye, Heart, Shield, Wifi, WifiOff } from 'lucide-react';
+import { apiClient } from '@/lib/api-client';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface ClaveStatus {
-  bridge: string;
-  monitor: {
-    running: boolean;
-    operators_monitored: number;
-  };
-  aion_instances: Record<string, { status: string }>;
+interface SystemStatus {
+  health: boolean;
+  ai: boolean;
+  twilio: boolean;
+  faceRec: boolean;
+  services: number;
 }
 
-async function fetchClaveStatus(): Promise<ClaveStatus | null> {
-  // Bridge status endpoint removed — it was returning 502 errors.
-  // Return null so the widget shows "Offline" gracefully.
-  return null;
+async function fetchSystemStatus(): Promise<SystemStatus> {
+  try {
+    const [health, twilio, faceRec] = await Promise.allSettled([
+      apiClient.get<{ status: string }>('/health/ready'),
+      apiClient.get<{ status: string }>('/twilio/health'),
+      apiClient.get<{ providerConfigured: boolean }>('/face-recognition/status'),
+    ]);
+
+    const healthOk = health.status === 'fulfilled' && (health.value as any)?.status === 'ready';
+    const twilioOk = twilio.status === 'fulfilled' && (twilio.value as any)?.data?.status === 'healthy';
+    const faceOk = faceRec.status === 'fulfilled' && (faceRec.value as any)?.data !== undefined;
+
+    let servicesOnline = 0;
+    if (healthOk) servicesOnline++;
+    if (twilioOk) servicesOnline++;
+    if (faceOk) servicesOnline++;
+
+    return {
+      health: healthOk,
+      ai: healthOk, // AI depends on backend being up
+      twilio: twilioOk,
+      faceRec: faceOk,
+      services: servicesOnline,
+    };
+  } catch {
+    return { health: false, ai: false, twilio: false, faceRec: false, services: 0 };
+  }
 }
 
 export default function ClaveAssistantWidget() {
+  const { isAuthenticated } = useAuth();
+
   const { data: status } = useQuery({
-    queryKey: ['clave-status'],
-    queryFn: fetchClaveStatus,
-    refetchInterval: 15000,
+    queryKey: ['system-status-widget'],
+    queryFn: fetchSystemStatus,
+    refetchInterval: 30000,
     retry: false,
+    enabled: isAuthenticated,
   });
 
-  const isOnline = status?.bridge === 'active';
+  const isOnline = status?.health ?? false;
+  const servicesCount = status?.services ?? 0;
 
   return (
-    <Card className="border-primary/20" aria-label="CLAVE Assistant Status">
+    <Card className="border-primary/20" aria-label="AION System Status">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bot className="h-4 w-4 text-primary" />
             <span className="text-sm font-semibold" style={{ fontFamily: 'var(--font-heading)' }}>
-              CLAVE Assistant
+              AION Platform
             </span>
           </div>
           <Badge variant={isOnline ? 'default' : 'secondary'} className="text-[10px]">
             {isOnline ? (
-              <><Wifi className="h-3 w-3 mr-1" /> Active</>
+              <><Wifi className="h-3 w-3 mr-1" /> Online</>
             ) : (
               <><WifiOff className="h-3 w-3 mr-1" /> Offline</>
             )}
@@ -50,29 +78,29 @@ export default function ClaveAssistantWidget() {
       <CardContent>
         <div className="grid grid-cols-4 gap-2">
           <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-muted/50">
-            <Mic className="h-4 w-4 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground">Voz</span>
-            <span className="text-xs font-medium">{isOnline ? 'Ready' : '--'}</span>
+            <Mic className={`h-4 w-4 ${status?.twilio ? 'text-green-500' : 'text-muted-foreground'}`} />
+            <span className="text-[10px] text-muted-foreground">Twilio</span>
+            <span className="text-xs font-medium">{status?.twilio ? 'OK' : '--'}</span>
           </div>
           <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-muted/50">
-            <Eye className="h-4 w-4 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground">Vision</span>
-            <span className="text-xs font-medium">{isOnline ? 'Ready' : '--'}</span>
+            <Eye className={`h-4 w-4 ${status?.ai ? 'text-green-500' : 'text-muted-foreground'}`} />
+            <span className="text-[10px] text-muted-foreground">IA</span>
+            <span className="text-xs font-medium">{status?.ai ? 'OK' : '--'}</span>
           </div>
           <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-muted/50">
-            <Heart className="h-4 w-4 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground">Bio</span>
-            <span className="text-xs font-medium">{isOnline ? 'Ready' : '--'}</span>
+            <Heart className={`h-4 w-4 ${status?.faceRec ? 'text-green-500' : 'text-muted-foreground'}`} />
+            <span className="text-[10px] text-muted-foreground">FaceRec</span>
+            <span className="text-xs font-medium">{status?.faceRec ? 'OK' : '--'}</span>
           </div>
           <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-muted/50">
-            <Shield className="h-4 w-4 text-muted-foreground" />
+            <Shield className={`h-4 w-4 ${isOnline ? 'text-green-500' : 'text-muted-foreground'}`} />
             <span className="text-[10px] text-muted-foreground">24/7</span>
-            <span className="text-xs font-medium">{status?.monitor?.running ? 'On' : 'Off'}</span>
+            <span className="text-xs font-medium">{isOnline ? 'On' : 'Off'}</span>
           </div>
         </div>
-        {isOnline && status?.monitor?.operators_monitored !== undefined && (
+        {isOnline && (
           <p className="text-[10px] text-muted-foreground mt-2 text-center">
-            Monitoreando {status.monitor.operators_monitored} operador(es) en {Object.keys(status.aion_instances || {}).length} instancias
+            {servicesCount}/3 servicios activos — Monitoreo continuo
           </p>
         )}
       </CardContent>

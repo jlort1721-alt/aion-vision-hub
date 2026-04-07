@@ -1,25 +1,12 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity } from 'lucide-react';
+import { apiClient } from '@/lib/api-client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const DAYS = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-
-function generateMockData(): number[][] {
-  return DAYS.map((_, dayIdx) =>
-    HOURS.map((hour) => {
-      // Simulate realistic security activity patterns
-      const isWeekend = dayIdx >= 5;
-      const isNight = hour >= 22 || hour <= 5;
-      const isPeak = hour >= 7 && hour <= 9 || hour >= 17 && hour <= 19;
-      let base = Math.random() * 3;
-      if (isNight) base += Math.random() * 4;
-      if (isPeak) base += Math.random() * 5;
-      if (isWeekend && isNight) base += Math.random() * 3;
-      return Math.round(base);
-    })
-  );
-}
 
 function getColor(value: number): string {
   if (value === 0) return 'bg-muted/30';
@@ -30,8 +17,38 @@ function getColor(value: number): string {
   return 'bg-red-500/60';
 }
 
+function buildHeatmapFromEvents(events: Array<{ created_at?: string; createdAt?: string }>): number[][] {
+  const grid = DAYS.map(() => HOURS.map(() => 0));
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  for (const ev of events) {
+    const ts = ev.created_at || ev.createdAt;
+    if (!ts) continue;
+    const d = new Date(ts);
+    if (d < weekAgo) continue;
+    const dayIdx = (d.getDay() + 6) % 7; // Mon=0
+    const hour = d.getHours();
+    grid[dayIdx][hour]++;
+  }
+  return grid;
+}
+
 export default function ActivityHeatmap() {
-  const data = useMemo(() => generateMockData(), []);
+  const { isAuthenticated } = useAuth();
+
+  const { data: events } = useQuery({
+    queryKey: ['heatmap-events'],
+    queryFn: async () => {
+      const res = await apiClient.get('/events', { limit: '500' });
+      return res.data?.items || res.data || [];
+    },
+    enabled: isAuthenticated,
+    refetchInterval: 60000,
+    staleTime: 30000,
+  });
+
+  const data = useMemo(() => buildHeatmapFromEvents(events || []), [events]);
 
   return (
     <Card>
@@ -43,7 +60,6 @@ export default function ActivityHeatmap() {
       <CardContent>
         <div className="overflow-x-auto">
           <div className="min-w-[600px]">
-            {/* Hour labels */}
             <div className="flex mb-1 ml-10">
               {HOURS.map(h => (
                 <div key={h} className="flex-1 text-center text-[9px] text-muted-foreground">
@@ -51,7 +67,6 @@ export default function ActivityHeatmap() {
                 </div>
               ))}
             </div>
-            {/* Grid rows */}
             {DAYS.map((day, dayIdx) => (
               <div key={day} className="flex items-center gap-1 mb-0.5">
                 <span className="w-8 text-[10px] text-muted-foreground text-right shrink-0">{day}</span>
@@ -66,7 +81,6 @@ export default function ActivityHeatmap() {
                 </div>
               </div>
             ))}
-            {/* Legend */}
             <div className="flex items-center justify-end gap-1.5 mt-2">
               <span className="text-[9px] text-muted-foreground">Menos</span>
               {['bg-muted/30', 'bg-green-500/30', 'bg-green-500/50', 'bg-yellow-500/50', 'bg-orange-500/50', 'bg-red-500/60'].map((c, i) => (
