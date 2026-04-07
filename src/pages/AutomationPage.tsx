@@ -237,9 +237,16 @@ export default function AutomationPage() {
     refetchInterval: 30000,
   });
 
-  const rules = rulesData?.data ?? [];
-  const executions = executionsData?.data ?? [];
-  const stats = statsData?.data;
+  const rules: any[] = rulesData?.data ?? [];
+  const executions: any[] = executionsData?.data ?? [];
+  const stats = statsData?.data as any;
+
+  const triggerTypeSpanish: Record<string, string> = {
+    event_severity: 'Severidad', device_offline: 'Offline', schedule: 'Programado', manual: 'Manual',
+  };
+  const execStatusSpanish: Record<string, string> = {
+    success: 'Exitoso', failed: 'Fallido', partial: 'Parcial', pending: 'Pendiente',
+  };
 
   // ── Form helpers ─────────────────────────────────────────
   function resetForm() {
@@ -374,9 +381,11 @@ export default function AutomationPage() {
         <TabsList>
           <TabsTrigger value="rules" className="gap-1">
             <Cog className="h-4 w-4" /> Reglas
+            {rules.length > 0 && <Badge variant="outline" className="ml-1 h-5 text-[10px]">{rules.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="executions" className="gap-1">
             <PlayCircle className="h-4 w-4" /> Ejecuciones
+            {executions.length > 0 && <Badge variant="secondary" className="ml-1 h-5 text-[10px]">{executions.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-1">
             <History className="h-4 w-4" /> Historial
@@ -641,7 +650,7 @@ export default function AutomationPage() {
 
           {loadingRules ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : rules.length === 0 ? (
             <Card>
@@ -652,30 +661,30 @@ export default function AutomationPage() {
               </CardContent>
             </Card>
           ) : (
-            rules.map((rule: Record<string, unknown>) => (
-              <Card key={rule.id as string}>
+            rules.map((rule: any) => (
+              <Card key={rule.id}>
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Cog className={`h-5 w-5 ${rule.isActive ? 'text-primary' : 'text-muted-foreground'}`} />
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">{rule.name as string}</h3>
-                          <Badge variant="outline">{rule.triggerType as string}</Badge>
-                          <Badge variant="secondary">{(rule.actionCount as number) ?? 0} acciones</Badge>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold">{rule.name}</h3>
+                          <Badge variant="outline">{triggerTypeSpanish[rule.triggerType] || rule.triggerType}</Badge>
+                          <Badge variant="secondary">{rule.actionCount ?? 0} acciones</Badge>
                           {rule.priority && (
-                            <Badge variant="outline">Prioridad: {rule.priority as number}</Badge>
+                            <Badge variant="outline">Prioridad: {rule.priority}</Badge>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Ejecutada {(rule.triggerCount as number) ?? 0} veces
-                          {rule.lastTriggeredAt && ` | Ultima: ${new Date(rule.lastTriggeredAt as string).toLocaleString()}`}
+                          Ejecutada {rule.triggerCount ?? 0} veces
+                          {rule.lastTriggeredAt && ` | Última: ${new Date(rule.lastTriggeredAt).toLocaleString('es-CO')}`}
                         </p>
                       </div>
                     </div>
                     <Switch
-                      checked={rule.isActive as boolean}
-                      onCheckedChange={(checked) => toggleRuleMutation.mutate({ id: rule.id as string, isActive: checked })}
+                      checked={rule.isActive}
+                      onCheckedChange={(checked) => toggleRuleMutation.mutate({ id: rule.id, isActive: checked })}
                     />
                   </div>
                 </CardContent>
@@ -688,7 +697,7 @@ export default function AutomationPage() {
         <TabsContent value="executions" className="space-y-4">
           {loadingExecutions ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : executions.length === 0 ? (
             <Card>
@@ -699,28 +708,28 @@ export default function AutomationPage() {
               </CardContent>
             </Card>
           ) : (
-            executions.map((exec: Record<string, unknown>) => {
+            executions.map((exec: any) => {
               const status = exec.status as string;
               const StatusIcon = status === 'success' ? CheckCircle : status === 'failed' ? XCircle : PlayCircle;
               const statusColor = status === 'success' ? 'text-success' : status === 'failed' ? 'text-destructive' : 'text-warning';
               return (
-                <Card key={exec.id as string}>
+                <Card key={exec.id}>
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3">
                         <StatusIcon className={`h-5 w-5 mt-0.5 ${statusColor}`} />
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="font-semibold">{(exec.ruleName as string) || 'Regla desconocida'}</h3>
+                            <h3 className="font-semibold">{exec.ruleName || 'Regla desconocida'}</h3>
                             <Badge className={executionStatusColors[status] || 'bg-gray-500'}>
-                              {status}
+                              {execStatusSpanish[status] || status}
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">
-                            Duracion: {exec.executionTime != null ? `${exec.executionTime as number}ms` : 'N/A'}
+                            Duración: {exec.executionTime != null ? `${exec.executionTime}ms` : 'N/A'}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {exec.createdAt ? new Date(exec.createdAt as string).toLocaleString() : 'N/A'}
+                            {exec.createdAt ? new Date(exec.createdAt).toLocaleString('es-CO') : 'N/A'}
                           </p>
                         </div>
                       </div>
@@ -736,7 +745,7 @@ export default function AutomationPage() {
         <TabsContent value="history" className="space-y-4">
           {loadingExecutions ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : executions.length === 0 ? (
             <Card>
@@ -756,17 +765,17 @@ export default function AutomationPage() {
                   <span>Resultado</span>
                   <span>Fecha / Hora</span>
                 </div>
-                {executions.map((exec: Record<string, unknown>) => {
+                {executions.map((exec: any) => {
                   const status = exec.status as string;
                   const statusColor = status === 'success' ? 'text-success' : status === 'failed' ? 'text-destructive' : 'text-warning';
                   const StatusIcon = status === 'success' ? CheckCircle : status === 'failed' ? XCircle : PlayCircle;
                   const actionsExecuted = exec.actionsExecuted as string[] | undefined;
                   const triggerType = exec.triggerType as string | undefined;
                   return (
-                    <div key={exec.id as string} className="grid grid-cols-5 gap-4 p-3 border-b last:border-b-0 items-center text-sm">
-                      <span className="font-medium truncate">{(exec.ruleName as string) || 'Regla desconocida'}</span>
+                    <div key={exec.id} className="grid grid-cols-5 gap-4 p-3 border-b last:border-b-0 items-center text-sm">
+                      <span className="font-medium truncate">{exec.ruleName || 'Regla desconocida'}</span>
                       <span className="text-muted-foreground">
-                        <Badge variant="outline" className="text-xs">{triggerType || (exec.triggerData as string) || 'N/A'}</Badge>
+                        <Badge variant="outline" className="text-xs">{triggerTypeSpanish[triggerType || ''] || triggerType || exec.triggerData || 'N/A'}</Badge>
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {actionsExecuted && actionsExecuted.length > 0
@@ -775,7 +784,7 @@ export default function AutomationPage() {
                                 {actionTypeLabels[a] || a}
                               </Badge>
                             ))
-                          : <span>{exec.executionTime != null ? `${exec.executionTime as number}ms` : 'N/A'}</span>
+                          : <span>{exec.executionTime != null ? `${exec.executionTime}ms` : 'N/A'}</span>
                         }
                       </span>
                       <span className="flex items-center gap-1">
