@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
@@ -17,9 +17,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/contexts/I18nContext';
 import { useSections, useDatabaseRecords, useDatabaseRecordMutations } from '@/hooks/use-module-data';
 import {
-  Database, Search, Plus, Download, Users, Car,
+  Database, Search, Plus, Download, Users,
   Building2, Home, MapPin, Eye, Pencil, Trash2,
-  MoreHorizontal, FileText, Phone, Mail,
+  MoreHorizontal, Phone, Mail,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -34,8 +34,10 @@ const DEFAULT_PAGE_SIZE = 25;
 
 export default function DatabasePage() {
   const { t } = useI18n();
-  const { data: sections = [] } = useSections();
-  const { data: records = [], isLoading } = useDatabaseRecords();
+  const { data: rawSections = [] } = useSections();
+  const { data: rawRecords = [], isLoading } = useDatabaseRecords();
+  const sections = rawSections as any[];
+  const records = rawRecords as any[];
   const { create, update, remove } = useDatabaseRecordMutations();
 
   const [activeTab, setActiveTab] = useState('all');
@@ -95,7 +97,7 @@ export default function DatabasePage() {
     setCurrentPage(1);
   };
 
-  const selected = selectedRecord ? records.find((r: any) => r.id === selectedRecord) : null;
+  const selected: any = selectedRecord ? records.find((r: any) => r.id === selectedRecord) : null;
 
   const handleAdd = () => {
     if (!form.title.trim()) return;
@@ -134,7 +136,7 @@ export default function DatabasePage() {
   };
 
   const handleExport = () => {
-    const headers = ['Name', 'Category', 'Section', 'Unit', 'Phone', 'Email', 'Status', 'Created'];
+    const headers = ['Nombre', 'Categoría', 'Sección', 'Unidad', 'Teléfono', 'Email', 'Estado', 'Creado'];
     const rows = filtered.map((r: any) => [
       `"${(r.title || '').replace(/"/g, '""')}"`,
       `"${(r.category || '').replace(/"/g, '""')}"`,
@@ -208,7 +210,7 @@ export default function DatabasePage() {
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                 <Database className="h-12 w-12 mb-2 opacity-20" />
-                <p className="text-sm">{records.length === 0 ? 'No records yet' : 'No results match your filters'}</p>
+                <p className="text-sm">{records.length === 0 ? 'Sin registros aún' : 'Sin resultados para los filtros aplicados'}</p>
                 {records.length === 0 && <Button variant="outline" size="sm" className="mt-2" onClick={() => setAddOpen(true)}><Plus className="mr-1 h-3 w-3" /> {t('database.add_record')}</Button>}
               </div>
             ) : (
@@ -254,7 +256,7 @@ export default function DatabasePage() {
             <div className="px-4 py-2 border-t flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>
-                  {startIndex}-{endIndex} of {filtered.length} records
+                  {startIndex}-{endIndex} de {filtered.length} registros
                 </span>
                 <span className="text-border">|</span>
                 <span>{sections.length} {t('database.sections').toLowerCase()}</span>
@@ -263,7 +265,7 @@ export default function DatabasePage() {
               <div className="flex items-center gap-2">
                 {/* Page size selector */}
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">Rows:</span>
+                  <span className="text-xs text-muted-foreground">Filas:</span>
                   <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
                     <SelectTrigger className="h-7 w-[65px] text-xs">
                       <SelectValue />
@@ -280,7 +282,7 @@ export default function DatabasePage() {
 
                 {/* Page indicator */}
                 <span className="text-xs text-muted-foreground mx-1">
-                  Page {safeCurrentPage} of {totalPages}
+                  Página {safeCurrentPage} de {totalPages}
                 </span>
 
                 {/* Navigation buttons */}
@@ -337,11 +339,11 @@ export default function DatabasePage() {
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('database.contact_info')}</CardTitle></CardHeader>
             <CardContent className="space-y-1 text-sm">
-              {selected.content?.unit && <div className="flex justify-between"><span className="text-muted-foreground">Unit</span><span>{selected.content.unit}</span></div>}
-              {selected.content?.phone && <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> Phone</span><span>{selected.content.phone}</span></div>}
+              {selected.content?.unit && <div className="flex justify-between"><span className="text-muted-foreground">Unidad</span><span>{selected.content.unit}</span></div>}
+              {selected.content?.phone && <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> Teléfono</span><span>{selected.content.phone}</span></div>}
               {selected.content?.email && <div className="flex justify-between"><span className="text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> Email</span><span>{selected.content.email}</span></div>}
-              <div className="flex justify-between"><span className="text-muted-foreground">Category</span><span className="capitalize">{selected.category}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Created</span><span className="text-xs font-mono">{new Date(selected.created_at).toLocaleDateString()}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Categoría</span><span className="capitalize">{selected.category}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Creado</span><span className="text-xs font-mono">{new Date(selected.created_at).toLocaleDateString('es-CO')}</span></div>
             </CardContent>
           </Card>
           {selected.content?.notes && (
@@ -352,7 +354,7 @@ export default function DatabasePage() {
           )}
           {selected.tags?.length > 0 && (
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Tags</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Etiquetas</CardTitle></CardHeader>
               <CardContent><div className="flex flex-wrap gap-1">{(selected.tags || []).map((tag: string) => <Badge key={tag} variant="secondary">{tag}</Badge>)}</div></CardContent>
             </Card>
           )}
@@ -370,8 +372,8 @@ export default function DatabasePage() {
           <div className="space-y-3">
             <div className="space-y-1"><Label>{t('common.name')} *</Label><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} /></div>
             <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1"><Label>Unit</Label><Input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} /></div>
-              <div className="space-y-1"><Label>Phone</Label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
+              <div className="space-y-1"><Label>Unidad</Label><Input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} /></div>
+              <div className="space-y-1"><Label>Teléfono</Label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1"><Label>Email</Label><Input value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} type="email" /></div>
@@ -391,7 +393,7 @@ export default function DatabasePage() {
                 <SelectContent>{sections.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="space-y-1"><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} /></div>
+            <div className="space-y-1"><Label>Notas</Label><Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} /></div>
             <Button className="w-full" onClick={handleAdd} disabled={!form.title.trim() || create.isPending}>{t('common.save')}</Button>
           </div>
         </DialogContent>
@@ -403,8 +405,8 @@ export default function DatabasePage() {
           <div className="space-y-3">
             <div className="space-y-1"><Label>{t('common.name')} *</Label><Input value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} /></div>
             <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1"><Label>Unit</Label><Input value={editForm.unit} onChange={e => setEditForm(p => ({ ...p, unit: e.target.value }))} /></div>
-              <div className="space-y-1"><Label>Phone</Label><Input value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} /></div>
+              <div className="space-y-1"><Label>Unidad</Label><Input value={editForm.unit} onChange={e => setEditForm(p => ({ ...p, unit: e.target.value }))} /></div>
+              <div className="space-y-1"><Label>Teléfono</Label><Input value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} /></div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1"><Label>Email</Label><Input value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} type="email" /></div>
@@ -424,7 +426,7 @@ export default function DatabasePage() {
                 <SelectContent>{sections.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="space-y-1"><Label>Notes</Label><Textarea value={editForm.notes} onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))} /></div>
+            <div className="space-y-1"><Label>Notas</Label><Textarea value={editForm.notes} onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))} /></div>
             <Button className="w-full" onClick={handleEdit} disabled={!editForm.title.trim() || update.isPending}>{t('common.save')}</Button>
           </div>
         </DialogContent>
@@ -436,11 +438,11 @@ export default function DatabasePage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('common.delete')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this record? This action cannot be undone.
+              ¿Está seguro de eliminar este registro? Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
