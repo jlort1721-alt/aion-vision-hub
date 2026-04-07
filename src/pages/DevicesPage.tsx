@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useDevices, useSites } from '@/hooks/use-api-data';
+import { apiClient } from '@/lib/api-client';
 import { useI18n } from '@/contexts/I18nContext';
 import DeviceFormDialog from '@/components/devices/DeviceFormDialog';
 import DeleteDeviceDialog from '@/components/devices/DeleteDeviceDialog';
@@ -17,7 +18,7 @@ const EWeLinkCloudPanel = lazy(() => import('@/components/devices/EWeLinkCloudPa
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Plus, Search, Upload, Wifi, WifiOff, AlertCircle, MoreHorizontal,
-  RefreshCw, Settings, Eye, Pencil, Trash2, Video, PlayCircle, Monitor,
+  RefreshCw, Eye, Pencil, Trash2, Video, PlayCircle, Monitor,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -33,14 +34,18 @@ export default function DevicesPage() {
   const [search, setSearch] = useState('');
   const [brandFilter, setBrandFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [siteFilter, setSiteFilter] = useState('all');
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editDevice, setEditDevice] = useState<any>(null);
   const [deleteDevice, setDeleteDevice] = useState<any>(null);
   const [importOpen, setImportOpen] = useState(false);
 
-  const { data: devices = [], isLoading, isError, error, refetch } = useDevices();
-  const { data: sites = [] } = useSites();
+  const { data: rawDevices = [], isLoading, isError, error, refetch } = useDevices();
+  const { data: rawSites = [] } = useSites();
+  const devices = rawDevices as any[];
+  const sites = rawSites as any[];
 
   const filtered = devices.filter((d: any) => {
     if (search) {
@@ -53,8 +58,16 @@ export default function DevicesPage() {
     }
     if (brandFilter !== 'all' && d.brand !== brandFilter) return false;
     if (statusFilter !== 'all' && d.status !== statusFilter) return false;
+    if (typeFilter !== 'all' && d.type !== typeFilter) return false;
+    if (siteFilter !== 'all' && d.site_id !== siteFilter) return false;
     return true;
   });
+
+  // Stats by type
+  const cameraCount = devices.filter((d: any) => d.type === 'camera' || d.type?.includes('nvr') || d.type?.includes('dvr')).length;
+  const onlineCount = devices.filter((d: any) => d.status === 'online' || d.status === 'active').length;
+  const offlineCount = devices.filter((d: any) => d.status === 'offline').length;
+  const deviceTypes = [...new Set(devices.map((d: any) => d.type).filter(Boolean))] as string[];
 
   const selected = selectedDevice ? devices.find(d => d.id === selectedDevice) : null;
   const openEdit = (device: any) => { setEditDevice(device); setFormOpen(true); };
@@ -67,7 +80,7 @@ export default function DevicesPage() {
   return (
     <PageShell
       title={t('devices.title')}
-      description="Manage device inventory, cloud accounts, and integrations"
+      description="Inventario de dispositivos, cuentas cloud e integraciones"
       icon={<Video className="h-5 w-5" />}
       actions={
         pageTab === 'inventory' ? (
@@ -124,11 +137,25 @@ export default function DevicesPage() {
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-24 sm:w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t('devices.all_status')}</SelectItem>
+                <SelectItem value="all">Todo estado</SelectItem>
                 <SelectItem value="active">Activo</SelectItem>
                 <SelectItem value="pending_configuration">Pendiente</SelectItem>
-                <SelectItem value="online">{t('common.online')}</SelectItem>
-                <SelectItem value="offline">{t('common.offline')}</SelectItem>
+                <SelectItem value="online">Online</SelectItem>
+                <SelectItem value="offline">Offline</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-24 sm:w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todo tipo</SelectItem>
+                {deviceTypes.map(t => <SelectItem key={t} value={t}><span className="capitalize">{t.replace(/_/g, ' ')}</span></SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={siteFilter} onValueChange={setSiteFilter}>
+              <SelectTrigger className="w-28 sm:w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todo sitio</SelectItem>
+                {sites.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -184,14 +211,12 @@ export default function DevicesPage() {
                             <DropdownMenuItem onClick={() => setSelectedDevice(device.id)}><Eye className="mr-2 h-3 w-3" /> {t('devices.view_details')}</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => openEdit(device)}><Pencil className="mr-2 h-3 w-3" /> {t('common.edit')}</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
-                              const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-                              fetch(`${backendUrl}/api/v1/devices/${device.id}/test`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-                                .then(r => r.json())
-                                .then(d => {
-                                  if (d.data?.reachable) toast.success(`Connected — Latency: ${d.data.latencyMs}ms`);
-                                  else toast.error(`Unreachable: ${d.data?.error || 'No response'}`);
+                              apiClient.post(`/device-control/test-connection`, { deviceId: device.id })
+                                .then((d: any) => {
+                                  if (d?.reachable || d?.data?.reachable) toast.success(`Conectado — Latencia: ${d?.latencyMs || d?.data?.latencyMs || '?'}ms`);
+                                  else toast.error(`No alcanzable: ${d?.error || d?.data?.error || 'Sin respuesta'}`);
                                 })
-                                .catch(() => toast.error('Error testing connection'));
+                                .catch(() => toast.error('Error al probar conexión'));
                             }}><RefreshCw className="mr-2 h-3 w-3" /> {t('devices.test_connection')}</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-destructive" onClick={() => setDeleteDevice(device)}><Trash2 className="mr-2 h-3 w-3" /> {t('common.delete')}</DropdownMenuItem>
@@ -206,7 +231,7 @@ export default function DevicesPage() {
           )}
         </div>
         <div className="px-4 py-2 border-t text-xs text-muted-foreground">
-          {filtered.length} {t('devices.title').toLowerCase()} • {filtered.filter((d: any) => d.status === 'active' || d.status === 'online').length} activos • {filtered.filter((d: any) => d.status === 'pending_configuration').length} pendientes
+          {devices.length} total • {onlineCount} online • {offlineCount} offline • {cameraCount} cámaras/grabadores • {filtered.length} mostrando
         </div>
       </div>
 
@@ -239,7 +264,7 @@ export default function DevicesPage() {
             <CardHeader className="pb-2"><CardTitle className="text-sm">{t('devices.capabilities')}</CardTitle></CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-1">
-                {Object.entries(selected.capabilities as Record<string, any>).map(([key, val]) => {
+                {Object.entries((selected.capabilities || {}) as Record<string, any>).map(([key, val]) => {
                   if (typeof val === 'boolean' && val) return <Badge key={key} variant="outline" className="text-[10px] capitalize">{key.replace(/_/g, ' ')}</Badge>;
                   return null;
                 })}
@@ -261,12 +286,10 @@ export default function DevicesPage() {
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => {
-                const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-                fetch(`${backendUrl}/api/v1/devices/${selected.id}/test`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-                  .then(r => r.json())
-                  .then(d => {
-                    if (d.data?.reachable) toast.success(`Conectado — Latencia: ${d.data.latencyMs}ms`);
-                    else toast.error(`No alcanzable: ${d.data?.error || 'Sin respuesta'}`);
+                apiClient.post('/device-control/test-connection', { deviceId: selected.id })
+                  .then((d: any) => {
+                    if (d?.reachable || d?.data?.reachable) toast.success(`Conectado — Latencia: ${d?.latencyMs || d?.data?.latencyMs || '?'}ms`);
+                    else toast.error(`No alcanzable: ${d?.error || d?.data?.error || 'Sin respuesta'}`);
                   })
                   .catch(() => toast.error('Error al probar conexión'));
               }}>
@@ -276,30 +299,21 @@ export default function DevicesPage() {
               <Button variant="outline" className="text-destructive" onClick={() => setDeleteDevice(selected)}><Trash2 className="h-3 w-3" /></Button>
             </div>
             <Button variant="default" className="w-full" onClick={() => {
-              const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-              fetch(`${backendUrl}/api/v1/devices/${selected.id}/register-stream`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-                .then(r => r.json())
-                .then(d => {
-                  if (d.data?.registered > 0) toast.success(`Stream registrado: ${d.data.registered} canal(es) en MediaMTX`);
-                  else toast.error(`${d.data?.errors?.join(', ') || 'No se pudo registrar'}`);
+              apiClient.post(`/device-control/execute`, { deviceId: selected.id, command: 'register-stream' })
+                .then(() => {
+                  toast.success(`Stream registrado para ${selected.name}`);
                 })
-                .catch(() => toast.error('Error al registrar stream — Verificar que MediaMTX esté activo'));
+                .catch(() => toast.error('Error al registrar stream'));
             }}>
               <PlayCircle className="mr-1.5 h-4 w-4" /> Registrar Stream en Vista en Vivo
             </Button>
             <Button variant="outline" className="w-full" onClick={() => {
-              const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-              fetch(`${backendUrl}/api/v1/devices/${selected.id}/rtsp-url`)
-                .then(r => r.json())
-                .then(d => {
-                  if (d.data?.rtspUrl) {
-                    navigator.clipboard.writeText(d.data.rtspUrl);
-                    toast.success(`URL RTSP copiada — Stream ID: ${d.data.streamId}`);
-                  }
-                })
-                .catch(() => toast.error('Error al obtener URL RTSP'));
+              const rtspUrl = `rtsp://${selected.remote_address || selected.ip_address}:${selected.rtsp_port || 554}/Streaming/Channels/101`;
+              navigator.clipboard.writeText(rtspUrl).then(() => {
+                toast.success(`URL RTSP copiada al portapapeles`);
+              }).catch(() => toast.info(rtspUrl));
             }}>
-              <Video className="mr-1.5 h-4 w-4" /> Ver URL RTSP
+              <Video className="mr-1.5 h-4 w-4" /> Copiar URL RTSP
             </Button>
           </div>
         </div>
