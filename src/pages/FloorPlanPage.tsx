@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSites, useDevices } from '@/hooks/use-api-data';
 import { apiClient } from '@/lib/api-client';
 import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';
-import { Map, Camera, DoorOpen, Siren, Radio, Eye, Loader2 } from 'lucide-react';
+import { Map, Camera, DoorOpen, Siren, Radio, Loader2 } from 'lucide-react';
 import { PageShell } from '@/components/shared/PageShell';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -56,63 +55,65 @@ function createDeviceIcon(type: string, status: string) {
   });
 }
 
-// ── Generate placeholder floor plan SVG ─────────────────────
-function generateFloorPlanSVG(): string {
+// ── Generate floor plan SVG tailored to the site ────────────
+function generateFloorPlanSVG(siteName: string, deviceCount: number, address?: string): string {
+  // Residential complex zones relevant to security monitoring
+  const zones = [
+    { x: 40, y: 40, w: 280, h: 180, label: 'Porteria Principal' },
+    { x: 320, y: 40, w: 280, h: 180, label: 'Acceso Vehicular' },
+    { x: 600, y: 40, w: 280, h: 180, label: 'Parqueaderos Norte' },
+    { x: 880, y: 40, w: 280, h: 180, label: 'Zona Verde' },
+    { x: 40, y: 220, w: 560, h: 180, label: 'Área Social / Salón Comunal' },
+    { x: 600, y: 220, w: 560, h: 180, label: 'Centro de Monitoreo' },
+    { x: 40, y: 400, w: 280, h: 180, label: 'Torre / Bloque A' },
+    { x: 320, y: 400, w: 280, h: 180, label: 'Torre / Bloque B' },
+    { x: 600, y: 400, w: 560, h: 180, label: 'Parqueaderos Sur' },
+    { x: 40, y: 580, w: 370, h: 180, label: 'Lobby / Recepción' },
+    { x: 410, y: 580, w: 370, h: 180, label: 'Cuarto de Equipos' },
+    { x: 780, y: 580, w: 380, h: 180, label: 'Depósito / Basuras' },
+  ];
+
+  const zonesSvg = zones.map(z =>
+    `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" fill="none" stroke="rgba(100,160,255,0.3)" stroke-width="1.5"/>
+     <text x="${z.x + z.w / 2}" y="${z.y + z.h / 2 + 4}" fill="rgba(100,160,255,0.45)" text-anchor="middle" font-size="11" font-family="system-ui,sans-serif">${z.label}</text>`
+  ).join('\n');
+
+  // Door indicators between zones
+  const doors = [
+    { x: 155, y: 216 }, { x: 435, y: 216 }, { x: 715, y: 216 }, { x: 995, y: 216 },
+    { x: 285, y: 577 }, { x: 565, y: 577 }, { x: 155, y: 396 }, { x: 435, y: 396 },
+  ];
+  const doorsSvg = doors.map(d =>
+    `<rect x="${d.x}" y="${d.y}" width="50" height="7" fill="rgba(34,197,94,0.35)" rx="2"/>`
+  ).join('\n');
+
+  const escapedName = siteName.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const escapedAddr = (address || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
       <defs>
         <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(100,140,200,0.15)" stroke-width="0.5"/>
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(100,140,200,0.12)" stroke-width="0.5"/>
         </pattern>
       </defs>
       <rect width="1200" height="800" fill="#0d1321"/>
       <rect width="1200" height="800" fill="url(#grid)"/>
+      <!-- Site title -->
+      <text x="600" y="25" fill="rgba(100,180,255,0.7)" text-anchor="middle" font-size="15" font-weight="600" font-family="system-ui,sans-serif">${escapedName}</text>
+      <text x="600" y="790" fill="rgba(100,160,255,0.3)" text-anchor="middle" font-size="9" font-family="system-ui,sans-serif">${escapedAddr} — ${deviceCount} dispositivos</text>
       <!-- Outer walls -->
       <rect x="40" y="40" width="1120" height="720" fill="none" stroke="rgba(100,160,255,0.4)" stroke-width="3" rx="4"/>
-      <!-- Main corridor horizontal -->
-      <line x1="40" y1="400" x2="1160" y2="400" stroke="rgba(100,160,255,0.25)" stroke-width="1.5" stroke-dasharray="8,4"/>
-      <!-- Main corridor vertical -->
-      <line x1="600" y1="40" x2="600" y2="760" stroke="rgba(100,160,255,0.25)" stroke-width="1.5" stroke-dasharray="8,4"/>
-      <!-- Room dividers - top left -->
-      <rect x="40" y="40" width="280" height="180" fill="none" stroke="rgba(100,160,255,0.3)" stroke-width="1.5"/>
-      <text x="180" y="140" fill="rgba(100,160,255,0.4)" text-anchor="middle" font-size="12" font-family="sans-serif">Room A1</text>
-      <rect x="320" y="40" width="280" height="180" fill="none" stroke="rgba(100,160,255,0.3)" stroke-width="1.5"/>
-      <text x="460" y="140" fill="rgba(100,160,255,0.4)" text-anchor="middle" font-size="12" font-family="sans-serif">Room A2</text>
-      <!-- Room dividers - top right -->
-      <rect x="600" y="40" width="280" height="180" fill="none" stroke="rgba(100,160,255,0.3)" stroke-width="1.5"/>
-      <text x="740" y="140" fill="rgba(100,160,255,0.4)" text-anchor="middle" font-size="12" font-family="sans-serif">Room B1</text>
-      <rect x="880" y="40" width="280" height="180" fill="none" stroke="rgba(100,160,255,0.3)" stroke-width="1.5"/>
-      <text x="1020" y="140" fill="rgba(100,160,255,0.4)" text-anchor="middle" font-size="12" font-family="sans-serif">Room B2</text>
-      <!-- Room dividers - middle -->
-      <rect x="40" y="220" width="560" height="180" fill="none" stroke="rgba(100,160,255,0.3)" stroke-width="1.5"/>
-      <text x="320" y="320" fill="rgba(100,160,255,0.4)" text-anchor="middle" font-size="14" font-family="sans-serif">Main Hall</text>
-      <rect x="600" y="220" width="560" height="180" fill="none" stroke="rgba(100,160,255,0.3)" stroke-width="1.5"/>
-      <text x="880" y="320" fill="rgba(100,160,255,0.4)" text-anchor="middle" font-size="12" font-family="sans-serif">Control Room</text>
-      <!-- Room dividers - bottom left -->
-      <rect x="40" y="400" width="280" height="180" fill="none" stroke="rgba(100,160,255,0.3)" stroke-width="1.5"/>
-      <text x="180" y="500" fill="rgba(100,160,255,0.4)" text-anchor="middle" font-size="12" font-family="sans-serif">Room C1</text>
-      <rect x="320" y="400" width="280" height="180" fill="none" stroke="rgba(100,160,255,0.3)" stroke-width="1.5"/>
-      <text x="460" y="500" fill="rgba(100,160,255,0.4)" text-anchor="middle" font-size="12" font-family="sans-serif">Room C2</text>
-      <!-- Room dividers - bottom right -->
-      <rect x="600" y="400" width="560" height="180" fill="none" stroke="rgba(100,160,255,0.3)" stroke-width="1.5"/>
-      <text x="880" y="500" fill="rgba(100,160,255,0.4)" text-anchor="middle" font-size="14" font-family="sans-serif">Parking</text>
-      <!-- Bottom rooms -->
-      <rect x="40" y="580" width="370" height="180" fill="none" stroke="rgba(100,160,255,0.3)" stroke-width="1.5"/>
-      <text x="225" y="680" fill="rgba(100,160,255,0.4)" text-anchor="middle" font-size="12" font-family="sans-serif">Lobby</text>
-      <rect x="410" y="580" width="370" height="180" fill="none" stroke="rgba(100,160,255,0.3)" stroke-width="1.5"/>
-      <text x="595" y="680" fill="rgba(100,160,255,0.4)" text-anchor="middle" font-size="12" font-family="sans-serif">Reception</text>
-      <rect x="780" y="580" width="380" height="180" fill="none" stroke="rgba(100,160,255,0.3)" stroke-width="1.5"/>
-      <text x="970" y="680" fill="rgba(100,160,255,0.4)" text-anchor="middle" font-size="12" font-family="sans-serif">Storage</text>
-      <!-- Door indicators -->
-      <rect x="155" y="216" width="50" height="8" fill="rgba(34,197,94,0.4)" rx="2"/>
-      <rect x="435" y="216" width="50" height="8" fill="rgba(34,197,94,0.4)" rx="2"/>
-      <rect x="715" y="216" width="50" height="8" fill="rgba(34,197,94,0.4)" rx="2"/>
-      <rect x="995" y="216" width="50" height="8" fill="rgba(34,197,94,0.4)" rx="2"/>
-      <rect x="285" y="577" width="50" height="6" fill="rgba(34,197,94,0.4)" rx="2"/>
-      <rect x="565" y="577" width="50" height="6" fill="rgba(34,197,94,0.4)" rx="2"/>
+      <!-- Corridors -->
+      <line x1="40" y1="400" x2="1160" y2="400" stroke="rgba(100,160,255,0.2)" stroke-width="1.5" stroke-dasharray="8,4"/>
+      <line x1="600" y1="40" x2="600" y2="760" stroke="rgba(100,160,255,0.2)" stroke-width="1.5" stroke-dasharray="8,4"/>
+      <!-- Zones -->
+      ${zonesSvg}
+      <!-- Doors -->
+      ${doorsSvg}
     </svg>
   `;
-  return 'data:image/svg+xml;base64,' + btoa(svg);
+  return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 }
 
 // ── Default device positions on the grid ────────────────────
@@ -146,10 +147,16 @@ function FloorPlanMap({
   devices,
   positions,
   onDeviceAction,
+  onPositionChange,
+  siteName,
+  siteAddress,
 }: {
   devices: any[];
   positions: { deviceId: string; x: number; y: number }[];
   onDeviceAction: (deviceId: string, action: string) => void;
+  onPositionChange?: (deviceId: string, x: number, y: number) => void;
+  siteName?: string;
+  siteAddress?: string;
 }) {
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -170,8 +177,9 @@ function FloorPlanMap({
       attributionControl: false,
     });
 
-    const imageUrl = generateFloorPlanSVG();
-    L.imageOverlay(imageUrl, bounds).addTo(map);
+    const imageUrl = generateFloorPlanSVG('', 0);
+    const imageLayer = L.imageOverlay(imageUrl, bounds).addTo(map);
+    (map as any)._aionImageLayer = imageLayer;
     map.fitBounds(bounds);
 
     mapRef.current = map;
@@ -183,6 +191,19 @@ function FloorPlanMap({
       markersRef.current = null;
     };
   }, []);
+
+  // Update SVG overlay when site info changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const bounds: L.LatLngBoundsExpression = [[0, 0], [800, 1200]];
+    const oldLayer = (map as any)._aionImageLayer;
+    if (oldLayer) map.removeLayer(oldLayer);
+    const newUrl = generateFloorPlanSVG(siteName || '', devices.length, siteAddress);
+    const newLayer = L.imageOverlay(newUrl, bounds).addTo(map);
+    newLayer.bringToBack();
+    (map as any)._aionImageLayer = newLayer;
+  }, [siteName, siteAddress, devices.length]);
 
   // Update markers when devices/positions change
   useEffect(() => {
@@ -205,6 +226,15 @@ function FloorPlanMap({
       const latLng = L.latLng(800 - pos.y, pos.x);
       const marker = L.marker(latLng, {
         icon: createDeviceIcon(device.type, device.status),
+        draggable: true,
+      });
+
+      // Persist position on drag end
+      marker.on('dragend', () => {
+        const newPos = marker.getLatLng();
+        const newX = Math.round(newPos.lng);
+        const newY = Math.round(800 - newPos.lat);
+        onPositionChange?.(pos.deviceId, newX, newY);
       });
 
       // Build popup content based on device type
@@ -278,10 +308,12 @@ export default function FloorPlanPage() {
   const [positions, setPositions] = useState<{ deviceId: string; x: number; y: number }[]>([]);
   const [loadingPlan, setLoadingPlan] = useState(false);
 
+  const selectedSite = useMemo(() => sites.find((s: any) => s.id === selectedSiteId), [sites, selectedSiteId]);
+
   // Auto-select first site
   useEffect(() => {
     if (sites.length > 0 && !selectedSiteId) {
-      setSelectedSiteId(sites[0].id);
+      setSelectedSiteId((sites[0] as any).id);
     }
   }, [sites, selectedSiteId]);
 
@@ -302,16 +334,26 @@ export default function FloorPlanPage() {
     setLoadingPlan(true);
 
     (async () => {
+      // Try localStorage first (operator-saved positions)
+      try {
+        const saved = localStorage.getItem(`aion-fp-${selectedSiteId}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            if (!cancelled) { setPositions(parsed); setLoadingPlan(false); }
+            return;
+          }
+        }
+      } catch { /* ignore */ }
+
       try {
         const data = await apiClient.get<any>(`/sites/${selectedSiteId}/floor-plan`);
         if (!cancelled && data?.positions && Array.isArray(data.positions) && data.positions.length > 0) {
           setPositions(data.positions);
         } else if (!cancelled) {
-          // No floor plan data — use default grid layout
           setPositions(generateDefaultPositions(siteDevices));
         }
       } catch {
-        // API may not exist yet — use default positions
         if (!cancelled) {
           setPositions(generateDefaultPositions(siteDevices));
         }
@@ -325,7 +367,7 @@ export default function FloorPlanPage() {
 
   // Device action handler
   const handleDeviceAction = useCallback((deviceId: string, action: string) => {
-    const device = allDevices.find((d: any) => d.id === deviceId);
+    const device = allDevices.find((d: any) => d.id === deviceId) as any;
     if (!device) return;
 
     switch (action) {
@@ -454,6 +496,16 @@ export default function FloorPlanPage() {
               devices={siteDevices}
               positions={positions}
               onDeviceAction={handleDeviceAction}
+              onPositionChange={(deviceId, x, y) => {
+                setPositions(prev => {
+                  const next = prev.map(p => p.deviceId === deviceId ? { ...p, x, y } : p);
+                  try { localStorage.setItem(`aion-fp-${selectedSiteId}`, JSON.stringify(next)); } catch { /* */ }
+                  return next;
+                });
+                toast.success('Posición guardada');
+              }}
+              siteName={(selectedSite as any)?.name}
+              siteAddress={(selectedSite as any)?.address}
             />
           )}
 
@@ -464,10 +516,10 @@ export default function FloorPlanPage() {
                 {t('floorPlan.legend') || 'Legend'}
               </p>
               {[
-                { color: '#3b82f6', label: t('floorPlan.cameras') || 'Cameras' },
-                { color: '#22c55e', label: t('floorPlan.doors') || 'Doors / Access' },
-                { color: '#ef4444', label: t('floorPlan.sirens') || 'Sirens / Alarms' },
-                { color: '#eab308', label: t('floorPlan.sensors') || 'Sensors' },
+                { color: '#3b82f6', label: `${t('floorPlan.cameras') || 'Cámaras'} (${stats.cameras})` },
+                { color: '#22c55e', label: `${t('floorPlan.doors') || 'Puertas'} (${stats.doors})` },
+                { color: '#ef4444', label: `${t('floorPlan.sirens') || 'Sirenas'} (${stats.sirens})` },
+                { color: '#eab308', label: `${t('floorPlan.sensors') || 'Sensores'} (${stats.sensors})` },
               ].map((item) => (
                 <div key={item.color} className="flex items-center gap-2">
                   <span
