@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
 import { PageShell } from '@/components/shared/PageShell';
 import { DataTable } from '@/components/shared/DataTable';
@@ -27,7 +27,7 @@ import { useEWeLinkAuth, useEWeLinkControl, useEWeLinkSync, useEWeLinkHealth, us
 
 import { TYPE_ICONS, TYPE_LABELS } from './domotics/types';
 
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+const ICON_MAP: Record<string, any> = {
   DoorOpen, Shield, Siren, Lightbulb, CircuitBoard, Activity, ToggleLeft,
 };
 import { DomoticsHeader } from './domotics/components/DomoticsHeader';
@@ -68,7 +68,7 @@ function EWeLinkDeviceCard({ device, onToggle, isPending }: {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           {online ? <Wifi className="h-3.5 w-3.5 text-emerald-500" /> : <WifiOff className="h-3.5 w-3.5 text-red-400" />}
-          <span className="text-xs text-muted-foreground">{online ? 'Online' : 'Offline'}</span>
+          <span className="text-xs text-muted-foreground">{online ? 'En línea' : 'Desconectado'}</span>
         </div>
         {switchState !== undefined && (
           <Badge variant={isOn ? 'default' : 'secondary'} className="text-[10px]">
@@ -80,7 +80,7 @@ function EWeLinkDeviceCard({ device, onToggle, isPending }: {
       {/* Toggle control */}
       {switchState !== undefined && (
         <div className="flex items-center justify-between pt-2 border-t">
-          <span className="text-xs font-medium">Power</span>
+          <span className="text-xs font-medium">Encendido</span>
           <div className="flex items-center gap-2">
             {isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
             <Switch
@@ -104,8 +104,10 @@ function EWeLinkDeviceCard({ device, onToggle, isPending }: {
 
 export default function DomoticsPage() {
   const { t } = useI18n();
-  const { data: sections = [], isLoading: sectionsLoading } = useSections();
-  const { data: devices = [], isLoading: devicesLoading, refetch } = useDomoticDevices();
+  const { data: rawSections = [], isLoading: sectionsLoading } = useSections();
+  const { data: rawDevices = [], isLoading: devicesLoading, refetch } = useDomoticDevices();
+  const sections = rawSections as any[];
+  const devices = rawDevices as any[];
   const { create, toggleState, remove } = useDomoticMutations();
 
   // eWeLink MCP devices from backend
@@ -122,6 +124,7 @@ export default function DomoticsPage() {
   // State
   const [activeTab, setActiveTab] = useState('ewelink');
   const [ewelinkSearch, setEwelinkSearch] = useState('');
+  const [ewelinkStatusFilter, setEwelinkStatusFilter] = useState<'all' | 'online' | 'offline'>('all');
   const [search, setSearch] = useState('');
   const [sectionFilter, setSectionFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -166,16 +169,22 @@ export default function DomoticsPage() {
 
   // Filtered eWeLink devices
   const filteredEwelinkDevices = useMemo(() => {
-    if (!ewelinkSearch.trim()) return ewelinkDevices;
-    const q = ewelinkSearch.toLowerCase();
     return ewelinkDevices.filter((d: any) => {
-      const name = String(d.name || '').toLowerCase();
-      const brand = String(d.brandName || '').toLowerCase();
-      const model = String(d.productModel || '').toLowerCase();
-      const id = String(d.deviceid || '').toLowerCase();
-      return name.includes(q) || brand.includes(q) || model.includes(q) || id.includes(q);
+      // Status filter
+      if (ewelinkStatusFilter === 'online' && !d.online) return false;
+      if (ewelinkStatusFilter === 'offline' && d.online) return false;
+      // Search filter
+      if (ewelinkSearch.trim()) {
+        const q = ewelinkSearch.toLowerCase();
+        const name = String(d.name || '').toLowerCase();
+        const brand = String(d.brandName || '').toLowerCase();
+        const model = String(d.productModel || '').toLowerCase();
+        const id = String(d.deviceid || '').toLowerCase();
+        if (!name.includes(q) && !brand.includes(q) && !model.includes(q) && !id.includes(q)) return false;
+      }
+      return true;
     });
-  }, [ewelinkDevices, ewelinkSearch]);
+  }, [ewelinkDevices, ewelinkSearch, ewelinkStatusFilter]);
 
   // Actions (DB devices)
   const handleTestConnection = useCallback(async (device: any) => {
@@ -352,6 +361,13 @@ export default function DomoticsPage() {
                       className="pl-8 h-8 text-xs"
                     />
                   </div>
+                  <div className="flex items-center border rounded-md">
+                    {(['all', 'online', 'offline'] as const).map(s => (
+                      <Button key={s} variant={ewelinkStatusFilter === s ? 'default' : 'ghost'} size="sm" className="h-8 text-xs rounded-none first:rounded-l-md last:rounded-r-md px-3" onClick={() => setEwelinkStatusFilter(s)}>
+                        {s === 'all' ? 'Todos' : s === 'online' ? `En línea (${ewOnlineCount})` : `Offline (${ewOfflineCount})`}
+                      </Button>
+                    ))}
+                  </div>
                   <Button variant="outline" size="sm" className="h-8" onClick={() => refetchEwelink()}>
                     <RefreshCw className="mr-1.5 h-3 w-3" /> Actualizar
                   </Button>
@@ -434,11 +450,11 @@ export default function DomoticsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('common.delete')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this device? This action cannot be undone.
+              ¿Está seguro de eliminar este dispositivo? Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
