@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare, Settings, FileText } from 'lucide-react';
@@ -24,7 +24,7 @@ export default function WhatsAppPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">WhatsApp Business</h1>
         <p className="text-muted-foreground">
-          Manage WhatsApp conversations, AI agent, and configuration
+          Gestione conversaciones, agente IA y configuración de WhatsApp
         </p>
       </div>
 
@@ -32,15 +32,15 @@ export default function WhatsAppPage() {
         <TabsList>
           <TabsTrigger value="conversations" className="gap-2">
             <MessageSquare className="h-4 w-4" />
-            Conversations
+            Conversaciones
           </TabsTrigger>
           <TabsTrigger value="templates" className="gap-2">
             <FileText className="h-4 w-4" />
-            Templates
+            Plantillas
           </TabsTrigger>
           <TabsTrigger value="config" className="gap-2">
             <Settings className="h-4 w-4" />
-            Configuration
+            Configuración
           </TabsTrigger>
         </TabsList>
 
