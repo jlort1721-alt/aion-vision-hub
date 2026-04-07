@@ -7,7 +7,7 @@ import {
   analyticsDevicesApi,
 } from "@/services/analytics-api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, TrendingUp, Cpu, ShieldCheck, Target, Activity } from "lucide-react";
+import { BarChart3, TrendingUp, Cpu, ShieldCheck, Target, Activity, Loader2 } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -18,15 +18,20 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+const incidentStatusConfig = [
+  { key: "open", label: "Abiertos", color: "bg-red-500" },
+  { key: "in_progress", label: "En Progreso", color: "bg-yellow-500" },
+  { key: "resolved", label: "Resueltos", color: "bg-green-500" },
+  { key: "closed", label: "Cerrados", color: "bg-gray-500" },
+];
+
 export default function AnalyticsPage() {
-  // ── Dashboard KPIs ───────────────────────────────────────
   const { data: dashboardData, isLoading: loadingDashboard, isError, error, refetch } = useQuery({
     queryKey: ["analytics", "dashboard"],
     queryFn: () => analyticsDashboardApi.get(),
     refetchInterval: 60000,
   });
 
-  // ── Event Trends ─────────────────────────────────────────
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const today = new Date().toISOString().split('T')[0];
 
@@ -35,36 +40,26 @@ export default function AnalyticsPage() {
     queryFn: () => analyticsEventsApi.trends({ from: thirtyDaysAgo, to: today, period: "daily" }),
   });
 
-  // ── Top Event Types ──────────────────────────────────────
   const { data: topTypesData } = useQuery({
     queryKey: ["analytics", "events", "top-types"],
     queryFn: () => analyticsEventsApi.topTypes(),
   });
 
-  // ── Incident Metrics ─────────────────────────────────────
   const { data: incidentData } = useQuery({
     queryKey: ["analytics", "incidents", "metrics"],
     queryFn: () => analyticsIncidentsApi.metrics(),
   });
 
-  // ── Device Status ────────────────────────────────────────
   const { data: devicesData } = useQuery({
     queryKey: ["analytics", "devices", "status"],
     queryFn: () => analyticsDevicesApi.status(),
   });
 
-  const dashboard = dashboardData?.data;
-  const trends = trendsData?.data ?? [];
-  const topTypes = topTypesData?.data ?? [];
-  const incidents = incidentData?.data;
-  const devices = devicesData?.data ?? [];
-
-  const incidentStatusConfig: { key: string; label: string; color: string }[] = [
-    { key: "open", label: "Open", color: "bg-red-500" },
-    { key: "in_progress", label: "In Progress", color: "bg-yellow-500" },
-    { key: "resolved", label: "Resolved", color: "bg-green-500" },
-    { key: "closed", label: "Closed", color: "bg-gray-500" },
-  ];
+  const dashboard = dashboardData?.data as any;
+  const trends: any[] = trendsData?.data ?? [];
+  const topTypes: any[] = topTypesData?.data ?? [];
+  const incidents = incidentData?.data as any;
+  const devices: any[] = devicesData?.data ?? [];
 
   if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
@@ -74,25 +69,25 @@ export default function AnalyticsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <BarChart3 className="h-6 w-6" />
-          Analytics Dashboard
+          Panel de Analítica
         </h1>
         <p className="text-muted-foreground">
-          Real-time analytics and operational insights
+          Analítica en tiempo real e indicadores operativos
         </p>
       </div>
 
       {/* KPI Cards */}
       {loadingDashboard ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Events 24h</p>
+                  <p className="text-xs text-muted-foreground">Eventos 24h</p>
                   <p className="text-2xl font-bold">{dashboard?.events24h ?? 0}</p>
                 </div>
                 <Activity className="h-6 w-6 text-blue-500" />
@@ -103,7 +98,7 @@ export default function AnalyticsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Active Incidents</p>
+                  <p className="text-xs text-muted-foreground">Incidentes Activos</p>
                   <p className="text-2xl font-bold text-red-500">{dashboard?.activeIncidents ?? 0}</p>
                 </div>
                 <ShieldCheck className="h-6 w-6 text-red-500" />
@@ -114,7 +109,7 @@ export default function AnalyticsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Devices Online</p>
+                  <p className="text-xs text-muted-foreground">Dispositivos Online</p>
                   <p className="text-2xl font-bold text-green-500">{dashboard?.devicesOnline ?? 0}</p>
                 </div>
                 <Cpu className="h-6 w-6 text-green-500" />
@@ -125,7 +120,7 @@ export default function AnalyticsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">SLA Compliance</p>
+                  <p className="text-xs text-muted-foreground">Cumplimiento SLA</p>
                   <p className="text-2xl font-bold">
                     {dashboard?.slaCompliance != null ? `${Math.round(dashboard.slaCompliance)}%` : '--'}
                   </p>
@@ -138,7 +133,7 @@ export default function AnalyticsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Patrol Compliance</p>
+                  <p className="text-xs text-muted-foreground">Cumplimiento Patrullas</p>
                   <p className="text-2xl font-bold">
                     {dashboard?.patrolCompliance != null ? `${Math.round(dashboard.patrolCompliance)}%` : '--'}
                   </p>
@@ -151,7 +146,7 @@ export default function AnalyticsPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Alert Count</p>
+                  <p className="text-xs text-muted-foreground">Alertas Activas</p>
                   <p className="text-2xl font-bold text-yellow-500">{dashboard?.alertCount ?? 0}</p>
                 </div>
                 <TrendingUp className="h-6 w-6 text-yellow-500" />
@@ -166,17 +161,17 @@ export default function AnalyticsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Event Trends (Last 30 Days)
+            Tendencia de Eventos (Últimos 30 Días)
           </CardTitle>
         </CardHeader>
         <CardContent>
           {loadingTrends ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : trends.length === 0 ? (
             <div className="flex justify-center py-12 text-muted-foreground">
-              No event data available
+              Sin datos de eventos disponibles
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
@@ -193,12 +188,12 @@ export default function AnalyticsPage() {
                   tick={{ fontSize: 12 }}
                   tickFormatter={(value) => {
                     const d = new Date(value);
-                    return `${d.getMonth() + 1}/${d.getDate()}`;
+                    return `${d.getDate()}/${d.getMonth() + 1}`;
                   }}
                 />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip
-                  labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                  labelFormatter={(value) => new Date(value).toLocaleDateString('es-CO')}
                   contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
@@ -212,6 +207,7 @@ export default function AnalyticsPage() {
                   fillOpacity={1}
                   fill="url(#colorEvents)"
                   strokeWidth={2}
+                  name="Eventos"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -226,20 +222,20 @@ export default function AnalyticsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              Top Event Types
+              Tipos de Evento Principales
             </CardTitle>
           </CardHeader>
           <CardContent>
             {topTypes.length === 0 ? (
               <div className="flex justify-center py-8 text-muted-foreground">
-                No event type data available
+                Sin datos de tipos de evento
               </div>
             ) : (
               <div className="space-y-3">
                 {topTypes.map((item: any) => (
                   <div key={item.type} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{item.type}</span>
+                      <span className="font-medium">{(item.type || '').replace(/_/g, ' ')}</span>
                       <span className="text-muted-foreground">{item.count}</span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-2">
@@ -260,13 +256,13 @@ export default function AnalyticsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5" />
-              Incident Metrics
+              Métricas de Incidentes
             </CardTitle>
           </CardHeader>
           <CardContent>
             {!incidents ? (
               <div className="flex justify-center py-8 text-muted-foreground">
-                No incident data available
+                Sin datos de incidentes
               </div>
             ) : (
               <div className="space-y-4">
@@ -277,7 +273,7 @@ export default function AnalyticsPage() {
                       <span className="text-sm font-medium">{label}</span>
                     </div>
                     <span className="text-2xl font-bold">
-                      {(incidents as Record<string, number>)[key] ?? 0}
+                      {(incidents as Record<string, number>)?.[key] ?? 0}
                     </span>
                   </div>
                 ))}
@@ -292,13 +288,13 @@ export default function AnalyticsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Cpu className="h-5 w-5" />
-            Device Status by Site
+            Estado de Dispositivos por Sitio
           </CardTitle>
         </CardHeader>
         <CardContent>
           {devices.length === 0 ? (
             <div className="flex justify-center py-8 text-muted-foreground">
-              No device status data available
+              Sin datos de estado de dispositivos
             </div>
           ) : (
             <div className="space-y-4">
@@ -310,9 +306,9 @@ export default function AnalyticsPage() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium">{site.site}</span>
                       <span className="text-muted-foreground">
-                        <span className="text-green-500">{site.online} online</span>
+                        <span className="text-green-500">{site.online} en línea</span>
                         {' / '}
-                        <span className="text-red-500">{site.offline} offline</span>
+                        <span className="text-red-500">{site.offline} fuera de línea</span>
                       </span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-2">
