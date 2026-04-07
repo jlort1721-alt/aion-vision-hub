@@ -1,6 +1,5 @@
-import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import ErrorState from '@/components/ui/ErrorState';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -8,18 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useDevices, useSites, useEventsLegacy } from '@/hooks/use-api-data';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api-client';
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
-  Calendar, Camera, Download, Play, Pause, SkipBack, SkipForward,
+  Camera, Download, Play, Pause, SkipBack, SkipForward,
   Scissors, Image, ChevronLeft, ChevronRight, Maximize, MonitorSpeaker,
   Wifi, WifiOff, ZoomIn, ZoomOut, Clock, AlertTriangle, Info,
   Loader2, Volume2, VolumeX, FastForward, Rewind
@@ -62,7 +58,7 @@ function InteractiveTimeline({
 }: {
   currentTime: number;
   onSeek: (t: number) => void;
-  segments: ReturnType<typeof generateRecordingSegments>;
+  segments: Array<{ start: number; end: number; type: 'continuous' | 'motion' | 'alarm' }>;
   events: any[];
   zoomLevel: number;
   onZoomIn: () => void;
@@ -125,7 +121,7 @@ function InteractiveTimeline({
         onClick={handleClick}
       >
         {/* Recording segments */}
-        {segments.map((seg, i) => {
+        {segments.map((seg: { start: number; end: number; type: string }, i: number) => {
           const left = timeToPercent(seg.start);
           const width = timeToPercent(seg.end) - left;
           if (left > 100 || left + width < 0) return null;
@@ -217,8 +213,13 @@ export default function PlaybackPage() {
     enabled: !!profile,
   });
   const cameras = Array.isArray(camerasRaw) ? camerasRaw : [];
-  const [selectedDevice, setSelectedDevice] = useState('');
+  const [selectedDevice, setSelectedDevice] = useState(() => {
+    try { return localStorage.getItem('aion-pb-cam') || ''; } catch { return ''; }
+  });
   const [selectedChannel, setSelectedChannel] = useState('1');
+
+  // Persist camera selection
+  useEffect(() => { try { localStorage.setItem('aion-pb-cam', selectedDevice); } catch { /* */ } }, [selectedDevice]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(8 * 3600); // Start at 08:00
@@ -226,6 +227,8 @@ export default function PlaybackPage() {
   const [muted, setMuted] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isClipping, setIsClipping] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [clipStart, setClipStart] = useState<number | null>(null);
   const [clipEnd, setClipEnd] = useState<number | null>(null);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
@@ -294,10 +297,10 @@ export default function PlaybackPage() {
   const createExport = useMutation({
     mutationFn: async () => {
       if (!device || !user || !profile || clipStart === null || clipEnd === null) {
-        throw new Error('Select a clip region first');
+        throw new Error('Seleccione una región de clip primero');
       }
       if (clipStart >= clipEnd) {
-        throw new Error('Clip start must be before clip end');
+        throw new Error('El inicio del clip debe ser antes del final');
       }
       const startDate = new Date(`${selectedDate}T00:00:00Z`);
       const endDate = new Date(`${selectedDate}T00:00:00Z`);
@@ -313,7 +316,7 @@ export default function PlaybackPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playback_requests'] });
-      toast.success('Export request created. The clip will be processed by the gateway.');
+      toast.success('Solicitud creada. El clip será procesado por el gateway.');
       setExportDialogOpen(false);
       setIsClipping(false);
       setClipStart(null);
@@ -329,7 +332,20 @@ export default function PlaybackPage() {
   const nextSpeed = () => setSpeed(prev => SPEEDS[Math.min(SPEEDS.length - 1, SPEEDS.indexOf(prev) + 1)]);
 
   const handleSnapshot = () => {
-    toast.success(`Snapshot captured at ${formatTime(currentTime)} from ${device?.name || 'camera'}`);
+    const video = videoRef.current;
+    if (video && video.readyState >= 2) {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      canvas.getContext('2d')?.drawImage(video, 0, 0);
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/jpeg', 0.92);
+      a.download = `${device?.name || 'camera'}-${selectedDate}-${formatTime(currentTime).replace(/:/g, '')}.jpg`;
+      a.click();
+      toast.success(`Captura guardada: ${device?.name} a las ${formatTime(currentTime)}`);
+    } else {
+      toast.info(`Captura: ${device?.name || 'cámara'} a las ${formatTime(currentTime)} (sin video activo)`);
+    }
   };
 
   const startClipping = () => {
@@ -361,7 +377,7 @@ export default function PlaybackPage() {
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Camera</Label>
             {isLoading ? <Skeleton className="h-8 w-full" /> : (
               <Select value={selectedDevice || device?.id || ''} onValueChange={setSelectedDevice}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select camera" /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Seleccionar cámara" /></SelectTrigger>
                 <SelectContent>
                   {cameras.map((d: any) => (
                     <SelectItem key={d.id} value={d.id}>
@@ -426,7 +442,7 @@ export default function PlaybackPage() {
             Events ({deviceEvents.length})
           </p>
           <Input
-            placeholder="Search events..."
+            placeholder="Buscar eventos..."
             value={eventSearchQuery}
             onChange={e => setEventSearchQuery(e.target.value)}
             className="h-7 text-xs"
@@ -435,9 +451,9 @@ export default function PlaybackPage() {
         <ScrollArea className="flex-1">
           <div className="p-1 space-y-0.5">
             {deviceEvents.length === 0 ? (
-              <p className="text-xs text-muted-foreground p-3 text-center">No events on this date</p>
-            ) : deviceEvents.filter(evt => !eventSearchQuery || evt.title?.toLowerCase().includes(eventSearchQuery.toLowerCase()) || evt.event_type?.toLowerCase().includes(eventSearchQuery.toLowerCase())).map(evt => {
-              const evtDate = new Date(evt.created_at);
+              <p className="text-xs text-muted-foreground p-3 text-center">Sin eventos en esta fecha</p>
+            ) : deviceEvents.filter((evt: any) => !eventSearchQuery || (evt.title || '').toLowerCase().includes(eventSearchQuery.toLowerCase()) || (evt.event_type || '').toLowerCase().includes(eventSearchQuery.toLowerCase())).map((evt: any) => {
+              const evtDate = new Date(evt.created_at || evt.createdAt);
               const evtSeconds = evtDate.getHours() * 3600 + evtDate.getMinutes() * 60 + evtDate.getSeconds();
               return (
                 <div
@@ -449,8 +465,8 @@ export default function PlaybackPage() {
                    evt.severity === 'high' ? <AlertTriangle className="h-3 w-3 text-warning mt-0.5 shrink-0" /> :
                    <Info className="h-3 w-3 text-info mt-0.5 shrink-0" />}
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-medium truncate">{evt.title}</p>
-                    <p className="text-[9px] text-muted-foreground">{formatTime(evtSeconds)} • {evt.event_type?.replace(/_/g, ' ')}</p>
+                    <p className="text-[11px] font-medium truncate">{evt.title || evt.description || evt.event_type}</p>
+                    <p className="text-[9px] text-muted-foreground">{formatTime(evtSeconds)} • {(evt.event_type || '').replace(/_/g, ' ')}</p>
                   </div>
                 </div>
               );
@@ -461,7 +477,7 @@ export default function PlaybackPage() {
         {/* Export History */}
         <div className="p-2 border-t">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1 mb-1">
-            Recent Exports ({playbackRequests.length})
+            Exportaciones Recientes ({playbackRequests.length})
           </p>
           <ScrollArea className="max-h-32">
             {playbackRequests.slice(0, 5).map((req: any) => (
@@ -480,53 +496,72 @@ export default function PlaybackPage() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col">
-        {/* Video area */}
-        <div className="flex-1 relative bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 flex items-center justify-center">
+        {/* Video area — real stream from go2rtc */}
+        <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden group">
           {!device ? (
             <div className="text-center">
               <Camera className="h-16 w-16 mx-auto mb-3 text-muted-foreground/20" />
-              <p className="text-sm text-muted-foreground">Select a camera to begin playback</p>
+              <p className="text-sm text-muted-foreground">Seleccione una cámara para reproducir</p>
             </div>
+          ) : isInRecording && device.status === 'online' ? (
+            /* Real video stream from go2rtc */
+            <video
+              ref={videoRef}
+              className="absolute inset-0 w-full h-full object-contain bg-black"
+              autoPlay
+              muted={muted}
+              playsInline
+              src={`/go2rtc/api/stream.mp4?src=${encodeURIComponent(device.stream_key || device.id)}`}
+              onError={() => setVideoError(true)}
+            />
           ) : (
+            /* Snapshot fallback or no-recording state */
             <div className="text-center">
-              <MonitorSpeaker className="h-20 w-20 mx-auto mb-3 text-muted-foreground/20" />
-              <p className="text-sm font-medium text-muted-foreground">{device.name} — Channel {selectedChannel}</p>
+              <MonitorSpeaker className="h-16 w-16 mx-auto mb-3 text-muted-foreground/20" />
+              <p className="text-sm font-medium text-muted-foreground">{device.name} — Canal {selectedChannel}</p>
               <p className="text-[11px] text-muted-foreground/60 mt-1">
                 {selectedDate} • {formatTime(currentTime)}
               </p>
-              <p className="text-[10px] text-muted-foreground/40 font-mono mt-2">
-                {device.brand === 'hikvision' ? 'ISAPI Playback' : device.brand === 'dahua' ? 'NetSDK Playback' : 'RTSP/ONVIF'} •
-                {isInRecording ? ' Recording Available' : ' No Recording'}
-              </p>
-              <div className="mt-3 flex items-center justify-center gap-2">
-                <Badge variant={isInRecording ? 'default' : 'secondary'} className="text-[10px]">
-                  {isInRecording ? '● Recording' : '○ Gap'}
-                </Badge>
-                {playing && (
-                  <Badge variant="outline" className="text-[10px] font-mono">
-                    {speed}× {speed > 1 ? '▶▶' : speed < 1 ? '▶' : '▶'}
-                  </Badge>
-                )}
-              </div>
+              <Badge variant={isInRecording ? 'default' : 'secondary'} className="text-[10px] mt-2">
+                {isInRecording ? '● Grabación disponible' : '○ Sin grabación en este horario'}
+              </Badge>
+              {videoError && (
+                <p className="text-[10px] text-destructive/60 mt-2">Stream no disponible — mostrando timeline</p>
+              )}
             </div>
           )}
 
-          {/* Overlay controls */}
+          {/* Overlay info */}
           {device && (
             <>
-              <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                <Badge variant="outline" className="text-[9px] bg-background/60 backdrop-blur">
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Badge variant="outline" className="text-[9px] bg-black/60 backdrop-blur text-white border-white/20">
                   {device.brand} • {device.model}
                 </Badge>
-                <Badge variant="outline" className="text-[9px] bg-background/60 backdrop-blur font-mono">
+                <Badge variant="outline" className="text-[9px] bg-black/60 backdrop-blur text-white border-white/20 font-mono">
                   CH{selectedChannel}
                 </Badge>
+                {playing && (
+                  <Badge variant="outline" className="text-[9px] bg-red-600/80 backdrop-blur text-white border-red-400/40 font-mono">
+                    ● {speed}×
+                  </Badge>
+                )}
               </div>
-              <div className="absolute top-3 right-3 flex items-center gap-1">
-                <Badge variant="outline" className="text-[9px] bg-background/60 backdrop-blur font-mono">
+              <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Badge variant="outline" className="text-[9px] bg-black/60 backdrop-blur text-white border-white/20 font-mono">
                   <Clock className="h-3 w-3 mr-1" />{formatTime(currentTime)}
                 </Badge>
-                <Button variant="ghost" size="icon" className="h-7 w-7"><Maximize className="h-3.5 w-3.5" /></Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-white hover:bg-white/20"
+                  onClick={() => {
+                    const el = document.querySelector('.playback-video-area');
+                    if (el) (el as HTMLElement).requestFullscreen?.();
+                  }}
+                >
+                  <Maximize className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </>
           )}
@@ -580,7 +615,7 @@ export default function PlaybackPage() {
                 className="h-7 text-xs"
                 onClick={() => isClipping ? setIsClipping(false) : startClipping()}
               >
-                <Scissors className="mr-1 h-3 w-3" /> {isClipping ? 'Cancel Clip' : 'Clip'}
+                <Scissors className="mr-1 h-3 w-3" /> {isClipping ? 'Cancelar' : 'Clip'}
               </Button>
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleSnapshot}>
                 <Image className="mr-1 h-3 w-3" /> Snapshot
@@ -594,11 +629,11 @@ export default function PlaybackPage() {
                     className="h-7 text-xs"
                     disabled={clipStart === null || clipEnd === null}
                   >
-                    <Download className="mr-1 h-3 w-3" /> Export Clip
+                    <Download className="mr-1 h-3 w-3" /> Exportar
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
-                  <DialogHeader><DialogTitle>Export Video Clip</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>Exportar Clip de Video</DialogTitle></DialogHeader>
                   <div className="space-y-4">
                     <div className="p-3 rounded-md bg-muted text-xs space-y-1">
                       <p><strong>Camera:</strong> {device?.name}</p>
@@ -609,8 +644,8 @@ export default function PlaybackPage() {
                       <p><strong>Duration:</strong> {clipStart !== null && clipEnd !== null ? formatTime(clipEnd - clipStart) : '—'}</p>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      The export request will be sent to the gateway for processing. 
-                      Once ready, the clip will be available in the Export History panel.
+                      La solicitud de exportación se enviará al gateway para procesamiento.
+                      Una vez listo, el clip estará disponible en el panel de Exportaciones.
                     </p>
                     <Button
                       className="w-full"
@@ -618,7 +653,7 @@ export default function PlaybackPage() {
                       disabled={createExport.isPending || clipStart === null || clipEnd === null}
                     >
                       {createExport.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}
-                      Create Export Request
+                      Crear Solicitud de Exportación
                     </Button>
                   </div>
                 </DialogContent>
