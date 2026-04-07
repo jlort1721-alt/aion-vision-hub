@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,63 +16,72 @@ import {
   Ticket, Video, Plus, RefreshCw, Loader2, Power, Zap,
 } from 'lucide-react';
 
-const iconMap: Record<string, React.ReactNode> = {
+const iconMap: Record<string, any> = {
   Video: <Video className="h-5 w-5" />, Mail: <Mail className="h-5 w-5" />,
   Webhook: <Webhook className="h-5 w-5" />, Ticket: <Ticket className="h-5 w-5" />,
   Cloud: <Cloud className="h-5 w-5" />, DoorOpen: <DoorOpen className="h-5 w-5" />,
   Shield: <Shield className="h-5 w-5" />, MessageCircle: <MessageCircle className="h-5 w-5" />,
 };
 
+const statusLabels: Record<string, string> = {
+  active: 'Activo', connected: 'Conectado', inactive: 'Inactivo',
+  disconnected: 'Desconectado', error: 'Error', pending: 'Pendiente',
+};
 const statusBadge = (status: string) => {
+  const label = statusLabels[status] || status;
   switch (status) {
-    case 'active': case 'connected': return <Badge className="bg-success text-success-foreground text-[10px]">{status}</Badge>;
-    case 'inactive': case 'disconnected': return <Badge variant="secondary" className="text-[10px]">{status}</Badge>;
-    case 'error': return <Badge variant="destructive" className="text-[10px]">Error</Badge>;
-    default: return <Badge variant="outline" className="text-[10px] capitalize">{status}</Badge>;
+    case 'active': case 'connected': return <Badge className="bg-success text-success-foreground text-[10px]">{label}</Badge>;
+    case 'inactive': case 'disconnected': return <Badge variant="secondary" className="text-[10px]">{label}</Badge>;
+    case 'error': return <Badge variant="destructive" className="text-[10px]">{label}</Badge>;
+    default: return <Badge variant="outline" className="text-[10px]">{label}</Badge>;
   }
 };
 
 export default function IntegrationsPage() {
   const { t } = useI18n();
-  const { data: integrations = [], isLoading: li, isError: integrationsError, error: intError, refetch: refetchInt } = useIntegrations();
-  const { data: connectors = [], isLoading: lc, isError: connectorsError, error: connError, refetch: refetchConn } = useMcpConnectors();
+  const { data: rawIntegrations = [], isLoading: li, isError: integrationsError, error: intError, refetch: refetchInt } = useIntegrations();
+  const { data: rawConnectors = [], isLoading: lc, isError: connectorsError, error: connError, refetch: refetchConn } = useMcpConnectors();
+  const integrations = rawIntegrations as any[];
+  const connectors = rawConnectors as any[];
   const queryClient = useQueryClient();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const handleIntegrationTest = async (id: string) => {
     setActionLoading(`test-${id}`);
-    try { const result = await apiClient.edgeFunction<any>('integrations-api', { id, action: 'test' }, { method: 'POST' }); toast.success(`Test: ${result.message} (${result.latency_ms}ms)`); }
-    catch (err) { toast.error(err instanceof Error ? err.message : 'Test failed'); }
+    try {
+      const result: any = await apiClient.post(`/integrations/${id}/test`);
+      toast.success(`Prueba: ${result?.message || 'OK'} (${result?.latency_ms || '?'}ms)`);
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Error en prueba'); }
     finally { setActionLoading(null); }
   };
 
   const handleIntegrationToggle = async (id: string) => {
     setActionLoading(`toggle-${id}`);
     try {
-      const updated = await apiClient.edgeFunction<any>('integrations-api', { id, action: 'toggle' }, { method: 'POST' });
-      toast.success(`Integration ${updated.status === 'active' ? t('common.active').toLowerCase() : t('common.inactive').toLowerCase()}`);
+      const updated: any = await apiClient.patch(`/integrations/${id}`, { action: 'toggle' });
+      toast.success(`Integración ${updated?.status === 'active' ? 'activada' : 'desactivada'}`);
       queryClient.invalidateQueries({ queryKey: ['integrations'] });
-    } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed'); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Error'); }
     finally { setActionLoading(null); }
   };
 
   const handleMcpHealthCheck = async (id: string) => {
     setActionLoading(`mcp-health-${id}`);
     try {
-      const result = await apiClient.edgeFunction<any>('mcp-api', { id, action: 'health-check' }, { method: 'POST' });
-      toast.success(`${t('integrations.health')}: ${result.health} (${result.check_latency_ms}ms)`);
+      const result: any = await apiClient.get(`/mcp/connectors/${id}/status`);
+      toast.success(`Salud: ${result?.health || 'OK'} (${result?.check_latency_ms || '?'}ms)`);
       queryClient.invalidateQueries({ queryKey: ['mcp_connectors'] });
-    } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed'); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Error'); }
     finally { setActionLoading(null); }
   };
 
   const handleMcpToggle = async (id: string) => {
     setActionLoading(`mcp-toggle-${id}`);
     try {
-      const updated = await apiClient.edgeFunction<any>('mcp-api', { id, action: 'toggle' }, { method: 'POST' });
-      toast.success(`Connector ${updated.status === 'connected' ? t('common.connect').toLowerCase() : t('common.disconnect').toLowerCase()}`);
+      const updated: any = await apiClient.patch(`/mcp/connectors/${id}`, { action: 'toggle' });
+      toast.success(`Conector ${updated?.status === 'connected' ? 'conectado' : 'desconectado'}`);
       queryClient.invalidateQueries({ queryKey: ['mcp_connectors'] });
-    } catch (err) { toast.error(err instanceof Error ? err.message : 'Failed'); }
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Error'); }
     finally { setActionLoading(null); }
   };
 
@@ -125,7 +134,7 @@ export default function IntegrationsPage() {
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div className="text-xs text-muted-foreground">
-                      {t('integrations.last_sync')}: {integration.last_sync ? new Date(integration.last_sync).toLocaleString() : t('integrations.never')}
+                      {t('integrations.last_sync')}: {integration.last_sync ? new Date(integration.last_sync).toLocaleString('es-CO') : t('integrations.never')}
                     </div>
                     {integration.error_message && <p className="text-xs text-destructive">{integration.error_message}</p>}
                     <div className="flex gap-1">
@@ -167,7 +176,7 @@ export default function IntegrationsPage() {
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                       <span>{t('integrations.errors')}: {connector.error_count} • {t('integrations.health')}: {connector.health}</span>
-                      {connector.last_check && <span>{new Date(connector.last_check).toLocaleTimeString()}</span>}
+                      {connector.last_check && <span>{new Date(connector.last_check).toLocaleTimeString('es-CO')}</span>}
                     </div>
                     <div className="flex gap-1">
                       <Button variant="outline" size="sm" className="h-7 text-xs flex-1" onClick={() => handleMcpHealthCheck(connector.id)} disabled={actionLoading === `mcp-health-${connector.id}`}>
