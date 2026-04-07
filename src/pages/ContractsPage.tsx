@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   FileText, DollarSign, Plus, CheckCircle, Receipt, Search, MoreHorizontal,
-  Pencil, Trash2, AlertTriangle, Calendar, TrendingUp, Paperclip, Upload, Download, X,
+  Pencil, Trash2, AlertTriangle, TrendingUp, Paperclip, Upload, Download, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { contractsApi, invoicesApi } from '@/services/contracts-api';
@@ -145,9 +145,9 @@ export default function ContractsPage() {
       qc.invalidateQueries({ queryKey: ['contracts'] });
       qc.invalidateQueries({ queryKey: ['contract-stats'] });
       closeContractDialog();
-      toast.success('Contract created successfully');
+      toast.success('Contrato creado exitosamente');
     },
-    onError: (err: Error) => toast.error(`Failed to create contract: ${err.message}`),
+    onError: (err: Error) => toast.error(`Error al crear contrato: ${err.message}`),
   });
 
   const updateContract = useMutation({
@@ -156,9 +156,9 @@ export default function ContractsPage() {
       qc.invalidateQueries({ queryKey: ['contracts'] });
       qc.invalidateQueries({ queryKey: ['contract-stats'] });
       closeContractDialog();
-      toast.success('Contract updated successfully');
+      toast.success('Contrato actualizado');
     },
-    onError: (err: Error) => toast.error(`Failed to update contract: ${err.message}`),
+    onError: (err: Error) => toast.error(`Error al actualizar contrato: ${err.message}`),
   });
 
   const deleteContract = useMutation({
@@ -167,9 +167,9 @@ export default function ContractsPage() {
       qc.invalidateQueries({ queryKey: ['contracts'] });
       qc.invalidateQueries({ queryKey: ['contract-stats'] });
       setDeleteTarget(null);
-      toast.success('Contract deleted');
+      toast.success('Contrato eliminado');
     },
-    onError: (err: Error) => toast.error(`Failed to delete contract: ${err.message}`),
+    onError: (err: Error) => toast.error(`Error al eliminar contrato: ${err.message}`),
   });
 
   const createInvoice = useMutation({
@@ -178,9 +178,9 @@ export default function ContractsPage() {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['invoice-stats'] });
       closeInvoiceDialog();
-      toast.success('Invoice created successfully');
+      toast.success('Factura creada exitosamente');
     },
-    onError: (err: Error) => toast.error(`Failed to create invoice: ${err.message}`),
+    onError: (err: Error) => toast.error(`Error al crear factura: ${err.message}`),
   });
 
   const updateInvoice = useMutation({
@@ -189,9 +189,9 @@ export default function ContractsPage() {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['invoice-stats'] });
       closeInvoiceDialog();
-      toast.success('Invoice updated successfully');
+      toast.success('Factura actualizada');
     },
-    onError: (err: Error) => toast.error(`Failed to update invoice: ${err.message}`),
+    onError: (err: Error) => toast.error(`Error al actualizar factura: ${err.message}`),
   });
 
   const deleteInvoice = useMutation({
@@ -200,9 +200,9 @@ export default function ContractsPage() {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['invoice-stats'] });
       setDeleteTarget(null);
-      toast.success('Invoice cancelled');
+      toast.success('Factura cancelada');
     },
-    onError: (err: Error) => toast.error(`Failed to cancel invoice: ${err.message}`),
+    onError: (err: Error) => toast.error(`Error al cancelar factura: ${err.message}`),
   });
 
   const markPaid = useMutation({
@@ -210,9 +210,9 @@ export default function ContractsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['invoice-stats'] });
-      toast.success('Invoice marked as paid');
+      toast.success('Factura marcada como pagada');
     },
-    onError: (err: Error) => toast.error(`Failed to mark paid: ${err.message}`),
+    onError: (err: Error) => toast.error(`Error al marcar como pagada: ${err.message}`),
   });
 
   // Dialog helpers
@@ -317,8 +317,8 @@ export default function ContractsPage() {
     return true;
   });
 
-  const s = stats?.data;
-  const is_ = invStats?.data;
+  const s = stats?.data as any;
+  const is_ = invStats?.data as any;
 
   // ── Expiry alert computation ──────────────────────────────
   const expiringContracts = useMemo(() => {
@@ -352,13 +352,13 @@ export default function ContractsPage() {
           uploadedAt: new Date().toISOString(),
         });
       } catch {
-        toast.error(`Failed to upload ${file.name}`);
+        toast.error(`Error al subir ${file.name}`);
       }
     }
     setAttachments(prev => [...prev, ...newAttachments]);
     setUploading(false);
     if (newAttachments.length > 0) {
-      toast.success(`${newAttachments.length} file(s) attached`);
+      toast.success(`${newAttachments.length} archivo(s) adjuntado(s)`);
     }
   };
 
@@ -371,10 +371,10 @@ export default function ContractsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <FileText className="h-6 w-6" />
-            Contracts & Billing
+            Contratos y Facturación
           </h1>
           <p className="text-sm text-muted-foreground">
-            Manage contracts, invoices, and billing
+            Gestione contratos, facturas y cobros
           </p>
         </div>
       </div>
@@ -384,31 +384,31 @@ export default function ContractsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <FileText className="h-4 w-4" />Active Contracts
+              <FileText className="h-4 w-4" />Contratos Activos
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{s?.active ?? 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {s?.total ?? 0} total contracts
+              {s?.total ?? 0} contratos en total
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />Monthly Revenue
+              <TrendingUp className="h-4 w-4" />Ingreso Mensual
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{fmt(s?.monthlyRevenue ?? 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Recurring value</p>
+            <p className="text-xs text-muted-foreground mt-1">Valor recurrente</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-warning" />Pending Invoices
+              <AlertTriangle className="h-4 w-4 text-warning" />Facturas Pendientes
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -416,19 +416,19 @@ export default function ContractsPage() {
               {(is_?.sent ?? 0) + (is_?.overdue ?? 0)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {is_?.overdue ?? 0} overdue
+              {is_?.overdue ?? 0} vencidas
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-success" />Total Collected
+              <DollarSign className="h-4 w-4 text-success" />Total Recaudado
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-success">{fmt(is_?.collected ?? 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Paid invoices</p>
+            <p className="text-xs text-muted-foreground mt-1">Facturas pagadas</p>
           </CardContent>
         </Card>
       </div>
@@ -490,21 +490,21 @@ export default function ContractsPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <TabsList>
             <TabsTrigger value="contracts">
-              <FileText className="h-4 w-4 mr-1" />Contracts
+              <FileText className="h-4 w-4 mr-1" />Contratos
             </TabsTrigger>
             <TabsTrigger value="invoices">
-              <Receipt className="h-4 w-4 mr-1" />Invoices
+              <Receipt className="h-4 w-4 mr-1" />Facturas
             </TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
             {tab === 'contracts' && (
               <Button size="sm" onClick={openCreateContract}>
-                <Plus className="h-4 w-4 mr-1" />New Contract
+                <Plus className="h-4 w-4 mr-1" />Nuevo Contrato
               </Button>
             )}
             {tab === 'invoices' && (
               <Button size="sm" onClick={openCreateInvoice}>
-                <Plus className="h-4 w-4 mr-1" />New Invoice
+                <Plus className="h-4 w-4 mr-1" />Nueva Factura
               </Button>
             )}
           </div>
@@ -515,7 +515,7 @@ export default function ContractsPage() {
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder={tab === 'contracts' ? 'Search contracts...' : 'Search invoices...'}
+              placeholder={tab === 'contracts' ? 'Buscar contratos...' : 'Buscar facturas...'}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 h-9"
@@ -528,12 +528,12 @@ export default function ContractsPage() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
-                  <SelectItem value="terminated">Terminated</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
+                  <SelectItem value="all">Todo Estado</SelectItem>
+                  <SelectItem value="draft">Borrador</SelectItem>
+                  <SelectItem value="active">Activo</SelectItem>
+                  <SelectItem value="suspended">Suspendido</SelectItem>
+                  <SelectItem value="terminated">Terminado</SelectItem>
+                  <SelectItem value="expired">Vencido</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -541,11 +541,11 @@ export default function ContractsPage() {
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="annual">Annual</SelectItem>
-                  <SelectItem value="one_time">One Time</SelectItem>
-                  <SelectItem value="project">Project</SelectItem>
+                  <SelectItem value="all">Todos los Tipos</SelectItem>
+                  <SelectItem value="monthly">Mensual</SelectItem>
+                  <SelectItem value="annual">Anual</SelectItem>
+                  <SelectItem value="one_time">Único</SelectItem>
+                  <SelectItem value="project">Proyecto</SelectItem>
                 </SelectContent>
               </Select>
             </>
@@ -556,12 +556,12 @@ export default function ContractsPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="all">Todo Estado</SelectItem>
+                <SelectItem value="draft">Borrador</SelectItem>
+                <SelectItem value="sent">Enviada</SelectItem>
+                <SelectItem value="paid">Pagada</SelectItem>
+                <SelectItem value="overdue">Vencida</SelectItem>
+                <SelectItem value="cancelled">Cancelada</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -788,7 +788,7 @@ export default function ContractsPage() {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingContract ? 'Edit Contract' : 'New Contract'}
+              {editingContract ? 'Edit Contract' : 'Nuevo Contrato'}
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
@@ -823,7 +823,7 @@ export default function ContractsPage() {
               <Input
                 value={contractForm.clientName}
                 onChange={(e) => setContractForm({ ...contractForm, clientName: e.target.value })}
-                placeholder="Client or company name"
+                placeholder="Nombre del cliente o empresa"
               />
             </div>
 
@@ -941,7 +941,7 @@ export default function ContractsPage() {
                 className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={contractForm.notes}
                 onChange={(e) => setContractForm({ ...contractForm, notes: e.target.value })}
-                placeholder="Additional notes..."
+                placeholder="Notas adicionales..."
               />
             </div>
 
@@ -1029,7 +1029,7 @@ export default function ContractsPage() {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingInvoice ? 'Edit Invoice' : 'New Invoice'}
+              {editingInvoice ? 'Edit Invoice' : 'Nueva Factura'}
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
@@ -1108,7 +1108,7 @@ export default function ContractsPage() {
                 className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={invoiceForm.notes}
                 onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })}
-                placeholder="Additional notes..."
+                placeholder="Notas adicionales..."
               />
             </div>
           </div>
