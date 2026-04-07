@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, Fragment } from 'react';
 import ErrorState from '@/components/ui/ErrorState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,21 +52,21 @@ interface AuditFilters {
 const PAGE_SIZE = 25;
 
 const ACTION_TYPES = [
-  { value: 'all', label: 'All Actions' },
-  { value: 'create', label: 'Create' },
-  { value: 'update', label: 'Update' },
-  { value: 'delete', label: 'Delete' },
-  { value: 'login', label: 'Login' },
-  { value: 'logout', label: 'Logout' },
+  { value: 'all', label: 'Todas las Acciones' },
+  { value: 'create', label: 'Crear' },
+  { value: 'update', label: 'Actualizar' },
+  { value: 'delete', label: 'Eliminar' },
+  { value: 'login', label: 'Inicio sesión' },
+  { value: 'logout', label: 'Cierre sesión' },
 ];
 
 const ENTITY_TYPES = [
-  { value: 'all', label: 'All Entities' },
-  { value: 'device', label: 'Device' },
-  { value: 'event', label: 'Event' },
-  { value: 'incident', label: 'Incident' },
-  { value: 'site', label: 'Site' },
-  { value: 'user', label: 'User' },
+  { value: 'all', label: 'Todas las Entidades' },
+  { value: 'device', label: 'Dispositivo' },
+  { value: 'event', label: 'Evento' },
+  { value: 'incident', label: 'Incidente' },
+  { value: 'site', label: 'Sitio' },
+  { value: 'user', label: 'Usuario' },
 ];
 
 const ACTION_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -81,10 +81,10 @@ const ACTION_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'destructiv
 
 function exportCSV(data: AuditLog[], filename: string) {
   if (!data.length) {
-    toast.error('No data to export');
+    toast.error('Sin datos para exportar');
     return;
   }
-  const headers = ['Timestamp', 'User', 'Action', 'Entity Type', 'Entity ID', 'IP Address'];
+  const headers = ['Fecha', 'Usuario', 'Acción', 'Tipo Entidad', 'ID Entidad', 'Dirección IP'];
   const rows = data.map(row => [
     new Date(row.created_at).toISOString(),
     row.user_email || '',
@@ -104,7 +104,7 @@ function exportCSV(data: AuditLog[], filename: string) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
-  toast.success('CSV exported successfully');
+  toast.success('CSV exportado exitosamente');
 }
 
 // ── Component ────────────────────────────────────────────────
@@ -216,7 +216,7 @@ export default function AuditPage() {
 
   const handleManualRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['audit-logs'] });
-    toast.success('Audit logs refreshed');
+    toast.success('Registros actualizados');
   }, [queryClient]);
 
   // ── Render ─────────────────────────────────────────────────
@@ -228,9 +228,9 @@ export default function AuditPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{t('audit.title') || 'Audit Log'}</h1>
+          <h1 className="text-2xl font-bold">{t('audit.title') || 'Registro de Auditoría'}</h1>
           <p className="text-sm text-muted-foreground">
-            {t('audit.subtitle') || 'Track all user actions and system changes'}
+            {t('audit.subtitle') || 'Rastree todas las acciones de usuario y cambios del sistema'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -241,7 +241,7 @@ export default function AuditPage() {
               aria-label="Auto-refresh"
             />
             <span className="text-muted-foreground text-xs">
-              Auto-refresh {autoRefresh ? '(30s)' : 'off'}
+              Auto-actualizar {autoRefresh ? '(30s)' : 'desactivado'}
             </span>
           </div>
           <Button variant="outline" size="sm" onClick={handleManualRefresh} disabled={isFetching}>
@@ -250,7 +250,7 @@ export default function AuditPage() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => exportCSV(logs, `audit-log-${format(new Date(), 'yyyy-MM-dd')}.csv`)}>
             <Download className="mr-1 h-4 w-4" />
-            {t('audit.export_csv') || 'Export CSV'}
+            {t('audit.export_csv') || 'Exportar CSV'}
           </Button>
         </div>
       </div>
@@ -268,7 +268,7 @@ export default function AuditPage() {
               {isLoading ? <Skeleton className="h-6 w-12" /> : (
                 <p className="text-2xl font-bold">{stats.actionsToday}</p>
               )}
-              <p className="text-xs text-muted-foreground">Actions Today</p>
+              <p className="text-xs text-muted-foreground">Acciones Hoy</p>
             </div>
           </CardContent>
         </Card>
@@ -283,7 +283,7 @@ export default function AuditPage() {
               {isLoading ? <Skeleton className="h-6 w-12" /> : (
                 <p className="text-2xl font-bold">{stats.uniqueUsers}</p>
               )}
-              <p className="text-xs text-muted-foreground">Unique Users</p>
+              <p className="text-xs text-muted-foreground">Usuarios Únicos</p>
             </div>
           </CardContent>
         </Card>
@@ -298,7 +298,7 @@ export default function AuditPage() {
               {isLoading ? <Skeleton className="h-6 w-12" /> : (
                 <p className="text-2xl font-bold capitalize">{stats.mostActiveModule}</p>
               )}
-              <p className="text-xs text-muted-foreground">Most Active Module</p>
+              <p className="text-xs text-muted-foreground">Módulo Más Activo</p>
             </div>
           </CardContent>
         </Card>
@@ -310,7 +310,7 @@ export default function AuditPage() {
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by user, action, entity..."
+            placeholder="Buscar por usuario, acción, entidad..."
             value={filters.search}
             onChange={e => updateFilters({ search: e.target.value })}
             className="pl-8 h-9"
@@ -322,7 +322,7 @@ export default function AuditPage() {
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className={cn('h-9 text-xs gap-1', !filters.dateFrom && 'text-muted-foreground')}>
               <CalendarIcon className="h-3.5 w-3.5" />
-              {filters.dateFrom ? format(filters.dateFrom, 'MMM dd, yyyy') : 'From date'}
+              {filters.dateFrom ? format(filters.dateFrom, 'MMM dd, yyyy') : 'Desde'}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -340,7 +340,7 @@ export default function AuditPage() {
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className={cn('h-9 text-xs gap-1', !filters.dateTo && 'text-muted-foreground')}>
               <CalendarIcon className="h-3.5 w-3.5" />
-              {filters.dateTo ? format(filters.dateTo, 'MMM dd, yyyy') : 'To date'}
+              {filters.dateTo ? format(filters.dateTo, 'MMM dd, yyyy') : 'Hasta'}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -359,7 +359,7 @@ export default function AuditPage() {
             <SelectValue placeholder="All Users" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Users</SelectItem>
+            <SelectItem value="all">Todos los Usuarios</SelectItem>
             {uniqueUserEmails.map(email => (
               <SelectItem key={email} value={email}>{email}</SelectItem>
             ))}
@@ -393,7 +393,7 @@ export default function AuditPage() {
         {/* Reset */}
         {(filters.search || filters.action !== 'all' || filters.entityType !== 'all' || filters.user !== 'all' || filters.dateFrom || filters.dateTo) && (
           <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => setFilters(defaultFilters)}>
-            Clear Filters
+            Limpiar Filtros
           </Button>
         )}
       </div>
@@ -409,20 +409,20 @@ export default function AuditPage() {
         ) : logs.length === 0 ? (
           <div className="p-12 text-center text-sm text-muted-foreground">
             <ScrollText className="h-10 w-10 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">No audit logs found</p>
-            <p className="text-xs mt-1">Try adjusting your filters or check back later</p>
+            <p className="font-medium">Sin registros de auditoría</p>
+            <p className="text-xs mt-1">Ajuste los filtros o intente más tarde</p>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8" />
-                <TableHead>Timestamp</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Entity Type</TableHead>
-                <TableHead>Entity ID</TableHead>
-                <TableHead>IP Address</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Usuario</TableHead>
+                <TableHead>Acción</TableHead>
+                <TableHead>Tipo Entidad</TableHead>
+                <TableHead>ID Entidad</TableHead>
+                <TableHead>Dirección IP</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -431,7 +431,7 @@ export default function AuditPage() {
                 const isExpanded = expandedRows.has(log.id);
                 return (
                   <Collapsible key={log.id} open={isExpanded} onOpenChange={() => hasChanges && toggleRow(log.id)} asChild>
-                    <React.Fragment>
+                    <Fragment>
                       <CollapsibleTrigger asChild disabled={!hasChanges}>
                         <TableRow className={cn('cursor-pointer hover:bg-muted/50', isExpanded && 'bg-muted/30', !hasChanges && 'cursor-default')}>
                           <TableCell className="w-8 text-center">
@@ -444,7 +444,7 @@ export default function AuditPage() {
                             ) : null}
                           </TableCell>
                           <TableCell className="text-xs font-mono text-muted-foreground whitespace-nowrap">
-                            {new Date(log.created_at).toLocaleString()}
+                            {new Date(log.created_at).toLocaleString('es-CO')}
                           </TableCell>
                           <TableCell className="text-sm">{log.user_email || '---'}</TableCell>
                           <TableCell>
@@ -467,7 +467,7 @@ export default function AuditPage() {
                             <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                               {log.before_state && (
                                 <div>
-                                  <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Before</p>
+                                  <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Antes</p>
                                   <pre className="text-xs bg-muted p-3 rounded-md overflow-auto font-mono max-h-48 border">
                                     {JSON.stringify(log.before_state, null, 2)}
                                   </pre>
@@ -475,7 +475,7 @@ export default function AuditPage() {
                               )}
                               {log.after_state && (
                                 <div>
-                                  <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">After</p>
+                                  <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Después</p>
                                   <pre className="text-xs bg-muted p-3 rounded-md overflow-auto font-mono max-h-48 border">
                                     {JSON.stringify(log.after_state, null, 2)}
                                   </pre>
@@ -485,7 +485,7 @@ export default function AuditPage() {
                           </TableCell>
                         </TableRow>
                       </CollapsibleContent>
-                    </React.Fragment>
+                    </Fragment>
                   </Collapsible>
                 );
               })}
@@ -498,7 +498,7 @@ export default function AuditPage() {
       {!isLoading && logs.length > 0 && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
-            {totalCount} records {'\u00B7'} Page {filters.page} of {totalPages}
+            {totalCount} registros {'\u00B7'} Página {filters.page} de {totalPages}
           </span>
           <div className="flex items-center gap-1">
             <Button
