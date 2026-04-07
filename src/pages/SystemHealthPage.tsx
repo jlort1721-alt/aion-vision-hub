@@ -104,19 +104,19 @@ function getOverallStatus(checks: HealthCheck[]): 'healthy' | 'degraded' | 'crit
 
 const overallConfig = {
   healthy: {
-    label: 'All Systems Operational',
+    label: 'Todos los Sistemas Operativos',
     bg: 'bg-green-500/10 border-green-500/30',
     text: 'text-green-700 dark:text-green-400',
     icon: <CheckCircle2 className="h-6 w-6 text-green-500" />,
   },
   degraded: {
-    label: 'Partial System Degradation',
+    label: 'Degradación Parcial del Sistema',
     bg: 'bg-yellow-500/10 border-yellow-500/30',
     text: 'text-yellow-700 dark:text-yellow-400',
     icon: <AlertCircle className="h-6 w-6 text-yellow-500" />,
   },
   critical: {
-    label: 'Major System Outage',
+    label: 'Fallo Mayor del Sistema',
     bg: 'bg-red-500/10 border-red-500/30',
     text: 'text-red-700 dark:text-red-400',
     icon: <XCircle className="h-6 w-6 text-red-500" />,
@@ -269,7 +269,7 @@ export default function SystemHealthPage() {
     return points;
   }, [statusData, overallStatus, checks]);
 
-  // ── Check Now ──────────────────────────────────────────────
+  // ── Verificar Ahora ──────────────────────────────────────────────
 
   const handleCheckNow = async () => {
     setCheckingNow(true);
@@ -277,9 +277,9 @@ export default function SystemHealthPage() {
       await queryClient.invalidateQueries({ queryKey: ['system-health'] });
       await queryClient.invalidateQueries({ queryKey: ['system-health-status'] });
       await queryClient.invalidateQueries({ queryKey: ['system-health-devices'] });
-      toast.success('Health check completed');
+      toast.success('Verificación completada');
     } catch {
-      toast.error('Health check failed');
+      toast.error('Verificación fallida');
     } finally {
       setCheckingNow(false);
     }
@@ -308,11 +308,11 @@ export default function SystemHealthPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{t('system.title') || 'System Health'}</h1>
+          <h1 className="text-2xl font-bold">{t('system.title') || 'Salud del Sistema'}</h1>
           <p className="text-sm text-muted-foreground">
-            {t('system.subtitle') || 'Monitor platform services and infrastructure'}
+            {t('system.subtitle') || 'Monitoree servicios de plataforma e infraestructura'}
             {dataUpdatedAt > 0 && (
-              <span> {'\u00B7'} Last check: {new Date(dataUpdatedAt).toLocaleTimeString()}</span>
+              <span> {'\u00B7'} Última verificación: {new Date(dataUpdatedAt).toLocaleTimeString('es-CO')}</span>
             )}
           </p>
         </div>
@@ -324,7 +324,7 @@ export default function SystemHealthPage() {
               aria-label="Auto-refresh"
             />
             <span className="text-muted-foreground text-xs">
-              Auto-refresh {autoRefresh ? '(15s)' : 'off'}
+              Auto-actualizar {autoRefresh ? '(15s)' : 'desactivado'}
             </span>
           </div>
           <Button
@@ -334,7 +334,7 @@ export default function SystemHealthPage() {
             disabled={checkingNow}
           >
             <RefreshCw className={cn('mr-1 h-4 w-4', checkingNow && 'animate-spin')} />
-            Check Now
+            Verificar Ahora
           </Button>
         </div>
       </div>
@@ -353,7 +353,7 @@ export default function SystemHealthPage() {
               <div className="flex-1">
                 <p className={cn('font-semibold text-lg', overall.text)}>{overall.label}</p>
                 <p className="text-xs text-muted-foreground">
-                  {checks.filter(c => c.status === 'healthy').length}/{checks.length} services healthy
+                  {checks.filter(c => c.status === 'healthy').length}/{checks.length} servicios saludables
                   {overallStatus !== 'healthy' && (
                     <span>
                       {' \u00B7 '}
@@ -371,11 +371,11 @@ export default function SystemHealthPage() {
         </CardContent>
       </Card>
 
-      {/* Service Status Cards Grid */}
+      {/* Estado de Servicios Cards Grid */}
       <div>
         <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
           <Activity className="h-4 w-4" />
-          Service Status
+          Estado de Servicios
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {SERVICE_CARDS.map(service => {
@@ -419,7 +419,7 @@ export default function SystemHealthPage() {
                           )}
                           {uptime && (
                             <span className="text-muted-foreground">
-                              Uptime: {uptime}
+                              Disponibilidad: {uptime}
                             </span>
                           )}
                           {!latency && !uptime && (
@@ -442,14 +442,14 @@ export default function SystemHealthPage() {
         </div>
       </div>
 
-      {/* Device Health Summary + Uptime Chart */}
+      {/* Salud de Dispositivos Summary + Uptime Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Device Health Summary */}
+        {/* Salud de Dispositivos Summary */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Wifi className="h-4 w-4" />
-              Device Health
+              Salud de Dispositivos
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -577,12 +577,12 @@ export default function SystemHealthPage() {
         </Card>
       </div>
 
-      {/* Recent Errors */}
+      {/* Errores Recientes */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" />
-            Recent Errors
+            Errores Recientes
             {recentErrors.length > 0 && (
               <Badge variant="destructive" className="text-[10px] ml-1">
                 {recentErrors.length}
@@ -633,7 +633,7 @@ export default function SystemHealthPage() {
                     <p className="text-xs text-muted-foreground mt-0.5">{error.message}</p>
                   </div>
                   <span className="text-[10px] text-muted-foreground font-mono whitespace-nowrap shrink-0">
-                    {new Date(error.timestamp).toLocaleTimeString()}
+                    {new Date(error.timestamp).toLocaleTimeString('es-CO')}
                   </span>
                 </div>
               ))}
