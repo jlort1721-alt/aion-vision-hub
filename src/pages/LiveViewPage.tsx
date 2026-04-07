@@ -39,6 +39,7 @@ import {
   Video,
   Grid3X3,
   Maximize,
+  Minimize2,
   RefreshCw,
   Wifi,
   WifiOff,
@@ -66,6 +67,8 @@ import {
   Zap,
   Power,
   Siren,
+  Camera,
+  Image,
 } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────
@@ -265,10 +268,50 @@ function CameraCell({
       </div>
 
       {isOnline && (
-        <div className="absolute top-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-black/60 backdrop-blur-sm border border-white/10 z-20">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-[9px] text-white/90 font-mono font-medium tracking-widest">LIVE</span>
-        </div>
+        <>
+          {/* Stream mode badge */}
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-black/60 backdrop-blur-sm border border-white/10 z-20">
+            {mode === 'video' ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-[9px] text-white/90 font-mono font-medium tracking-widest">LIVE</span>
+              </>
+            ) : (
+              <>
+                <Image className="w-2.5 h-2.5 text-yellow-400" />
+                <span className="text-[9px] text-yellow-300/90 font-mono font-medium tracking-widest">SNAP</span>
+              </>
+            )}
+          </div>
+
+          {/* Snapshot capture button — visible on hover */}
+          <button
+            className="absolute top-1.5 left-1.5 p-1 rounded-sm bg-black/60 backdrop-blur-sm border border-white/10 z-20 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/20"
+            title="Capturar imagen"
+            onClick={(e) => {
+              e.stopPropagation();
+              const canvas = document.createElement('canvas');
+              const source = mode === 'video' ? videoRef.current : imgRef.current;
+              if (!source) return;
+              if (mode === 'video' && videoRef.current) {
+                canvas.width = videoRef.current.videoWidth || 640;
+                canvas.height = videoRef.current.videoHeight || 480;
+                canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
+              } else if (imgRef.current) {
+                canvas.width = imgRef.current.naturalWidth || 640;
+                canvas.height = imgRef.current.naturalHeight || 480;
+                canvas.getContext('2d')?.drawImage(imgRef.current, 0, 0);
+              }
+              const a = document.createElement('a');
+              a.href = canvas.toDataURL('image/jpeg', 0.92);
+              a.download = `${camera.name}-${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
+              a.click();
+              toast.success(`Captura: ${camera.name}`);
+            }}
+          >
+            <Camera className="h-3.5 w-3.5 text-white" />
+          </button>
+        </>
       )}
     </Card>
   );
@@ -783,6 +826,7 @@ export default function LiveViewPage() {
   const [autoRotate, setAutoRotate] = useState(false);
   const [opsOpen, setOpsOpen] = useState(true);
   const [opsTab, setOpsTab] = useState('search');
+  const [focusedCamera, setFocusedCamera] = useState<string | null>(null);
   const autoRotateRef = useRef(autoRotate);
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
@@ -830,9 +874,13 @@ export default function LiveViewPage() {
   const allCameras = useMemo(() => siteGroups.flatMap((sg) => sg.cameras), [siteGroups]);
 
   const filteredCameras = useMemo(() => {
-    if (selectedSite === 'all') return allCameras;
-    const group = siteGroups.find((sg) => sg.site_id === selectedSite);
-    return group ? group.cameras : [];
+    const raw = selectedSite === 'all' ? allCameras : (siteGroups.find((sg) => sg.site_id === selectedSite)?.cameras ?? []);
+    // Sort: online first, then by name
+    return [...raw].sort((a, b) => {
+      if (a.status === 'online' && b.status !== 'online') return -1;
+      if (a.status !== 'online' && b.status === 'online') return 1;
+      return a.name.localeCompare(b.name);
+    });
   }, [allCameras, siteGroups, selectedSite]);
 
   const totalPages = Math.max(1, Math.ceil(filteredCameras.length / gridSize));
@@ -876,6 +924,18 @@ export default function LiveViewPage() {
 
   const goToPrevPage = useCallback(() => setCurrentPage((prev) => Math.max(0, prev - 1)), []);
   const goToNextPage = useCallback(() => setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1)), [totalPages]);
+
+  // Keyboard shortcuts: arrows for pages, Escape to exit focus
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'ArrowLeft') goToPrevPage();
+      else if (e.key === 'ArrowRight') goToNextPage();
+      else if (e.key === 'Escape') setFocusedCamera(null);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [goToPrevPage, goToNextPage]);
 
   const toggleFullscreen = useCallback(() => {
     if (!gridContainerRef.current) return;
@@ -1066,13 +1126,34 @@ export default function LiveViewPage() {
                   </Card>
                 ))}
               </div>
+            ) : focusedCamera ? (
+              /* Focused 1x1 view — single camera expanded */
+              <div className="h-full relative">
+                <CameraCell
+                  key={focusedCamera}
+                  camera={allCameras.find(c => c.id === focusedCamera) ?? null}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="absolute top-2 left-2 z-30 h-7 gap-1 text-xs shadow-lg"
+                  onClick={() => setFocusedCamera(null)}
+                >
+                  <Minimize2 className="h-3 w-3" />
+                  Volver al grid
+                </Button>
+              </div>
             ) : (
               <div
                 className="grid gap-1 h-full"
                 style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${cols}, 1fr)` }}
               >
                 {paginatedCameras.map((camera, i) => (
-                  <CameraCell key={camera?.id ?? `empty-${i}`} camera={camera} />
+                  <CameraCell
+                    key={camera?.id ?? `empty-${i}`}
+                    camera={camera}
+                    onClick={() => camera && setFocusedCamera(camera.id)}
+                  />
                 ))}
               </div>
             )}
