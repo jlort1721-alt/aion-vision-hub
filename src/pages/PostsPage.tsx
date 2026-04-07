@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import ErrorState from '@/components/ui/ErrorState';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,8 +31,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useSites, useDevices } from '@/hooks/use-api-data';
 import {
   Building2, Shield, UserX, AlertTriangle, Video, DoorOpen, Phone, ScrollText,
-  Plus, Search, MoreVertical, CheckCircle2, XCircle, AlertCircle, User,
-  Clock, Cpu, Radio, Camera, Pencil, Trash2, Eye, MapPin, Layers,
+  Plus, Search, MoreVertical, CheckCircle2, XCircle, User,
+  Clock, Cpu, Radio, Camera, Pencil, Trash2, MapPin, Layers,
 } from 'lucide-react';
 
 // ── Types ──
