@@ -20,14 +20,14 @@ import {
 // ── Contact categories ─────────────────────────────
 const CONTACT_CATEGORIES = [
   { value: 'emergencia', label: 'Emergencia', color: 'bg-destructive/20 text-destructive border-destructive/30' },
-  { value: 'administracion', label: 'Administracion', color: 'bg-primary/20 text-primary border-primary/30' },
+  { value: 'administracion', label: 'Administración', color: 'bg-primary/20 text-primary border-primary/30' },
   { value: 'propietarios', label: 'Propietarios', color: 'bg-success/20 text-success border-success/30' },
   { value: 'proveedores', label: 'Proveedores', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
 ];
 
 // ── Emergency speed dial ─────────────────────────────
 const EMERGENCY_CONTACTS = [
-  { name: 'Policia', number: '123', icon: Shield, color: 'bg-primary hover:bg-primary/90 text-white' },
+  { name: 'Policía', number: '123', icon: Shield, color: 'bg-primary hover:bg-primary/90 text-white' },
   { name: 'Bomberos', number: '119', icon: PhoneCall, color: 'bg-destructive hover:bg-destructive/90 text-white' },
   { name: 'Ambulancia', number: '125', icon: PhoneCall, color: 'bg-success hover:bg-success/90 text-white' },
   { name: 'Supervisor', number: '', icon: Star, color: 'bg-info hover:bg-info/90 text-white' },
@@ -175,7 +175,7 @@ export default function PhonePanelPage() {
       sip.call(callerNumber.replace(/\D/g, ''));
     }
     setPhoneNumber(callerNumber.replace(/\D/g, ''));
-    toast({ title: 'Connecting', description: `Calling ${callerNumber}` });
+    toast({ title: 'Conectando', description: `Llamando a ${callerNumber}` });
   }, [toast, sip]);
 
   // ── Filtered contacts ─────────────────────────────
@@ -250,10 +250,10 @@ export default function PhonePanelPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Phone className="h-6 w-6 text-primary" />
-            Panel Telefonico
+            Panel Telefónico
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Extension 099 — Central AION (WebRTC SIP)
+            Extensión 099 — Central AION (WebRTC SIP)
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -339,8 +339,8 @@ export default function PhonePanelPage() {
           {sipQueueCalls.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">
               <PhoneIncoming className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No calls waiting</p>
-              <p className="text-xs mt-0.5">Incoming queued calls will appear here</p>
+              <p className="text-sm">Sin llamadas en espera</p>
+              <p className="text-xs mt-0.5">Las llamadas en cola aparecerán aquí</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -373,15 +373,15 @@ export default function PhonePanelPage() {
                         <span className="font-mono">{formatWaitTime(queueTimers[qCall.id] || 0)}</span>
                       </div>
                       {qCall.priority === 'high' && (
-                        <Badge variant="destructive" className="text-[10px] mt-0.5">Priority</Badge>
+                        <Badge variant="destructive" className="text-[10px] mt-0.5">Prioridad</Badge>
                       )}
                     </div>
                     <Select onValueChange={(ext) => {
-                      toast({ title: 'Transferring', description: `Forwarding to ext. ${ext}` });
+                      toast({ title: 'Transfiriendo', description: `Redirigiendo a ext. ${ext}` });
                     }}>
                       <SelectTrigger className="w-[100px] h-8 text-xs" aria-label="Transfer call">
                         <ArrowRightLeft className="h-3 w-3 mr-1" />
-                        <SelectValue placeholder="Transfer" />
+                        <SelectValue placeholder="Transferir" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="100">Ext. 100</SelectItem>
@@ -397,7 +397,7 @@ export default function PhonePanelPage() {
                       aria-label={`Answer call from ${qCall.callerName || qCall.callerNumber}`}
                     >
                       <PhoneCall className="h-3.5 w-3.5" />
-                      Answer
+                      Contestar
                     </Button>
                   </div>
                 </div>
@@ -524,7 +524,7 @@ export default function PhonePanelPage() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <User className="h-4 w-4 text-primary" />
-                  Contactos Rapidos
+                  Contactos Rápidos
                 </CardTitle>
                 <div className="flex gap-2">
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
