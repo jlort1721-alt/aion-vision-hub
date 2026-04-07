@@ -235,6 +235,6 @@ export function emitSecurityAudit(entry: Omit<SecurityAuditEntry, 'timestamp'>):
     ...entry,
     timestamp: new Date().toISOString(),
   };
-  // Structured JSON output — can be captured by log aggregator
-  console.log(JSON.stringify({ level: 'audit', ...full }));
+  // Structured JSON output — captured by log aggregator (stdout)
+  process.stdout.write(JSON.stringify({ level: 'audit', ...full }) + '\n');
 }

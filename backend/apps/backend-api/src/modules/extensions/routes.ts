@@ -8,41 +8,9 @@
 
 import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth.js';
-import { db } from '../../db/client.js';
-import { tenants } from '../../db/schema/index.js';
-import { eq } from 'drizzle-orm';
 import { synthesize, listVoices, healthCheck as elevenHealthCheck, isConfigured } from '../../services/elevenlabs.js';
-import crypto from 'crypto';
-
-interface Extension {
-  id: string;
-  name: string;
-  type: 'greeting' | 'after_hours' | 'emergency' | 'maintenance' | 'announcement' | 'custom';
-  text: string;
-  voiceId: string;
-  modelId: string;
-  language: string;
-  schedule: string | null;
-  isActive: boolean;
-  audioCache: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-async function getTenantExtensions(tenantId: string): Promise<Extension[]> {
-  const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-  if (!tenant) return [];
-  const settings = (tenant.settings || {}) as Record<string, unknown>;
-  return (settings.extensions || []) as Extension[];
-}
-
-async function saveTenantExtensions(tenantId: string, extensions: Extension[]): Promise<void> {
-  const [tenant] = await db.select().from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-  const currentSettings = ((tenant?.settings || {}) as Record<string, unknown>);
-  await db.update(tenants).set({
-    settings: { ...currentSettings, extensions },
-  }).where(eq(tenants.id, tenantId));
-}
+import { extensionsService } from './service.js';
+import type { CreateExtensionInput, UpdateExtensionInput } from './service.js';
 
 export async function registerExtensionRoutes(app: FastifyInstance) {
 
@@ -54,7 +22,7 @@ export async function registerExtensionRoutes(app: FastifyInstance) {
       schema: { tags: ['Extensions'], summary: 'List all voice extensions for tenant' },
     },
     async (request, reply) => {
-      const extensions = await getTenantExtensions(request.tenantId);
+      const extensions = await extensionsService.listExtensions(request.tenantId);
       return reply.send({ success: true, data: extensions });
     },
   );
@@ -69,38 +37,25 @@ export async function registerExtensionRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { name, type, text, voiceId, modelId, language, schedule, isActive } = request.body;
 
-      if (!name?.trim() || !text?.trim()) {
-        return reply.code(400).send({ success: false, error: 'Nombre y texto son obligatorios' });
+      try {
+        const input: CreateExtensionInput = { name, type, text, voiceId, modelId, language, schedule, isActive };
+        const extension = await extensionsService.createExtension(request.tenantId, input);
+
+        await request.audit('extension.create', 'extensions', extension.id, { name, type });
+
+        return reply.code(201).send({ success: true, data: extension });
+      } catch (err) {
+        const message = (err as Error).message;
+        if (message.startsWith('VALIDATION_ERROR:')) {
+          return reply.code(400).send({ success: false, error: message.replace('VALIDATION_ERROR: ', '') });
+        }
+        throw err;
       }
-
-      const extensions = await getTenantExtensions(request.tenantId);
-
-      const extension: Extension = {
-        id: crypto.randomUUID(),
-        name: name.trim(),
-        type: (type || 'custom') as Extension['type'],
-        text: text.trim(),
-        voiceId: voiceId || process.env.ELEVENLABS_DEFAULT_VOICE_ID || '',
-        modelId: modelId || process.env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2',
-        language: language || 'es',
-        schedule: schedule || null,
-        isActive: isActive ?? true,
-        audioCache: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      extensions.push(extension);
-      await saveTenantExtensions(request.tenantId, extensions);
-
-      await request.audit('extension.create', 'extensions', extension.id, { name, type });
-
-      return reply.code(201).send({ success: true, data: extension });
     },
   );
 
   // ── PATCH /:id — Update extension ──
-  app.patch<{ Params: { id: string }; Body: Partial<Omit<Extension, 'id' | 'createdAt'>> }>(
+  app.patch<{ Params: { id: string }; Body: Partial<{ name: string; type: string; text: string; voiceId: string; modelId: string; language: string; schedule: string; isActive: boolean }> }>(
     '/:id',
     {
       preHandler: [requireRole('tenant_admin', 'super_admin')],
@@ -108,35 +63,17 @@ export async function registerExtensionRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params;
-      const extensions = await getTenantExtensions(request.tenantId);
-      const idx = extensions.findIndex(e => e.id === id);
+      const updates: UpdateExtensionInput = request.body;
 
-      if (idx === -1) {
+      const result = await extensionsService.updateExtension(request.tenantId, id, updates);
+
+      if (!result) {
         return reply.code(404).send({ success: false, error: 'Extensión no encontrada' });
       }
 
-      const updates = request.body;
-      if (updates.name !== undefined) extensions[idx].name = updates.name;
-      if (updates.type !== undefined) extensions[idx].type = updates.type as Extension['type'];
-      if (updates.text !== undefined) {
-        extensions[idx].text = updates.text;
-        extensions[idx].audioCache = null; // Invalidate cache when text changes
-      }
-      if (updates.voiceId !== undefined) {
-        extensions[idx].voiceId = updates.voiceId;
-        extensions[idx].audioCache = null;
-      }
-      if (updates.modelId !== undefined) extensions[idx].modelId = updates.modelId;
-      if (updates.language !== undefined) extensions[idx].language = updates.language;
-      if (updates.schedule !== undefined) extensions[idx].schedule = updates.schedule;
-      if (updates.isActive !== undefined) extensions[idx].isActive = updates.isActive;
-      extensions[idx].updatedAt = new Date().toISOString();
+      await request.audit('extension.update', 'extensions', id, updates as Record<string, unknown>);
 
-      await saveTenantExtensions(request.tenantId, extensions);
-
-      await request.audit('extension.update', 'extensions', id, updates);
-
-      return reply.send({ success: true, data: extensions[idx] });
+      return reply.send({ success: true, data: result });
     },
   );
 
@@ -149,14 +86,13 @@ export async function registerExtensionRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const { id } = request.params;
-      const extensions = await getTenantExtensions(request.tenantId);
-      const filtered = extensions.filter(e => e.id !== id);
 
-      if (filtered.length === extensions.length) {
+      const deleted = await extensionsService.deleteExtension(request.tenantId, id);
+
+      if (!deleted) {
         return reply.code(404).send({ success: false, error: 'Extensión no encontrada' });
       }
 
-      await saveTenantExtensions(request.tenantId, filtered);
       await request.audit('extension.delete', 'extensions', id);
 
       return reply.code(204).send();
@@ -176,8 +112,7 @@ export async function registerExtensionRoutes(app: FastifyInstance) {
       }
 
       const { id } = request.params;
-      const extensions = await getTenantExtensions(request.tenantId);
-      const ext = extensions.find(e => e.id === id);
+      const ext = await extensionsService.getExtension(request.tenantId, id);
 
       if (!ext) {
         return reply.code(404).send({ success: false, error: 'Extensión no encontrada' });
@@ -199,9 +134,7 @@ export async function registerExtensionRoutes(app: FastifyInstance) {
 
       // Cache the audio
       const base64 = audio.toString('base64');
-      ext.audioCache = base64;
-      ext.updatedAt = new Date().toISOString();
-      await saveTenantExtensions(request.tenantId, extensions);
+      await extensionsService.updateAudioCache(request.tenantId, id, base64);
 
       return reply.send({
         success: true,
@@ -223,8 +156,7 @@ export async function registerExtensionRoutes(app: FastifyInstance) {
       }
 
       const { id } = request.params;
-      const extensions = await getTenantExtensions(request.tenantId);
-      const ext = extensions.find(e => e.id === id);
+      const ext = await extensionsService.getExtension(request.tenantId, id);
 
       if (!ext) {
         return reply.code(404).send({ success: false, error: 'Extensión no encontrada' });
@@ -237,9 +169,7 @@ export async function registerExtensionRoutes(app: FastifyInstance) {
       }
 
       const base64 = audio.toString('base64');
-      ext.audioCache = base64;
-      ext.updatedAt = new Date().toISOString();
-      await saveTenantExtensions(request.tenantId, extensions);
+      await extensionsService.updateAudioCache(request.tenantId, id, base64);
 
       return reply.send({
         success: true,

@@ -19,9 +19,9 @@ export function initSentry(): void {
       sendDefaultPii: true,
     });
     sentryAvailable = true;
-    console.log('[sentry] Error tracking initialized');
+    // Sentry initialized successfully
   }).catch(() => {
-    console.warn('[sentry] @sentry/node not installed — skipping error tracking');
+    // @sentry/node not installed — skipping error tracking
   });
 }
 
