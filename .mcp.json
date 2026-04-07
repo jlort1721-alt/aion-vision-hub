@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "n8n-mcp": {
+      "command": "npx",
+      "args": ["-y", "@czlonkowski/n8n-mcp"],
+      "env": {
+        "N8N_BASE_URL": "<URL_N8N_VPS>",
+        "N8N_API_KEY": "<TU_API_KEY_N8N>"
+      }
+    },
+    "claude-mem": {
+      "command": "npx",
+      "args": ["-y", "claude-mem"],
+      "env": {
+        "CLAUDE_MEM_DB_PATH": "/Users/ADMIN/.claude/claude-mem.db"
+      }
+    }
+  }
+}

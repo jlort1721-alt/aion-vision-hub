@@ -60,3 +60,10 @@ data-import/.env.production.template
 # Deploy secrets
 deploy/backend.env.production
 deploy/*.env*
+deploy/RUNBOOK.sh
+deploy/go2rtc-*.yaml
+
+# Duplicate/backup files
+**/twilio.service\ 2.ts
+package\ 2.json
+pnpm-lock\ 2.yaml
