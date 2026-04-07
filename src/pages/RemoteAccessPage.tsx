@@ -10,9 +10,9 @@ import { useSites } from '@/hooks/use-api-data';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/lib/api-client';
 import {
-  Globe, Server, Router, Monitor, Camera, Lock, Unlock, RefreshCw,
-  Activity, CheckCircle2, XCircle, Wifi, WifiOff, Phone, Shield,
-  Eye, Zap, Copy, ExternalLink, Network, Signal, ArrowRight,
+  Globe, Server, Router, Monitor, Camera, Lock,
+  Activity, CheckCircle2, XCircle, Wifi, WifiOff, Phone,
+  Eye, Zap, Copy, Network, Signal, ArrowRight,
   Loader2, AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -198,9 +198,9 @@ export default function RemoteAccessPage() {
                 <SelectItem key={site.id as string} value={site.id as string}>
                   <div className="flex items-center gap-2">
                     <Signal className="h-3 w-3" />
-                    {site.name as string}
+                    {String(site.name || '')}
                     {site.wan_ip && (
-                      <span className="text-xs text-muted-foreground ml-1">({site.wan_ip as string})</span>
+                      <span className="text-xs text-muted-foreground ml-1">({String(site.wan_ip)})</span>
                     )}
                   </div>
                 </SelectItem>
@@ -284,11 +284,11 @@ export default function RemoteAccessPage() {
                   <>
                     <Badge variant="default" className="bg-green-600">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
-                      {connectivityResults.filter(r => r.reachable).length} Online
+                      {connectivityResults.filter(r => r.reachable).length} En línea
                     </Badge>
                     <Badge variant="destructive">
                       <XCircle className="h-3 w-3 mr-1" />
-                      {connectivityResults.filter(r => !r.reachable).length} Offline
+                      {connectivityResults.filter(r => !r.reachable).length} Fuera de línea
                     </Badge>
                   </>
                 )}
@@ -347,7 +347,7 @@ export default function RemoteAccessPage() {
                             {conn.reachable ? (
                               <><Wifi className="h-3 w-3 mr-1" />{conn.latencyMs}ms</>
                             ) : (
-                              <><WifiOff className="h-3 w-3 mr-1" />Offline</>
+                              <><WifiOff className="h-3 w-3 mr-1" />Fuera de línea</>
                             )}
                           </Badge>
                         )}
@@ -416,7 +416,7 @@ export default function RemoteAccessPage() {
                       <TableHead>Puerto Interno</TableHead>
                       <TableHead>Protocolo</TableHead>
                       <TableHead>Servicio</TableHead>
-                      <TableHead>Descripcion</TableHead>
+                      <TableHead>Descripción</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -551,7 +551,7 @@ function ProxyPanel({
       {/* Quick paths */}
       {paths.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          <span className="text-xs text-muted-foreground self-center mr-1">Rutas rapidas:</span>
+          <span className="text-xs text-muted-foreground self-center mr-1">Rutas rápidas:</span>
           {paths.map((p, i) => (
             <Button
               key={i}
@@ -574,10 +574,10 @@ function ProxyPanel({
         <div className="border rounded-lg overflow-hidden">
           <div className="bg-muted/50 px-3 py-2 flex items-center justify-between border-b">
             <div className="flex items-center gap-2 text-xs">
-              <Badge variant={(result.statusCode as number) < 300 ? 'default' : 'destructive'}>
-                {result.statusCode as number}
+              <Badge variant={Number(result.statusCode) < 300 ? 'default' : 'destructive'}>
+                {String(result.statusCode)}
               </Badge>
-              <span className="text-muted-foreground">{result.latencyMs as number}ms</span>
+              <span className="text-muted-foreground">{String(result.latencyMs)}ms</span>
               {(result.target as Record<string, unknown>)?.deviceName && (
                 <span className="font-medium">{(result.target as Record<string, unknown>).deviceName as string}</span>
               )}
