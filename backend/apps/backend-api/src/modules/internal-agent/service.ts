@@ -1,6 +1,7 @@
 import { createLogger } from '@aion/common-utils';
 import { db } from '../../db/client.js';
 import { sql } from 'drizzle-orm';
+import { broadcast } from '../../plugins/websocket.js';
 
 const logger = createLogger({ name: 'internal-agent' });
 
@@ -71,12 +72,24 @@ export class InternalAgentService {
         modules: reports.length, critical, warnings, avgScore,
       }, 'Health check complete');
 
-      // Auto-create alert for critical findings
+      // Auto-create events for critical findings (triggers automations + notifications)
       if (critical > 0) {
         const criticalFindings = reports
           .filter(r => r.status === 'critical')
           .flatMap(r => r.findings);
         logger.warn({ findings: criticalFindings }, 'Critical findings detected');
+
+        try {
+          await db.execute(sql`
+            INSERT INTO events (tenant_id, event_type, source, description, severity, status, metadata, created_at)
+            SELECT t.id, 'agent_health_critical', 'internal-agent',
+              ${`Hallazgos criticos del agente interno: ${criticalFindings.join('; ')}`},
+              'critical', 'new',
+              ${JSON.stringify({ modules: reports.filter(r => r.status === 'critical').map(r => r.module), findings: criticalFindings, avgScore })}::jsonb,
+              NOW()
+            FROM tenants t LIMIT 1
+          `);
+        } catch { /* non-blocking */ }
       }
     } catch (err) {
       logger.error({ error: (err as Error).message }, 'Health check failed');
@@ -136,6 +149,27 @@ export class InternalAgentService {
 
       if (alerts.length > 0) {
         logger.info({ alertCount: alerts.length }, 'Proactive analysis found anomalies');
+
+        // Publish anomalies to event bus (creates events that trigger automations)
+        for (const alert of alerts) {
+          try {
+            await db.execute(sql`
+              INSERT INTO events (tenant_id, event_type, source, description, severity, status, metadata, created_at)
+              SELECT t.id, ${'agent_' + alert.type}, 'internal-agent', ${alert.message},
+                ${alert.severity === 'high' ? 'critical' : alert.severity}, 'new',
+                ${JSON.stringify({ agentAlert: alert.type, count: alert.count })}::jsonb, NOW()
+              FROM tenants t LIMIT 1
+            `);
+          } catch { /* non-blocking: event creation failure should not stop agent */ }
+        }
+
+        // Broadcast to all tenants via WebSocket for real-time dashboard updates
+        try {
+          const tenants = await db.execute(sql`SELECT id FROM tenants LIMIT 10`);
+          for (const t of tenants as unknown as { id: string }[]) {
+            broadcast(t.id, 'agent:anomaly', { alerts, timestamp: new Date().toISOString() });
+          }
+        } catch { /* non-blocking */ }
       }
     } catch (err) {
       logger.error({ error: (err as Error).message }, 'Proactive analysis failed');

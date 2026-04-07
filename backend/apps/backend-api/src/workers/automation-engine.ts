@@ -14,6 +14,7 @@ import {
 import { emailService } from '../modules/email/service.js';
 import { pushService } from '../modules/push/service.js';
 import { whatsappService } from '../modules/whatsapp/service.js';
+import { executeTool } from '../modules/mcp-bridge/tools/index.js';
 
 const logger = createLogger({ name: 'automation-engine' });
 
@@ -47,7 +48,7 @@ interface RuleCondition {
 }
 
 interface RuleAction {
-  type: 'send_alert' | 'create_incident' | 'send_whatsapp' | 'webhook' | 'toggle_device' | 'activate_protocol';
+  type: 'send_alert' | 'create_incident' | 'send_whatsapp' | 'webhook' | 'toggle_device' | 'activate_protocol' | 'execute_mcp_tool';
   config?: Record<string, unknown>;
   [key: string]: unknown;
 }
@@ -590,6 +591,35 @@ async function executeAction(
           status: 'failed',
           detail: msg,
         };
+      }
+    }
+
+    case 'execute_mcp_tool': {
+      const toolName = action.config?.toolName as string;
+      if (!toolName) {
+        return { action: 'execute_mcp_tool', status: 'failed', detail: 'No toolName configured' };
+      }
+      try {
+        const toolParams: Record<string, unknown> = {
+          ...(action.config?.params as Record<string, unknown> ?? {}),
+          // Inject event context so tools can use trigger data
+          _event_type: event.eventType,
+          _severity: event.severity,
+          _device_id: event.deviceId,
+          _site_id: event.siteId,
+        };
+        const context = { tenantId: event.tenantId, userId: SYSTEM_USER_ID };
+        const result = await executeTool(toolName, toolParams, context);
+        logger.info({ toolName, result: typeof result }, 'execute_mcp_tool completed');
+        return {
+          action: 'execute_mcp_tool',
+          status: 'success',
+          detail: `MCP tool "${toolName}" executed: ${JSON.stringify(result).slice(0, 200)}`,
+        };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        logger.error({ err: msg, toolName }, 'execute_mcp_tool failed');
+        return { action: 'execute_mcp_tool', status: 'failed', detail: msg };
       }
     }
 

@@ -141,11 +141,86 @@ export async function registerVPSPlugins(app: FastifyInstance) {
     } catch { return { success: false, error: 'Skill not found' }; }
   });
 
-  safeRoute(app, 'post', '/skills/:id/execute', async (request: any) => {
+  safeRoute(app, 'post', '/skills/:slugOrId/execute', async (request: any) => {
     try {
-      await db.execute(sql`UPDATE operational_skills SET usage_count = usage_count + 1 WHERE id = ${request.params.id}::uuid`);
-      await db.execute(sql`INSERT INTO skill_executions (skill_id, tenant_id, user_id, input_data, status, created_at) VALUES (${request.params.id}::uuid, ${request.tenantId}, ${request.userId}::uuid, ${JSON.stringify(request.body || {})}::jsonb, 'completed', NOW())`);
-      return { success: true };
+      const param = request.params.slugOrId;
+      // Support both UUID (id) and slug lookup
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param);
+      const skillQuery = isUuid
+        ? sql`SELECT * FROM operational_skills WHERE id = ${param}::uuid AND tenant_id = ${request.tenantId} LIMIT 1`
+        : sql`SELECT * FROM operational_skills WHERE slug = ${param} AND tenant_id = ${request.tenantId} LIMIT 1`;
+      const skillRows = await db.execute(skillQuery);
+      const skill = (skillRows as any[])[0];
+      if (!skill) return { success: false, error: 'Skill no encontrado' };
+
+      // Increment usage
+      await db.execute(sql`UPDATE operational_skills SET usage_count = usage_count + 1 WHERE id = ${skill.id}::uuid`);
+
+      // Build AI prompt from skill template + user input
+      const inputData = request.body || {};
+      const systemPrompt = `Eres un asistente de operaciones de seguridad de Clave Seguridad. Genera un documento profesional en español basado en la siguiente skill: "${skill.name}" (${skill.description}). Usa formato Markdown con encabezados, listas y secciones claras.`;
+      let userPrompt = `Skill: ${skill.name}\nCategoria: ${skill.category}\n\nDatos de entrada:\n`;
+      for (const [key, value] of Object.entries(inputData)) {
+        userPrompt += `- ${key}: ${value}\n`;
+      }
+      userPrompt += '\nGenera el documento completo.';
+
+      // Try AI generation via OpenAI or Anthropic
+      let content = '';
+      const openaiKey = process.env.OPENAI_API_KEY;
+      const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
+      if (openaiKey) {
+        try {
+          const res = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+              max_tokens: 2048,
+              temperature: 0.7,
+            }),
+          });
+          const data = await res.json() as any;
+          content = data.choices?.[0]?.message?.content || '';
+        } catch { /* fallback below */ }
+      }
+
+      if (!content && anthropicKey) {
+        try {
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': anthropicKey,
+              'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: 2048,
+              system: systemPrompt,
+              messages: [{ role: 'user', content: userPrompt }],
+            }),
+          });
+          const data = await res.json() as any;
+          content = data.content?.[0]?.text || '';
+        } catch { /* fallback below */ }
+      }
+
+      // Fallback: template-based generation if no AI available
+      if (!content) {
+        content = `## ${skill.name}\n\n**Categoria:** ${skill.category}\n\n### Datos proporcionados\n\n`;
+        for (const [key, value] of Object.entries(inputData)) {
+          content += `- **${key}:** ${value}\n`;
+        }
+        content += '\n---\n*Documento generado automaticamente. Configure OPENAI_API_KEY o ANTHROPIC_API_KEY para generacion con IA.*';
+      }
+
+      // Log execution
+      await db.execute(sql`INSERT INTO skill_executions (skill_id, tenant_id, user_id, input_data, status, created_at) VALUES (${skill.id}::uuid, ${request.tenantId}, ${request.userId}::uuid, ${JSON.stringify(inputData)}::jsonb, 'completed', NOW())`);
+
+      return { success: true, data: { content, skill: skill.name, category: skill.category } };
     } catch (e: any) { return { success: false, error: e.message }; }
   });
 
@@ -160,8 +235,13 @@ export async function registerVPSPlugins(app: FastifyInstance) {
       const secret = request.headers['x-webhook-secret'] || (request.query as any)?.secret;
       if (secret !== N8N_SECRET) return reply.code(401).send({ error: 'Invalid webhook secret' });
       try {
+        const body = request.body || {};
+        const severity = (body as Record<string, unknown>).severity as string || 'info';
+        const description = (body as Record<string, unknown>).description as string || `Webhook: ${type}`;
+        const validSeverities = ['info', 'low', 'medium', 'high', 'critical'];
+        const safeSeverity = validSeverities.includes(severity) ? severity : 'info';
         await db.execute(sql`INSERT INTO events (tenant_id, event_type, source, description, severity, raw_data, created_at)
-          VALUES ('a0000000-0000-0000-0000-000000000001'::uuid, ${type}, 'n8n-webhook', ${'Webhook: ' + type}, 'info', ${JSON.stringify(request.body || {})}::jsonb, NOW())`);
+          VALUES ('a0000000-0000-0000-0000-000000000001'::uuid, ${type}, 'n8n-webhook', ${description}, ${safeSeverity}, ${JSON.stringify(body)}::jsonb, NOW())`);
       } catch { /* silent */ }
       return { success: true, received: type, timestamp: new Date().toISOString() };
     });
