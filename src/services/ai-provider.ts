@@ -39,22 +39,22 @@ export interface AIResponse {
 
 export const AI_MODELS: Record<AIProvider, { id: string; name: string; description: string }[]> = {
   openai: [
-    { id: 'gpt-5', name: 'GPT-5', description: 'Most capable model' },
-    { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: 'Fast and efficient' },
+    { id: 'gpt-4o', name: 'GPT-4o', description: 'Modelo más capaz' },
+    { id: 'gpt-4o-mini', name: 'GPT-4o Mini', description: 'Rápido y eficiente' },
   ],
   anthropic: [
-    { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', description: 'Balanced capability' },
-    { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', description: 'Fast and affordable' },
+    { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', description: 'Capacidad balanceada' },
+    { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', description: 'Rápido y económico' },
   ],
   lovable: [
-    { id: 'google/gemini-3-flash-preview', name: 'Gemini 3 Flash', description: 'Default fast model' },
-    { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Top-tier reasoning' },
+    { id: 'google/gemini-3-flash-preview', name: 'Gemini 3 Flash', description: 'Modelo rápido por defecto' },
+    { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Razonamiento avanzado' },
   ],
 };
 
 export const DEFAULT_AI_CONFIG: AIProviderConfig = {
-  provider: 'lovable',
-  model: 'google/gemini-3-flash-preview',
+  provider: 'anthropic',
+  model: 'claude-sonnet-4-20250514',
   temperature: 0.7,
   maxTokens: 2048,
 };

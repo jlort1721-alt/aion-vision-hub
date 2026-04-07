@@ -167,25 +167,47 @@ export function AIONFloatingAssistant() {
     recognition.onend = () => setListening(false);
   };
 
-  // ── Text-to-Speech (TTS) ──────────────────────────────────────
-  const speakResponse = useCallback((text: string) => {
+  // ── Text-to-Speech (TTS) — ElevenLabs (backend) with browser fallback ──
+  const speakResponse = useCallback(async (text: string) => {
+    // Try ElevenLabs TTS via backend first (higher quality Spanish voice)
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${apiUrl}/voice/health`);
+      if (res.ok) {
+        const health = await res.json();
+        if (health?.data?.available) {
+          const synthRes = await fetch(`${apiUrl}/voice/agent/synthesize`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, voice_id: health.data?.voiceId }),
+          });
+          if (synthRes.ok) {
+            const blob = await synthRes.blob();
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            audio.onended = () => URL.revokeObjectURL(url);
+            await audio.play();
+            return;
+          }
+        }
+      }
+    } catch {
+      // ElevenLabs unavailable, fall through to browser TTS
+    }
+
+    // Fallback: Browser SpeechSynthesis
     if (!('speechSynthesis' in window)) {
-      toast.error('TTS no disponible en este navegador');
+      toast.error('TTS no disponible');
       return;
     }
-    // Cancel any ongoing speech
     window.speechSynthesis.cancel();
-
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'es-CO';
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
-
-    // Try to find a Spanish voice
     const voices = window.speechSynthesis.getVoices();
     const spanishVoice = voices.find(v => (v.lang || '').startsWith('es'));
     if (spanishVoice) utterance.voice = spanishVoice;
-
     window.speechSynthesis.speak(utterance);
   }, []);
 
@@ -231,7 +253,9 @@ export function AIONFloatingAssistant() {
         tools: true,
         pageContext: { page: pagePath },
       });
-      const response = (resp as Record<string, unknown>)?.response as string || 'Sin respuesta';
+      // Backend returns { success, data: { content, ... } } — extract content
+      const data = (resp as any)?.data ?? resp;
+      const response: string = (typeof data === 'string' ? data : data?.content ?? data?.response ?? 'Sin respuesta');
       const allMessages = [...updatedMessages, { role: 'assistant' as const, content: response }];
       setMessages(allMessages);
       // Auto-speak new AI response if enabled
