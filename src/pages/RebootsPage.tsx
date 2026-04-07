@@ -22,19 +22,31 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
+// Procedimientos de referencia operativa (guía para operadores)
 const REBOOT_PROCEDURES = [
-  { id: 'proc-001', title: 'Reinicio remoto de camara IP', steps: ['Verificar conectividad de red', 'Intentar ping al dispositivo', 'Enviar comando de reinicio ONVIF/ISAPI', 'Esperar 60 segundos', 'Verificar stream RTSP', 'Confirmar resolucion o escalar'], difficulty: 'basic' },
-  { id: 'proc-002', title: 'Reinicio de NVR', steps: ['Notificar al supervisor', 'Verificar que no hay grabaciones activas criticas', 'Enviar comando de reinicio', 'Esperar 2-3 minutos', 'Verificar canales reconectados', 'Confirmar grabacion reanudada'], difficulty: 'intermediate' },
-  { id: 'proc-003', title: 'Reinicio de switch/PoE', steps: ['Identificar dispositivos afectados', 'Notificar a central', 'Reiniciar puerto PoE especifico', 'Si no resuelve, reiniciar switch completo', 'Esperar reconexion de todos los dispositivos', 'Verificar uno por uno'], difficulty: 'advanced' },
-  { id: 'proc-004', title: 'Verificacion post-reinicio', steps: ['Confirmar IP accesible', 'Verificar stream de video', 'Verificar grabacion local/NVR', 'Verificar eventos inteligentes', 'Registrar resultado en bitacora'], difficulty: 'basic' },
+  { id: 'proc-001', title: 'Reinicio remoto de cámara IP', steps: ['Verificar conectividad de red', 'Intentar ping al dispositivo', 'Enviar comando de reinicio ONVIF/ISAPI', 'Esperar 60 segundos', 'Verificar stream RTSP', 'Confirmar resolución o escalar'], difficulty: 'basico' },
+  { id: 'proc-002', title: 'Reinicio de NVR', steps: ['Notificar al supervisor', 'Verificar que no hay grabaciones activas críticas', 'Enviar comando de reinicio', 'Esperar 2-3 minutos', 'Verificar canales reconectados', 'Confirmar grabación reanudada'], difficulty: 'intermedio' },
+  { id: 'proc-003', title: 'Reinicio de switch/PoE', steps: ['Identificar dispositivos afectados', 'Notificar a central', 'Reiniciar puerto PoE específico', 'Si no resuelve, reiniciar switch completo', 'Esperar reconexión de todos los dispositivos', 'Verificar uno por uno'], difficulty: 'avanzado' },
+  { id: 'proc-004', title: 'Verificación post-reinicio', steps: ['Confirmar IP accesible', 'Verificar stream de video', 'Verificar grabación local/NVR', 'Verificar eventos inteligentes', 'Registrar resultado en bitácora'], difficulty: 'basico' },
 ];
+
+const difficultyLabels: Record<string, string> = {
+  basico: 'Básico', intermedio: 'Intermedio', avanzado: 'Avanzado',
+  basic: 'Básico', intermediate: 'Intermedio', advanced: 'Avanzado',
+};
+
+const statusLabels: Record<string, string> = {
+  pending: 'Pendiente', in_progress: 'En curso', completed: 'Completado', failed: 'Fallido',
+};
 
 export default function RebootsPage() {
   const { t } = useI18n();
-  const { data: devices = [] } = useDevices();
+  const { data: rawDevices = [] } = useDevices();
+  const devices = rawDevices as any[];
   const queryClient = useQueryClient();
   const [selectedProcedure, setSelectedProcedure] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [taskStatusFilter, setTaskStatusFilter] = useState('all');
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState({ device_id: '', reason: '' });
   const [aiLoading, setAiLoading] = useState<string | null>(null);
@@ -57,7 +69,7 @@ export default function RebootsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reboot_tasks'] });
-      toast.success('Reboot initiated');
+      toast.success('Reinicio iniciado');
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -70,7 +82,7 @@ export default function RebootsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reboot_tasks'] });
-      toast.success('Reboot status updated');
+      toast.success('Estado de reinicio actualizado');
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -151,8 +163,16 @@ export default function RebootsPage() {
         <div className="flex flex-1 overflow-hidden">
           {/* Reboot tasks list */}
           <div className="flex-1 flex flex-col border-r">
-            <div className="px-4 py-2 border-b">
-              <div className="relative"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder={t('common.search')} value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-sm" /></div>
+            <div className="px-4 py-2 border-b space-y-2">
+              <div className="relative"><Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por razón..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-sm" /></div>
+              <div className="flex items-center gap-1">
+                {['all', 'pending', 'completed', 'failed'].map(s => (
+                  <Button key={s} variant={taskStatusFilter === s ? 'default' : 'ghost'} size="sm" className="h-6 text-[10px] px-2" onClick={() => setTaskStatusFilter(s)}>
+                    {s === 'all' ? 'Todos' : statusLabels[s] || s}
+                    {s !== 'all' && <Badge variant="secondary" className="ml-1 h-4 text-[9px]">{rebootTasks.filter((t: any) => t.status === s).length}</Badge>}
+                  </Button>
+                ))}
+              </div>
             </div>
             <div className="flex-1 overflow-auto">
               {isLoading ? (
@@ -160,7 +180,7 @@ export default function RebootsPage() {
               ) : rebootTasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                   <RotateCcw className="h-12 w-12 mb-2 opacity-20" />
-                  <p className="text-sm">No reboot tasks yet</p>
+                  <p className="text-sm">Sin tareas de reinicio</p>
                   <Button variant="outline" size="sm" className="mt-2" onClick={() => setAddOpen(true)}><Plus className="mr-1 h-3 w-3" /> {t('reboots.initiate')}</Button>
                 </div>
               ) : (
@@ -168,31 +188,35 @@ export default function RebootsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t('common.status')}</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>Recovery</TableHead>
+                      <TableHead>Razón</TableHead>
+                      <TableHead>Recuperación</TableHead>
                       <TableHead>{t('common.date')}</TableHead>
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rebootTasks.map((task: any) => (
+                    {rebootTasks.filter((task: any) => {
+                      if (taskStatusFilter !== 'all' && task.status !== taskStatusFilter) return false;
+                      if (search && !(task.reason || '').toLowerCase().includes(search.toLowerCase())) return false;
+                      return true;
+                    }).map((task: any) => (
                       <TableRow key={task.id}>
                         <TableCell>
-                          <Badge variant={task.status === 'completed' ? 'default' : task.status === 'failed' ? 'destructive' : 'secondary'} className="text-[10px] capitalize">{task.status}</Badge>
+                          <Badge variant={task.status === 'completed' ? 'default' : task.status === 'failed' ? 'destructive' : 'secondary'} className="text-[10px]">{statusLabels[task.status] || task.status}</Badge>
                         </TableCell>
                         <TableCell className="text-xs max-w-[200px] truncate">{task.reason}</TableCell>
                         <TableCell className="text-xs font-mono">{task.recovery_time_seconds ? `${task.recovery_time_seconds}s` : task.recoveryTimeSeconds ? `${task.recoveryTimeSeconds}s` : '\u2014'}</TableCell>
-                        <TableCell className="text-xs font-mono">{new Date(task.created_at ?? task.createdAt).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs font-mono">{new Date(task.created_at ?? task.createdAt).toLocaleString('es-CO')}</TableCell>
                         <TableCell>
                           {task.status === 'pending' && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => completeMutation.mutate({ id: task.id, status: 'completed', result: 'OK', recoveryTimeSeconds: 45 })}>
-                                  <CheckCircle className="mr-2 h-3 w-3" /> Mark Completed
+                                  <CheckCircle className="mr-2 h-3 w-3" /> Marcar Completado
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => completeMutation.mutate({ id: task.id, status: 'failed', result: 'Device unreachable' })}>
-                                  <AlertTriangle className="mr-2 h-3 w-3" /> Mark Failed
+                                <DropdownMenuItem onClick={() => completeMutation.mutate({ id: task.id, status: 'failed', result: 'Dispositivo inalcanzable' })}>
+                                  <AlertTriangle className="mr-2 h-3 w-3" /> Marcar Fallido
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -238,9 +262,9 @@ export default function RebootsPage() {
                   <CardContent className="p-3">
                     <div className="flex items-start justify-between">
                       <p className="text-xs font-medium">{proc.title}</p>
-                      <Badge variant="outline" className="text-[9px] capitalize">{proc.difficulty}</Badge>
+                      <Badge variant="outline" className="text-[9px]">{difficultyLabels[proc.difficulty] || proc.difficulty}</Badge>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-1">{proc.steps.length} steps</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{proc.steps.length} pasos</p>
                   </CardContent>
                 </Card>
               ))}
@@ -265,18 +289,18 @@ export default function RebootsPage() {
                     <div className="flex items-center gap-2 py-2">
                       <Loader2 className="h-3 w-3 animate-spin text-primary" />
                       <span className="text-[10px] text-muted-foreground">
-                        {aiLoading === 'diagnose' ? 'Running diagnostics...' : 'Generating fix suggestion...'}
+                        {aiLoading === 'diagnose' ? 'Ejecutando diagnóstico...' : 'Generando sugerencia de solución...'}
                       </span>
                     </div>
                   ) : aiResult ? (
                     <p className="text-[10px] text-muted-foreground whitespace-pre-wrap max-h-40 overflow-auto">{aiResult}</p>
                   ) : (
                     <p className="text-[10px] text-muted-foreground">
-                      {procedure.difficulty === 'basic'
-                        ? `Basic procedure. Follow the ${procedure.steps.length} steps sequentially for "${procedure.title}".`
-                        : procedure.difficulty === 'intermediate'
-                        ? `Intermediate procedure. Ensure supervisor notification before executing "${procedure.title}".`
-                        : `Advanced procedure: "${procedure.title}" may affect multiple devices. Coordinate with central before proceeding.`}
+                      {procedure.difficulty === 'basico' || procedure.difficulty === 'basic'
+                        ? `Procedimiento básico. Siga los ${procedure.steps.length} pasos secuencialmente para "${procedure.title}".`
+                        : procedure.difficulty === 'intermedio' || procedure.difficulty === 'intermediate'
+                        ? `Procedimiento intermedio. Notifique al supervisor antes de ejecutar "${procedure.title}".`
+                        : `Procedimiento avanzado: "${procedure.title}" puede afectar múltiples dispositivos. Coordine con central antes de proceder.`}
                     </p>
                   )}
                 </div>
@@ -288,7 +312,7 @@ export default function RebootsPage() {
                     disabled={!!aiLoading}
                     onClick={handleAiDiagnose}
                   >
-                    {aiLoading === 'diagnose' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Zap className="mr-1 h-3 w-3" />} Diagnose
+                    {aiLoading === 'diagnose' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Zap className="mr-1 h-3 w-3" />} Diagnosticar
                   </Button>
                   <Button
                     variant="outline"
@@ -297,7 +321,7 @@ export default function RebootsPage() {
                     disabled={!!aiLoading}
                     onClick={handleAiSuggestFix}
                   >
-                    {aiLoading === 'fix' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Bot className="mr-1 h-3 w-3" />} Suggest Fix
+                    {aiLoading === 'fix' ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Bot className="mr-1 h-3 w-3" />} Sugerir Solución
                   </Button>
                 </div>
               </div>
@@ -310,13 +334,15 @@ export default function RebootsPage() {
         <DialogContent>
           <DialogHeader><DialogTitle>{t('reboots.initiate')}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1"><Label>Device</Label>
-              <Select value={form.device_id} onValueChange={v => setForm(p => ({ ...p, device_id: v }))}><SelectTrigger><SelectValue placeholder="Select device" /></SelectTrigger>
-                <SelectContent>{devices.map(d => <SelectItem key={d.id} value={d.id}>{d.name} ({d.ip_address})</SelectItem>)}</SelectContent>
+            <div className="space-y-1"><Label>Dispositivo</Label>
+              <Select value={form.device_id} onValueChange={v => setForm(p => ({ ...p, device_id: v }))}><SelectTrigger><SelectValue placeholder="Seleccionar dispositivo" /></SelectTrigger>
+                <SelectContent>{devices.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name} ({d.ip_address})</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="space-y-1"><Label>Reason *</Label><Textarea value={form.reason} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))} placeholder="Describe the issue..." /></div>
-            <Button className="w-full" onClick={handleAdd} disabled={!form.reason.trim() || createMutation.isPending}><RotateCcw className="mr-1 h-4 w-4" /> Initiate Reboot</Button>
+            <div className="space-y-1"><Label>Razón *</Label><Textarea value={form.reason} onChange={e => setForm(p => ({ ...p, reason: e.target.value }))} placeholder="Describa el problema..." /></div>
+            <Button className="w-full" onClick={handleAdd} disabled={!form.reason.trim() || createMutation.isPending}>
+              {createMutation.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-1 h-4 w-4" />} Iniciar Reinicio
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
