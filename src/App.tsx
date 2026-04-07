@@ -13,6 +13,7 @@ import { hasModuleAccess } from "@/lib/permissions";
 import AppLayout from "@/components/layout/AppLayout";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import AppErrorBoundary from "@/components/shared/AppErrorBoundary";
 // Route-level code splitting: each page loads on-demand
 const PWAUpdateNotification = lazy(() => import("@/components/pwa/PWAUpdateNotification").then(m => ({ default: m.PWAUpdateNotification })));
 const PWAInstallPrompt = lazy(() => import("@/components/pwa/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
@@ -135,6 +136,7 @@ function ModuleGuard({ module, children }: { module: string; children: React.Rea
 function AppRoutes() {
   return (
     <ErrorBoundary>
+    <AppErrorBoundary>
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<LandingRoute />} />
@@ -207,6 +209,7 @@ function AppRoutes() {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
+    </AppErrorBoundary>
     </ErrorBoundary>
   );
 }
