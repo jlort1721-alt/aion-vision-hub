@@ -130,9 +130,9 @@ export default function TrainingPage() {
       qc.invalidateQueries({ queryKey: ['training-programs'] });
       qc.invalidateQueries({ queryKey: ['training-stats'] });
       closeProgramDialog();
-      toast.success('Program created successfully');
+      toast.success('Programa creado exitosamente');
     },
-    onError: (err: Error) => toast.error(`Failed to create program: ${err.message}`),
+    onError: (err: Error) => toast.error(`Error al crear programa: ${err.message}`),
   });
 
   const updateProgram = useMutation({
@@ -141,9 +141,9 @@ export default function TrainingPage() {
       qc.invalidateQueries({ queryKey: ['training-programs'] });
       qc.invalidateQueries({ queryKey: ['training-stats'] });
       closeProgramDialog();
-      toast.success('Program updated successfully');
+      toast.success('Programa actualizado');
     },
-    onError: (err: Error) => toast.error(`Failed to update program: ${err.message}`),
+    onError: (err: Error) => toast.error(`Error al actualizar programa: ${err.message}`),
   });
 
   const deleteProgram = useMutation({
@@ -152,9 +152,9 @@ export default function TrainingPage() {
       qc.invalidateQueries({ queryKey: ['training-programs'] });
       qc.invalidateQueries({ queryKey: ['training-stats'] });
       setDeleteTarget(null);
-      toast.success('Program deleted');
+      toast.success('Programa eliminado');
     },
-    onError: (err: Error) => toast.error(`Failed to delete program: ${err.message}`),
+    onError: (err: Error) => toast.error(`Error al eliminar programa: ${err.message}`),
   });
 
   const enrollUser = useMutation({
@@ -164,9 +164,9 @@ export default function TrainingPage() {
       qc.invalidateQueries({ queryKey: ['certifications'] });
       qc.invalidateQueries({ queryKey: ['training-stats'] });
       closeEnrollDialog();
-      toast.success('User enrolled successfully');
+      toast.success('Usuario inscrito exitosamente');
     },
-    onError: (err: Error) => toast.error(`Failed to enroll user: ${err.message}`),
+    onError: (err: Error) => toast.error(`Error al inscribir usuario: ${err.message}`),
   });
 
   const completeCert = useMutation({
@@ -177,9 +177,9 @@ export default function TrainingPage() {
       qc.invalidateQueries({ queryKey: ['training-stats'] });
       qc.invalidateQueries({ queryKey: ['expiring-certs'] });
       closeCompleteDialog();
-      toast.success('Certification completed');
+      toast.success('Certificación completada');
     },
-    onError: (err: Error) => toast.error(`Failed to complete certification: ${err.message}`),
+    onError: (err: Error) => toast.error(`Error al completar certificación: ${err.message}`),
   });
 
   // Dialog helpers
@@ -276,10 +276,10 @@ export default function TrainingPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <GraduationCap className="h-6 w-6" />
-            Training & Certifications
+            Capacitación y Certificaciones
           </h1>
           <p className="text-sm text-muted-foreground">
-            Manage training programs, enrollments, and certifications
+            Gestione programas de capacitación, inscripciones y certificaciones
           </p>
         </div>
       </div>
@@ -294,7 +294,7 @@ export default function TrainingPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{s?.totalPrograms ?? 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Training programs</p>
+            <p className="text-xs text-muted-foreground mt-1">Programas de capacitación</p>
           </CardContent>
         </Card>
         <Card>
@@ -305,42 +305,42 @@ export default function TrainingPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{s?.totalCertifications ?? 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total issued</p>
+            <p className="text-xs text-muted-foreground mt-1">Total emitidas</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />Compliance Rate
+              <TrendingUp className="h-4 w-4" />Tasa de Cumplimiento
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${(s?.complianceRate ?? 0) >= 80 ? 'text-success' : (s?.complianceRate ?? 0) >= 50 ? 'text-warning' : 'text-destructive'}`}>
               {s?.complianceRate ?? 0}%
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Completion rate</p>
+            <p className="text-xs text-muted-foreground mt-1">Tasa de completitud</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-warning" />Expiring (30d)
+              <AlertTriangle className="h-4 w-4 text-warning" />Por Vencer (30d)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-warning">{expiringCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Need renewal</p>
+            <p className="text-xs text-muted-foreground mt-1">Necesitan renovación</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Expiring Certifications Warning */}
+      {/* Certificaciones por Vencer Warning */}
       {expiringCount > 0 && (
         <Card className="border-warning/30 bg-warning/5">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-warning" />
-              Expiring Certifications
+              Certificaciones por Vencer
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -356,14 +356,14 @@ export default function TrainingPage() {
                   <div className="flex items-center gap-2">
                     <Clock className="h-3 w-3 text-warning" />
                     <span className="text-xs text-muted-foreground">
-                      Expires: {new Date(c.expiresAt).toLocaleDateString()}
+                      Vence: {new Date(c.expiresAt).toLocaleDateString('es-CO')}
                     </span>
                   </div>
                 </div>
               ))}
               {expiringCount > 5 && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  ... and {expiringCount - 5} more
+                  ... y más
                 </p>
               )}
             </div>
@@ -385,12 +385,12 @@ export default function TrainingPage() {
           <div className="flex gap-2">
             {tab === 'programs' && (
               <Button size="sm" onClick={openCreateProgram}>
-                <Plus className="h-4 w-4 mr-1" />New Program
+                <Plus className="h-4 w-4 mr-1" />Nuevo Programa
               </Button>
             )}
             {tab === 'certifications' && (
               <Button size="sm" onClick={openEnrollDialog}>
-                <Users className="h-4 w-4 mr-1" />Enroll User
+                <Users className="h-4 w-4 mr-1" />Inscribir Usuario
               </Button>
             )}
           </div>
@@ -401,7 +401,7 @@ export default function TrainingPage() {
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder={tab === 'programs' ? 'Search programs...' : 'Search certifications...'}
+              placeholder={tab === 'programs' ? 'Buscar programas...' : 'Buscar certificaciones...'}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 h-9"
@@ -413,14 +413,14 @@ export default function TrainingPage() {
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="safety">Safety</SelectItem>
-                <SelectItem value="technology">Technology</SelectItem>
-                <SelectItem value="compliance">Compliance</SelectItem>
-                <SelectItem value="first_aid">First Aid</SelectItem>
-                <SelectItem value="emergency">Emergency</SelectItem>
-                <SelectItem value="firearms">Firearms</SelectItem>
-                <SelectItem value="customer_service">Customer Service</SelectItem>
+                <SelectItem value="all">Todas las Categorías</SelectItem>
+                <SelectItem value="safety">Seguridad</SelectItem>
+                <SelectItem value="technology">Tecnología</SelectItem>
+                <SelectItem value="compliance">Cumplimiento</SelectItem>
+                <SelectItem value="first_aid">Primeros Auxilios</SelectItem>
+                <SelectItem value="emergency">Emergencia</SelectItem>
+                <SelectItem value="firearms">Armas de Fuego</SelectItem>
+                <SelectItem value="customer_service">Atención al Cliente</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -430,12 +430,12 @@ export default function TrainingPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="enrolled">Enrolled</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="expired">Expired</SelectItem>
+                <SelectItem value="all">Todo Estado</SelectItem>
+                <SelectItem value="enrolled">Inscrito</SelectItem>
+                <SelectItem value="in_progress">En Progreso</SelectItem>
+                <SelectItem value="completed">Completado</SelectItem>
+                <SelectItem value="failed">Fallido</SelectItem>
+                <SelectItem value="expired">Vencido</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -456,12 +456,12 @@ export default function TrainingPage() {
                   <GraduationCap className="h-12 w-12 mb-3 opacity-20" />
                   <p className="text-sm font-medium">
                     {(programs?.data || []).length === 0
-                      ? 'No training programs yet'
-                      : 'No programs match your filters'}
+                      ? 'Sin programas de capacitación'
+                      : 'Sin programas que coincidan con los filtros'}
                   </p>
                   {(programs?.data || []).length === 0 && (
                     <Button variant="outline" size="sm" className="mt-3" onClick={openCreateProgram}>
-                      <Plus className="mr-1 h-3 w-3" />Create your first program
+                      <Plus className="mr-1 h-3 w-3" />Crear primer programa
                     </Button>
                   )}
                 </div>
@@ -470,11 +470,11 @@ export default function TrainingPage() {
                   <thead>
                     <tr className="border-b bg-muted/50">
                       <th className="p-3 text-left font-medium">Name</th>
-                      <th className="p-3 text-left font-medium">Category</th>
+                      <th className="p-3 text-left font-medium">Categoría</th>
                       <th className="p-3 text-left font-medium">Duration</th>
-                      <th className="p-3 text-left font-medium">Pass Score</th>
-                      <th className="p-3 text-left font-medium">Validity</th>
-                      <th className="p-3 text-left font-medium">Required</th>
+                      <th className="p-3 text-left font-medium">Nota Mín.</th>
+                      <th className="p-3 text-left font-medium">Vigencia</th>
+                      <th className="p-3 text-left font-medium">Obligatorio</th>
                       <th className="p-3 text-left font-medium">Status</th>
                       <th className="p-3 w-10">Actions</th>
                     </tr>
@@ -502,7 +502,7 @@ export default function TrainingPage() {
                           <span className="font-mono">{p.passingScore}%</span>
                         </td>
                         <td className="p-3 text-xs">
-                          {p.validityMonths} months
+                          {p.validityMonths} meses
                         </td>
                         <td className="p-3">
                           <Badge variant={p.isRequired ? 'destructive' : 'secondary'}>
@@ -531,7 +531,7 @@ export default function TrainingPage() {
                                   setShowEnrollDialog(true);
                                 }}
                               >
-                                <Users className="mr-2 h-3 w-3" />Enroll User
+                                <Users className="mr-2 h-3 w-3" />Inscribir Usuario
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -551,7 +551,7 @@ export default function TrainingPage() {
             </CardContent>
           </Card>
           <div className="text-xs text-muted-foreground mt-2">
-            {filteredPrograms.length} program(s) shown
+            {filteredPrograms.length} programa(s) mostrados
           </div>
         </TabsContent>
 
@@ -570,12 +570,12 @@ export default function TrainingPage() {
                   <Award className="h-12 w-12 mb-3 opacity-20" />
                   <p className="text-sm font-medium">
                     {(certs?.data || []).length === 0
-                      ? 'No certifications yet'
-                      : 'No certifications match your filters'}
+                      ? 'Sin certificaciones aún'
+                      : 'Sin certificaciones que coincidan con los filtros'}
                   </p>
                   {(certs?.data || []).length === 0 && (
                     <Button variant="outline" size="sm" className="mt-3" onClick={openEnrollDialog}>
-                      <Plus className="mr-1 h-3 w-3" />Enroll your first user
+                      <Plus className="mr-1 h-3 w-3" />Inscribir primer usuario
                     </Button>
                   )}
                 </div>
@@ -587,8 +587,8 @@ export default function TrainingPage() {
                       <th className="p-3 text-left font-medium">Program</th>
                       <th className="p-3 text-left font-medium">Status</th>
                       <th className="p-3 text-left font-medium">Score</th>
-                      <th className="p-3 text-left font-medium">Enrolled</th>
-                      <th className="p-3 text-left font-medium">Completed</th>
+                      <th className="p-3 text-left font-medium">Inscrito</th>
+                      <th className="p-3 text-left font-medium">Completado</th>
                       <th className="p-3 text-left font-medium">Expires</th>
                       <th className="p-3 w-10">Actions</th>
                     </tr>
@@ -622,14 +622,14 @@ export default function TrainingPage() {
                           </td>
                           <td className="p-3 text-xs">
                             {c.enrolledAt
-                              ? new Date(c.enrolledAt).toLocaleDateString()
+                              ? new Date(c.enrolledAt).toLocaleDateString('es-CO')
                               : c.createdAt
-                              ? new Date(c.createdAt).toLocaleDateString()
+                              ? new Date(c.createdAt).toLocaleDateString('es-CO')
                               : '-'}
                           </td>
                           <td className="p-3 text-xs">
                             {c.completedAt
-                              ? new Date(c.completedAt).toLocaleDateString()
+                              ? new Date(c.completedAt).toLocaleDateString('es-CO')
                               : '-'}
                           </td>
                           <td className="p-3 text-xs">
@@ -643,9 +643,9 @@ export default function TrainingPage() {
                                     : ''
                                 }
                               >
-                                {new Date(c.expiresAt).toLocaleDateString()}
-                                {isExpired && ' (Expired)'}
-                                {isExpiringSoon && !isExpired && ' (Soon)'}
+                                {new Date(c.expiresAt).toLocaleDateString('es-CO')}
+                                {isExpired && ' (Vencido)'}
+                                {isExpiringSoon && !isExpired && ' (Pronto)'}
                               </span>
                             ) : (
                               '-'
@@ -676,7 +676,7 @@ export default function TrainingPage() {
             </CardContent>
           </Card>
           <div className="text-xs text-muted-foreground mt-2">
-            {filteredCerts.length} certification(s) shown
+            {filteredCerts.length} certificación(es) mostradas
           </div>
         </TabsContent>
       </Tabs>
@@ -686,51 +686,51 @@ export default function TrainingPage() {
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingProgram ? 'Edit Program' : 'New Training Program'}
+              {editingProgram ? 'Editar Programa' : 'Nuevo Programa de Capacitación'}
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
             <div className="space-y-1">
-              <Label>Program Name *</Label>
+              <Label>Nombre del Programa *</Label>
               <Input
                 value={progForm.name}
                 onChange={(e) => setProgForm({ ...progForm, name: e.target.value })}
-                placeholder="Program name"
+                placeholder="Nombre del programa"
               />
             </div>
 
             <div className="space-y-1">
-              <Label>Description</Label>
+              <Label>Descripción</Label>
               <textarea
                 className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={progForm.description}
                 onChange={(e) => setProgForm({ ...progForm, description: e.target.value })}
-                placeholder="Training program description..."
+                placeholder="Descripción del programa..."
               />
             </div>
 
             <div className="space-y-1">
-              <Label>Category</Label>
+              <Label>Categoría</Label>
               <Select
                 value={progForm.category}
                 onValueChange={(v) => setProgForm({ ...progForm, category: v })}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="safety">Safety</SelectItem>
-                  <SelectItem value="technology">Technology</SelectItem>
-                  <SelectItem value="compliance">Compliance</SelectItem>
-                  <SelectItem value="first_aid">First Aid</SelectItem>
-                  <SelectItem value="emergency">Emergency</SelectItem>
-                  <SelectItem value="firearms">Firearms</SelectItem>
-                  <SelectItem value="customer_service">Customer Service</SelectItem>
+                  <SelectItem value="safety">Seguridad</SelectItem>
+                  <SelectItem value="technology">Tecnología</SelectItem>
+                  <SelectItem value="compliance">Cumplimiento</SelectItem>
+                  <SelectItem value="first_aid">Primeros Auxilios</SelectItem>
+                  <SelectItem value="emergency">Emergencia</SelectItem>
+                  <SelectItem value="firearms">Armas de Fuego</SelectItem>
+                  <SelectItem value="customer_service">Atención al Cliente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
-                <Label>Duration (hours)</Label>
+                <Label>Duración (horas)</Label>
                 <Input
                   type="number"
                   min={1}
@@ -739,7 +739,7 @@ export default function TrainingPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label>Passing Score (%)</Label>
+                <Label>Nota de Aprobación (%)</Label>
                 <Input
                   type="number"
                   min={0}
@@ -749,7 +749,7 @@ export default function TrainingPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label>Validity (months)</Label>
+                <Label>Vigencia (months)</Label>
                 <Input
                   type="number"
                   min={0}
@@ -765,7 +765,7 @@ export default function TrainingPage() {
                   checked={progForm.isRequired}
                   onCheckedChange={(v) => setProgForm({ ...progForm, isRequired: v })}
                 />
-                <Label>Required Training</Label>
+                <Label>Capacitación Obligatoria</Label>
               </div>
               {editingProgram && (
                 <div className="flex items-center gap-2">
@@ -773,13 +773,13 @@ export default function TrainingPage() {
                     checked={progForm.isActive}
                     onCheckedChange={(v) => setProgForm({ ...progForm, isActive: v })}
                   />
-                  <Label>Active</Label>
+                  <Label>Activo</Label>
                 </div>
               )}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeProgramDialog}>Cancel</Button>
+            <Button variant="outline" onClick={closeProgramDialog}>Cancelar</Button>
             <Button
               onClick={handleProgramSubmit}
               disabled={
@@ -789,58 +789,58 @@ export default function TrainingPage() {
               }
             >
               {createProgram.isPending || updateProgram.isPending
-                ? 'Saving...'
+                ? 'Guardando...'
                 : editingProgram
-                ? 'Update Program'
-                : 'Create Program'}
+                ? 'Actualizar Programa'
+                : 'Crear Programa'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Enroll User Dialog */}
+      {/* Inscribir Usuario Dialog */}
       <Dialog open={showEnrollDialog} onOpenChange={(o) => { if (!o) closeEnrollDialog(); else setShowEnrollDialog(true); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Enroll User in Training Program</DialogTitle>
+            <DialogTitle>Inscribir Usuario in Training Program</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
             <div className="space-y-1">
-              <Label>Select Program *</Label>
+              <Label>Seleccionar Programa *</Label>
               <Select
                 value={enrollForm.programId}
                 onValueChange={(v) => setEnrollForm({ ...enrollForm, programId: v })}
               >
-                <SelectTrigger><SelectValue placeholder="Select a program..." /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Seleccionar programa..." /></SelectTrigger>
                 <SelectContent>
                   {(programs?.data || []).map((p: any) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
-                      {p.isRequired && ' (Required)'}
+                      {p.isRequired && ' (Obligatorio)'}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>User ID *</Label>
+              <Label>ID de Usuario *</Label>
               <Input
                 value={enrollForm.userId}
                 onChange={(e) => setEnrollForm({ ...enrollForm, userId: e.target.value })}
-                placeholder="User UUID"
+                placeholder="UUID del usuario"
               />
             </div>
             <div className="space-y-1">
-              <Label>User Name *</Label>
+              <Label>Nombre del Usuario *</Label>
               <Input
                 value={enrollForm.userName}
                 onChange={(e) => setEnrollForm({ ...enrollForm, userName: e.target.value })}
-                placeholder="Full name"
+                placeholder="Nombre completo"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeEnrollDialog}>Cancel</Button>
+            <Button variant="outline" onClick={closeEnrollDialog}>Cancelar</Button>
             <Button
               onClick={() =>
                 enrollUser.mutate({
@@ -856,17 +856,17 @@ export default function TrainingPage() {
                 enrollUser.isPending
               }
             >
-              {enrollUser.isPending ? 'Enrolling...' : 'Enroll User'}
+              {enrollUser.isPending ? 'Inscribiendo...' : 'Inscribir Usuario'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Complete Certification Dialog */}
+      {/* Completar Certificación Dialog */}
       <Dialog open={showCompleteDialog} onOpenChange={(o) => { if (!o) closeCompleteDialog(); else setShowCompleteDialog(true); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Complete Certification</DialogTitle>
+            <DialogTitle>Completar Certificación</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
             {completingCert && (
@@ -880,33 +880,33 @@ export default function TrainingPage() {
               </div>
             )}
             <div className="space-y-1">
-              <Label>Score (0-100) *</Label>
+              <Label>Puntaje (0-100) *</Label>
               <Input
                 type="number"
                 min={0}
                 max={100}
                 value={completeForm.score}
                 onChange={(e) => setCompleteForm({ ...completeForm, score: parseInt(e.target.value) || 0 })}
-                placeholder="Enter score"
+                placeholder="Ingrese puntaje"
               />
               {completingCert?.passingScore && (
                 <p className="text-xs text-muted-foreground">
-                  Passing score: {completingCert.passingScore}%
+                  Nota de aprobación: {completingCert.passingScore}%
                 </p>
               )}
             </div>
             <div className="space-y-1">
-              <Label>Notes</Label>
+              <Label>Notas</Label>
               <textarea
                 className="min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={completeForm.notes}
                 onChange={(e) => setCompleteForm({ ...completeForm, notes: e.target.value })}
-                placeholder="Evaluation notes..."
+                placeholder="Notas de evaluación..."
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeCompleteDialog}>Cancel</Button>
+            <Button variant="outline" onClick={closeCompleteDialog}>Cancelar</Button>
             <Button
               onClick={() =>
                 completeCert.mutate({
@@ -917,7 +917,7 @@ export default function TrainingPage() {
               }
               disabled={completeCert.isPending}
             >
-              {completeCert.isPending ? 'Completing...' : 'Complete Certification'}
+              {completeCert.isPending ? 'Completando...' : 'Completar Certificación'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -927,14 +927,14 @@ export default function TrainingPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Training Program</AlertDialogTitle>
+            <AlertDialogTitle>Eliminar Programa</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete program "{deleteTarget?.name}"?
-              This will not remove existing certifications but new enrollments will not be possible.
+              ¿Está seguro de eliminar el programa "{deleteTarget?.name}"?
+              Esto no eliminará certificaciones existentes pero no se podrán hacer nuevas inscripciones.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => deleteProgram.mutate(deleteTarget.id)}
