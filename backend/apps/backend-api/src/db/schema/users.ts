@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, boolean, timestamp, text } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, boolean, timestamp, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 
 export const profiles = pgTable('profiles', {
@@ -17,7 +17,9 @@ export const profiles = pgTable('profiles', {
   lastLoginAt: timestamp('last_login', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  uniqueIndex('idx_profiles_email_tenant').on(table.email, table.tenantId),
+]);
 
 export const userRoles = pgTable('user_roles', {
   id: uuid('id').defaultRandom().primaryKey(),

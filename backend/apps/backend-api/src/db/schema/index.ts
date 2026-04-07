@@ -38,10 +38,13 @@ export { apiKeys } from '../../modules/api-keys/schema.js';
 export { evidence } from './evidence.js';
 export { knowledgeBase } from './knowledge-base.js';
 export { communicationLogs, twilioNotificationRules } from './communication-logs.js';
+export { operationalNotes } from './operational-notes.js';
 
 import { pgTable, uuid, text, boolean, integer, timestamp, jsonb, varchar, index } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { tenants } from './tenants.js';
+import { devices } from './devices.js';
+import { profiles } from './users.js';
 
 // ── Notification Templates ───────────────────────────────────
 // Unified templates for email, WhatsApp, push notifications
@@ -77,7 +80,13 @@ export const auditLogs = pgTable('audit_logs', {
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  index('idx_audit_logs_tenant').on(table.tenantId),
+  index('idx_audit_logs_user').on(table.userId),
+  index('idx_audit_logs_action').on(table.action),
+  index('idx_audit_logs_entity_type').on(table.entityType),
+  index('idx_audit_logs_created_at').on(table.createdAt),
+]);
 
 export const integrations = pgTable('integrations', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -145,7 +154,7 @@ export const roleModulePermissions = pgTable('role_module_permissions', {
 export const liveViewLayouts = pgTable('live_view_layouts', {
   id: uuid('id').defaultRandom().primaryKey(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').notNull(),
+  userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   grid: integer('grid').notNull().default(9),
   slots: jsonb('slots').notNull().default([]),
@@ -157,7 +166,7 @@ export const liveViewLayouts = pgTable('live_view_layouts', {
 
 export const streams = pgTable('streams', {
   id: uuid('id').defaultRandom().primaryKey(),
-  deviceId: uuid('device_id').notNull(),
+  deviceId: uuid('device_id').notNull().references(() => devices.id, { onDelete: 'cascade' }),
   channel: integer('channel').notNull().default(1),
   type: text('type').notNull().default('main'),
   codec: text('codec').notNull().default('H.264'),
@@ -173,7 +182,7 @@ export const streams = pgTable('streams', {
 export const playbackRequests = pgTable('playback_requests', {
   id: uuid('id').defaultRandom().primaryKey(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  deviceId: uuid('device_id').notNull(),
+  deviceId: uuid('device_id').notNull().references(() => devices.id, { onDelete: 'cascade' }),
   channel: integer('channel').notNull().default(1),
   startTime: timestamp('start_time', { withTimezone: true }).notNull(),
   endTime: timestamp('end_time', { withTimezone: true }).notNull(),
