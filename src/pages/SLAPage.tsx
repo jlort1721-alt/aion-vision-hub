@@ -2,23 +2,26 @@ import { useState } from "react";
 import ErrorState from "@/components/ui/ErrorState";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { slaDefinitionsApi, slaTrackingApi } from "@/services/sla-api";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Timer, CheckCircle, AlertTriangle, Target, Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Timer, CheckCircle, AlertTriangle, Target, Plus, Filter, Loader2 } from "lucide-react";
 
 const severityColors: Record<string, string> = {
   critical: "bg-destructive",
   high: "bg-warning",
   medium: "bg-warning",
   low: "bg-primary",
+};
+
+const severityLabels: Record<string, string> = {
+  critical: "Crítica", high: "Alta", medium: "Media", low: "Baja", info: "Info",
 };
 
 function formatMinutes(minutes: number): string {
@@ -35,17 +38,18 @@ function getDeadlineInfo(deadline: string): { text: string; isUrgent: boolean; i
   const diffMins = Math.round(diffMs / 60000);
 
   if (diffMins < 0) {
-    return { text: `Breached ${Math.abs(diffMins)}m ago`, isUrgent: true, isBreached: true };
+    return { text: `Incumplido hace ${Math.abs(diffMins)}m`, isUrgent: true, isBreached: true };
   }
   if (diffMins < 30) {
-    return { text: `${diffMins}m remaining`, isUrgent: true, isBreached: false };
+    return { text: `${diffMins}m restantes`, isUrgent: true, isBreached: false };
   }
-  return { text: formatMinutes(diffMins) + ' remaining', isUrgent: false, isBreached: false };
+  return { text: formatMinutes(diffMins) + ' restantes', isUrgent: false, isBreached: false };
 }
 
 export default function SLAPage() {
   const [activeTab, setActiveTab] = useState("definitions");
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [severityFilter, setSeverityFilter] = useState("all");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -60,7 +64,7 @@ export default function SLAPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sla", "definitions"] });
       setDeleteTarget(null);
-      toast({ title: "SLA definition deleted" });
+      toast({ title: "Definición SLA eliminada" });
     },
   });
 
@@ -77,9 +81,13 @@ export default function SLAPage() {
     refetchInterval: 30000,
   });
 
-  const definitions = definitionsData?.data ?? [];
-  const tracking = trackingData?.data ?? [];
-  const stats = statsData?.data;
+  const allDefinitions: any[] = definitionsData?.data ?? [];
+  const definitions = severityFilter === 'all' ? allDefinitions : allDefinitions.filter((d: any) => d.severity === severityFilter);
+  const tracking: any[] = trackingData?.data ?? [];
+  const stats = statsData?.data as any;
+
+  const breachedCount = tracking.filter((t: any) => t.deadline && getDeadlineInfo(t.deadline).isBreached).length;
+  const activeTrackingCount = tracking.filter((t: any) => t.status !== 'resolved').length;
 
   if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
@@ -90,22 +98,22 @@ export default function SLAPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Target className="h-6 w-6" />
-            SLA Management
+            Gestión de SLA
           </h1>
           <p className="text-muted-foreground">
-            Define service level agreements and track compliance
+            Defina acuerdos de nivel de servicio y monitoree el cumplimiento
           </p>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="cursor-pointer hover:ring-1 hover:ring-primary/50 transition-all" onClick={() => setActiveTab('definitions')}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Active SLAs</p>
-                <p className="text-3xl font-bold">{stats?.activeSlas ?? 0}</p>
+                <p className="text-sm text-muted-foreground">SLAs Activos</p>
+                <p className="text-3xl font-bold">{stats?.activeSlas ?? allDefinitions.length}</p>
               </div>
               <Timer className="h-8 w-8 text-primary" />
             </div>
@@ -115,19 +123,19 @@ export default function SLAPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Met</p>
+                <p className="text-sm text-muted-foreground">Cumplidos</p>
                 <p className="text-3xl font-bold text-success">{stats?.met ?? 0}</p>
               </div>
               <CheckCircle className="h-8 w-8 text-success" />
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="cursor-pointer hover:ring-1 hover:ring-destructive/50 transition-all" onClick={() => setActiveTab('tracking')}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Breached</p>
-                <p className="text-3xl font-bold text-destructive">{stats?.breached ?? 0}</p>
+                <p className="text-sm text-muted-foreground">Incumplidos</p>
+                <p className="text-3xl font-bold text-destructive">{stats?.breached ?? breachedCount}</p>
               </div>
               <AlertTriangle className="h-8 w-8 text-destructive" />
             </div>
@@ -137,7 +145,7 @@ export default function SLAPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Response Breach Rate</p>
+                <p className="text-sm text-muted-foreground">Tasa de Incumplimiento</p>
                 <p className="text-3xl font-bold text-warning">{stats?.responseBreachRate ?? 0}%</p>
               </div>
               <Target className="h-8 w-8 text-warning" />
@@ -146,34 +154,45 @@ export default function SLAPage() {
         </Card>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs with counts */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="definitions" className="gap-1">
-            <Target className="h-4 w-4" /> Definitions
+            <Target className="h-4 w-4" /> Definiciones
+            {allDefinitions.length > 0 && <Badge variant="outline" className="ml-1 h-5 text-[10px]">{allDefinitions.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="tracking" className="gap-1">
-            <Timer className="h-4 w-4" /> Tracking
+            <Timer className="h-4 w-4" /> Seguimiento
+            {activeTrackingCount > 0 && <Badge variant="destructive" className="ml-1 h-5 text-[10px]">{activeTrackingCount}</Badge>}
           </TabsTrigger>
         </TabsList>
 
         {/* ── Definitions Tab ─────────────────────────────── */}
         <TabsContent value="definitions" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between">
+            {/* Severity filter */}
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              {['all', 'critical', 'high', 'medium', 'low'].map(sev => (
+                <Button key={sev} variant={severityFilter === sev ? 'default' : 'outline'} size="sm" className="h-7 text-xs" onClick={() => setSeverityFilter(sev)}>
+                  {sev === 'all' ? 'Todas' : severityLabels[sev] || sev}
+                </Button>
+              ))}
+            </div>
             <Button className="gap-1">
-              <Plus className="h-4 w-4" /> New Definition
+              <Plus className="h-4 w-4" /> Nueva Definición
             </Button>
           </div>
           {loadingDefinitions ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : definitions.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium">No SLA definitions</p>
-                <p className="text-sm text-muted-foreground mt-1">Create your first SLA definition to start tracking</p>
+                <p className="text-lg font-medium">Sin definiciones SLA</p>
+                <p className="text-sm text-muted-foreground mt-1">Cree su primera definición SLA para comenzar el seguimiento</p>
               </CardContent>
             </Card>
           ) : (
@@ -184,12 +203,12 @@ export default function SLAPage() {
                     <div className="flex items-center gap-3">
                       <Target className="h-5 w-5 text-muted-foreground" />
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold">{def.name}</h3>
-                          <Badge className={severityColors[def.severity] || 'bg-gray-500'}>{def.severity}</Badge>
+                          <Badge className={severityColors[def.severity] || 'bg-gray-500'}>{severityLabels[def.severity] || def.severity}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Response Time: {formatMinutes(def.responseTimeMinutes ?? 0)} | Resolution Time: {formatMinutes(def.resolutionTimeMinutes ?? 0)}
+                          Tiempo de Respuesta: {formatMinutes(def.responseTimeMinutes ?? 0)} | Tiempo de Resolución: {formatMinutes(def.resolutionTimeMinutes ?? 0)}
                         </p>
                         {def.description && (
                           <p className="text-xs text-muted-foreground mt-1">{def.description}</p>
@@ -202,7 +221,7 @@ export default function SLAPage() {
                       className="text-destructive hover:text-destructive/70"
                       onClick={() => setDeleteTarget(def)}
                     >
-                      Delete
+                      Eliminar
                     </Button>
                   </div>
                 </CardContent>
@@ -215,14 +234,14 @@ export default function SLAPage() {
         <TabsContent value="tracking" className="space-y-4">
           {loadingTracking ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : tracking.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <Timer className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium">No active SLA tracking items</p>
-                <p className="text-sm text-muted-foreground mt-1">SLA tracking will appear here when incidents are linked to SLA definitions</p>
+                <p className="text-lg font-medium">Sin elementos de seguimiento activos</p>
+                <p className="text-sm text-muted-foreground mt-1">El seguimiento SLA aparecerá aquí cuando los incidentes se vinculen a definiciones SLA</p>
               </CardContent>
             </Card>
           ) : (
@@ -235,18 +254,18 @@ export default function SLAPage() {
                       <div className="flex items-start gap-3">
                         <Timer className={`h-5 w-5 mt-0.5 ${deadlineInfo?.isBreached ? 'text-destructive' : deadlineInfo?.isUrgent ? 'text-warning animate-pulse' : 'text-muted-foreground'}`} />
                         <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold">{item.title || item.incidentTitle || 'SLA Item'}</h3>
-                            <Badge className={severityColors[item.severity] || 'bg-gray-500'}>{item.severity}</Badge>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold">{item.title || item.incidentTitle || 'Elemento SLA'}</h3>
+                            <Badge className={severityColors[item.severity] || 'bg-gray-500'}>{severityLabels[item.severity] || item.severity}</Badge>
                             {deadlineInfo?.isBreached && (
-                              <Badge variant="destructive">Breached</Badge>
+                              <Badge variant="destructive">Incumplido</Badge>
                             )}
                             {item.status && (
-                              <Badge variant="outline">{item.status}</Badge>
+                              <Badge variant="outline">{item.status === 'resolved' ? 'Resuelto' : item.status === 'in_progress' ? 'En curso' : item.status}</Badge>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">
-                            SLA: {item.slaName || 'Unknown'} | Created: {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'N/A'}
+                            SLA: {item.slaName || 'Desconocido'} | Creado: {item.createdAt ? new Date(item.createdAt).toLocaleString('es-CO') : 'N/A'}
                           </p>
                           {deadlineInfo && (
                             <p className={`text-sm mt-1 font-medium ${deadlineInfo.isBreached ? 'text-destructive' : deadlineInfo.isUrgent ? 'text-warning' : 'text-success'}`}>
@@ -258,7 +277,7 @@ export default function SLAPage() {
                       {!deadlineInfo?.isBreached && item.status !== 'resolved' && (
                         <Badge variant="outline" className="shrink-0">
                           <Timer className="h-3 w-3 mr-1" />
-                          Active
+                          Activo
                         </Badge>
                       )}
                     </div>
@@ -274,18 +293,18 @@ export default function SLAPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete SLA Definition</AlertDialogTitle>
+            <AlertDialogTitle>Eliminar Definición SLA</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>"{deleteTarget?.name}"</strong>? This action cannot be undone.
+              ¿Está seguro de eliminar <strong>"{deleteTarget?.name}"</strong>? Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => deleteTarget && deleteDefinitionMutation.mutate(deleteTarget.id)}
             >
-              {deleteDefinitionMutation.isPending ? 'Deleting...' : 'Delete'}
+              {deleteDefinitionMutation.isPending ? 'Eliminando...' : 'Eliminar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
