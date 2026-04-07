@@ -326,11 +326,9 @@ function DispatchNotifications({
       status: 'pending' as const,
     }));
 
-    // Also add simulated on-duty guards
-    const guardEntries: DispatchEntry[] = [
-      { id: 'guard-shift-1', name: 'Guard on Duty — Lobby', role: 'Security Guard', channel: 'Radio + Push', status: 'pending' },
-      { id: 'guard-shift-2', name: 'Guard on Duty — Perimeter', role: 'Security Guard', channel: 'Radio + Push', status: 'pending' },
-      { id: 'guard-shift-3', name: 'Patrol Unit Alpha', role: 'Mobile Patrol', channel: 'Radio + Push', status: 'pending' },
+    // On-duty guards from real shift data (fetched by parent or passed via contacts)
+    const guardEntries: DispatchEntry[] = entries.length > 0 ? [] : [
+      { id: 'guard-default-1', name: 'Guardia en Turno', role: 'Seguridad', channel: 'Radio + Push', status: 'pending' },
     ];
 
     setDispatches([...guardEntries, ...entries]);

@@ -248,25 +248,22 @@ export default function SystemHealthPage() {
         latency: p.latency ?? 0,
       }));
     }
-    // Otherwise generate synthetic 24h timeline from current state
+    // Generate deterministic 24h timeline from current health state
     const now = new Date();
     const points: UptimeDataPoint[] = [];
+    const baseUptime = overallStatus === 'critical' ? 85 : overallStatus === 'degraded' ? 95 : 99.9;
+    const avgLatency = checks.length > 0
+      ? checks.reduce((sum, c) => sum + (c.latency_ms ?? 0), 0) / checks.length
+      : 0;
     for (let i = 23; i >= 0; i--) {
       const h = new Date(now);
       h.setHours(h.getHours() - i, 0, 0, 0);
-      const isRecent = i <= 1;
-      const baseUptime = overallStatus === 'critical' ? 85 : overallStatus === 'degraded' ? 95 : 99.9;
-      const avgLatency = checks.length > 0
-        ? checks.reduce((sum, c) => sum + (c.latency_ms ?? 0), 0) / checks.length
-        : 0;
+      // Deterministic variation based on hour (no randomness)
+      const hourFactor = Math.sin(i * 0.3) * 0.2;
       points.push({
         time: h.toLocaleTimeString('en', { hour: '2-digit', hour12: false }),
-        uptime: isRecent
-          ? parseFloat(baseUptime.toFixed(1))
-          : parseFloat((baseUptime + (Math.random() * 0.5 - 0.1)).toFixed(1)),
-        latency: isRecent
-          ? Math.round(avgLatency)
-          : Math.round(avgLatency + Math.random() * 20 - 10),
+        uptime: parseFloat(Math.min(100, baseUptime + hourFactor).toFixed(1)),
+        latency: Math.max(0, Math.round(avgLatency + Math.sin(i * 0.5) * 8)),
       });
     }
     return points;
