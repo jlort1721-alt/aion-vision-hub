@@ -1,7 +1,6 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useEvents, useDevices, useSites, type EventFilters } from '@/hooks/use-api-data';
@@ -14,7 +13,7 @@ import { toast } from 'sonner';
 import {
   XCircle, AlertTriangle, AlertCircle, Info,
   CheckCircle2, Bot, MoreHorizontal, ChevronLeft, ChevronRight,
-  Volume2, VolumeX, Loader2,
+  Volume2, VolumeX, Loader2, Download, Radio,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -57,12 +56,14 @@ export default function EventsPage() {
   const [bulkLoading, setBulkLoading] = useState<{ action: string; done: number; total: number } | null>(null);
 
   const { data: result, isLoading, isError, error, refetch } = useEvents(filters);
-  const events = result?.data ?? [];
+  const events: any[] = result?.data ?? [];
   const totalCount = result?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  const { data: devices = [] } = useDevices();
-  const { data: sites = [] } = useSites();
+  const { data: rawDevices = [] } = useDevices();
+  const { data: rawSites = [] } = useSites();
+  const devices = rawDevices as any[];
+  const sites = rawSites as any[];
   const queryClient = useQueryClient();
   useRealtimeEvents();
 
@@ -106,11 +107,7 @@ export default function EventsPage() {
     let successCount = 0;
     for (let i = 0; i < ids.length; i++) {
       try {
-        switch (action) {
-          case 'acknowledge': await apiClient.edgeFunction('events-api', { id: ids[i], action: 'acknowledge' }, { method: 'POST' }); break;
-          case 'resolve': await apiClient.edgeFunction('events-api', { id: ids[i], action: 'resolve' }, { method: 'POST' }); break;
-          case 'dismiss': await apiClient.edgeFunction('events-api', { id: ids[i], action: 'dismiss' }, { method: 'POST' }); break;
-        }
+        await apiClient.patch(`/events/${ids[i]}`, { status: action === 'acknowledge' ? 'acknowledged' : action === 'resolve' ? 'resolved' : 'dismissed' });
         successCount++;
       } catch { /* continue with remaining */ }
       setBulkLoading({ action, done: i + 1, total: ids.length });
@@ -119,7 +116,7 @@ export default function EventsPage() {
     queryClient.invalidateQueries({ queryKey: ['events'] });
     setSelectedIds(new Set());
     setBulkLoading(null);
-    toast.success(`${action}: ${successCount}/${ids.length} events processed`);
+    toast.success(`${successCount}/${ids.length} eventos procesados`);
   }, [selectedIds, queryClient]);
 
   const updateFilters = useCallback((partial: Partial<EventFilters>) => {
@@ -132,20 +129,33 @@ export default function EventsPage() {
     setActionLoading(action);
     try {
       switch (action) {
-        case 'acknowledge': await apiClient.edgeFunction('events-api', { id: eventId, action: 'acknowledge' }, { method: 'POST' }); toast.success(t('events.acknowledged')); break;
-        case 'resolve': await apiClient.edgeFunction('events-api', { id: eventId, action: 'resolve' }, { method: 'POST' }); toast.success(t('events.resolved')); break;
-        case 'dismiss': await apiClient.edgeFunction('events-api', { id: eventId, action: 'dismiss' }, { method: 'POST' }); toast.success(t('events.dismissed')); break;
-        case 'ai-summary': await apiClient.edgeFunction('events-api', { id: eventId, action: 'ai-summary' }, { method: 'POST' }); toast.success(t('events.ai_summary')); break;
+        case 'acknowledge':
+          await apiClient.patch(`/events/${eventId}`, { status: 'acknowledged' });
+          toast.success('Evento reconocido');
+          break;
+        case 'resolve':
+          await apiClient.patch(`/events/${eventId}`, { status: 'resolved' });
+          toast.success('Evento resuelto');
+          break;
+        case 'dismiss':
+          await apiClient.patch(`/events/${eventId}`, { status: 'dismissed' });
+          toast.success('Evento descartado');
+          break;
+        case 'ai-summary':
+          await apiClient.post('/ai/chat', { messages: [{ role: 'user', content: `Analiza este evento de seguridad y dame un resumen: ID ${eventId}` }] });
+          toast.success('Resumen IA solicitado');
+          break;
         case 'create-incident': {
-          const event = events.find(e => e.id === eventId);
+          const event = events.find((e: any) => e.id === eventId);
           if (event) {
-            const incidentData = {
-              title: `Incident: ${event.title}`, description: `Auto-created from event: ${event.description || event.title}`,
+            await apiClient.post('/incidents', {
+              title: `Incidente: ${event.title}`,
+              description: `Creado desde evento: ${event.description || event.title}`,
               priority: event.severity === 'critical' ? 'critical' : event.severity === 'high' ? 'high' : 'medium',
-              site_id: event.site_id, event_ids: [eventId],
-            };
-            await apiClient.edgeFunction('incidents-api', undefined, { method: 'POST', body: JSON.stringify(incidentData) });
-            toast.success(t('events.create_incident') + ' ✓');
+              site_id: event.site_id,
+              event_ids: [eventId],
+            });
+            toast.success('Incidente creado desde evento');
           }
           break;
         }
@@ -153,7 +163,7 @@ export default function EventsPage() {
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Action failed');
+      toast.error(err instanceof Error ? err.message : 'Error en acción');
     } finally { setActionLoading(null); }
   };
 
@@ -161,10 +171,10 @@ export default function EventsPage() {
 
   return (
     <PageShell
-      title="Events & Alarms"
-      description="Real-time event monitoring and alarm management"
+      title="Eventos y Alarmas"
+      description="Monitoreo de eventos en tiempo real"
       icon={<AlertTriangle className="h-5 w-5" />}
-      badge={<Badge variant="destructive" className="text-xs">{totalCount} new</Badge>}
+      badge={<Badge variant="destructive" className="text-xs">{totalCount} total</Badge>}
     >
     <div className="flex flex-col lg:flex-row h-full">
       <div className={cn("flex-1 flex flex-col", selectedEvent && "lg:max-w-[60%] hidden lg:flex")}>
@@ -172,37 +182,75 @@ export default function EventsPage() {
 
         {/* Sound toggle + Bulk actions bar */}
         <div className="px-4 py-1.5 border-b flex items-center gap-2">
+          {/* Realtime indicator */}
+          <div className="flex items-center gap-1.5 text-[10px] text-green-500">
+            <Radio className="h-3 w-3 animate-pulse" />
+            <span className="font-medium">Tiempo real</span>
+          </div>
+
+          <div className="w-px h-5 bg-border mx-1" />
+
           <Button
             variant={isMuted ? 'outline' : 'default'}
             size="sm"
             className="h-7 text-xs gap-1.5"
             onClick={toggleMute}
-            aria-label={isMuted ? 'Enable sound alerts' : 'Mute sound alerts'}
+            aria-label={isMuted ? 'Activar sonido' : 'Silenciar'}
           >
             {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-            {isMuted ? 'Sound Off' : 'Sound On'}
+            {isMuted ? 'Sin sonido' : 'Sonido'}
+          </Button>
+
+          {/* CSV Export */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1.5"
+            onClick={() => {
+              const csv = [
+                ['Fecha', 'Tipo', 'Severidad', 'Título', 'Estado', 'Dispositivo', 'Sitio'].join(','),
+                ...events.map((e: any) => [
+                  new Date(e.created_at).toLocaleString('es-CO'),
+                  (e.event_type || '').replace(/_/g, ' '),
+                  e.severity || '',
+                  `"${(e.title || '').replace(/"/g, '""')}"`,
+                  e.status || '',
+                  (devices.find((d: any) => d.id === e.device_id) as any)?.name || '',
+                  (sites.find((s: any) => s.id === e.site_id) as any)?.name || '',
+                ].join(','))
+              ].join('\n');
+              const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = `eventos-${new Date().toISOString().slice(0, 10)}.csv`;
+              a.click();
+              toast.success(`${events.length} eventos exportados a CSV`);
+            }}
+          >
+            <Download className="h-3.5 w-3.5" />
+            CSV
           </Button>
 
           {selectedIds.size > 0 && (
             <>
               <div className="w-px h-5 bg-border mx-1" />
-              <span className="text-xs text-muted-foreground">{selectedIds.size} selected</span>
+              <span className="text-xs text-muted-foreground">{selectedIds.size} seleccionados</span>
 
               {bulkLoading ? (
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground ml-2">
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  Processing {bulkLoading.done}/{bulkLoading.total}...
+                  Procesando {bulkLoading.done}/{bulkLoading.total}...
                 </div>
               ) : (
                 <>
                   <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleBulkAction('acknowledge')}>
-                    Acknowledge Selected
+                    Reconocer
                   </Button>
                   <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleBulkAction('resolve')}>
-                    Resolve Selected
+                    Resolver
                   </Button>
                   <Button variant="outline" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={() => handleBulkAction('dismiss')}>
-                    Dismiss Selected
+                    Descartar
                   </Button>
                 </>
               )}
