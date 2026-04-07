@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,9 +24,9 @@ import { ALL_MODULES, DEFAULT_ROLE_PERMISSIONS } from '@/lib/permissions';
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   super_admin: { label: 'Super Admin', color: 'bg-destructive text-destructive-foreground' },
-  tenant_admin: { label: 'Admin', color: 'bg-primary text-primary-foreground' },
-  operator: { label: 'Operator', color: 'bg-secondary text-secondary-foreground' },
-  viewer: { label: 'Viewer', color: 'bg-muted text-muted-foreground' },
+  tenant_admin: { label: 'Administrador', color: 'bg-primary text-primary-foreground' },
+  operator: { label: 'Operador', color: 'bg-secondary text-secondary-foreground' },
+  viewer: { label: 'Visor', color: 'bg-muted text-muted-foreground' },
   auditor: { label: 'Auditor', color: 'bg-accent text-accent-foreground' },
 };
 
@@ -88,10 +88,10 @@ export default function AdminPage() {
         role: inviteRole,
       });
       setInviteResult({ temp_password: data?.temp_password, activation_link: data?.activation_link });
-      toast.success(`User created: ${inviteEmail}`);
+      toast.success(`Usuario creado: ${inviteEmail}`);
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to send invitation');
+      toast.error(err instanceof Error ? err.message : 'Error al enviar invitación');
     } finally {
       setLoading(false);
     }
@@ -99,16 +99,16 @@ export default function AdminPage() {
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast.success(`${label} copied to clipboard`);
+    toast.success(`${label} copiado al portapapeles`);
   };
 
   const handleToggleActive = async (userId: string, currentActive: boolean) => {
     try {
       await apiClient.patch('/users/' + userId, { is_active: !currentActive });
-      toast.success(`User ${currentActive ? 'deactivated' : 'activated'}`);
+      toast.success(`Usuario ${currentActive ? 'desactivado' : 'activado'}`);
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     } catch (err) {
-      toast.error('Failed to update user status');
+      toast.error('Error al actualizar estado');
     }
   };
 
@@ -116,10 +116,10 @@ export default function AdminPage() {
     setLoading(true);
     try {
       await apiClient.patch('/users/' + userId + '/role', { role: newRole, tenant_id: tenantId });
-      toast.success('Role updated');
+      toast.success('Rol actualizado');
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     } catch (err) {
-      toast.error('Failed to update role');
+      toast.error('Error al actualizar rol');
     } finally {
       setLoading(false);
     }
@@ -175,7 +175,7 @@ export default function AdminPage() {
                   </div>
                   {inviteResult.activation_link && (
                     <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Activation Link</Label>
+                      <Label className="text-xs text-muted-foreground">Enlace de Activación</Label>
                       <div className="flex items-center gap-2">
                         <Input value={inviteResult.activation_link} readOnly className="text-xs font-mono" />
                         <Button variant="outline" size="icon" className="shrink-0" onClick={() => copyToClipboard(inviteResult.activation_link || '', 'Link')}><Copy className="h-3 w-3" /></Button>
@@ -191,12 +191,12 @@ export default function AdminPage() {
               <>
                 <div className="space-y-4 py-2">
                   <div className="space-y-2">
-                    <Label>Email Address</Label>
-                    <Input placeholder="user@example.com" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
+                    <Label>Correo Electrónico</Label>
+                    <Input placeholder="usuario@ejemplo.com" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Full Name</Label>
-                    <Input placeholder="John Doe" value={inviteName} onChange={e => setInviteName(e.target.value)} />
+                    <Label>Nombre Completo</Label>
+                    <Input placeholder="Nombre Apellido" value={inviteName} onChange={e => setInviteName(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <Label>Role</Label>
@@ -229,43 +229,43 @@ export default function AdminPage() {
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold">{users.length}</p>
-            <p className="text-xs text-muted-foreground">Total Users</p>
+            <p className="text-xs text-muted-foreground">Total Usuarios</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold text-success">{users.filter(u => u.is_active).length}</p>
-            <p className="text-xs text-muted-foreground">Active</p>
+            <p className="text-xs text-muted-foreground">Activos</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold">{users.filter(u => (u.roles || []).includes('tenant_admin') || (u.roles || []).includes('super_admin')).length}</p>
-            <p className="text-xs text-muted-foreground">Admins</p>
+            <p className="text-xs text-muted-foreground">Administradores</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-2xl font-bold">{users.filter(u => (u.roles || []).includes('operator')).length}</p>
-            <p className="text-xs text-muted-foreground">Operators</p>
+            <p className="text-xs text-muted-foreground">Operadores</p>
           </CardContent>
         </Card>
       </div>
 
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="permissions">Module Permissions</TabsTrigger>
+          <TabsTrigger value="users">Usuarios</TabsTrigger>
+          <TabsTrigger value="permissions">Permisos por Módulo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Users</CardTitle>
+                <CardTitle className="text-base">Usuarios</CardTitle>
                 <div className="relative w-64">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
+                  <Input placeholder="Buscar usuarios..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
                 </div>
               </div>
             </CardHeader>
@@ -280,8 +280,8 @@ export default function AdminPage() {
                       <TableHead>User</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Last Login</TableHead>
-                      <TableHead>Active</TableHead>
+                      <TableHead>Último Acceso</TableHead>
+                      <TableHead>Activos</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -428,11 +428,11 @@ function PermissionsEditor({ tenantId }: { tenantId?: string }) {
         }
       }
       await apiClient.put('/roles/permissions', { permissions: rows });
-      toast.success('Permissions saved');
+      toast.success('Permisos guardados');
       setDirty(false);
       queryClient.invalidateQueries({ queryKey: ['role-module-permissions'] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save');
+      toast.error(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
       setSaving(false);
     }
@@ -450,11 +450,11 @@ function PermissionsEditor({ tenantId }: { tenantId?: string }) {
     setSaving(true);
     try {
       await apiClient.delete('/roles/permissions');
-      toast.success('Permissions reset to defaults');
+      toast.success('Permisos restaurados a valores predeterminados');
       setDirty(false);
       queryClient.invalidateQueries({ queryKey: ['role-module-permissions'] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to reset');
+      toast.error(err instanceof Error ? err.message : 'Error al restaurar');
     } finally {
       setSaving(false);
     }
