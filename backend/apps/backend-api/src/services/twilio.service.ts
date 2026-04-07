@@ -236,11 +236,12 @@ export async function sendSMS(
 ): Promise<{ sid: string; status: string }> {
   const client = getClient();
   const normalizedTo = normalizeColombianPhone(to);
-  const from = process.env.TWILIO_PHONE_NUMBER;
-  if (!from) throw new Error('TWILIO_PHONE_NUMBER is required');
+  // Colombian landline (+5760x) does NOT support SMS — use US number for SMS
+  const from = process.env.TWILIO_PHONE_NUMBER_US || process.env.TWILIO_PHONE_NUMBER;
+  if (!from) throw new Error('TWILIO_PHONE_NUMBER_US or TWILIO_PHONE_NUMBER is required');
 
   const msg = await client.messages.create({ from, to: normalizedTo, body });
-  logger.info({ to: normalizedTo, sid: msg.sid }, 'SMS sent');
+  logger.info({ to: normalizedTo, sid: msg.sid, from }, 'SMS sent');
   return { sid: msg.sid, status: msg.status };
 }
 

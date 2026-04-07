@@ -140,7 +140,8 @@ export const envSchema = z.object({
   SENTRY_DSN: z.string().optional(),
 
   // Twilio phone (voice) & TwiML
-  TWILIO_PHONE_NUMBER: z.string().optional(),
+  TWILIO_PHONE_NUMBER: z.string().optional(),       // Colombian landline (Voice only)
+  TWILIO_PHONE_NUMBER_US: z.string().optional(),    // US number (Voice + SMS)
   TWILIO_TWIML_APP_SID: z.string().optional(),
   TWILIO_WEBHOOK_BASE: z.string().url().optional(),
 

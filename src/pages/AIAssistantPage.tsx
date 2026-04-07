@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -118,9 +118,9 @@ function getAuthHeaders() {
 
 function AgentStatusIndicator({ status, toolName }: { status: AgentStatus; toolName?: string }) {
   const config: Record<AgentStatus, { dot: string; label: string; animate?: string }> = {
-    ready: { dot: 'bg-emerald-500', label: 'Ready' },
-    thinking: { dot: 'bg-yellow-500', label: 'Thinking...', animate: 'animate-pulse' },
-    executing: { dot: 'bg-blue-500', label: `Executing: ${toolName || '...'}`, animate: 'animate-spin' },
+    ready: { dot: 'bg-emerald-500', label: 'Listo' },
+    thinking: { dot: 'bg-yellow-500', label: 'Pensando...', animate: 'animate-pulse' },
+    executing: { dot: 'bg-blue-500', label: `Ejecutando: ${toolName || '...'}`, animate: 'animate-spin' },
     error: { dot: 'bg-red-500', label: 'Error' },
   };
   const c = config[status];
@@ -149,7 +149,7 @@ function ToolExecutionCard({ exec }: { exec: ToolExecution }) {
       <div className="flex items-center gap-2 px-3 py-2 bg-muted/40">
         {statusIcon}
         <span className="font-medium text-foreground">
-          {exec.status === 'running' ? 'Executing' : exec.status === 'success' ? 'Executed' : 'Failed'}:
+          {exec.status === 'running' ? 'Ejecutando' : exec.status === 'success' ? 'Ejecutado' : 'Falló'}:
         </span>
         <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-mono">
           {exec.tool}
@@ -167,7 +167,7 @@ function ToolExecutionCard({ exec }: { exec: ToolExecution }) {
           <CollapsibleTrigger asChild>
             <button className="flex items-center gap-1 px-3 py-1.5 w-full text-left text-muted-foreground hover:text-foreground transition-colors border-t border-border/40">
               {paramsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-              <span className="text-[10px] uppercase tracking-wider font-medium">Parameters</span>
+              <span className="text-[10px] uppercase tracking-wider font-medium">Parámetros</span>
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -184,7 +184,7 @@ function ToolExecutionCard({ exec }: { exec: ToolExecution }) {
           <CollapsibleTrigger asChild>
             <button className="flex items-center gap-1 px-3 py-1.5 w-full text-left text-muted-foreground hover:text-foreground transition-colors border-t border-border/40">
               {resultOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-              <span className="text-[10px] uppercase tracking-wider font-medium">Result</span>
+              <span className="text-[10px] uppercase tracking-wider font-medium">Resultado</span>
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -473,7 +473,7 @@ export default function AIAssistantPage() {
           {/* Agent Mode Toggle */}
           <div className="flex items-center gap-2">
             <label htmlFor="agent-mode" className="text-[10px] text-muted-foreground cursor-pointer select-none">
-              Agent Mode
+              Modo Agente
             </label>
             <Switch
               id="agent-mode"
@@ -503,7 +503,7 @@ export default function AIAssistantPage() {
           </Select>
           {messages.length > 0 && (
             <Button variant="ghost" size="sm" className="h-7 text-[10px] gap-1 text-muted-foreground hover:text-destructive" onClick={clearHistory}>
-              <Trash2 className="h-3 w-3" /> Clear History
+              <Trash2 className="h-3 w-3" /> Limpiar
             </Button>
           )}
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={clearHistory}>
@@ -619,7 +619,7 @@ export default function AIAssistantPage() {
         {/* Quick action buttons (shown when tools are enabled) */}
         {enableTools && (
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            <Radio className="h-3 w-3 text-muted-foreground shrink-0" />
+            <Zap className="h-3 w-3 text-muted-foreground shrink-0" />
             {QUICK_ACTIONS.map(action => (
               <Button
                 key={action.label}
@@ -640,7 +640,7 @@ export default function AIAssistantPage() {
           <Input
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder={enableTools ? 'Ask AION Agent... (tools enabled)' : t('ai.placeholder')}
+            placeholder={enableTools ? 'Pregunta al agente AION... (herramientas activas)' : t('ai.placeholder')}
             className="flex-1"
             disabled={isLoading}
           />
@@ -656,12 +656,12 @@ export default function AIAssistantPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-warning" />
-              Confirmar acci&oacute;n: {confirmDialog?.tool}
+              Confirmar acción: {confirmDialog?.tool}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Esta acci&oacute;n afecta un sistema f&iacute;sico. Revise los par&aacute;metros antes de confirmar.
+                  Esta acción afecta un sistema físico. Revise los parámetros antes de confirmar.
                 </p>
                 {confirmDialog?.params && Object.keys(confirmDialog.params).length > 0 && (
                   <pre className="text-xs font-mono bg-muted rounded-md p-3 overflow-x-auto">

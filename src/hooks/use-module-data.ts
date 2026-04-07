@@ -190,17 +190,38 @@ export function useAccessPeopleMutations() {
 
   const create = useMutation({
     mutationFn: async (input: { full_name: string; type: string; section_id?: string; phone?: string; email?: string; unit?: string; document_id?: string; notes?: string }) => {
-      await apiClient.post('/access-control/people', input);
+      // Backend expects camelCase field names
+      await apiClient.post('/access-control/people', {
+        fullName: input.full_name,
+        type: input.type,
+        sectionId: input.section_id || undefined,
+        phone: input.phone,
+        email: input.email,
+        unit: input.unit,
+        documentId: input.document_id,
+        notes: input.notes,
+      });
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_people'] }); toast.success('Person added'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_people'] }); toast.success('Persona agregada'); },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, ...input }: { id: string; [key: string]: unknown }) => {
-      await apiClient.patch(`/access-control/people/${id}`, input);
+    mutationFn: async ({ id, ...input }: { id: string; full_name?: string; type?: string; section_id?: string; phone?: string; email?: string; unit?: string; document_id?: string; notes?: string; status?: string }) => {
+      // Backend expects camelCase field names
+      const payload: Record<string, unknown> = {};
+      if (input.full_name !== undefined) payload.fullName = input.full_name;
+      if (input.type !== undefined) payload.type = input.type;
+      if (input.section_id !== undefined) payload.sectionId = input.section_id || undefined;
+      if (input.phone !== undefined) payload.phone = input.phone;
+      if (input.email !== undefined) payload.email = input.email;
+      if (input.unit !== undefined) payload.unit = input.unit;
+      if (input.document_id !== undefined) payload.documentId = input.document_id;
+      if (input.notes !== undefined) payload.notes = input.notes;
+      if (input.status !== undefined) payload.status = input.status;
+      await apiClient.patch(`/access-control/people/${id}`, payload);
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_people'] }); toast.success('Person updated'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_people'] }); toast.success('Persona actualizada'); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -233,9 +254,32 @@ export function useAccessVehicleMutations() {
 
   const create = useMutation({
     mutationFn: async (input: { plate: string; person_id?: string; brand?: string; model?: string; color?: string; type?: string }) => {
-      await apiClient.post('/access-control/vehicles', input);
+      await apiClient.post('/access-control/vehicles', {
+        plate: input.plate,
+        personId: input.person_id,
+        brand: input.brand,
+        model: input.model,
+        color: input.color,
+        type: input.type,
+      });
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_vehicles'] }); toast.success('Vehicle added'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_vehicles'] }); toast.success('Vehículo agregado'); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const update = useMutation({
+    mutationFn: async ({ id, ...input }: { id: string; plate?: string; person_id?: string; brand?: string; model?: string; color?: string; type?: string; status?: string }) => {
+      const payload: Record<string, unknown> = {};
+      if (input.plate !== undefined) payload.plate = input.plate;
+      if (input.person_id !== undefined) payload.personId = input.person_id;
+      if (input.brand !== undefined) payload.brand = input.brand;
+      if (input.model !== undefined) payload.model = input.model;
+      if (input.color !== undefined) payload.color = input.color;
+      if (input.type !== undefined) payload.type = input.type;
+      if (input.status !== undefined) payload.status = input.status;
+      await apiClient.patch(`/access-control/vehicles/${id}`, payload);
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_vehicles'] }); toast.success('Vehículo actualizado'); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -243,11 +287,11 @@ export function useAccessVehicleMutations() {
     mutationFn: async (id: string) => {
       await apiClient.delete(`/access-control/vehicles/${id}`);
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_vehicles'] }); toast.success('Vehicle removed'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_vehicles'] }); toast.success('Vehículo eliminado'); },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  return { create, remove };
+  return { create, update, remove };
 }
 
 // ── Access Logs ──
@@ -268,9 +312,16 @@ export function useAccessLogMutations() {
 
   const create = useMutation({
     mutationFn: async (input: { person_id?: string; vehicle_id?: string; section_id?: string; direction: string; method: string; notes?: string }) => {
-      await apiClient.post('/access-control/logs', input);
+      await apiClient.post('/access-control/logs', {
+        personId: input.person_id,
+        vehicleId: input.vehicle_id,
+        sectionId: input.section_id,
+        direction: input.direction,
+        method: input.method,
+        notes: input.notes,
+      });
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_logs'] }); toast.success('Access logged'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['access_logs'] }); toast.success('Acceso registrado'); },
     onError: (e: Error) => toast.error(e.message),
   });
 

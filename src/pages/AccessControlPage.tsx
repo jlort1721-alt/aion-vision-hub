@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,12 +17,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/contexts/I18nContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useSections, useAccessPeople, useAccessPeopleMutations, useAccessVehicles, useAccessLogs } from '@/hooks/use-module-data';
+import { useSections, useAccessPeople, useAccessPeopleMutations, useAccessVehicles, useAccessVehicleMutations, useAccessLogs } from '@/hooks/use-module-data';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import {
   UserCheck, Users, Car, Search, Plus, FileText, Download, FileUp,
-  Shield, Clock, Pencil, Trash2, MoreHorizontal, Eye, Key, Camera, ScanLine, CarFront, CheckCircle2, AlertCircle, CalendarClock
+  Shield, Clock, Pencil, Trash2, MoreHorizontal, Eye, Key, Camera, ScanLine, CarFront, CheckCircle2, AlertCircle, CalendarClock,
+  X, Phone, Mail, FileBarChart, ArrowDownUp, Bike, Truck
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -32,65 +33,72 @@ import type { ImportEntityType } from '@/services/data-import-api';
 import { PageShell } from '@/components/shared/PageShell';
 import ErrorState from '@/components/ui/ErrorState';
 
-// ── Access Schedule Types & Helpers ──────────────────────────
+// ══════════════════════════════════════════════════════════════
+// Types & Constants
+// ══════════════════════════════════════════════════════════════
 
 interface AccessSchedule {
   id: string;
   name: string;
   type: 'allow' | 'deny';
-  dayOfWeek: number[]; // 0=Sun, 6=Sat
-  startTime: string;   // "08:00"
-  endTime: string;     // "18:00"
+  dayOfWeek: number[];
+  startTime: string;
+  endTime: string;
   applies_to: 'all' | 'visitors' | 'contractors' | 'staff';
   zone: string;
   active: boolean;
 }
 
-// Access schedules are stored locally per-operator (lightweight UI config, not operational data)
 const SCHEDULES_KEY = 'aion-access-schedules';
-const DAY_LABEL_KEYS = [
-  { key: 'access.day_sun_s', fallback: 'D' },
-  { key: 'access.day_mon_s', fallback: 'L' },
-  { key: 'access.day_tue_s', fallback: 'M' },
-  { key: 'access.day_wed_s', fallback: 'M' },
-  { key: 'access.day_thu_s', fallback: 'J' },
-  { key: 'access.day_fri_s', fallback: 'V' },
-  { key: 'access.day_sat_s', fallback: 'S' },
-];
-const DAY_NAME_KEYS = [
-  { key: 'access.day_sun', fallback: 'Dom' },
-  { key: 'access.day_mon', fallback: 'Lun' },
-  { key: 'access.day_tue', fallback: 'Mar' },
-  { key: 'access.day_wed', fallback: 'Mié' },
-  { key: 'access.day_thu', fallback: 'Jue' },
-  { key: 'access.day_fri', fallback: 'Vie' },
-  { key: 'access.day_sat', fallback: 'Sáb' },
-];
+
+const DAY_LABELS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 const EMPTY_SCHEDULE: Omit<AccessSchedule, 'id'> = {
   name: '', type: 'allow', dayOfWeek: [1, 2, 3, 4, 5],
   startTime: '08:00', endTime: '18:00', applies_to: 'all', zone: '', active: true,
 };
 
+const typeConfig: Record<string, { label: string; color: string }> = {
+  resident: { label: 'Residente', color: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
+  visitor: { label: 'Visitante', color: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
+  staff: { label: 'Personal', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
+  provider: { label: 'Proveedor', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30' },
+};
+
+const vehicleTypeIcon: Record<string, typeof Car> = {
+  car: Car,
+  motorcycle: Bike,
+  truck: Truck,
+  bicycle: Bike,
+};
+
 function loadSchedules(): AccessSchedule[] {
-  try {
-    const raw = localStorage.getItem(SCHEDULES_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(SCHEDULES_KEY) || '[]'); } catch { return []; }
 }
 
 function persistSchedules(schedules: AccessSchedule[]) {
-  try { localStorage.setItem(SCHEDULES_KEY, JSON.stringify(schedules)); } catch { /* no-op */ }
+  try { localStorage.setItem(SCHEDULES_KEY, JSON.stringify(schedules)); } catch { /* noop */ }
 }
+
+// ══════════════════════════════════════════════════════════════
+// Main Page
+// ══════════════════════════════════════════════════════════════
 
 export default function AccessControlPage() {
   const { t } = useI18n();
   const { isAuthenticated } = useAuth();
-  const { data: sections = [] } = useSections();
-  const { data: people = [], isLoading, isError, error, refetch } = useAccessPeople();
-  const { data: vehicles = [] } = useAccessVehicles();
-  const { data: logs = [] } = useAccessLogs();
-  const { create, update, remove } = useAccessPeopleMutations();
+  const { data: rawSections = [] } = useSections();
+  const sections = rawSections as any[];
+  const { data: rawPeople = [], isLoading, isError, error, refetch } = useAccessPeople();
+  const { data: rawVehicles = [] } = useAccessVehicles();
+  const { data: rawLogs = [] } = useAccessLogs();
+  const peopleMut = useAccessPeopleMutations();
+  const vehicleMut = useAccessVehicleMutations();
+
+  const people = rawPeople as any[];
+  const vehicles = rawVehicles as any[];
+  const logs = rawLogs as any[];
 
   const { data: lprDetections = [] } = useQuery({
     queryKey: ['lpr-detections'],
@@ -102,28 +110,140 @@ export default function AccessControlPage() {
     refetchInterval: 10000,
   });
 
+  // ── State ──
   const [activeTab, setActiveTab] = useState('residents');
   const [search, setSearch] = useState('');
   const [sectionFilter, setSectionFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
+  const [personDialogOpen, setPersonDialogOpen] = useState(false);
+  const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importType, setImportType] = useState<ImportEntityType>('residents');
   const [form, setForm] = useState({ full_name: '', type: 'resident', section_id: '', unit: '', phone: '', email: '', document_id: '', notes: '' });
+  const [vehicleForm, setVehicleForm] = useState({ plate: '', brand: '', model: '', color: '', type: 'car', person_id: '' });
   const [deletePersonId, setDeletePersonId] = useState<string | null>(null);
   const [editingPerson, setEditingPerson] = useState<string | null>(null);
+  const [editingVehicle, setEditingVehicle] = useState<string | null>(null);
+  const [deleteVehicleId, setDeleteVehicleId] = useState<string | null>(null);
 
-  // Schedule rules state
+  // Schedule state
   const [schedules, setSchedules] = useState<AccessSchedule[]>(() => loadSchedules());
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<AccessSchedule | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [scheduleForm, setScheduleForm] = useState<Omit<AccessSchedule, 'id'>>(EMPTY_SCHEDULE);
 
-  // Persist schedules whenever they change
   useEffect(() => { persistSchedules(schedules); }, [schedules]);
 
+  // ── Computed ──
+  const getSectionName = useCallback((id: string) => (sections as any[]).find(s => s.id === id)?.name || '—', [sections]);
+
+  const filtered = useMemo(() => {
+    return people.filter((p: any) => {
+      const q = search.toLowerCase();
+      if (q && !(p.fullName || p.full_name || '').toLowerCase().includes(q) && !(p.unit || '').toLowerCase().includes(q) && !(p.phone || '').includes(q)) return false;
+      const sid = p.sectionId || p.section_id;
+      if (sectionFilter !== 'all' && sid !== sectionFilter) return false;
+      if (typeFilter !== 'all' && p.type !== typeFilter) return false;
+      return true;
+    });
+  }, [people, search, sectionFilter, typeFilter]);
+
+  const selected = useMemo(() => selectedPerson ? people.find((p: any) => p.id === selectedPerson) : null, [selectedPerson, people]);
+
+  const personVehicles = useMemo(() => {
+    if (!selected) return [];
+    return vehicles.filter((v: any) => (v.personId || v.person_id) === selected.id);
+  }, [selected, vehicles]);
+
+  const personName = (p: any) => p.fullName || p.full_name || '—';
+  const personSection = (p: any) => p.sectionId || p.section_id;
+  const personDoc = (p: any) => p.documentId || p.document_id;
+
+  // ── Stats ──
+  const stats = useMemo(() => ({
+    total: people.length,
+    residents: people.filter((p: any) => p.type === 'resident').length,
+    vehicles: vehicles.length,
+    todayLogs: logs.filter((l: any) => {
+      const d = new Date(l.createdAt || l.created_at);
+      return d.toDateString() === new Date().toDateString();
+    }).length,
+  }), [people, vehicles, logs]);
+
+  // ── Handlers ──
+  const openAddPerson = () => {
+    setEditingPerson(null);
+    setForm({ full_name: '', type: 'resident', section_id: '', unit: '', phone: '', email: '', document_id: '', notes: '' });
+    setPersonDialogOpen(true);
+  };
+
+  const openEditPerson = (p: any) => {
+    setEditingPerson(p.id);
+    setForm({
+      full_name: personName(p), type: p.type || 'resident',
+      section_id: personSection(p) || '', unit: p.unit || '',
+      phone: p.phone || '', email: p.email || '',
+      document_id: personDoc(p) || '', notes: p.notes || '',
+    });
+    setPersonDialogOpen(true);
+  };
+
+  const handleSavePerson = () => {
+    if (!form.full_name.trim()) return;
+    const payload = {
+      full_name: form.full_name, type: form.type,
+      section_id: form.section_id || undefined, unit: form.unit || undefined,
+      phone: form.phone || undefined, email: form.email || undefined,
+      document_id: form.document_id || undefined, notes: form.notes || undefined,
+    };
+    if (editingPerson) {
+      peopleMut.update.mutate({ id: editingPerson, ...payload });
+    } else {
+      peopleMut.create.mutate(payload);
+    }
+    setPersonDialogOpen(false);
+    setEditingPerson(null);
+  };
+
+  const openAddVehicle = (personId?: string) => {
+    setEditingVehicle(null);
+    setVehicleForm({ plate: '', brand: '', model: '', color: '', type: 'car', person_id: personId || '' });
+    setVehicleDialogOpen(true);
+  };
+
+  const openEditVehicle = (v: any) => {
+    setEditingVehicle(v.id);
+    setVehicleForm({
+      plate: v.plate || '', brand: v.brand || '', model: v.model || '',
+      color: v.color || '', type: v.type || 'car',
+      person_id: v.personId || v.person_id || '',
+    });
+    setVehicleDialogOpen(true);
+  };
+
+  const handleSaveVehicle = () => {
+    if (!vehicleForm.plate.trim()) return;
+    if (editingVehicle) {
+      vehicleMut.update.mutate({ id: editingVehicle, ...vehicleForm });
+    } else {
+      vehicleMut.create.mutate(vehicleForm);
+    }
+    setVehicleDialogOpen(false);
+    setEditingVehicle(null);
+  };
+
+  const handleOpenGate = async (detectionId: string) => {
+    try {
+      await apiClient.post('/lpr/gate-action', { detectionId, action: 'open' });
+      toast.success('Puerta abierta');
+    } catch {
+      toast.error('Error al abrir puerta');
+    }
+  };
+
+  // Schedule handlers
   const openScheduleDialog = useCallback((schedule?: AccessSchedule) => {
     if (schedule) {
       setEditingSchedule(schedule);
@@ -136,173 +256,329 @@ export default function AccessControlPage() {
   }, []);
 
   const saveSchedule = useCallback(() => {
-    if (!scheduleForm.name.trim()) { toast.error('Name is required'); return; }
+    if (!scheduleForm.name.trim()) { toast.error('El nombre es requerido'); return; }
     if (editingSchedule) {
       setSchedules(prev => prev.map(s => s.id === editingSchedule.id ? { ...scheduleForm, id: editingSchedule.id } : s));
-      toast.success('Schedule updated');
+      toast.success('Horario actualizado');
     } else {
       setSchedules(prev => [...prev, { ...scheduleForm, id: `sched-${Date.now()}` }]);
-      toast.success('Schedule created');
+      toast.success('Horario creado');
     }
     setScheduleDialogOpen(false);
   }, [scheduleForm, editingSchedule]);
-
-  const deleteSchedule = useCallback((id: string) => {
-    setSchedules(prev => prev.filter(s => s.id !== id));
-    setDeleteConfirm(null);
-    toast.success('Schedule deleted');
-  }, []);
-
-  const toggleScheduleActive = useCallback((id: string) => {
-    setSchedules(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
-  }, []);
-
-  const toggleDay = useCallback((day: number) => {
-    setScheduleForm(prev => {
-      const days = prev.dayOfWeek.includes(day) ? prev.dayOfWeek.filter(d => d !== day) : [...prev.dayOfWeek, day].sort();
-      return { ...prev, dayOfWeek: days };
-    });
-  }, []);
-
-  const getSectionName = (id: string) => sections.find((s: any) => s.id === id)?.name || '—';
-
-  const filtered = people.filter((p: any) => {
-    if (search && !p.full_name?.toLowerCase().includes(search.toLowerCase()) && !p.unit?.toLowerCase().includes(search.toLowerCase())) return false;
-    if (sectionFilter !== 'all' && p.section_id !== sectionFilter) return false;
-    if (typeFilter !== 'all' && p.type !== typeFilter) return false;
-    return true;
-  });
-
-  const selected = selectedPerson ? people.find((p: any) => p.id === selectedPerson) : null;
-  const personVehicles = selected ? vehicles.filter((v: any) => v.person_id === selected.id) : [];
-
-  const handleAdd = () => {
-    if (!form.full_name.trim()) return;
-    const payload = {
-      full_name: form.full_name, type: form.type,
-      section_id: form.section_id || undefined, unit: form.unit || undefined,
-      phone: form.phone || undefined, email: form.email || undefined,
-      document_id: form.document_id || undefined,
-      notes: form.notes || undefined,
-    };
-    if (editingPerson) {
-      update.mutate({ id: editingPerson, ...payload });
-    } else {
-      create.mutate(payload);
-    }
-    setAddOpen(false);
-    setEditingPerson(null);
-    setForm({ full_name: '', type: 'resident', section_id: '', unit: '', phone: '', email: '', document_id: '', notes: '' });
-  };
-
-  const handleOpenGate = async (detectionId: string) => {
-    try {
-      await apiClient.post('/lpr/gate-action', { detectionId, action: 'open' });
-      toast.success('Gate opened');
-    } catch {
-      toast.error('Failed to open gate');
-    }
-  };
 
   if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 
   return (
     <PageShell
-      title={t('access.title')}
-      description={t('access.subtitle')}
+      title="Control de Acceso"
+      description="Personas, vehículos y registros de acceso"
       icon={<Shield className="h-5 w-5" />}
       actions={
-        <>
-          <Button variant="outline" size="sm" onClick={() => { setImportType('residents'); setImportOpen(true); }}><FileUp className="mr-1 h-3 w-3" /> Import</Button>
-          <Button variant="outline" size="sm" onClick={() => toast.info('Export requires selecting a report type in the Reports tab')}><Download className="mr-1 h-3 w-3" /> {t('common.export')}</Button>
-          <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="mr-1 h-3 w-3" /> {t('access.add_person')}</Button>
-        </>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => { setImportType('residents'); setImportOpen(true); }} className="gap-1"><FileUp className="h-3 w-3" /> Importar</Button>
+          <Button size="sm" onClick={openAddPerson} className="gap-1"><Plus className="h-3.5 w-3.5" /> Nueva Persona</Button>
+        </div>
       }
     >
-    <div className="flex h-full">
-      <div className={cn("flex-1 flex flex-col border-r", selected && "max-w-[60%]")}>
-        <div className="px-4 py-3 border-b space-y-3">
-          <div className="grid grid-cols-4 gap-2">
-            <Card className="p-2"><div className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('access.total_people')}</p><p className="text-lg font-bold">{people.length}</p></div></div></Card>
-            <Card className="p-2"><div className="flex items-center gap-2"><UserCheck className="h-4 w-4 text-success" /><div><p className="text-xs text-muted-foreground">{t('access.residents')}</p><p className="text-lg font-bold">{people.filter((p: any) => p.type === 'resident').length}</p></div></div></Card>
-            <Card className="p-2"><div className="flex items-center gap-2"><Car className="h-4 w-4 text-primary" /><div><p className="text-xs text-muted-foreground">{t('access.vehicles')}</p><p className="text-lg font-bold">{vehicles.length}</p></div></div></Card>
-            <Card className="p-2"><div className="flex items-center gap-2"><Clock className="h-4 w-4 text-warning" /><div><p className="text-xs text-muted-foreground">{t('access.today_accesses')}</p><p className="text-lg font-bold">{logs.length}</p></div></div></Card>
-          </div>
+    <div className="flex flex-col lg:flex-row h-full">
+      <div className={cn("flex-1 flex flex-col min-w-0 transition-all", selected && "lg:max-w-[58%]")}>
+
+        {/* Stats */}
+        <div className="px-4 py-3 border-b border-slate-700/50 flex gap-3 flex-wrap">
+          <StatCard icon={<Users className="h-4 w-4 text-blue-400" />} label="Total Personas" value={stats.total} />
+          <StatCard icon={<UserCheck className="h-4 w-4 text-emerald-400" />} label="Residentes" value={stats.residents} />
+          <StatCard icon={<Car className="h-4 w-4 text-purple-400" />} label="Vehículos" value={stats.vehicles} />
+          <StatCard icon={<Clock className="h-4 w-4 text-amber-400" />} label="Accesos hoy" value={stats.todayLogs} />
         </div>
 
+        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <div className="px-4 pt-2 border-b">
-            <TabsList className="h-8">
-              <TabsTrigger value="residents" className="text-xs"><Users className="mr-1 h-3 w-3" /> {t('access.people')}</TabsTrigger>
-              <TabsTrigger value="logs" className="text-xs"><Clock className="mr-1 h-3 w-3" /> {t('access.access_log')}</TabsTrigger>
-              <TabsTrigger value="vehicles" className="text-xs"><Car className="mr-1 h-3 w-3" /> {t('access.vehicles')}</TabsTrigger>
-              <TabsTrigger value="lpr_scanner" className="text-xs text-primary data-[state=active]:bg-primary/20"><ScanLine className="mr-1 h-3 w-3" /> LPR Vision</TabsTrigger>
-              <TabsTrigger value="reports" className="text-xs"><FileText className="mr-1 h-3 w-3" /> {t('reports.title')}</TabsTrigger>
-              <TabsTrigger value="schedules" className="text-xs"><CalendarClock className="mr-1 h-3 w-3" /> Schedules</TabsTrigger>
-              <TabsTrigger value="credentials" className="text-xs"><Key className="mr-1 h-3 w-3" /> {t('access.credentials')}</TabsTrigger>
+          <div className="px-4 pt-2 border-b border-slate-700/50 overflow-x-auto">
+            <TabsList className="h-8 bg-slate-800/50">
+              <TabsTrigger value="residents" className="text-xs gap-1"><Users className="h-3 w-3" /> Personas</TabsTrigger>
+              <TabsTrigger value="vehicles" className="text-xs gap-1"><Car className="h-3 w-3" /> Vehículos</TabsTrigger>
+              <TabsTrigger value="logs" className="text-xs gap-1"><Clock className="h-3 w-3" /> Registro</TabsTrigger>
+              <TabsTrigger value="lpr_scanner" className="text-xs gap-1 text-blue-400 data-[state=active]:bg-blue-500/10"><ScanLine className="h-3 w-3" /> LPR</TabsTrigger>
+              <TabsTrigger value="schedules" className="text-xs gap-1"><CalendarClock className="h-3 w-3" /> Horarios</TabsTrigger>
+              <TabsTrigger value="reports" className="text-xs gap-1"><FileBarChart className="h-3 w-3" /> Reportes</TabsTrigger>
             </TabsList>
           </div>
 
-          <div className="px-4 py-2 border-b flex gap-2">
+          {/* Filters */}
+          <div className="px-4 py-2 border-b border-slate-700/50 flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder={t('access.search')} value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+              <Input placeholder="Buscar por nombre, unidad o teléfono..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-sm bg-slate-900/50 border-slate-700" />
             </div>
             <Select value={sectionFilter} onValueChange={setSectionFilter}>
-              <SelectTrigger className="w-44 h-8 text-xs"><SelectValue placeholder={t('access.all_sections')} /></SelectTrigger>
+              <SelectTrigger className="w-40 h-8 text-xs bg-slate-900/50 border-slate-700"><SelectValue placeholder="Todas las sedes" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t('access.all_sections')}</SelectItem>
-                {sections.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                <SelectItem value="all">Todas las sedes</SelectItem>
+                {(sections as any[]).map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-32 h-8 text-xs bg-slate-900/50 border-slate-700"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t('common.all')}</SelectItem>
-                <SelectItem value="resident">{t('access.residents')}</SelectItem>
-                <SelectItem value="visitor">{t('access.visitors')}</SelectItem>
-                <SelectItem value="staff">{t('access.staff')}</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="resident">Residentes</SelectItem>
+                <SelectItem value="visitor">Visitantes</SelectItem>
+                <SelectItem value="staff">Personal</SelectItem>
+                <SelectItem value="provider">Proveedores</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
+          {/* ── People Tab ── */}
           <TabsContent value="residents" className="flex-1 overflow-auto m-0">
             {isLoading ? (
-              <div className="p-4 space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+              <div className="p-4 space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
             ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                <Users className="h-12 w-12 mb-2 opacity-20" />
-                <p className="text-sm">{people.length === 0 ? 'No people registered yet' : 'No results match your filters'}</p>
-                {people.length === 0 && <Button variant="outline" size="sm" className="mt-2" onClick={() => setAddOpen(true)}><Plus className="mr-1 h-3 w-3" /> {t('access.add_person')}</Button>}
-              </div>
+              <EmptyState icon={<Users />} message={people.length === 0 ? 'No hay personas registradas' : 'Sin resultados para el filtro actual'} action={people.length === 0 ? <Button size="sm" onClick={openAddPerson} className="gap-1"><Plus className="h-3.5 w-3.5" /> Agregar persona</Button> : <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setTypeFilter('all'); setSectionFilter('all'); }}>Limpiar filtros</Button>} />
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('common.name')}</TableHead>
-                    <TableHead>{t('access.section')}</TableHead>
-                    <TableHead>{t('access.unit')}</TableHead>
-                    <TableHead>{t('common.type')}</TableHead>
-                    <TableHead>{t('common.status')}</TableHead>
+                  <TableRow className="border-slate-700/50">
+                    <TableHead className="text-xs">Nombre</TableHead>
+                    <TableHead className="text-xs">Sede</TableHead>
+                    <TableHead className="text-xs">Unidad</TableHead>
+                    <TableHead className="text-xs">Tipo</TableHead>
+                    <TableHead className="text-xs">Contacto</TableHead>
+                    <TableHead className="text-xs">Estado</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((person: any) => (
-                    <TableRow key={person.id} className={cn("cursor-pointer", selectedPerson === person.id && "bg-muted/50")} onClick={() => setSelectedPerson(person.id)}>
-                      <TableCell className="font-medium text-sm">{person.full_name}</TableCell>
-                      <TableCell className="text-xs">{getSectionName(person.section_id)}</TableCell>
-                      <TableCell className="text-xs">{person.unit || '—'}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-[10px] capitalize">{person.type}</Badge></TableCell>
-                      <TableCell><Badge variant={person.status === 'active' ? 'default' : 'secondary'} className="text-[10px] capitalize">{person.status}</Badge></TableCell>
+                  {filtered.map((p: any) => {
+                    const tc = typeConfig[p.type] || typeConfig.resident;
+                    return (
+                      <TableRow
+                        key={p.id}
+                        className={cn("cursor-pointer border-slate-800 hover:bg-slate-800/50", selectedPerson === p.id && "bg-slate-800/70")}
+                        onClick={() => setSelectedPerson(p.id)}
+                      >
+                        <TableCell className="font-medium text-sm text-white">{personName(p)}</TableCell>
+                        <TableCell className="text-xs text-slate-400">{getSectionName(personSection(p))}</TableCell>
+                        <TableCell className="text-xs text-slate-300">{p.unit || '—'}</TableCell>
+                        <TableCell><Badge className={cn("text-[9px] border", tc.color)}>{tc.label}</Badge></TableCell>
+                        <TableCell className="text-xs text-slate-400">
+                          {p.phone && <span className="flex items-center gap-1"><Phone className="h-2.5 w-2.5" /> {p.phone}</span>}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={p.status === 'active' ? 'default' : p.status === 'blocked' ? 'destructive' : 'secondary'} className="text-[9px] capitalize">
+                            {p.status === 'active' ? 'Activo' : p.status === 'blocked' ? 'Bloqueado' : 'Inactivo'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setSelectedPerson(p.id)}><Eye className="mr-2 h-3 w-3" /> Ver detalle</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openEditPerson(p)}><Pencil className="mr-2 h-3 w-3" /> Editar</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-destructive" onClick={() => setDeletePersonId(p.id)}><Trash2 className="mr-2 h-3 w-3" /> Eliminar</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </TabsContent>
+
+          {/* ── Vehicles Tab ── */}
+          <TabsContent value="vehicles" className="flex-1 overflow-auto m-0">
+            <div className="px-4 py-2 border-b border-slate-700/50 flex justify-between items-center">
+              <p className="text-xs text-slate-400">{vehicles.length} vehículos registrados</p>
+              <Button size="sm" variant="outline" onClick={() => openAddVehicle()} className="gap-1 h-7 text-xs"><Plus className="h-3 w-3" /> Agregar</Button>
+            </div>
+            {vehicles.length === 0 ? (
+              <EmptyState icon={<Car />} message="No hay vehículos registrados" action={<Button size="sm" onClick={() => openAddVehicle()} className="gap-1"><Plus className="h-3.5 w-3.5" /> Registrar vehículo</Button>} />
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-slate-700/50">
+                    <TableHead className="text-xs">Placa</TableHead>
+                    <TableHead className="text-xs">Marca / Modelo</TableHead>
+                    <TableHead className="text-xs">Color</TableHead>
+                    <TableHead className="text-xs">Tipo</TableHead>
+                    <TableHead className="text-xs">Propietario</TableHead>
+                    <TableHead className="text-xs">Estado</TableHead>
+                    <TableHead className="w-10"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {vehicles.map((v: any) => {
+                    const owner = people.find((p: any) => p.id === (v.personId || v.person_id));
+                    return (
+                      <TableRow key={v.id} className="border-slate-800">
+                        <TableCell className="font-mono font-bold text-sm text-white">{v.plate}</TableCell>
+                        <TableCell className="text-xs text-slate-300">{[v.brand, v.model].filter(Boolean).join(' ') || '—'}</TableCell>
+                        <TableCell className="text-xs">{v.color || '—'}</TableCell>
+                        <TableCell className="text-xs capitalize">{v.type}</TableCell>
+                        <TableCell className="text-xs text-slate-400">{owner ? personName(owner) : '—'}</TableCell>
+                        <TableCell><Badge variant={v.status === 'active' ? 'default' : 'secondary'} className="text-[9px] capitalize">{v.status === 'active' ? 'Activo' : 'Inactivo'}</Badge></TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEditVehicle(v)}><Pencil className="mr-2 h-3 w-3" /> Editar</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteVehicleId(v.id)}><Trash2 className="mr-2 h-3 w-3" /> Eliminar</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </TabsContent>
+
+          {/* ── Access Logs Tab ── */}
+          <TabsContent value="logs" className="flex-1 overflow-auto m-0">
+            {logs.length === 0 ? (
+              <EmptyState icon={<Clock />} message="No hay registros de acceso" />
+            ) : (
+              <Table>
+                <TableHeader><TableRow className="border-slate-700/50">
+                  <TableHead className="text-xs">Fecha/Hora</TableHead>
+                  <TableHead className="text-xs">Persona</TableHead>
+                  <TableHead className="text-xs">Dirección</TableHead>
+                  <TableHead className="text-xs">Método</TableHead>
+                  <TableHead className="text-xs">Sede</TableHead>
+                  <TableHead className="text-xs">Notas</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {logs.map((log: any) => {
+                    const person = people.find((p: any) => p.id === (log.personId || log.person_id));
+                    return (
+                      <TableRow key={log.id} className="border-slate-800">
+                        <TableCell className="text-xs font-mono text-slate-300">{new Date(log.createdAt || log.created_at).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}</TableCell>
+                        <TableCell className="text-xs text-white">{person ? personName(person) : '—'}</TableCell>
+                        <TableCell>
+                          <Badge className={cn("text-[9px]", log.direction === 'in' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30')}>
+                            {log.direction === 'in' ? '→ Entrada' : '← Salida'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-400 capitalize">{log.method}</TableCell>
+                        <TableCell className="text-xs text-slate-400">{getSectionName(log.sectionId || log.section_id)}</TableCell>
+                        <TableCell className="text-xs text-slate-500 max-w-[150px] truncate">{log.notes || '—'}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </TabsContent>
+
+          {/* ── LPR Tab ── */}
+          <TabsContent value="lpr_scanner" className="flex-1 overflow-auto m-0 p-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+              {/* Camera Feed */}
+              <Card className="flex flex-col border-blue-500/20 overflow-hidden bg-slate-900/50">
+                <CardHeader className="py-2.5 px-4 border-b border-slate-700/50 flex flex-row items-center justify-between">
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                    <Camera className="h-4 w-4" /> Cámara LPR - Entrada
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>
+                    <span className="text-[10px] text-slate-500 font-mono">EN VIVO / OCR ACTIVO</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0 flex-1 relative bg-black flex items-center justify-center overflow-hidden min-h-[280px]">
+                  <ScanLine className="absolute h-full w-full text-blue-500/15 animate-pulse pointer-events-none p-16" />
+                  <div className="w-[75%] h-[55%] border-2 border-dashed border-blue-500/40 relative">
+                    <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-blue-400 -translate-x-1 -translate-y-1"></div>
+                    <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-blue-400 translate-x-1 -translate-y-1"></div>
+                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-blue-400 -translate-x-1 translate-y-1"></div>
+                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-blue-400 translate-x-1 translate-y-1"></div>
+                  </div>
+                  <div className="absolute bottom-3 left-4 right-4 flex justify-between font-mono text-[9px] text-blue-500/60">
+                    <span>RECONOCIMIENTO OPTICO...</span>
+                    <span>CONFIANZA: 98.8%</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Detections */}
+              <Card className="flex flex-col max-h-[500px] bg-slate-900/30">
+                <CardHeader className="py-2.5 px-4 border-b border-slate-700/50">
+                  <CardTitle className="text-xs font-bold flex items-center gap-2"><CarFront className="h-4 w-4 text-slate-400" /> Detecciones de Placas</CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 overflow-y-auto space-y-2">
+                  {(lprDetections as any[]).length === 0 ? (
+                    <EmptyState icon={<ScanLine />} message="Sin detecciones. Configure cámaras LPR para comenzar." compact />
+                  ) : (
+                    (lprDetections as any[]).map((det: any) => {
+                      const isAuth = det.status === 'authorized' || det.authorized;
+                      const isUnknown = det.status === 'unknown' || (!det.authorized && !det.person_name);
+                      const elapsed = det.detected_at ? `${Math.round((Date.now() - new Date(det.detected_at).getTime()) / 1000)}s` : '';
+                      return (
+                        <div key={det.id} className={cn('flex items-center justify-between p-2.5 rounded-lg border', isAuth && 'border-emerald-500/30 bg-emerald-500/5', isUnknown && 'border-red-500/30 bg-red-500/5', !isAuth && !isUnknown && 'bg-slate-800/30 border-slate-700/30 opacity-60')}>
+                          {isUnknown && <div className="absolute left-0 top-0 w-1 h-full bg-red-500 animate-pulse rounded-l" />}
+                          <div className="flex gap-3 items-center">
+                            <div className={cn('h-9 w-20 rounded border-2 border-black flex items-center justify-center', isUnknown ? 'bg-yellow-400' : 'bg-white')}>
+                              <span className="text-black font-extrabold font-mono tracking-widest text-xs">{det.plate}</span>
+                            </div>
+                            <div>
+                              {isAuth ? <p className="text-xs font-bold text-emerald-400 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> AUTORIZADO</p>
+                               : isUnknown ? <p className="text-xs font-bold text-red-400 flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" /> DESCONOCIDO</p>
+                               : <p className="text-xs font-bold text-slate-400">{(det.status || 'detectado').toUpperCase()}</p>}
+                              <p className="text-[10px] text-slate-500">{det.person_name ? `${det.person_type || 'Residente'}: ${det.person_name}` : 'Sin registros'}{det.zone ? ` \u2022 ${det.zone}` : ''}</p>
+                            </div>
+                          </div>
+                          {isUnknown ? <Button size="sm" variant="destructive" className="h-6 text-[10px]" onClick={() => handleOpenGate(det.id)}>Abrir</Button> : <span className="text-[10px] text-slate-500 font-mono">{elapsed}</span>}
+                        </div>
+                      );
+                    })
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ── Schedules Tab ── */}
+          <TabsContent value="schedules" className="flex-1 overflow-auto m-0">
+            <div className="px-4 py-3 border-b border-slate-700/50 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold flex items-center gap-2"><CalendarClock className="h-4 w-4 text-blue-400" /> Horarios de Acceso</h2>
+                <p className="text-xs text-slate-500">Reglas de acceso basadas en horarios y zonas</p>
+              </div>
+              <Button size="sm" onClick={() => openScheduleDialog()} className="gap-1"><Plus className="h-3 w-3" /> Nuevo Horario</Button>
+            </div>
+            {schedules.length === 0 ? (
+              <EmptyState icon={<CalendarClock />} message="No hay horarios de acceso definidos" action={<Button size="sm" onClick={() => openScheduleDialog()} className="gap-1"><Plus className="h-3.5 w-3.5" /> Crear primer horario</Button>} />
+            ) : (
+              <Table>
+                <TableHeader><TableRow className="border-slate-700/50">
+                  <TableHead className="text-xs">Nombre</TableHead><TableHead className="text-xs">Tipo</TableHead><TableHead className="text-xs">Días</TableHead><TableHead className="text-xs">Horario</TableHead><TableHead className="text-xs">Aplica a</TableHead><TableHead className="text-xs">Zona</TableHead><TableHead className="text-xs">Activo</TableHead><TableHead className="w-10"></TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {schedules.map(s => (
+                    <TableRow key={s.id} className={cn("border-slate-800", !s.active && 'opacity-40')}>
+                      <TableCell className="font-medium text-sm text-white">{s.name}</TableCell>
+                      <TableCell><Badge variant={s.type === 'allow' ? 'default' : 'destructive'} className="text-[9px]">{s.type === 'allow' ? 'Permitir' : 'Denegar'}</Badge></TableCell>
+                      <TableCell>
+                        <div className="flex gap-0.5">{DAY_LABELS.map((d, i) => (
+                          <span key={i} className={cn('w-5 h-5 rounded text-[9px] flex items-center justify-center font-medium', s.dayOfWeek.includes(i) ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-600')}>{d}</span>
+                        ))}</div>
+                      </TableCell>
+                      <TableCell className="text-xs font-mono text-slate-300">{s.startTime} - {s.endTime}</TableCell>
+                      <TableCell className="text-xs capitalize text-slate-400">{s.applies_to === 'all' ? 'Todos' : s.applies_to}</TableCell>
+                      <TableCell className="text-xs text-slate-400">{s.zone || '—'}</TableCell>
+                      <TableCell><Switch checked={s.active} onCheckedChange={() => setSchedules(prev => prev.map(x => x.id === s.id ? { ...x, active: !x.active } : x))} className="h-4 w-8" /></TableCell>
                       <TableCell>
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setSelectedPerson(person.id)}><Eye className="mr-2 h-3 w-3" /> {t('common.view')}</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => { setEditingPerson(person.id); setForm({ full_name: person.full_name, type: person.type, section_id: person.section_id || '', unit: person.unit || '', phone: person.phone || '', email: person.email || '', document_id: person.document_id || '', notes: person.notes || '' }); setAddOpen(true); }}><Pencil className="mr-2 h-3 w-3" /> {t('common.edit')}</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openScheduleDialog(s)}><Pencil className="mr-2 h-3 w-3" /> Editar</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={() => setDeletePersonId(person.id)}><Trash2 className="mr-2 h-3 w-3" /> {t('common.delete')}</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => setDeleteConfirm(s.id)}><Trash2 className="mr-2 h-3 w-3" /> Eliminar</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -313,503 +589,267 @@ export default function AccessControlPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="logs" className="flex-1 overflow-auto m-0">
-            {logs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground"><Clock className="h-12 w-12 mb-2 opacity-20" /><p className="text-sm">No access logs yet</p></div>
-            ) : (
-              <Table>
-                <TableHeader><TableRow><TableHead>{t('access.time')}</TableHead><TableHead>{t('access.direction')}</TableHead><TableHead>{t('access.method')}</TableHead><TableHead>{t('access.section')}</TableHead><TableHead>Notes</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {logs.map((log: any) => (
-                    <TableRow key={log.id}>
-                      <TableCell className="text-xs font-mono">{new Date(log.created_at).toLocaleString()}</TableCell>
-                      <TableCell><Badge variant={log.direction === 'in' ? 'default' : 'secondary'} className="text-[10px]">{log.direction === 'in' ? '→ Entry' : '← Exit'}</Badge></TableCell>
-                      <TableCell className="text-xs">{log.method}</TableCell>
-                      <TableCell className="text-xs">{getSectionName(log.section_id)}</TableCell>
-                      <TableCell className="text-xs">{log.notes || '—'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </TabsContent>
-
-          <TabsContent value="vehicles" className="flex-1 overflow-auto m-0">
-            {vehicles.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground"><Car className="h-12 w-12 mb-2 opacity-20" /><p className="text-sm">No vehicles registered</p></div>
-            ) : (
-              <Table>
-                <TableHeader><TableRow><TableHead>{t('access.plate')}</TableHead><TableHead>Brand</TableHead><TableHead>Color</TableHead><TableHead>{t('common.type')}</TableHead><TableHead>{t('common.status')}</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {vehicles.map((v: any) => (
-                    <TableRow key={v.id}>
-                      <TableCell className="font-mono font-bold text-sm">{v.plate}</TableCell>
-                      <TableCell className="text-xs">{v.brand || '—'} {v.model || ''}</TableCell>
-                      <TableCell className="text-xs">{v.color || '—'}</TableCell>
-                      <TableCell className="text-xs capitalize">{v.type}</TableCell>
-                      <TableCell><Badge variant={v.status === 'active' ? 'default' : 'secondary'} className="text-[10px] capitalize">{v.status}</Badge></TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </TabsContent>
-
-          <TabsContent value="lpr_scanner" className="flex-1 overflow-auto m-0 p-4">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
-               {/* Camera Feed Context */}
-               <Card className="flex flex-col border-primary/20 shadow-[0_0_15px_rgba(0,180,216,0.05)] overflow-hidden">
-                 <CardHeader className="py-3 px-4 bg-background/50 border-b flex flex-row items-center justify-between">
-                   <CardTitle className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
-                     <Camera className="h-4 w-4" /> Entry Lane: Cam-LPR-01
-                   </CardTitle>
-                   <div className="flex items-center gap-2">
-                     <span className="relative flex h-2 w-2">
-                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-                       <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
-                     </span>
-                     <span className="text-[10px] text-muted-foreground font-mono">LIVE / OCR ACTIVE</span>
-                   </div>
-                 </CardHeader>
-                 <CardContent className="p-0 flex-1 relative bg-black flex items-center justify-center overflow-hidden min-h-[300px]">
-                   <ScanLine className="absolute h-full w-full text-primary/20 animate-pulse pointer-events-none p-12" />
-                   <div className="w-[80%] h-[60%] border-2 border-dashed border-primary/50 relative">
-                     <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary -translate-x-1 -translate-y-1"></div>
-                     <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary translate-x-1 -translate-y-1"></div>
-                     <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-primary -translate-x-1 translate-y-1"></div>
-                     <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary translate-x-1 translate-y-1"></div>
-                   </div>
-                   <div className="absolute bottom-4 left-4 right-4 flex justify-between tracking-widest font-mono text-[9px] text-primary/70">
-                     <span>OPTICAL RECOGNITION...</span>
-                     <span>98.8% CONFIDENCE TARGET</span>
-                   </div>
-                 </CardContent>
-               </Card>
-
-               {/* OCR Extracted Plates Logic */}
-               <Card className="flex flex-col max-h-[500px]">
-                 <CardHeader className="py-3 px-4 border-b bg-muted/20">
-                    <CardTitle className="text-xs font-bold flex items-center gap-2">
-                      <CarFront className="h-4 w-4 text-muted-foreground" /> OCR Plate Buffer
-                    </CardTitle>
-                 </CardHeader>
-                 <CardContent className="p-4 overflow-y-auto space-y-3">
-                   {lprDetections.length === 0 ? (
-                     <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
-                       <ScanLine className="h-12 w-12 mb-2 opacity-20" />
-                       <p className="text-sm text-center">No plate detections yet. Configure LPR cameras to start receiving detections.</p>
-                     </div>
-                   ) : (
-                     lprDetections.map((det: any) => {
-                       const isAuthorized = det.status === 'authorized' || det.authorized;
-                       const isUnknown = det.status === 'unknown' || (!det.authorized && !det.person_name);
-                       const elapsed = det.detected_at
-                         ? `${Math.round((Date.now() - new Date(det.detected_at).getTime()) / 1000)}s ago`
-                         : '';
-                       return (
-                         <div
-                           key={det.id}
-                           className={cn(
-                             'flex items-center justify-between p-3 rounded-lg border relative overflow-hidden',
-                             isAuthorized && 'border-success/30 bg-success/5',
-                             isUnknown && 'border-destructive/30 bg-destructive/5',
-                             !isAuthorized && !isUnknown && 'bg-muted/10 opacity-60',
-                           )}
-                         >
-                           {isUnknown && <div className="absolute top-0 left-0 w-1 h-full bg-destructive animate-pulse" />}
-                           <div className="flex gap-4 items-center">
-                             <div className={cn('h-10 w-24 rounded border-2 border-black flex items-center justify-center', isUnknown ? 'bg-yellow-400' : 'bg-white')}>
-                               <span className="text-black font-extrabold font-mono tracking-widest">{det.plate}</span>
-                             </div>
-                             <div>
-                               {isAuthorized ? (
-                                 <p className="text-sm font-bold text-success flex items-center gap-1"><CheckCircle2 className="h-4 w-4" /> AUTHORIZED</p>
-                               ) : isUnknown ? (
-                                 <p className="text-sm font-bold text-destructive flex items-center gap-1"><AlertCircle className="h-4 w-4" /> UNKNOWN</p>
-                               ) : (
-                                 <p className="text-sm font-bold text-muted-foreground">{(det.status || 'detected').toUpperCase()}</p>
-                               )}
-                               <p className="text-[10px] text-muted-foreground">
-                                 {det.person_name ? `${det.person_type || 'Resident'}: ${det.person_name}` : 'No records in DB'}
-                                 {det.zone ? ` \u2022 ${det.zone}` : ''}
-                               </p>
-                             </div>
-                           </div>
-                           {isUnknown ? (
-                             <Button size="sm" variant="destructive" className="h-7 text-[10px]" onClick={() => handleOpenGate(det.id)}>Open Gate</Button>
-                           ) : (
-                             <span className="text-xs text-muted-foreground font-mono">{elapsed}</span>
-                           )}
-                         </div>
-                       );
-                     })
-                   )}
-                 </CardContent>
-               </Card>
-             </div>
-          </TabsContent>
-
+          {/* ── Reports Tab ── */}
           <TabsContent value="reports" className="flex-1 overflow-auto m-0 p-4">
-            <div className="grid grid-cols-2 gap-4">
-              {['daily', 'weekly', 'biweekly', 'monthly'].map(period => (
-                <Card key={period}>
-                  <CardHeader className="pb-2"><CardTitle className="text-sm">{t(`access.${period}_report`)}</CardTitle></CardHeader>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { key: 'daily', label: 'Reporte Diario', desc: 'Todos los accesos del día de hoy' },
+                { key: 'weekly', label: 'Reporte Semanal', desc: 'Resumen de accesos de la semana' },
+                { key: 'biweekly', label: 'Reporte Quincenal', desc: 'Estadísticas de los últimos 15 días' },
+                { key: 'monthly', label: 'Reporte Mensual', desc: 'Informe completo del mes' },
+              ].map(r => (
+                <Card key={r.key} className="bg-slate-800/30 border-slate-700/40">
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">{r.label}</CardTitle></CardHeader>
                   <CardContent>
-                    <p className="text-xs text-muted-foreground mb-3">{t(`access.${period}_report_desc`)}</p>
+                    <p className="text-xs text-slate-500 mb-3">{r.desc}</p>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="text-xs" onClick={() => toast.success(`${period} CSV report generation started`)}><Download className="mr-1 h-3 w-3" /> CSV</Button>
-                      <Button variant="outline" size="sm" className="text-xs" onClick={() => toast.success(`${period} Excel report generation started`)}><FileText className="mr-1 h-3 w-3" /> Excel</Button>
+                      <Button variant="outline" size="sm" className="text-xs h-7 gap-1" onClick={() => toast.success(`Generando ${r.label} CSV...`)}><Download className="h-3 w-3" /> CSV</Button>
+                      <Button variant="outline" size="sm" className="text-xs h-7 gap-1" onClick={() => toast.success(`Generando ${r.label} Excel...`)}><FileText className="h-3 w-3" /> Excel</Button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
           </TabsContent>
-
-          <TabsContent value="schedules" className="flex-1 overflow-auto m-0">
-            <div className="px-4 py-3 border-b flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-bold flex items-center gap-2"><CalendarClock className="h-4 w-4 text-primary" /> Access Schedules</h2>
-                <p className="text-xs text-muted-foreground">Define time-based access rules for zones and groups</p>
-              </div>
-              <Button size="sm" onClick={() => openScheduleDialog()}><Plus className="mr-1 h-3 w-3" /> Add Schedule</Button>
-            </div>
-            {schedules.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                <CalendarClock className="h-12 w-12 mb-2 opacity-20" />
-                <p className="text-sm">No access schedules defined</p>
-                <Button variant="outline" size="sm" className="mt-2" onClick={() => openScheduleDialog()}>
-                  <Plus className="mr-1 h-3 w-3" /> Create First Schedule
-                </Button>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Days</TableHead>
-                    <TableHead>Time Range</TableHead>
-                    <TableHead>Applies To</TableHead>
-                    <TableHead>Zone</TableHead>
-                    <TableHead>Active</TableHead>
-                    <TableHead className="w-10"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {schedules.map(sched => (
-                    <TableRow key={sched.id} className={cn(!sched.active && 'opacity-50')}>
-                      <TableCell className="font-medium text-sm">{sched.name}</TableCell>
-                      <TableCell>
-                        <Badge variant={sched.type === 'allow' ? 'default' : 'destructive'} className="text-[10px] capitalize">{sched.type}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-0.5">
-                          {DAY_LABEL_KEYS.map((day, i) => (
-                            <span
-                              key={i}
-                              className={cn(
-                                'w-5 h-5 rounded text-[9px] flex items-center justify-center font-medium',
-                                (sched.dayOfWeek || []).includes(i)
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-muted text-muted-foreground',
-                              )}
-                            >
-                              {t(day.key, day.fallback)}
-                            </span>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs font-mono">{sched.startTime} - {sched.endTime}</TableCell>
-                      <TableCell className="text-xs capitalize">{sched.applies_to}</TableCell>
-                      <TableCell className="text-xs">{sched.zone || '—'}</TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={sched.active}
-                          onCheckedChange={() => toggleScheduleActive(sched.id)}
-                          className="h-5 w-9 data-[state=checked]:bg-primary"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openScheduleDialog(sched)}>
-                              <Pencil className="mr-2 h-3 w-3" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={() => setDeleteConfirm(sched.id)}>
-                              <Trash2 className="mr-2 h-3 w-3" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </TabsContent>
-
-          <TabsContent value="credentials" className="flex-1 overflow-auto m-0 p-4">
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Key className="h-4 w-4" /> {t('access.credentials')}</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-xs text-muted-foreground">Manage access credentials: keycards, RFID tags, PIN codes, and biometric enrollment for registered people.</p>
-                <div className="space-y-2">
-                  <p className="text-[10px] font-semibold uppercase text-muted-foreground">Supported Methods</p>
-                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                    <li>RFID / NFC cards (HID, EM4100)</li>
-                    <li>PIN codes</li>
-                    <li>QR / Barcode</li>
-                    <li>Biometric (fingerprint, facial recognition)</li>
-                  </ul>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => toast.info('Credential management requires access control hardware integration in Settings > Integrations')}>Configure</Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
 
+      {/* ── Detail Panel ── */}
       {selected && (
-        <div className="w-[40%] overflow-auto p-4 space-y-4">
+        <div className="lg:w-[42%] border-t lg:border-t-0 lg:border-l border-slate-700/50 overflow-auto bg-slate-900/30 p-4 space-y-4">
           <div className="flex items-start justify-between">
-            <div><h2 className="font-bold">{selected.full_name}</h2><p className="text-sm text-muted-foreground">{selected.unit || '—'} • {getSectionName(selected.section_id)}</p></div>
-            <Badge variant={selected.status === 'active' ? 'default' : 'secondary'} className="capitalize">{selected.status}</Badge>
+            <div>
+              <h2 className="font-bold text-lg text-white">{personName(selected)}</h2>
+              <p className="text-xs text-slate-400">{selected.unit || '—'} &bull; {getSectionName(personSection(selected))}</p>
+            </div>
+            <div className="flex items-center gap-1">
+              <Badge variant={selected.status === 'active' ? 'default' : selected.status === 'blocked' ? 'destructive' : 'secondary'} className="capitalize text-xs">
+                {selected.status === 'active' ? 'Activo' : selected.status === 'blocked' ? 'Bloqueado' : 'Inactivo'}
+              </Badge>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400" onClick={() => setSelectedPerson(null)}><X className="h-3.5 w-3.5" /></Button>
+            </div>
           </div>
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">{t('access.contact')}</CardTitle></CardHeader>
-            <CardContent className="space-y-1 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">{t('access.phone')}</span><span>{selected.phone || '—'}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span>{selected.email || '—'}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Document</span><span>{selected.document_id || '—'}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">{t('common.type')}</span><span className="capitalize">{selected.type}</span></div>
+
+          {/* Contact Info */}
+          <Card className="bg-slate-800/30 border-slate-700/40">
+            <CardHeader className="pb-2 px-3 pt-3"><CardTitle className="text-sm">Información de Contacto</CardTitle></CardHeader>
+            <CardContent className="px-3 pb-3 space-y-1.5 text-sm">
+              <InfoRow icon={<Phone className="h-3 w-3" />} label="Teléfono" value={selected.phone || '—'} />
+              <InfoRow icon={<Mail className="h-3 w-3" />} label="Email" value={selected.email || '—'} />
+              <InfoRow icon={<FileText className="h-3 w-3" />} label="Documento" value={personDoc(selected) || '—'} />
+              <InfoRow icon={<Shield className="h-3 w-3" />} label="Tipo" value={<Badge className={cn("text-[9px] border", (typeConfig[selected.type] || typeConfig.resident).color)}>{(typeConfig[selected.type] || typeConfig.resident).label}</Badge>} />
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">{t('access.vehicles')} ({personVehicles.length})</CardTitle></CardHeader>
-            <CardContent>
+
+          {/* Vehicles */}
+          <Card className="bg-slate-800/30 border-slate-700/40">
+            <CardHeader className="pb-2 px-3 pt-3 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm flex items-center gap-1.5"><Car className="h-4 w-4 text-purple-400" /> Vehículos ({personVehicles.length})</CardTitle>
+              <Button size="sm" variant="ghost" className="h-6 text-xs gap-1" onClick={() => openAddVehicle(selected.id)}><Plus className="h-3 w-3" /> Agregar</Button>
+            </CardHeader>
+            <CardContent className="px-3 pb-3">
               {personVehicles.length > 0 ? (
-                <div className="flex flex-wrap gap-1">{personVehicles.map((v: any) => <Badge key={v.id} variant="outline" className="font-mono">{v.plate}</Badge>)}</div>
-              ) : <p className="text-xs text-muted-foreground">{t('access.no_vehicles')}</p>}
+                <div className="space-y-1.5">
+                  {personVehicles.map((v: any) => (
+                    <div key={v.id} className="flex items-center justify-between p-2 rounded-md bg-slate-900/40">
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-16 rounded bg-yellow-400 flex items-center justify-center border border-black">
+                          <span className="text-black font-bold font-mono text-[10px] tracking-wider">{v.plate}</span>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-300">{[v.brand, v.model].filter(Boolean).join(' ') || '—'}</p>
+                          <p className="text-[10px] text-slate-500">{v.color || ''} {v.type}</p>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEditVehicle(v)}><Pencil className="h-3 w-3" /></Button>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="text-xs text-slate-500 text-center py-3">Sin vehículos registrados</p>}
             </CardContent>
           </Card>
+
+          {/* Notes */}
           {selected.notes && (
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Notes</CardTitle></CardHeader>
-              <CardContent className="text-sm text-muted-foreground">{selected.notes}</CardContent>
+            <Card className="bg-slate-800/30 border-slate-700/40">
+              <CardHeader className="pb-2 px-3 pt-3"><CardTitle className="text-sm">Notas</CardTitle></CardHeader>
+              <CardContent className="px-3 pb-3 text-sm text-slate-400">{selected.notes}</CardContent>
             </Card>
           )}
+
+          {/* Actions */}
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => { setEditingPerson(selected.id); setForm({ full_name: selected.full_name, type: selected.type, section_id: selected.section_id || '', unit: selected.unit || '', phone: selected.phone || '', email: selected.email || '', document_id: selected.document_id || '', notes: selected.notes || '' }); setAddOpen(true); }}><Pencil className="mr-1 h-3 w-3" /> {t('common.edit')}</Button>
-            <Button variant="outline" className="text-destructive" onClick={() => setDeletePersonId(selected.id)}><Trash2 className="h-3 w-3" /></Button>
+            <Button variant="outline" className="flex-1 gap-1" onClick={() => openEditPerson(selected)}><Pencil className="h-3 w-3" /> Editar</Button>
+            <Button variant="outline" className="text-destructive gap-1" onClick={() => setDeletePersonId(selected.id)}><Trash2 className="h-3 w-3" /> Eliminar</Button>
           </div>
         </div>
       )}
 
-      <Dialog open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (!open) { setEditingPerson(null); setForm({ full_name: '', type: 'resident', section_id: '', unit: '', phone: '', email: '', document_id: '', notes: '' }); } }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{editingPerson ? t('common.edit') : t('access.add_person')}</DialogTitle></DialogHeader>
+      {/* ══════════ Dialogs ══════════ */}
+
+      {/* Person Dialog */}
+      <Dialog open={personDialogOpen} onOpenChange={(open) => { setPersonDialogOpen(open); if (!open) setEditingPerson(null); }}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader><DialogTitle>{editingPerson ? 'Editar Persona' : 'Nueva Persona'}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1"><Label>{t('common.name')} *</Label><Input value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} placeholder="Full name" /></div>
+            <div className="space-y-1"><Label className="text-xs text-slate-400">Nombre completo *</Label><Input value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} placeholder="Juan Carlos Pérez" className="bg-slate-900 border-slate-700" /></div>
             <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1"><Label>{t('access.unit')}</Label><Input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} placeholder="Apt/House" /></div>
-              <div className="space-y-1"><Label>{t('access.phone')}</Label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
+              <div className="space-y-1"><Label className="text-xs text-slate-400">Unidad</Label><Input value={form.unit} onChange={e => setForm(p => ({ ...p, unit: e.target.value }))} placeholder="Apto 301" className="bg-slate-900 border-slate-700" /></div>
+              <div className="space-y-1"><Label className="text-xs text-slate-400">Teléfono</Label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="3001234567" className="bg-slate-900 border-slate-700" /></div>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1"><Label>{t('common.type')}</Label>
-                <Select value={form.type} onValueChange={v => setForm(p => ({ ...p, type: v }))}><SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="resident">{t('access.residents')}</SelectItem>
-                    <SelectItem value="visitor">{t('access.visitors')}</SelectItem>
-                    <SelectItem value="staff">{t('access.staff')}</SelectItem>
-                  </SelectContent>
+              <div className="space-y-1"><Label className="text-xs text-slate-400">Tipo</Label>
+                <Select value={form.type} onValueChange={v => setForm(p => ({ ...p, type: v }))}><SelectTrigger className="bg-slate-900 border-slate-700"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="resident">Residente</SelectItem><SelectItem value="visitor">Visitante</SelectItem><SelectItem value="staff">Personal</SelectItem><SelectItem value="provider">Proveedor</SelectItem></SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1"><Label>{t('access.section')}</Label>
-                <Select value={form.section_id} onValueChange={v => setForm(p => ({ ...p, section_id: v }))}><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                  <SelectContent>{sections.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+              <div className="space-y-1"><Label className="text-xs text-slate-400">Sede</Label>
+                <Select value={form.section_id} onValueChange={v => setForm(p => ({ ...p, section_id: v }))}><SelectTrigger className="bg-slate-900 border-slate-700"><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>{(sections as any[]).map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
-            <div className="space-y-1"><Label>Email</Label><Input value={form.email || ''} onChange={e => setForm({...form, email: e.target.value})} placeholder="email@ejemplo.com" type="email" /></div>
-            <div className="space-y-1"><Label>Document ID</Label><Input value={form.document_id} onChange={e => setForm(p => ({ ...p, document_id: e.target.value }))} /></div>
-            <div className="space-y-1"><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} /></div>
-            <Button className="w-full" onClick={handleAdd} disabled={!form.full_name.trim() || create.isPending || update.isPending}>{editingPerson ? t('common.save') : t('access.add_person')}</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <DataImportDialog
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        entityType={importType}
-        onImportComplete={() => {
-          // Trigger refetch of the relevant data lists
-          window.location.reload();
-        }}
-      />
-
-      {/* ── Schedule Create/Edit Dialog ─── */}
-      <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingSchedule ? 'Edit Schedule' : 'New Access Schedule'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <Label>Name *</Label>
-              <Input
-                value={scheduleForm.name}
-                onChange={e => setScheduleForm(p => ({ ...p, name: e.target.value }))}
-                placeholder="e.g. Business Hours"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Type</Label>
-                <Select value={scheduleForm.type} onValueChange={(v: 'allow' | 'deny') => setScheduleForm(p => ({ ...p, type: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="allow">Allow</SelectItem>
-                    <SelectItem value="deny">Deny</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Applies To</Label>
-                <Select value={scheduleForm.applies_to} onValueChange={(v: 'all' | 'visitors' | 'contractors' | 'staff') => setScheduleForm(p => ({ ...p, applies_to: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="visitors">Visitors</SelectItem>
-                    <SelectItem value="contractors">Contractors</SelectItem>
-                    <SelectItem value="staff">Staff</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label>Days of Week</Label>
-              <div className="flex gap-1">
-                {DAY_LABEL_KEYS.map((day, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => toggleDay(i)}
-                    className={cn(
-                      'w-9 h-9 rounded-md text-xs font-medium transition-colors border',
-                      scheduleForm.dayOfWeek.includes(i)
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-muted text-muted-foreground border-border hover:bg-muted/80',
-                    )}
-                    title={t(DAY_NAME_KEYS[i].key, DAY_NAME_KEYS[i].fallback)}
-                  >
-                    {t(day.key, day.fallback)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Start Time</Label>
-                <Input
-                  type="time"
-                  value={scheduleForm.startTime}
-                  onChange={e => setScheduleForm(p => ({ ...p, startTime: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>End Time</Label>
-                <Input
-                  type="time"
-                  value={scheduleForm.endTime}
-                  onChange={e => setScheduleForm(p => ({ ...p, endTime: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label>Zone</Label>
-              <Input
-                value={scheduleForm.zone}
-                onChange={e => setScheduleForm(p => ({ ...p, zone: e.target.value }))}
-                placeholder="e.g. Main Entrance, Parking, All"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={scheduleForm.active}
-                onCheckedChange={active => setScheduleForm(p => ({ ...p, active }))}
-                className="h-5 w-9 data-[state=checked]:bg-primary"
-              />
-              <Label className="cursor-pointer">Active</Label>
-            </div>
+            <div className="space-y-1"><Label className="text-xs text-slate-400">Email</Label><Input value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="email@ejemplo.com" type="email" className="bg-slate-900 border-slate-700" /></div>
+            <div className="space-y-1"><Label className="text-xs text-slate-400">Documento de identidad</Label><Input value={form.document_id} onChange={e => setForm(p => ({ ...p, document_id: e.target.value }))} placeholder="CC 1234567890" className="bg-slate-900 border-slate-700" /></div>
+            <div className="space-y-1"><Label className="text-xs text-slate-400">Notas</Label><Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} className="bg-slate-900 border-slate-700" /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>Cancel</Button>
-            <Button onClick={saveSchedule} disabled={!scheduleForm.name.trim()}>
-              {editingSchedule ? 'Save Changes' : 'Create Schedule'}
-            </Button>
+            <Button variant="outline" onClick={() => setPersonDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSavePerson} disabled={!form.full_name.trim() || peopleMut.create.isPending || peopleMut.update.isPending}>{editingPerson ? 'Actualizar' : 'Crear'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ── Delete Schedule Confirmation ─── */}
-      <AlertDialog open={!!deleteConfirm} onOpenChange={open => { if (!open) setDeleteConfirm(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Schedule</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this access schedule rule? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteConfirm && deleteSchedule(deleteConfirm)}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Vehicle Dialog */}
+      <Dialog open={vehicleDialogOpen} onOpenChange={(open) => { setVehicleDialogOpen(open); if (!open) setEditingVehicle(null); }}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader><DialogTitle>{editingVehicle ? 'Editar Vehículo' : 'Nuevo Vehículo'}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1"><Label className="text-xs text-slate-400">Placa *</Label><Input value={vehicleForm.plate} onChange={e => setVehicleForm(p => ({ ...p, plate: e.target.value.toUpperCase() }))} placeholder="ABC123" className="bg-slate-900 border-slate-700 font-mono text-lg tracking-widest" /></div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1"><Label className="text-xs text-slate-400">Marca</Label><Input value={vehicleForm.brand} onChange={e => setVehicleForm(p => ({ ...p, brand: e.target.value }))} placeholder="Renault" className="bg-slate-900 border-slate-700" /></div>
+              <div className="space-y-1"><Label className="text-xs text-slate-400">Modelo</Label><Input value={vehicleForm.model} onChange={e => setVehicleForm(p => ({ ...p, model: e.target.value }))} placeholder="Sandero 2024" className="bg-slate-900 border-slate-700" /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1"><Label className="text-xs text-slate-400">Color</Label><Input value={vehicleForm.color} onChange={e => setVehicleForm(p => ({ ...p, color: e.target.value }))} placeholder="Blanco" className="bg-slate-900 border-slate-700" /></div>
+              <div className="space-y-1"><Label className="text-xs text-slate-400">Tipo</Label>
+                <Select value={vehicleForm.type} onValueChange={v => setVehicleForm(p => ({ ...p, type: v }))}><SelectTrigger className="bg-slate-900 border-slate-700"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="car">Auto</SelectItem><SelectItem value="motorcycle">Moto</SelectItem><SelectItem value="truck">Camión</SelectItem><SelectItem value="bicycle">Bicicleta</SelectItem></SelectContent>
+                </Select>
+              </div>
+            </div>
+            {!vehicleForm.person_id && (
+              <div className="space-y-1"><Label className="text-xs text-slate-400">Propietario</Label>
+                <Select value={vehicleForm.person_id} onValueChange={v => setVehicleForm(p => ({ ...p, person_id: v }))}><SelectTrigger className="bg-slate-900 border-slate-700"><SelectValue placeholder="Seleccionar persona" /></SelectTrigger>
+                  <SelectContent>{people.map((p: any) => <SelectItem key={p.id} value={p.id}>{personName(p)}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVehicleDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSaveVehicle} disabled={!vehicleForm.plate.trim()}>{editingVehicle ? 'Actualizar' : 'Registrar'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* ── Delete Person Confirmation ─── */}
-      <AlertDialog open={!!deletePersonId} onOpenChange={open => { if (!open) setDeletePersonId(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Person</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this person? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (deletePersonId) {
-                  remove.mutate(deletePersonId);
-                  if (selectedPerson === deletePersonId) setSelectedPerson(null);
-                  setDeletePersonId(null);
-                }
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DataImportDialog open={importOpen} onOpenChange={setImportOpen} entityType={importType} onImportComplete={() => refetch()} />
+
+      {/* Schedule Dialog */}
+      <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>{editingSchedule ? 'Editar Horario' : 'Nuevo Horario de Acceso'}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1"><Label className="text-xs text-slate-400">Nombre *</Label><Input value={scheduleForm.name} onChange={e => setScheduleForm(p => ({ ...p, name: e.target.value }))} placeholder="Horario laboral" className="bg-slate-900 border-slate-700" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label className="text-xs text-slate-400">Tipo</Label>
+                <Select value={scheduleForm.type} onValueChange={(v: 'allow' | 'deny') => setScheduleForm(p => ({ ...p, type: v }))}><SelectTrigger className="bg-slate-900 border-slate-700"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="allow">Permitir</SelectItem><SelectItem value="deny">Denegar</SelectItem></SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1"><Label className="text-xs text-slate-400">Aplica a</Label>
+                <Select value={scheduleForm.applies_to} onValueChange={(v: any) => setScheduleForm(p => ({ ...p, applies_to: v }))}><SelectTrigger className="bg-slate-900 border-slate-700"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="visitors">Visitantes</SelectItem><SelectItem value="contractors">Contratistas</SelectItem><SelectItem value="staff">Personal</SelectItem></SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-400">Días de la semana</Label>
+              <div className="flex gap-1">{DAY_NAMES.map((d, i) => (
+                <button key={i} type="button" onClick={() => setScheduleForm(prev => ({ ...prev, dayOfWeek: prev.dayOfWeek.includes(i) ? prev.dayOfWeek.filter(x => x !== i) : [...prev.dayOfWeek, i].sort() }))}
+                  className={cn('w-9 h-9 rounded-md text-xs font-medium transition-colors border', scheduleForm.dayOfWeek.includes(i) ? 'bg-blue-500 text-white border-blue-600' : 'bg-slate-800 text-slate-500 border-slate-700 hover:bg-slate-700')}>
+                  {d}
+                </button>
+              ))}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label className="text-xs text-slate-400">Hora inicio</Label><Input type="time" value={scheduleForm.startTime} onChange={e => setScheduleForm(p => ({ ...p, startTime: e.target.value }))} className="bg-slate-900 border-slate-700" /></div>
+              <div className="space-y-1"><Label className="text-xs text-slate-400">Hora fin</Label><Input type="time" value={scheduleForm.endTime} onChange={e => setScheduleForm(p => ({ ...p, endTime: e.target.value }))} className="bg-slate-900 border-slate-700" /></div>
+            </div>
+            <div className="space-y-1"><Label className="text-xs text-slate-400">Zona</Label><Input value={scheduleForm.zone} onChange={e => setScheduleForm(p => ({ ...p, zone: e.target.value }))} placeholder="Entrada principal, Parqueadero..." className="bg-slate-900 border-slate-700" /></div>
+            <div className="flex items-center gap-2"><Switch checked={scheduleForm.active} onCheckedChange={active => setScheduleForm(p => ({ ...p, active }))} className="h-4 w-8" /><Label className="text-xs text-slate-400 cursor-pointer">Activo</Label></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={saveSchedule} disabled={!scheduleForm.name.trim()}>{editingSchedule ? 'Guardar' : 'Crear'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmations */}
+      <ConfirmDelete open={!!deletePersonId} onCancel={() => setDeletePersonId(null)} onConfirm={() => { if (deletePersonId) { peopleMut.remove.mutate(deletePersonId); if (selectedPerson === deletePersonId) setSelectedPerson(null); setDeletePersonId(null); } }} title="Eliminar Persona" desc="Se eliminará esta persona y sus vehículos asociados. Esta acción no se puede deshacer." />
+      <ConfirmDelete open={!!deleteVehicleId} onCancel={() => setDeleteVehicleId(null)} onConfirm={() => { if (deleteVehicleId) { vehicleMut.remove.mutate(deleteVehicleId); setDeleteVehicleId(null); } }} title="Eliminar Vehículo" desc="Se eliminará este vehículo del sistema." />
+      <ConfirmDelete open={!!deleteConfirm} onCancel={() => setDeleteConfirm(null)} onConfirm={() => { if (deleteConfirm) { setSchedules(prev => prev.filter(s => s.id !== deleteConfirm)); setDeleteConfirm(null); toast.success('Horario eliminado'); } }} title="Eliminar Horario" desc="Se eliminará esta regla de horario de acceso." />
     </div>
     </PageShell>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// Sub-components
+// ══════════════════════════════════════════════════════════════
+
+function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-700/30">
+      {icon}
+      <div>
+        <p className="text-lg font-bold text-white leading-none">{value}</p>
+        <p className="text-[10px] text-slate-500">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ icon, message, action, compact }: { icon: React.ReactNode; message: string; action?: React.ReactNode; compact?: boolean }) {
+  return (
+    <div className={cn("flex flex-col items-center justify-center text-slate-500", compact ? 'py-8' : 'h-52')}>
+      <div className="opacity-20 mb-2 [&>svg]:h-10 [&>svg]:w-10">{icon}</div>
+      <p className="text-sm text-center">{message}</p>
+      {action && <div className="mt-3">{action}</div>}
+    </div>
+  );
+}
+
+function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex justify-between items-center">
+      <span className="text-slate-500 text-xs flex items-center gap-1.5">{icon} {label}</span>
+      <span className="text-white text-xs">{value}</span>
+    </div>
+  );
+}
+
+function ConfirmDelete({ open, onCancel, onConfirm, title, desc }: { open: boolean; onCancel: () => void; onConfirm: () => void; title: string; desc: string }) {
+  return (
+    <AlertDialog open={open} onOpenChange={o => { if (!o) onCancel(); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader><AlertDialogTitle>{title}</AlertDialogTitle><AlertDialogDescription>{desc}</AlertDialogDescription></AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={onConfirm}>Eliminar</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

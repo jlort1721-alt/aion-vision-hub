@@ -235,8 +235,25 @@ export class EmergencyService {
     const offset = (filters.page - 1) * filters.perPage;
 
     const rows = await db
-      .select()
+      .select({
+        id: emergencyActivations.id,
+        tenantId: emergencyActivations.tenantId,
+        protocolId: emergencyActivations.protocolId,
+        siteId: emergencyActivations.siteId,
+        activatedBy: emergencyActivations.activatedBy,
+        status: emergencyActivations.status,
+        timeline: emergencyActivations.timeline,
+        resolvedBy: emergencyActivations.resolvedBy,
+        resolvedAt: emergencyActivations.resolvedAt,
+        resolution: emergencyActivations.resolution,
+        createdAt: emergencyActivations.createdAt,
+        updatedAt: emergencyActivations.updatedAt,
+        // Enrichment: protocol name and type via LEFT JOIN
+        protocolName: emergencyProtocols.name,
+        protocolType: emergencyProtocols.type,
+      })
       .from(emergencyActivations)
+      .leftJoin(emergencyProtocols, eq(emergencyActivations.protocolId, emergencyProtocols.id))
       .where(whereClause)
       .orderBy(desc(emergencyActivations.createdAt))
       .limit(filters.perPage)
@@ -331,24 +348,39 @@ export class EmergencyService {
   }
 
   async getActivationStats(tenantId: string) {
-    const [result] = await db
+    const [activationStats] = await db
       .select({
         total: sql<number>`count(*)::int`,
         active: sql<number>`count(*) filter (where ${emergencyActivations.status} = 'active')::int`,
         resolved: sql<number>`count(*) filter (where ${emergencyActivations.status} = 'resolved')::int`,
         cancelled: sql<number>`count(*) filter (where ${emergencyActivations.status} = 'cancelled')::int`,
         falseAlarm: sql<number>`count(*) filter (where ${emergencyActivations.status} = 'false_alarm')::int`,
+        resolvedToday: sql<number>`count(*) filter (where ${emergencyActivations.status} = 'resolved' and ${emergencyActivations.resolvedAt} >= current_date)::int`,
       })
       .from(emergencyActivations)
       .where(eq(emergencyActivations.tenantId, tenantId));
 
+    const [protocolCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(emergencyProtocols)
+      .where(eq(emergencyProtocols.tenantId, tenantId));
+
+    const [contactCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(emergencyContacts)
+      .where(eq(emergencyContacts.tenantId, tenantId));
+
     return {
-      total: result?.total ?? 0,
+      activeEmergencies: activationStats?.active ?? 0,
+      totalProtocols: protocolCount?.count ?? 0,
+      emergencyContacts: contactCount?.count ?? 0,
+      resolvedToday: activationStats?.resolvedToday ?? 0,
+      total: activationStats?.total ?? 0,
       byStatus: {
-        active: result?.active ?? 0,
-        resolved: result?.resolved ?? 0,
-        cancelled: result?.cancelled ?? 0,
-        false_alarm: result?.falseAlarm ?? 0,
+        active: activationStats?.active ?? 0,
+        resolved: activationStats?.resolved ?? 0,
+        cancelled: activationStats?.cancelled ?? 0,
+        false_alarm: activationStats?.falseAlarm ?? 0,
       },
     };
   }

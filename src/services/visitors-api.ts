@@ -45,8 +45,8 @@ export const visitorPassesApi = {
 // ── QR Validation ───────────────────────────────────────────
 
 export const visitorQrApi = {
-  validate: (token: string) =>
-    apiClient.post<{ success: boolean; data: { visitor: Record<string, unknown>; pass: Record<string, unknown>; valid: boolean } }>('/visitors/validate-qr', { token }),
+  validate: (qrToken: string) =>
+    apiClient.post<{ success: boolean; data: { visitor: Record<string, unknown>; pass: Record<string, unknown>; valid: boolean } }>('/visitors/validate-qr', { qrToken }),
 };
 
 // ── Visitor Stats ───────────────────────────────────────────

@@ -45,7 +45,8 @@ export class SiteService {
         latitude: data.latitude ?? null,
         longitude: data.longitude ?? null,
         timezone: data.timezone,
-        status: 'unknown',
+        wanIp: data.wanIp ?? null,
+        status: data.status ?? 'unknown',
       })
       .returning();
 

@@ -173,8 +173,29 @@ export class VisitorService {
     const offset = (filters.page - 1) * filters.perPage;
 
     const rows = await db
-      .select()
+      .select({
+        id: visitorPasses.id,
+        tenantId: visitorPasses.tenantId,
+        visitorId: visitorPasses.visitorId,
+        siteId: visitorPasses.siteId,
+        qrToken: visitorPasses.qrToken,
+        passType: visitorPasses.passType,
+        validFrom: visitorPasses.validFrom,
+        validUntil: visitorPasses.validUntil,
+        status: visitorPasses.status,
+        checkInAt: visitorPasses.checkInAt,
+        checkOutAt: visitorPasses.checkOutAt,
+        checkInBy: visitorPasses.checkInBy,
+        authorizedBy: visitorPasses.authorizedBy,
+        notes: visitorPasses.notes,
+        metadata: visitorPasses.metadata,
+        createdAt: visitorPasses.createdAt,
+        // Enrichment: visitor name via LEFT JOIN
+        visitorName: visitors.fullName,
+        visitorCompany: visitors.company,
+      })
       .from(visitorPasses)
+      .leftJoin(visitors, eq(visitorPasses.visitorId, visitors.id))
       .where(whereClause)
       .orderBy(desc(visitorPasses.createdAt))
       .limit(filters.perPage)

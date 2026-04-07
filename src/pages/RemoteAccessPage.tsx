@@ -16,6 +16,7 @@ import {
   Loader2, AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PageShell } from '@/components/shared/PageShell';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -176,50 +177,41 @@ export default function RemoteAccessPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Globe className="h-6 w-6 text-primary" />
-            AION Remote Connect
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Acceso remoto universal a equipos de seguridad — Proxy HTTP, RTSP, SIP, ISAPI
-          </p>
-        </div>
+    <PageShell
+      title="Acceso Remoto"
+      description="Proxy HTTP, RTSP, SIP e ISAPI para equipos de seguridad"
+      icon={<Globe className="h-5 w-5" />}
+      actions={
         <div className="flex items-center gap-3">
           <Select value={selectedSiteId} onValueChange={handleSiteChange}>
-            <SelectTrigger className="w-[280px]">
+            <SelectTrigger className="w-[260px] h-8 text-xs bg-slate-900/50 border-slate-700">
               <SelectValue placeholder="Seleccionar sitio..." />
             </SelectTrigger>
             <SelectContent>
-              {sites.map((site) => (
-                <SelectItem key={site.id as string} value={site.id as string}>
-                  <div className="flex items-center gap-2">
-                    <Signal className="h-3 w-3" />
-                    {String(site.name || '')}
-                    {site.wan_ip && (
-                      <span className="text-xs text-muted-foreground ml-1">({String(site.wan_ip)})</span>
-                    )}
-                  </div>
-                </SelectItem>
-              ))}
+              {sites.map((site) => {
+                const wanIp = (site.wanIp || site.wan_ip) as string | undefined;
+                return (
+                  <SelectItem key={site.id as string} value={site.id as string}>
+                    <div className="flex items-center gap-2">
+                      <Signal className="h-3 w-3" />
+                      {String(site.name || '')}
+                      {wanIp && <span className="text-[10px] text-muted-foreground ml-1">({wanIp})</span>}
+                    </div>
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
           {selectedSiteId && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={testConnectivity}
-              disabled={testingConnectivity}
-            >
-              {testingConnectivity ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Activity className="h-4 w-4 mr-1" />}
+            <Button variant="outline" size="sm" onClick={testConnectivity} disabled={testingConnectivity} className="gap-1 h-8 text-xs">
+              {testingConnectivity ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
               Probar Conectividad
             </Button>
           )}
         </div>
-      </div>
+      }
+    >
+    <div className="space-y-5 p-5">
 
       {/* Loading state */}
       {loading && (
@@ -231,11 +223,11 @@ export default function RemoteAccessPage() {
 
       {/* No site selected */}
       {!selectedSiteId && !loading && (
-        <Card className="border-dashed">
+        <Card className="border-dashed bg-slate-800/20 border-slate-700/40">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <Globe className="h-12 w-12 text-muted-foreground/40 mb-4" />
-            <p className="text-lg font-medium text-muted-foreground">Selecciona un sitio para comenzar</p>
-            <p className="text-sm text-muted-foreground/60 mt-1">
+            <Globe className="h-12 w-12 text-slate-500/30 mb-4" />
+            <p className="text-base font-medium text-slate-400">Selecciona un sitio para comenzar</p>
+            <p className="text-xs text-slate-500 mt-1">
               Verás todos los dispositivos, puertos mapeados, y URLs de acceso remoto
             </p>
           </CardContent>
@@ -469,6 +461,7 @@ export default function RemoteAccessPage() {
         </Tabs>
       )}
     </div>
+    </PageShell>
   );
 }
 

@@ -96,7 +96,25 @@ export class KeyService {
     const total = countResult?.count ?? 0;
     const offset = (filters.page - 1) * filters.perPage;
 
-    const rows = await db.select().from(keyLogs).where(whereClause).orderBy(desc(keyLogs.createdAt)).limit(filters.perPage).offset(offset);
+    // JOIN with keyInventory to include keyCode and label in log entries
+    const rows = await db.select({
+      id: keyLogs.id,
+      tenantId: keyLogs.tenantId,
+      keyId: keyLogs.keyId,
+      action: keyLogs.action,
+      fromHolder: keyLogs.fromHolder,
+      toHolder: keyLogs.toHolder,
+      performedBy: keyLogs.performedBy,
+      notes: keyLogs.notes,
+      createdAt: keyLogs.createdAt,
+      keyCode: keyInventory.keyCode,
+      keyLabel: keyInventory.label,
+    }).from(keyLogs)
+      .leftJoin(keyInventory, eq(keyLogs.keyId, keyInventory.id))
+      .where(whereClause)
+      .orderBy(desc(keyLogs.createdAt))
+      .limit(filters.perPage)
+      .offset(offset);
 
     return { items: rows, meta: { page: filters.page, perPage: filters.perPage, total, totalPages: Math.ceil(total / filters.perPage) } };
   }

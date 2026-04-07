@@ -88,6 +88,7 @@ import { registerHikConnectRoutes } from './modules/hikconnect/routes.js';
 import { registerFaceRecognitionRoutes } from './modules/face-recognition/routes.js';
 import { registerHeatMappingRoutes } from './modules/heat-mapping/routes.js';
 import { registerTwilioRoutes, registerTwilioWebhookRoutes } from './modules/twilio/routes.js';
+import { registerNoteRoutes } from './modules/notes/routes.js';
 import { registerRemoteAccessRoutes } from './modules/remote-access/routes.js';
 import { registerFloorPlanRoutes } from './modules/floor-plans/routes.js';
 import { registerClipRoutes } from './modules/clips/routes.js';
@@ -316,6 +317,9 @@ export async function buildApp() {
   await app.register(registerPlaybackRoutes, { prefix: '/playback' });
   // Operator Site Assignments — Assign operators to specific sites
   await app.register(registerOperatorAssignmentRoutes, { prefix: '/operator-assignments' });
+
+  // Operational Notes — operator notes, shift handoffs, observations
+  await app.register(registerNoteRoutes, { prefix: '/notes' });
 
   // Twilio — WhatsApp, SMS, Voice calls (Colombian PSTN via Twilio)
   await app.register(registerTwilioRoutes, { prefix: '/twilio' });

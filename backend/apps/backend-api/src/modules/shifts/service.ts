@@ -3,6 +3,7 @@ import { db } from '../../db/client.js';
 import {
   shifts,
   shiftAssignments,
+  profiles,
 } from '../../db/schema/index.js';
 import { NotFoundError } from '@aion/shared-contracts';
 import type {
@@ -135,8 +136,29 @@ export class ShiftService {
     const offset = (filters.page - 1) * filters.perPage;
 
     const rows = await db
-      .select()
+      .select({
+        id: shiftAssignments.id,
+        tenantId: shiftAssignments.tenantId,
+        shiftId: shiftAssignments.shiftId,
+        userId: shiftAssignments.userId,
+        date: shiftAssignments.date,
+        status: shiftAssignments.status,
+        checkInAt: shiftAssignments.checkInAt,
+        checkOutAt: shiftAssignments.checkOutAt,
+        checkInLocation: shiftAssignments.checkInLocation,
+        notes: shiftAssignments.notes,
+        createdAt: shiftAssignments.createdAt,
+        updatedAt: shiftAssignments.updatedAt,
+        // Enrichment: user and shift names via LEFT JOIN
+        userName: profiles.fullName,
+        userEmail: profiles.email,
+        shiftName: shifts.name,
+        startTime: shifts.startTime,
+        endTime: shifts.endTime,
+      })
       .from(shiftAssignments)
+      .leftJoin(profiles, eq(shiftAssignments.userId, profiles.id))
+      .leftJoin(shifts, eq(shiftAssignments.shiftId, shifts.id))
       .where(whereClause)
       .orderBy(desc(shiftAssignments.date))
       .limit(filters.perPage)
