@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { alertRulesApi, alertInstancesApi, escalationPoliciesApi, notificationChannelsApi } from "@/services/alerts-api";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card"; // CardHeader/CardTitle available if needed
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useToast } from "@/hooks/use-toast";
 import {
   Bell, BellRing, CheckCircle, AlertTriangle, AlertCircle, Shield, Plus,
-  Clock, ArrowUpCircle, Mail, MessageSquare, Globe, Settings, Loader2
+  Clock, ArrowUpCircle, Mail, MessageSquare, Globe, Settings, Loader2, Filter
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import EscalationConfigPanel from "@/components/alerts/EscalationConfigPanel";
@@ -29,6 +29,20 @@ const severityColors: Record<string, string> = {
   info: "bg-gray-500",
 };
 
+const severityLabels: Record<string, string> = {
+  critical: "Crítica",
+  high: "Alta",
+  medium: "Media",
+  low: "Baja",
+  info: "Info",
+};
+
+const statusLabels: Record<string, string> = {
+  firing: "Activa",
+  acknowledged: "Reconocida",
+  resolved: "Resuelta",
+};
+
 const statusIcons: Record<string, typeof Bell> = {
   firing: BellRing,
   acknowledged: Clock,
@@ -37,6 +51,7 @@ const statusIcons: Record<string, typeof Bell> = {
 
 export default function AlertsPage() {
   const [activeTab, setActiveTab] = useState("instances");
+  const [severityFilter, setSeverityFilter] = useState("all");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -58,7 +73,7 @@ export default function AlertsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alerts"] });
       queryClient.invalidateQueries({ queryKey: ["alert-stats"] });
-      toast({ title: "Alert acknowledged" });
+      toast({ title: "Alerta reconocida" });
     },
   });
 
@@ -67,7 +82,7 @@ export default function AlertsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alerts"] });
       queryClient.invalidateQueries({ queryKey: ["alert-stats"] });
-      toast({ title: "Alert resolved" });
+      toast({ title: "Alerta resuelta" });
     },
   });
 
@@ -82,7 +97,7 @@ export default function AlertsPage() {
       alertRulesApi.update(id, { isActive }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alerts", "rules"] });
-      toast({ title: "Rule updated" });
+      toast({ title: "Regla actualizada" });
     },
   });
 
@@ -106,7 +121,7 @@ export default function AlertsPage() {
       alertRulesApi.create({ name: data.name, condition: data.condition, severity: data.severity, isActive: data.isActive }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alerts", "rules"] });
-      toast({ title: "Rule created" });
+      toast({ title: "Regla creada" });
       setRuleDialogOpen(false);
       setRuleForm({ name: "", condition: "", severity: "medium", isActive: true });
     },
@@ -124,7 +139,7 @@ export default function AlertsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alerts", "channels"] });
-      toast({ title: "Channel created" });
+      toast({ title: "Canal creado" });
       setChannelDialogOpen(false);
       setChannelForm({ name: "", type: "email", config: "{}" });
     },
@@ -137,12 +152,13 @@ export default function AlertsPage() {
       notificationChannelsApi.update(id, { isActive }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alerts", "channels"] });
-      toast({ title: "Channel updated" });
+      toast({ title: "Canal actualizado" });
     },
   });
 
   const stats = statsData?.data;
-  const instances = instancesData?.data ?? [];
+  const allInstances = instancesData?.data ?? [];
+  const instances = severityFilter === 'all' ? allInstances : allInstances.filter((a: any) => a.severity === severityFilter);
   const rules = rulesData?.data ?? [];
   const policies = policiesData?.data ?? [];
   const channels = channelsData?.data ?? [];
@@ -151,51 +167,51 @@ export default function AlertsPage() {
 
   return (
     <PageShell
-      title="Alert Center"
-      description="Manage alert rules, monitor active alerts, and configure notifications"
+      title="Centro de Alertas"
+      description="Reglas, alertas activas, escalamiento y canales de notificación"
       icon={<Bell className="h-5 w-5" />}
     >
       <div className="space-y-6 p-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card aria-label="Active alerts count">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="cursor-pointer hover:ring-1 hover:ring-destructive/50 transition-all" onClick={() => { setActiveTab('instances'); setSeverityFilter('all'); }}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Active Alerts</p>
+                <p className="text-sm text-muted-foreground">Alertas Activas</p>
                 <p className="text-3xl font-bold">{stats?.byStatus?.firing ?? 0}</p>
               </div>
               <BellRing className="h-8 w-8 text-destructive" />
             </div>
           </CardContent>
         </Card>
-        <Card aria-label="Critical alerts count">
+        <Card className="cursor-pointer hover:ring-1 hover:ring-destructive/50 transition-all" onClick={() => { setActiveTab('instances'); setSeverityFilter('critical'); }}>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Critical</p>
+                <p className="text-sm text-muted-foreground">Críticas</p>
                 <p className="text-3xl font-bold text-destructive">{stats?.activeCritical ?? 0}</p>
               </div>
               <AlertCircle className="h-8 w-8 text-destructive" />
             </div>
           </CardContent>
         </Card>
-        <Card aria-label="Acknowledged alerts count">
+        <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Acknowledged</p>
+                <p className="text-sm text-muted-foreground">Reconocidas</p>
                 <p className="text-3xl font-bold text-warning">{stats?.byStatus?.acknowledged ?? 0}</p>
               </div>
               <Clock className="h-8 w-8 text-warning" />
             </div>
           </CardContent>
         </Card>
-        <Card aria-label="Resolved today count">
+        <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Resolved Today</p>
+                <p className="text-sm text-muted-foreground">Resueltas Hoy</p>
                 <p className="text-3xl font-bold text-success">{stats?.byStatus?.resolved ?? 0}</p>
               </div>
               <CheckCircle className="h-8 w-8 text-success" />
@@ -204,25 +220,49 @@ export default function AlertsPage() {
         </Card>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs with counts */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="instances" className="gap-1">
-            <BellRing className="h-4 w-4" /> Active Alerts
+            <BellRing className="h-4 w-4" /> Alertas Activas
+            {allInstances.length > 0 && <Badge variant="destructive" className="ml-1 h-5 text-[10px]">{allInstances.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="rules" className="gap-1">
-            <Shield className="h-4 w-4" /> Rules
+            <Shield className="h-4 w-4" /> Reglas
+            {rules.length > 0 && <Badge variant="outline" className="ml-1 h-5 text-[10px]">{rules.length}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="escalation" className="gap-1">
-            <ArrowUpCircle className="h-4 w-4" /> Escalation Policies
+            <ArrowUpCircle className="h-4 w-4" /> Escalamiento
           </TabsTrigger>
           <TabsTrigger value="channels" className="gap-1">
-            <Settings className="h-4 w-4" /> Channels
+            <Settings className="h-4 w-4" /> Canales
+            {channels.length > 0 && <Badge variant="outline" className="ml-1 h-5 text-[10px]">{channels.length}</Badge>}
           </TabsTrigger>
         </TabsList>
 
         {/* ── Active Alerts ────────────────────────────────── */}
         <TabsContent value="instances" className="space-y-4">
+          {/* Severity quick filter */}
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            {['all', 'critical', 'high', 'medium', 'low'].map(sev => (
+              <Button
+                key={sev}
+                variant={severityFilter === sev ? 'default' : 'outline'}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setSeverityFilter(sev)}
+              >
+                {sev === 'all' ? 'Todas' : severityLabels[sev] || sev}
+                {sev !== 'all' && (
+                  <Badge variant="secondary" className="ml-1 h-4 text-[9px]">
+                    {allInstances.filter((a: any) => a.severity === sev).length}
+                  </Badge>
+                )}
+              </Button>
+            ))}
+          </div>
+
           {loadingInstances ? (
             <div className="space-y-4">
               {[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
@@ -231,41 +271,43 @@ export default function AlertsPage() {
             <Card>
               <CardContent className="py-12 text-center">
                 <CheckCircle className="h-12 w-12 mx-auto mb-4 text-success" />
-                <p className="text-lg font-medium">No active alerts</p>
-                <p className="text-sm text-muted-foreground mt-1">All systems operational</p>
+                <p className="text-lg font-medium">Sin alertas activas</p>
+                <p className="text-sm text-muted-foreground mt-1">Todos los sistemas operativos</p>
               </CardContent>
             </Card>
           ) : (
             instances.map((alert: any) => {
               const StatusIcon = statusIcons[alert.status] ?? Bell;
               return (
-                <Card key={alert.id} className={alert.status === 'firing' ? 'border-destructive/50' : ''} aria-label={`Alert: ${alert.title}, severity ${alert.severity}, status ${alert.status}`}>
+                <Card key={alert.id} className={alert.status === 'firing' ? 'border-destructive/50' : ''}>
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3">
                         <StatusIcon className={`h-5 w-5 mt-0.5 ${alert.status === 'firing' ? 'text-destructive animate-pulse' : 'text-muted-foreground'}`} />
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold">{alert.title}</h3>
-                            <Badge className={severityColors[alert.severity]}>{alert.severity}</Badge>
-                            <Badge variant={alert.status === 'firing' ? 'destructive' : 'secondary'}>{alert.status}</Badge>
+                            <Badge className={severityColors[alert.severity]}>{severityLabels[alert.severity] || alert.severity}</Badge>
+                            <Badge variant={alert.status === 'firing' ? 'destructive' : 'secondary'}>{statusLabels[alert.status] || alert.status}</Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">{alert.message}</p>
                           <p className="text-xs text-muted-foreground mt-2">
-                            {new Date(alert.createdAt).toLocaleString()}
-                            {alert.acknowledgedAt && ` | Acknowledged: ${new Date(alert.acknowledgedAt).toLocaleString()}`}
+                            {new Date(alert.createdAt).toLocaleString('es-CO')}
+                            {alert.acknowledgedAt && ` · Reconocida: ${new Date(alert.acknowledgedAt).toLocaleString('es-CO')}`}
                           </p>
                         </div>
                       </div>
                       <div className="flex gap-2 shrink-0">
                         {alert.status === 'firing' && (
-                          <Button size="sm" variant="outline" onClick={() => acknowledgeMutation.mutate(alert.id)} aria-label={`Acknowledge alert: ${alert.title}`}>
-                            Acknowledge
+                          <Button size="sm" variant="outline" onClick={() => acknowledgeMutation.mutate(alert.id)} disabled={acknowledgeMutation.isPending}>
+                            {acknowledgeMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                            Reconocer
                           </Button>
                         )}
                         {alert.status !== 'resolved' && (
-                          <Button size="sm" variant="default" onClick={() => resolveMutation.mutate(alert.id)} aria-label={`Resolve alert: ${alert.title}`}>
-                            Resolve
+                          <Button size="sm" variant="default" onClick={() => resolveMutation.mutate(alert.id)} disabled={resolveMutation.isPending}>
+                            {resolveMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                            Resolver
                           </Button>
                         )}
                       </div>
@@ -281,7 +323,7 @@ export default function AlertsPage() {
         <TabsContent value="rules" className="space-y-4">
           <div className="flex justify-end">
             <Button className="gap-1" onClick={() => setRuleDialogOpen(true)}>
-              <Plus className="h-4 w-4" /> New Rule
+              <Plus className="h-4 w-4" /> Nueva Regla
             </Button>
           </div>
           {loadingRules ? (
@@ -292,8 +334,8 @@ export default function AlertsPage() {
             <Card>
               <CardContent className="py-12 text-center">
                 <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium">No alert rules configured</p>
-                <p className="text-sm text-muted-foreground mt-1">Create your first rule to start receiving alerts</p>
+                <p className="text-lg font-medium">Sin reglas de alerta</p>
+                <p className="text-sm text-muted-foreground mt-1">Cree su primera regla para empezar a recibir alertas</p>
               </CardContent>
             </Card>
           ) : (
@@ -306,12 +348,12 @@ export default function AlertsPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold">{rule.name}</h3>
-                          <Badge className={severityColors[rule.severity]}>{rule.severity}</Badge>
+                          <Badge className={severityColors[rule.severity]}>{severityLabels[rule.severity] || rule.severity}</Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">{rule.description || 'No description'}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{rule.description || 'Sin descripción'}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Triggered {rule.triggerCount ?? 0} times
-                          {rule.lastTriggeredAt && ` | Last: ${new Date(rule.lastTriggeredAt).toLocaleString()}`}
+                          Disparada {rule.triggerCount ?? 0} veces
+                          {rule.lastTriggeredAt && ` · Última: ${new Date(rule.lastTriggeredAt).toLocaleString('es-CO')}`}
                         </p>
                       </div>
                     </div>
@@ -335,21 +377,22 @@ export default function AlertsPage() {
         <TabsContent value="channels" className="space-y-4">
           <div className="flex justify-end">
             <Button className="gap-1" onClick={() => setChannelDialogOpen(true)}>
-              <Plus className="h-4 w-4" /> New Channel
+              <Plus className="h-4 w-4" /> Nuevo Canal
             </Button>
           </div>
           {channels.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <Mail className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium">No notification channels</p>
-                <p className="text-sm text-muted-foreground mt-1">Add email, WhatsApp, or webhook channels</p>
+                <p className="text-lg font-medium">Sin canales de notificación</p>
+                <p className="text-sm text-muted-foreground mt-1">Agregue canales de email, WhatsApp o webhook</p>
               </CardContent>
             </Card>
           ) : (
             channels.map((channel: any) => {
               const iconMap: Record<string, typeof Mail> = { email: Mail, whatsapp: MessageSquare, webhook: Globe, push: Bell };
               const ChannelIcon = iconMap[channel.type] ?? Bell;
+              const typeLabels: Record<string, string> = { email: 'Email', whatsapp: 'WhatsApp', webhook: 'Webhook', push: 'Push' };
               return (
                 <Card key={channel.id}>
                   <CardContent className="pt-6">
@@ -359,11 +402,11 @@ export default function AlertsPage() {
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{channel.name}</h3>
-                            <Badge variant="outline">{channel.type}</Badge>
+                            <Badge variant="outline">{typeLabels[channel.type] || channel.type}</Badge>
                           </div>
                           {channel.lastUsedAt && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              Last used: {new Date(channel.lastUsedAt).toLocaleString()}
+                              Último uso: {new Date(channel.lastUsedAt).toLocaleString('es-CO')}
                             </p>
                           )}
                         </div>
@@ -382,38 +425,38 @@ export default function AlertsPage() {
       {/* New Rule Dialog */}
       <Dialog open={ruleDialogOpen} onOpenChange={setRuleDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>New Alert Rule</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Nueva Regla de Alerta</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Name</Label>
-              <Input value={ruleForm.name} onChange={(e) => setRuleForm(f => ({ ...f, name: e.target.value }))} placeholder="Rule name" />
+              <Label>Nombre</Label>
+              <Input value={ruleForm.name} onChange={(e) => setRuleForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre de la regla" />
             </div>
             <div className="space-y-2">
-              <Label>Condition Description</Label>
-              <Textarea value={ruleForm.condition} onChange={(e) => setRuleForm(f => ({ ...f, condition: e.target.value }))} placeholder="Describe the alert condition" />
+              <Label>Descripción de la Condición</Label>
+              <Textarea value={ruleForm.condition} onChange={(e) => setRuleForm(f => ({ ...f, condition: e.target.value }))} placeholder="Describa cuándo se activa la alerta" />
             </div>
             <div className="space-y-2">
-              <Label>Severity</Label>
+              <Label>Severidad</Label>
               <Select value={ruleForm.severity} onValueChange={(v) => setRuleForm(f => ({ ...f, severity: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="info">Info</SelectItem>
+                  <SelectItem value="critical">Crítica</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="medium">Media</SelectItem>
+                  <SelectItem value="low">Baja</SelectItem>
+                  <SelectItem value="info">Informativa</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={ruleForm.isActive} onCheckedChange={(v) => setRuleForm(f => ({ ...f, isActive: v }))} />
-              <Label>Active</Label>
+              <Label>Activa</Label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRuleDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setRuleDialogOpen(false)}>Cancelar</Button>
             <Button onClick={() => createRuleMutation.mutate(ruleForm)} disabled={!ruleForm.name || createRuleMutation.isPending}>
-              {createRuleMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Create Rule
+              {createRuleMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Crear Regla
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -422,32 +465,33 @@ export default function AlertsPage() {
       {/* New Channel Dialog */}
       <Dialog open={channelDialogOpen} onOpenChange={setChannelDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>New Notification Channel</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Nuevo Canal de Notificación</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Name</Label>
-              <Input value={channelForm.name} onChange={(e) => setChannelForm(f => ({ ...f, name: e.target.value }))} placeholder="Channel name" />
+              <Label>Nombre</Label>
+              <Input value={channelForm.name} onChange={(e) => setChannelForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre del canal" />
             </div>
             <div className="space-y-2">
-              <Label>Type</Label>
+              <Label>Tipo</Label>
               <Select value={channelForm.type} onValueChange={(v) => setChannelForm(f => ({ ...f, type: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="email">Email</SelectItem>
                   <SelectItem value="push">Push</SelectItem>
                   <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  <SelectItem value="webhook">Webhook</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Config (JSON)</Label>
-              <Textarea value={channelForm.config} onChange={(e) => setChannelForm(f => ({ ...f, config: e.target.value }))} placeholder='{"email": "admin@example.com"}' rows={3} />
+              <Label>Configuración (JSON)</Label>
+              <Textarea value={channelForm.config} onChange={(e) => setChannelForm(f => ({ ...f, config: e.target.value }))} placeholder='{"email": "admin@claveseguridad.co"}' rows={3} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setChannelDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setChannelDialogOpen(false)}>Cancelar</Button>
             <Button onClick={() => createChannelMutation.mutate(channelForm)} disabled={!channelForm.name || createChannelMutation.isPending}>
-              {createChannelMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Create Channel
+              {createChannelMutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />} Crear Canal
             </Button>
           </DialogFooter>
         </DialogContent>
