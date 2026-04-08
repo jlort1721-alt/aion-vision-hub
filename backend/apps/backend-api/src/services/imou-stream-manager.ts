@@ -134,7 +134,9 @@ async function getLiveStreamUrl(token: string, serial: string, channelId: string
 
 async function addToGo2rtc(streamKey: string, hlsUrl: string): Promise<boolean> {
   try {
-    const body = JSON.stringify({ [streamKey]: hlsUrl });
+    // go2rtc requires ffmpeg: prefix to consume HLS streams and transcode to fMP4
+    const source = `ffmpeg:${hlsUrl}#video=copy`;
+    const body = JSON.stringify({ [streamKey]: source });
     const resp = await fetch(GO2RTC_API, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
