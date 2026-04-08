@@ -18,7 +18,6 @@ const logger = createLogger({ name: 'imou-stream-manager' });
 const APP_ID = process.env.IMOU_APP_ID || '';
 const APP_SECRET = process.env.IMOU_APP_SECRET || '';
 const API_BASE = 'https://openapi-or.easy4ip.com/openapi';
-const GO2RTC_API = 'http://localhost:1984/api/streams';
 const REFRESH_INTERVAL = 20 * 60 * 1000; // 20 minutes
 
 interface ImouDevice {
@@ -132,22 +131,61 @@ async function getLiveStreamUrl(token: string, serial: string, channelId: string
   }
 }
 
-async function addToGo2rtc(streamKey: string, hlsUrl: string): Promise<boolean> {
+import { readFileSync, writeFileSync } from 'fs';
+import { execSync } from 'child_process';
+
+const GO2RTC_YAML = '/etc/go2rtc/go2rtc.yaml';
+
+/** Batch-write all Dahua HLS streams to go2rtc YAML and restart the service */
+async function syncStreamsToYaml(streams: Map<string, string>): Promise<number> {
+  if (streams.size === 0) return 0;
+
   try {
-    // go2rtc requires ffmpeg: prefix to consume HLS streams and transcode to fMP4
-    const source = `ffmpeg:${hlsUrl}#video=copy`;
-    const body = JSON.stringify({ [streamKey]: source });
-    const resp = await fetch(GO2RTC_API, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-      signal: AbortSignal.timeout(5000),
+    // Read current YAML
+    const yamlContent = readFileSync(GO2RTC_YAML, 'utf-8');
+    const lines = yamlContent.split('\n');
+
+    // Remove old da- entries (except da-brescia which uses RTSP direct from YAML)
+    const cleanedLines = lines.filter(line => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('da-') && !trimmed.startsWith('da-brescia')) return false;
+      return true;
     });
-    return resp.ok;
-  } catch {
-    return false;
+
+    // Find the "streams:" section and add new entries after it
+    const newEntries: string[] = [];
+    for (const [key, hlsUrl] of streams) {
+      if (key.startsWith('da-brescia')) continue; // Brescia uses RTSP direct
+      // H.264 transcode — Dahua XVRs send H.265/HEVC which browsers cannot decode
+      newEntries.push(`  ${key}: "ffmpeg:${hlsUrl}#video=h264"`);
+    }
+
+    // Insert after "streams:" line
+    const streamsIdx = cleanedLines.findIndex(l => l.trim() === 'streams:');
+    if (streamsIdx >= 0) {
+      cleanedLines.splice(streamsIdx + 1, 0, ...newEntries);
+    }
+
+    // Write back
+    writeFileSync(GO2RTC_YAML, cleanedLines.join('\n'));
+
+    // Restart go2rtc to pick up new config
+    try {
+      execSync('sudo systemctl restart go2rtc', { timeout: 10000 });
+    } catch {
+      logger.warn('Could not restart go2rtc via systemctl — streams may not load until manual restart');
+    }
+
+    logger.info({ count: newEntries.length }, 'Wrote Dahua HLS streams to go2rtc YAML');
+    return newEntries.length;
+  } catch (err) {
+    logger.error({ err: (err as Error).message }, 'Failed to write go2rtc YAML');
+    return 0;
   }
 }
+
+// NOTE: go2rtc PUT /api/streams does NOT persist — streams vanish without consumers.
+// Use syncStreamsToYaml() instead which writes to the YAML config and restarts go2rtc.
 
 export class ImouStreamManager {
   private refreshTimer: NodeJS.Timeout | null = null;
@@ -207,27 +245,26 @@ export class ImouStreamManager {
       logger.debug({ device: device.name, channels: channels.length }, 'Device online');
 
       for (const chId of channels) {
-        // First try to get existing stream URL
         let hlsUrl = await getLiveStreamUrl(token, device.serial, chId);
-
-        // If no existing stream, bind new one
         if (!hlsUrl) {
           hlsUrl = await bindLiveStream(token, device.serial, chId);
         }
 
         if (hlsUrl) {
           const streamKey = `da-${device.name}-ch${chId}`;
-          const added = await addToGo2rtc(streamKey, hlsUrl);
-
-          if (added) {
-            this.activeStreams.set(streamKey, hlsUrl);
-            totalStreams++;
-          }
+          this.activeStreams.set(streamKey, hlsUrl);
+          totalStreams++;
         }
 
         // Small delay to avoid rate limiting
         await new Promise(r => setTimeout(r, 300));
       }
+    }
+
+    // Batch-write all collected HLS streams to go2rtc YAML + restart
+    if (this.activeStreams.size > 0) {
+      const written = await syncStreamsToYaml(this.activeStreams);
+      logger.info({ written }, 'Synced Dahua streams to go2rtc YAML');
     }
 
     logger.info({
