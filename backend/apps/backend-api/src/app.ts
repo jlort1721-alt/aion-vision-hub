@@ -97,6 +97,7 @@ import { registerOperatorAssignmentRoutes } from './modules/operator-assignments
 import websocketPlugin from './plugins/websocket.js';
 import { cameraEvents } from './services/camera-events.js';
 import { imouEventPoller } from './services/imou-event-poller.js';
+import { imouStreamManager } from './services/imou-stream-manager.js';
 import { twilioNotificationWorker } from './workers/twilio-notifications.js';
 
 const loggerOpts = { name: 'aion-api', level: config.LOG_LEVEL };
@@ -353,6 +354,10 @@ export async function buildApp() {
   // Start IMOU cloud event poller (1 min interval, configurable via IMOU_POLL_INTERVAL_MS)
   imouEventPoller.start();
 
+  // Start IMOU stream manager — maintains live HLS streams for all Dahua XVR via P2P Cloud
+  // Refreshes every 20 min (URLs expire ~30min). Registers streams in go2rtc as da-{name}-ch{N}
+  imouStreamManager.start();
+
   // Start Twilio scheduled notifications (15 min interval)
   twilioNotificationWorker.start(900_000);
 
@@ -361,6 +366,7 @@ export async function buildApp() {
     internalAgent.stop();
     cameraEvents.stop();
     imouEventPoller.stop();
+    imouStreamManager.stop();
     twilioNotificationWorker.stop();
   });
 
