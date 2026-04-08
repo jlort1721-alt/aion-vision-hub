@@ -286,7 +286,7 @@ export default function DomoticsPage() {
   if (isError) return <div className="p-6 text-center text-destructive">Error al cargar datos. <Button variant="outline" onClick={() => refetch()}>Reintentar</Button></div>;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">
+    <div className="flex flex-col h-full min-h-0">
       <PageShell
         title={t('domotics.title')}
         description={t('domotics.subtitle')}
@@ -314,7 +314,7 @@ export default function DomoticsPage() {
           </div>
         }
       >
-        <div className="p-4 flex gap-4 h-full overflow-hidden">
+        <div className="p-4 flex gap-4 flex-1 min-h-0 overflow-auto">
           <div className="flex-1 flex flex-col min-w-0">
             <DomoticsHeader
               devicesCount={headerDevicesCount}
