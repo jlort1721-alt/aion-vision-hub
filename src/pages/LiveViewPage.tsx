@@ -136,7 +136,7 @@ interface RecentEvent {
 
 type GridSize = 4 | 9 | 16;
 
-const SDK_ONLY_PREFIXES = ['ss-', 'ag-', 'pq-', 'tl-', 'se-', 'ar-', 'br-'];
+const SDK_ONLY_PREFIXES = ['ss-', 'ag-', 'tl-', 'se-', 'ar-', 'br-'];
 const isSnapshotOnly = (key: string) =>
   SDK_ONLY_PREFIXES.some((p) => key.startsWith(p));
 
@@ -208,7 +208,7 @@ function CameraCell({
 
   if (!camera) {
     return (
-      <Card className="relative flex items-center justify-center bg-muted/30 border-dashed">
+      <Card className="relative flex items-center justify-center bg-muted/30 border-dashed aspect-video">
         <div className="text-center text-muted-foreground">
           <Video className="h-8 w-8 mx-auto mb-2 opacity-30" />
           <p className="text-xs opacity-50">Sin cámara</p>
@@ -222,7 +222,7 @@ function CameraCell({
   return (
     <Card
       ref={containerRef}
-      className={`relative overflow-hidden bg-black border-border/50 group cursor-pointer transition-all ${
+      className={`relative overflow-hidden bg-black border-border/50 group cursor-pointer transition-all aspect-video ${
         isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''
       }`}
       onClick={onClick}
@@ -1118,10 +1118,10 @@ export default function LiveViewPage() {
             {isLoading ? (
               <div
                 className="grid gap-1 h-full"
-                style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${cols}, 1fr)` }}
+                style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
               >
                 {Array.from({ length: gridSize }).map((_, i) => (
-                  <Card key={i} className="flex items-center justify-center bg-muted/20 animate-pulse">
+                  <Card key={i} className="flex items-center justify-center bg-muted/20 animate-pulse aspect-video">
                     <Video className="h-8 w-8 text-muted-foreground/20" />
                   </Card>
                 ))}
@@ -1146,7 +1146,7 @@ export default function LiveViewPage() {
             ) : (
               <div
                 className="grid gap-1 h-full"
-                style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${cols}, 1fr)` }}
+                style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
               >
                 {paginatedCameras.map((camera, i) => (
                   <CameraCell
