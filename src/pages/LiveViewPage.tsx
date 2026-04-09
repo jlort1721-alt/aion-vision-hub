@@ -136,9 +136,9 @@ interface RecentEvent {
 
 type GridSize = 4 | 9 | 16;
 
-const SDK_ONLY_PREFIXES = ['ss-', 'ag-', 'tl-', 'se-', 'ar-', 'br-'];
-const isSnapshotOnly = (key: string) =>
-  SDK_ONLY_PREFIXES.some((p) => key.startsWith(p));
+// SDK_ONLY_PREFIXES removed — all sites now have real RTSP video via go2rtc
+// Snapshot-only mode is no longer needed for any prefix
+const isSnapshotOnly = (_key: string) => false;
 
 // ── Camera Cell ─────────────────────────────────────────────
 
