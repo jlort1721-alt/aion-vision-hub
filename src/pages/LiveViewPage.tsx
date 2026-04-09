@@ -134,7 +134,7 @@ interface RecentEvent {
   siteName?: string;
 }
 
-type GridSize = 4 | 9 | 16;
+type GridSize = 0 | 1 | 4 | 6 | 9 | 16 | 25;
 
 // SDK_ONLY_PREFIXES removed — all sites now have real RTSP video via go2rtc
 // Snapshot-only mode is no longer needed for any prefix
@@ -208,7 +208,7 @@ function CameraCell({
 
   if (!camera) {
     return (
-      <Card className="relative flex items-center justify-center bg-muted/30 border-dashed aspect-video">
+      <Card className="relative flex items-center justify-center bg-muted/30 border-dashed">
         <div className="text-center text-muted-foreground">
           <Video className="h-8 w-8 mx-auto mb-2 opacity-30" />
           <p className="text-xs opacity-50">Sin cámara</p>
@@ -222,7 +222,7 @@ function CameraCell({
   return (
     <Card
       ref={containerRef}
-      className={`relative overflow-hidden bg-black border-border/50 group cursor-pointer transition-all aspect-video ${
+      className={`relative overflow-hidden bg-black border-border/50 group cursor-pointer transition-all ${
         isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''
       }`}
       onClick={onClick}
@@ -883,7 +883,7 @@ export default function LiveViewPage() {
     });
   }, [allCameras, siteGroups, selectedSite]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredCameras.length / gridSize));
+  const totalPages = isAutoGrid ? 1 : Math.max(1, Math.ceil(filteredCameras.length / gridSize));
 
   useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages - 1));
@@ -894,12 +894,13 @@ export default function LiveViewPage() {
   }, [selectedSite, gridSize]);
 
   const paginatedCameras = useMemo(() => {
+    if (isAutoGrid) return filteredCameras as (Camera | null)[];
     const start = currentPage * gridSize;
     const slice = filteredCameras.slice(start, start + gridSize);
     const padded: (Camera | null)[] = [...slice];
     while (padded.length < gridSize) padded.push(null);
     return padded;
-  }, [filteredCameras, currentPage, gridSize]);
+  }, [filteredCameras, currentPage, gridSize, isAutoGrid]);
 
   const siteStats = useMemo(() => {
     const stats: Record<string, { online: number; offline: number; total: number }> = {};
@@ -943,11 +944,18 @@ export default function LiveViewPage() {
     else gridContainerRef.current.requestFullscreen().catch(() => {});
   }, []);
 
-  const cols = Math.sqrt(gridSize);
+  const isAutoGrid = gridSize === 0;
+  const effectiveCount = isAutoGrid ? filteredCameras.length : gridSize;
+  const cols = isAutoGrid ? Math.ceil(Math.sqrt(Math.max(1, filteredCameras.length))) : (gridSize === 6 ? 3 : Math.ceil(Math.sqrt(gridSize)));
+  const rows = isAutoGrid ? Math.ceil(filteredCameras.length / cols) : (gridSize === 6 ? 2 : cols);
   const gridOptions: { size: GridSize; label: string }[] = [
+    { size: 1, label: '1×1' },
     { size: 4, label: '2×2' },
+    { size: 6, label: '2×3' },
     { size: 9, label: '3×3' },
     { size: 16, label: '4×4' },
+    { size: 25, label: '5×5' },
+    { size: 0, label: 'Todas' },
   ];
 
   // ── Error state ───────────────────────────────────────────
@@ -1118,10 +1126,10 @@ export default function LiveViewPage() {
             {isLoading ? (
               <div
                 className="grid gap-1 h-full"
-                style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+                style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}
               >
-                {Array.from({ length: gridSize }).map((_, i) => (
-                  <Card key={i} className="flex items-center justify-center bg-muted/20 animate-pulse aspect-video">
+                {Array.from({ length: effectiveCount }).map((_, i) => (
+                  <Card key={i} className="flex items-center justify-center bg-muted/20 animate-pulse">
                     <Video className="h-8 w-8 text-muted-foreground/20" />
                   </Card>
                 ))}
@@ -1146,7 +1154,7 @@ export default function LiveViewPage() {
             ) : (
               <div
                 className="grid gap-1 h-full"
-                style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+                style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}
               >
                 {paginatedCameras.map((camera, i) => (
                   <CameraCell
