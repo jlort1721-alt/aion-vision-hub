@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { deviceControlApi } from '@/services/device-control-api';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWebSocket } from '@/hooks/use-websocket';
 import { toast } from 'sonner';
 
 import { Card } from '@/components/ui/card';
@@ -804,7 +805,7 @@ export default function LiveViewPage() {
   const [gridSize, setGridSize] = useState<GridSize>(() => {
     try {
       const saved = localStorage.getItem('aion-lv-grid');
-      if (saved && [4, 9, 16].includes(Number(saved))) return Number(saved) as GridSize;
+      if (saved && [0, 1, 4, 6, 9, 16, 25].includes(Number(saved))) return Number(saved) as GridSize;
     } catch { /* ignore */ }
     return 9;
   });
@@ -833,6 +834,49 @@ export default function LiveViewPage() {
   useEffect(() => {
     autoRotateRef.current = autoRotate;
   }, [autoRotate]);
+
+  // ── Live Alerts (eventos en tiempo real via WebSocket) ────
+  const [liveAlert, setLiveAlert] = useState<{
+    id: string; type: string; severity: string; description: string;
+    siteName: string; cameraName: string; timestamp: string;
+  } | null>(null);
+  const alertTimerRef = useRef<number>(0);
+  const { subscribe: wsSubscribe } = useWebSocket();
+
+  useEffect(() => {
+    const handler = (msg: { channel: string; payload: Record<string, unknown> }) => {
+      const p = msg.payload;
+      const severity = String(p.severity || 'info');
+      const eventType = String(p.eventType || p.event_type || p.type || '');
+      const alertTypes = ['motion', 'intrusion', 'tamper', 'face', 'line_crossing', 'region_entrance', 'alarm', 'VMD'];
+      if (!alertTypes.some(t => eventType.toLowerCase().includes(t.toLowerCase()))) return;
+      if (severity !== 'critical' && severity !== 'high' && severity !== 'medium') return;
+
+      const alert = {
+        id: String(p.id || Date.now()),
+        type: eventType,
+        severity,
+        description: String(p.description || p.title || `Evento: ${eventType}`),
+        siteName: String(p.siteName || p.site_name || ''),
+        cameraName: String(p.deviceName || p.camera_name || p.device_id || ''),
+        timestamp: new Date().toLocaleTimeString('es-CO'),
+      };
+
+      setLiveAlert(alert);
+      try { new Audio('/sounds/alert.mp3').play().catch(() => {}); } catch { /* silent */ }
+      toast.error(`${alert.type.toUpperCase()} — ${alert.siteName}`, {
+        description: `${alert.cameraName}: ${alert.description}`,
+        duration: 8000,
+      });
+      if (alertTimerRef.current) window.clearTimeout(alertTimerRef.current);
+      alertTimerRef.current = window.setTimeout(() => setLiveAlert(null), 10000);
+    };
+
+    wsSubscribe('events', handler);
+    return () => {
+      if (alertTimerRef.current) window.clearTimeout(alertTimerRef.current);
+    };
+  }, [wsSubscribe]);
 
   // ── Data ──────────────────────────────────────────────────
 
@@ -914,15 +958,22 @@ export default function LiveViewPage() {
     return stats;
   }, [siteGroups, allCameras]);
 
-  // ── Auto-Rotation ─────────────────────────────────────────
+  // ── Auto-Rotation (rota entre sitios) ──────────────────────
 
   useEffect(() => {
-    if (!autoRotate || totalPages <= 1) return;
+    if (!autoRotate || siteGroups.length === 0) return;
+    const siteIds = siteGroups.map(sg => sg.site_id);
     const interval = setInterval(() => {
-      if (autoRotateRef.current) setCurrentPage((prev) => (prev + 1) % totalPages);
-    }, 60_000);
+      if (!autoRotateRef.current) return;
+      setSelectedSite(prev => {
+        const idx = siteIds.indexOf(prev);
+        const next = (idx + 1) % siteIds.length;
+        return siteIds[next];
+      });
+      setCurrentPage(0);
+    }, 15_000); // Rota cada 15 segundos entre puestos
     return () => clearInterval(interval);
-  }, [autoRotate, totalPages]);
+  }, [autoRotate, siteGroups]);
 
   const goToPrevPage = useCallback(() => setCurrentPage((prev) => Math.max(0, prev - 1)), []);
   const goToNextPage = useCallback(() => setCurrentPage((prev) => Math.min(totalPages - 1, prev + 1)), [totalPages]);
@@ -1120,6 +1171,27 @@ export default function LiveViewPage() {
               </Tooltip>
             </div>
           </div>
+
+          {/* ── Live Alert Overlay ── */}
+          {liveAlert && (
+            <div className="mx-1.5 mb-1 px-4 py-2.5 rounded-lg border-2 border-red-500 bg-red-500/10 backdrop-blur-sm flex items-center gap-3 animate-pulse cursor-pointer z-30"
+              onClick={() => setLiveAlert(null)}
+            >
+              <div className="shrink-0 w-3 h-3 rounded-full bg-red-500 animate-ping" />
+              <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-red-400">{liveAlert.type.toUpperCase()}</span>
+                  <Badge variant="destructive" className="text-[10px]">{liveAlert.severity}</Badge>
+                  <span className="text-xs text-muted-foreground">{liveAlert.timestamp}</span>
+                </div>
+                <p className="text-xs text-foreground truncate">{liveAlert.siteName} — {liveAlert.cameraName}: {liveAlert.description}</p>
+              </div>
+              <Button variant="ghost" size="sm" className="shrink-0 h-6 text-xs text-muted-foreground" onClick={(e) => { e.stopPropagation(); setLiveAlert(null); }}>
+                Cerrar
+              </Button>
+            </div>
+          )}
 
           {/* Video grid */}
           <div className="flex-1 p-1.5 bg-background">
