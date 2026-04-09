@@ -883,6 +883,7 @@ export default function LiveViewPage() {
     });
   }, [allCameras, siteGroups, selectedSite]);
 
+  const isAutoGrid = gridSize === 0;
   const totalPages = isAutoGrid ? 1 : Math.max(1, Math.ceil(filteredCameras.length / gridSize));
 
   useEffect(() => {
@@ -944,10 +945,9 @@ export default function LiveViewPage() {
     else gridContainerRef.current.requestFullscreen().catch(() => {});
   }, []);
 
-  const isAutoGrid = gridSize === 0;
   const effectiveCount = isAutoGrid ? filteredCameras.length : gridSize;
   const cols = isAutoGrid ? Math.ceil(Math.sqrt(Math.max(1, filteredCameras.length))) : (gridSize === 6 ? 3 : Math.ceil(Math.sqrt(gridSize)));
-  const rows = isAutoGrid ? Math.ceil(filteredCameras.length / cols) : (gridSize === 6 ? 2 : cols);
+  const rows = isAutoGrid ? Math.ceil(Math.max(1, filteredCameras.length) / cols) : (gridSize === 6 ? 2 : Math.ceil(Math.sqrt(gridSize)));
   const gridOptions: { size: GridSize; label: string }[] = [
     { size: 1, label: '1×1' },
     { size: 4, label: '2×2' },
