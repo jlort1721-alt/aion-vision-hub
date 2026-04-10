@@ -15,6 +15,7 @@ import { apiClient } from '@/lib/api-client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useI18n } from '@/contexts/I18nContext';
+import { formatDateTime, formatShortDate } from '@/lib/date-utils';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area, CartesianGrid,
@@ -193,7 +194,7 @@ export default function DashboardPage() {
   const { t } = useI18n();
   const loading = loadingDevices || loadingSites || loadingEvents;
 
-  const onlineDevices = devices.filter(d => d.status === 'online').length;
+  const onlineDevices = devices.filter(d => d.status === 'online' || d.status === 'active').length;
   const offlineDevices = devices.filter(d => d.status === 'offline').length;
   const activeEvents = events.filter(e => e.status === 'new' || e.status === 'acknowledged').length;
   const criticalEvents = events.filter(e => e.severity === 'critical' || e.severity === 'high').length;
@@ -251,11 +252,22 @@ export default function DashboardPage() {
   // ── Device status ──
   const deviceStatusData = useMemo(() => {
     const counts: Record<string, number> = {};
-    devices.forEach(d => { counts[d.status] = (counts[d.status] || 0) + 1; });
+    devices.forEach(d => {
+      const normalizedStatus = d.status === 'active' ? 'online' : d.status;
+      counts[normalizedStatus] = (counts[normalizedStatus] || 0) + 1;
+    });
+    const statusColors: Record<string, string> = {
+      online: 'hsl(142, 71%, 45%)',
+      offline: 'hsl(0, 84%, 60%)',
+      degraded: 'hsl(48, 96%, 53%)',
+      maintenance: 'hsl(220, 70%, 55%)',
+      pending_configuration: 'hsl(280, 60%, 55%)',
+      unknown: 'hsl(var(--muted))',
+    };
     return Object.entries(counts).map(([name, value]) => ({
       name,
       value,
-      fill: name === 'online' ? 'hsl(142, 71%, 45%)' : name === 'offline' ? 'hsl(0, 84%, 60%)' : 'hsl(48, 96%, 53%)',
+      fill: statusColors[name] || 'hsl(var(--muted))',
     }));
   }, [devices]);
 
@@ -319,7 +331,7 @@ export default function DashboardPage() {
               onClick={() => setViewMode('current')}
             >
               <MapPin className="mr-1.5 h-3.5 w-3.5" />
-              {t('dashboard.current_site') || 'Current Site'}
+              {t('dashboard.current_site')}
             </Button>
             <Button
               variant={viewMode === 'all' ? 'default' : 'ghost'}
@@ -328,7 +340,7 @@ export default function DashboardPage() {
               onClick={() => setViewMode('all')}
             >
               <Globe2 className="mr-1.5 h-3.5 w-3.5" />
-              {t('dashboard.all_sites') || 'All Sites'}
+              {t('dashboard.all_sites')}
             </Button>
           </div>
 
@@ -336,13 +348,13 @@ export default function DashboardPage() {
           <Dialog open={customizeOpen} onOpenChange={setCustomizeOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
-                <Settings className="mr-2 h-4 w-4" /> Customize
+                <Settings className="mr-2 h-4 w-4" /> {t('dashboard.customize')}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-h-[80vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Customize Dashboard</DialogTitle>
-                <DialogDescription>Toggle widgets on or off and reorder them using the arrow buttons.</DialogDescription>
+                <DialogTitle>{t('dashboard.customize_title')}</DialogTitle>
+                <DialogDescription>{t('dashboard.customize_description')}</DialogDescription>
               </DialogHeader>
               <div className="space-y-2 py-2">
                 {widgets.map((widget, idx) => (
@@ -383,7 +395,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex justify-end pt-2">
                 <Button variant="outline" size="sm" onClick={resetWidgets}>
-                  Reset to Defaults
+                  {t('dashboard.reset_defaults')}
                 </Button>
               </div>
             </DialogContent>
@@ -406,7 +418,7 @@ export default function DashboardPage() {
     >
     <div className="p-6 space-y-6">
       <div className="text-sm text-muted-foreground mb-4">
-        {t('dashboard.welcome_back') || 'Welcome back'}, {user?.email?.split('@')[0] || 'User'}. {t('dashboard.last_login') || 'Last login'}: {new Date().toLocaleDateString('es-CO')}.
+        {t('dashboard.welcome_back')}, {user?.email?.split('@')[0] || 'User'}. {t('dashboard.last_login')}: {formatShortDate(new Date())}.
       </div>
 
       {/* Cross-site view — shown when "All Sites" is selected or widget enabled */}
@@ -617,7 +629,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{event.title}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(event.created_at).toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">{formatDateTime(event.created_at)}</p>
                 </div>
                 <Badge variant={event.status === 'new' ? 'destructive' : 'secondary'} className="text-[10px] shrink-0">{event.status}</Badge>
               </div>

@@ -87,7 +87,7 @@ function EventItem({
   event: DeviceEvent;
   onClick: () => void;
 }) {
-  const time = new Date(event.createdAt).toLocaleTimeString('es-CR', {
+  const time = new Date(event.createdAt).toLocaleTimeString('es-CO', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',

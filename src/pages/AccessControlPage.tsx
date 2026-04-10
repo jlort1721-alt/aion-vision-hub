@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/contexts/I18nContext';
+import { formatDateTime } from '@/lib/date-utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSections, useAccessPeople, useAccessPeopleMutations, useAccessVehicles, useAccessVehicleMutations, useAccessLogs } from '@/hooks/use-module-data';
 import { useQuery } from '@tanstack/react-query';
@@ -459,7 +460,7 @@ export default function AccessControlPage() {
                     const person = people.find((p: any) => p.id === (log.personId || log.person_id));
                     return (
                       <TableRow key={log.id} className="border-slate-800">
-                        <TableCell className="text-xs font-mono text-slate-300">{new Date(log.createdAt || log.created_at).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}</TableCell>
+                        <TableCell className="text-xs font-mono text-slate-300">{formatDateTime(log.createdAt || log.created_at)}</TableCell>
                         <TableCell className="text-xs text-white">{person ? personName(person) : '—'}</TableCell>
                         <TableCell>
                           <Badge className={cn("text-[9px]", log.direction === 'in' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30')}>

@@ -101,6 +101,14 @@ const es: Record<string, string> = {
   'dashboard.no_events': 'Sin eventos',
   'dashboard.loading_health': 'Cargando datos de salud...',
   'dashboard.devices_online': 'dispositivos en línea',
+  'dashboard.current_site': 'Sitio Actual',
+  'dashboard.all_sites': 'Todos los Sitios',
+  'dashboard.welcome_back': 'Bienvenido de nuevo',
+  'dashboard.last_login': 'Último inicio de sesión',
+  'dashboard.customize': 'Personalizar',
+  'dashboard.customize_title': 'Personalizar Panel',
+  'dashboard.customize_description': 'Activa o desactiva widgets y reordénalos usando los botones de flecha.',
+  'dashboard.reset_defaults': 'Restablecer Valores',
 
   // Events
   'events.title': 'Eventos',

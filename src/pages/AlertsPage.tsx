@@ -22,6 +22,7 @@ import { PageShell } from "@/components/shared/PageShell";
 import ErrorState from "@/components/ui/ErrorState";
 import EmptyState from "@/components/shared/EmptyState";
 import { useI18n } from "@/contexts/I18nContext";
+import { formatDateTime } from "@/lib/date-utils";
 
 const severityColors: Record<string, string> = {
   critical: "bg-destructive",
@@ -293,8 +294,8 @@ export default function AlertsPage() {
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">{alert.message}</p>
                           <p className="text-xs text-muted-foreground mt-2">
-                            {new Date(alert.createdAt).toLocaleString('es-CO')}
-                            {alert.acknowledgedAt && ` · Reconocida: ${new Date(alert.acknowledgedAt).toLocaleString('es-CO')}`}
+                            {formatDateTime(alert.createdAt)}
+                            {alert.acknowledgedAt && ` · Reconocida: ${formatDateTime(alert.acknowledgedAt)}`}
                           </p>
                         </div>
                       </div>
@@ -354,7 +355,7 @@ export default function AlertsPage() {
                         <p className="text-sm text-muted-foreground mt-1">{rule.description || t('alerts.no_description')}</p>
                         <p className="text-xs text-muted-foreground mt-1">
                           Disparada {rule.triggerCount ?? 0} veces
-                          {rule.lastTriggeredAt && ` · Última: ${new Date(rule.lastTriggeredAt).toLocaleString('es-CO')}`}
+                          {rule.lastTriggeredAt && ` · Última: ${formatDateTime(rule.lastTriggeredAt)}`}
                         </p>
                       </div>
                     </div>
@@ -407,7 +408,7 @@ export default function AlertsPage() {
                           </div>
                           {channel.lastUsedAt && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              Último uso: {new Date(channel.lastUsedAt).toLocaleString('es-CO')}
+                              Último uso: {formatDateTime(channel.lastUsedAt)}
                             </p>
                           )}
                         </div>

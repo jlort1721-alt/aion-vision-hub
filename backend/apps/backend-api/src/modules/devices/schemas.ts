@@ -12,7 +12,7 @@ const deviceTypes = [
   'domotic', 'cloud_account_ewelink', 'cloud_account_hik',
   'server', 'other',
 ] as const;
-const deviceStatuses = ['online', 'offline', 'degraded', 'maintenance', 'unknown', 'active', 'pending_configuration'] as const;
+const deviceStatuses = ['online', 'offline', 'degraded', 'maintenance', 'unknown', 'pending_configuration'] as const;
 
 // ── Create Device ───────────────────────────────────────────
 export const createDeviceSchema = z.object({

@@ -4,6 +4,7 @@ import { apiClient } from '@/lib/api-client';
 import { deviceControlApi } from '@/services/device-control-api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { formatTime } from '@/lib/date-utils';
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -606,7 +607,7 @@ function EventsPanel() {
               </p>
             </div>
             <span className="text-[9px] text-muted-foreground shrink-0 tabular-nums">
-              {new Date(e.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+              {formatTime(e.createdAt)}
             </span>
           </div>
         ))}

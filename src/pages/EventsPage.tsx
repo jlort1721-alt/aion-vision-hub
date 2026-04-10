@@ -19,6 +19,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { formatDateTime } from '@/lib/date-utils';
 import EventFiltersBar from '@/components/events/EventFiltersBar';
 import EventDetailPanel from '@/components/events/EventDetailPanel';
 import { PageShell } from '@/components/shared/PageShell';
@@ -210,7 +211,7 @@ export default function EventsPage() {
               const csv = [
                 ['Fecha', 'Tipo', 'Severidad', 'Título', 'Estado', 'Dispositivo', 'Sitio'].join(','),
                 ...events.map((e) => [
-                  new Date(String(e.created_at)).toLocaleString('es-CO'),
+                  formatDateTime(e.created_at),
                   String(e.event_type ?? '').replace(/_/g, ' '),
                   String(e.severity ?? ''),
                   `"${String(e.title ?? '').replace(/"/g, '""')}"`,
@@ -284,7 +285,7 @@ export default function EventsPage() {
                         <span className={sev.color}>{sev.icon}</span>
                         <Badge variant={event.status === 'new' ? 'destructive' : event.status === 'resolved' ? 'secondary' : 'outline'} className="text-[10px] capitalize">{event.status}</Badge>
                       </div>
-                      <span className="text-xs text-muted-foreground">{new Date(event.created_at).toLocaleString()}</span>
+                      <span className="text-xs text-muted-foreground">{formatDateTime(event.created_at)}</span>
                     </div>
                     <p className="text-sm font-medium mt-1.5">{event.title}</p>
                     <p className="text-xs text-muted-foreground truncate capitalize">{(event.event_type || 'unknown').replace(/_/g, ' ')}{device ? ` — ${device.name}` : ''}</p>
@@ -335,9 +336,9 @@ export default function EventsPage() {
                           <p className="text-xs text-muted-foreground capitalize">{(event.event_type || 'unknown').replace(/_/g, ' ')}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell text-xs">{device?.name}</TableCell>
-                      <TableCell className="hidden md:table-cell text-xs">{site?.name?.split('—')[0]?.trim()}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{new Date(event.created_at).toLocaleString()}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs">{event.device_name || device?.name || '—'}</TableCell>
+                      <TableCell className="hidden md:table-cell text-xs">{(event.site_name || site?.name || '—')?.split('—')[0]?.trim()}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDateTime(event.created_at)}</TableCell>
                       <TableCell>
                         <Badge variant={event.status === 'new' ? 'destructive' : event.status === 'resolved' ? 'secondary' : 'outline'} className="text-[10px] capitalize">{event.status}</Badge>
                       </TableCell>

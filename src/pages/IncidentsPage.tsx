@@ -13,6 +13,7 @@ import { useIncidents, useSites } from '@/hooks/use-api-data';
 import { apiClient } from '@/lib/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/contexts/I18nContext';
+import { formatDateTime } from '@/lib/date-utils';
 import { toast } from 'sonner';
 import {
   AlertTriangle, AlertCircle, Plus, Search, MessageSquare, Bot,
@@ -20,6 +21,27 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sanitizeText } from '@/lib/sanitize';
+
+function formatIncidentDescription(text: string): string {
+  if (!text) return '';
+  const cleaned = sanitizeText(text);
+  // Detect raw JSON metadata in descriptions from automation engine
+  const jsonMatch = cleaned.match(/Metadata:\s*(\{[\s\S]*\})\s*$/);
+  if (jsonMatch) {
+    try {
+      const meta = JSON.parse(jsonMatch[1]) as Record<string, unknown>;
+      const prefix = cleaned.slice(0, jsonMatch.index).trim();
+      const details = Object.entries(meta)
+        .filter(([, v]) => v != null && v !== '')
+        .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1').trim()}: ${v}`)
+        .join('\n');
+      return `${prefix}\n${details}`;
+    } catch {
+      return cleaned;
+    }
+  }
+  return cleaned;
+}
 import EvidencePanel from '@/components/incidents/EvidencePanel';
 import { PageShell } from '@/components/shared/PageShell';
 import ErrorState from '@/components/ui/ErrorState';
@@ -230,7 +252,7 @@ export default function IncidentsPage() {
                     <Badge variant={statusBadgeVariant(inc.status)} className="text-[9px]">{statusLabels[inc.status] || inc.status}</Badge>
                     <Badge variant="outline" className="text-[9px]">{priorityLabels[inc.priority] || inc.priority}</Badge>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-1">{new Date(inc.created_at).toLocaleString('es-CO')}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">{formatDateTime(inc.created_at)}</p>
                 </div>
               </div>
             </button>
@@ -249,7 +271,7 @@ export default function IncidentsPage() {
                 <Badge className={cn("text-xs", selectedInc.priority === 'critical' ? 'bg-destructive' : '')}>{priorityLabels[selectedInc.priority] || selectedInc.priority}</Badge>
               </div>
               <h2 className="text-xl font-bold">{selectedInc.title}</h2>
-              <p className="text-sm text-muted-foreground mt-1">{sanitizeText(selectedInc.description)}</p>
+              <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">{formatIncidentDescription(selectedInc.description)}</p>
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button variant="outline" size="sm" onClick={handleAiSummary} disabled={!!actionLoading}>
@@ -278,7 +300,7 @@ export default function IncidentsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card><CardContent className="p-3 space-y-1 text-sm"><p className="text-xs text-muted-foreground">Asignado a</p><p className="font-medium flex items-center gap-1"><User className="h-3 w-3" /> {selectedInc.assigned_to ? 'Operador' : 'Sin asignar'}</p></CardContent></Card>
             <Card><CardContent className="p-3 space-y-1 text-sm"><p className="text-xs text-muted-foreground">Eventos relacionados</p><p className="font-medium">{selectedInc.event_ids?.length || 0} eventos</p></CardContent></Card>
-            <Card><CardContent className="p-3 space-y-1 text-sm"><p className="text-xs text-muted-foreground">Creado</p><p className="font-medium flex items-center gap-1"><Clock className="h-3 w-3" /> {new Date(selectedInc.created_at).toLocaleString('es-CO')}</p></CardContent></Card>
+            <Card><CardContent className="p-3 space-y-1 text-sm"><p className="text-xs text-muted-foreground">Creado</p><p className="font-medium flex items-center gap-1"><Clock className="h-3 w-3" /> {formatDateTime(selectedInc.created_at)}</p></CardContent></Card>
           </div>
 
           <Tabs defaultValue="activity" className="w-full">
@@ -302,7 +324,7 @@ export default function IncidentsPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium">{c.user_name || 'Usuario'}</span>
-                          <span className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleString('es-CO')}</span>
+                          <span className="text-[10px] text-muted-foreground">{formatDateTime(c.created_at)}</span>
                         </div>
                         <p className="text-sm text-muted-foreground mt-0.5">{sanitizeText(c.content)}</p>
                       </div>
