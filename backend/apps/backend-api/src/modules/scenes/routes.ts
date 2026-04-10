@@ -1,11 +1,10 @@
 import type { FastifyInstance } from 'fastify';
-import fp from 'fastify-plugin';
 import { requireRole } from '../../plugins/auth.js';
 import { sceneService } from './service.js';
 import { createSceneSchema, updateSceneSchema, listScenesFilterSchema } from './schemas.js';
 import type { ApiResponse } from '@aion/shared-contracts';
 
-async function sceneRoutes(app: FastifyInstance) {
+export async function registerSceneRoutes(app: FastifyInstance) {
   // GET / — List scenes
   app.get(
     '/',
@@ -77,6 +76,4 @@ async function sceneRoutes(app: FastifyInstance) {
   );
 }
 
-export const registerSceneRoutes = fp(sceneRoutes, {
-  name: 'scene-routes',
-});
+// Exported directly — encapsulated by prefix in app.ts
