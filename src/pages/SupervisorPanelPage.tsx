@@ -1,15 +1,23 @@
-import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  Shield, AlertTriangle, Users, Clock, Activity, TrendingUp, Bell, Loader2,
-  CheckCircle2, FileText,
-} from 'lucide-react';
-import { toast } from 'sonner';
+  Shield,
+  AlertTriangle,
+  Users,
+  Clock,
+  Activity,
+  TrendingUp,
+  Bell,
+  Loader2,
+  CheckCircle2,
+  FileText,
+} from "lucide-react";
+import { toast } from "sonner";
 
 interface DashboardStats {
   events24h: number;
@@ -43,84 +51,85 @@ interface OpenIncident {
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
-  critical: 'bg-red-500',
-  high: 'bg-orange-500',
-  medium: 'bg-yellow-500',
-  low: 'bg-blue-500',
-  info: 'bg-gray-500',
+  critical: "bg-red-500",
+  high: "bg-orange-500",
+  medium: "bg-yellow-500",
+  low: "bg-blue-500",
+  info: "bg-gray-500",
 };
 
 const SEVERITY_LABELS: Record<string, string> = {
-  critical: 'Cr\u00edtico',
-  high: 'Alto',
-  medium: 'Medio',
-  low: 'Bajo',
-  info: 'Info',
+  critical: "Cr\u00edtico",
+  high: "Alto",
+  medium: "Medio",
+  low: "Bajo",
+  info: "Info",
 };
 
 export default function SupervisorPanelPage() {
-  const [shiftNotes, setShiftNotes] = useState('');
+  const [shiftNotes, setShiftNotes] = useState("");
 
   const { data: stats } = useQuery<DashboardStats>({
-    queryKey: ['analytics', 'dashboard'],
-    queryFn: () => apiClient.get('/analytics/dashboard'),
+    queryKey: ["analytics", "dashboard"],
+    queryFn: () => apiClient.get("/analytics/dashboard"),
     refetchInterval: 30_000,
   });
 
   const { data: alerts = [] } = useQuery<FiringAlert[]>({
-    queryKey: ['alerts', 'firing'],
-    queryFn: () => apiClient.get('/alerts', { status: 'firing' }),
+    queryKey: ["alerts", "firing"],
+    queryFn: () => apiClient.get("/alerts/instances", { status: "firing" }),
     refetchInterval: 30_000,
   });
 
   const { data: incidents = [] } = useQuery<OpenIncident[]>({
-    queryKey: ['incidents', 'open'],
-    queryFn: () => apiClient.get('/incidents', { status: 'open' }),
+    queryKey: ["incidents", "open"],
+    queryFn: () => apiClient.get("/incidents", { status: "open" }),
   });
 
   const { data: assignments = [] } = useQuery<ShiftAssignment[]>({
-    queryKey: ['shifts', 'assignments'],
-    queryFn: () => apiClient.get('/shifts/assignments'),
+    queryKey: ["shifts", "assignments"],
+    queryFn: () => apiClient.get("/shifts/assignments"),
   });
 
   const reportMutation = useMutation({
-    mutationFn: () => apiClient.post('/shifts/current/report', { notes: shiftNotes }),
+    mutationFn: () =>
+      apiClient.post("/shifts/current/report", { notes: shiftNotes }),
     onSuccess: () => {
-      toast.success('Reporte de turno generado correctamente');
+      toast.success("Reporte de turno generado correctamente");
     },
     onError: () => {
-      toast.error('Error al generar el reporte');
+      toast.error("Error al generar el reporte");
     },
   });
 
   const handleSign = () => {
-    toast.success('Turno firmado y cerrado correctamente');
+    toast.success("Turno firmado y cerrado correctamente");
   };
 
   const kpis = [
     {
-      label: 'Eventos (24h)',
-      value: stats?.events24h ?? '--',
+      label: "Eventos (24h)",
+      value: stats?.events24h ?? "--",
       icon: Activity,
-      color: 'text-blue-500',
+      color: "text-blue-500",
     },
     {
-      label: 'Incidentes activos',
-      value: stats?.activeIncidents ?? '--',
+      label: "Incidentes activos",
+      value: stats?.activeIncidents ?? "--",
       icon: AlertTriangle,
-      color: 'text-orange-500',
+      color: "text-orange-500",
     },
     {
-      label: 'Dispositivos en l\u00ednea',
-      value: stats ? `${stats.devicesOnline}/${stats.devicesTotal}` : '--',
+      label: "Dispositivos en l\u00ednea",
+      value: stats ? `${stats.devicesOnline}/${stats.devicesTotal}` : "--",
       icon: TrendingUp,
-      color: 'text-green-500',
+      color: "text-green-500",
     },
     {
-      label: 'Cumplimiento SLA',
-      value: stats ? `${stats.slaCompliance}%` : '--',
+      label: "Cumplimiento SLA",
+      value: stats ? `${stats.slaCompliance}%` : "--",
       icon: Shield,
-      color: 'text-purple-500',
+      color: "text-purple-500",
     },
   ];
 
@@ -176,17 +185,25 @@ export default function SupervisorPanelPage() {
                       <Bell className="h-4 w-4 mt-0.5 text-muted-foreground" />
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex items-center gap-2">
-                          <Badge className={`${SEVERITY_COLORS[alert.severity] ?? 'bg-gray-500'} text-white text-xs`}>
+                          <Badge
+                            className={`${SEVERITY_COLORS[alert.severity] ?? "bg-gray-500"} text-white text-xs`}
+                          >
                             {SEVERITY_LABELS[alert.severity] ?? alert.severity}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
-                            {new Date(alert.firedAt).toLocaleString('es-CO')}
+                            {new Date(alert.firedAt).toLocaleString("es-CO")}
                           </span>
                         </div>
-                        <p className="text-sm font-medium truncate">{alert.ruleName}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-2">{alert.message}</p>
+                        <p className="text-sm font-medium truncate">
+                          {alert.ruleName}
+                        </p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {alert.message}
+                        </p>
                       </div>
-                      <Button size="sm" variant="outline">Atender</Button>
+                      <Button size="sm" variant="outline">
+                        Atender
+                      </Button>
                     </div>
                   ))
                 )}
@@ -202,9 +219,14 @@ export default function SupervisorPanelPage() {
               <CardContent>
                 <ul className="space-y-2">
                   {incidents.slice(0, 5).map((inc) => (
-                    <li key={inc.id} className="flex items-center justify-between text-sm">
+                    <li
+                      key={inc.id}
+                      className="flex items-center justify-between text-sm"
+                    >
                       <span className="truncate">{inc.title}</span>
-                      <Badge variant="outline" className="text-xs">{inc.priority}</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {inc.priority}
+                      </Badge>
                     </li>
                   ))}
                 </ul>
@@ -231,17 +253,22 @@ export default function SupervisorPanelPage() {
                     <div key={op.id} className="flex items-center gap-3 p-4">
                       <span
                         className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-                          op.isOnline ? 'bg-green-500' : 'bg-gray-400'
+                          op.isOnline ? "bg-green-500" : "bg-gray-400"
                         }`}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{op.operatorName}</p>
+                        <p className="text-sm font-medium truncate">
+                          {op.operatorName}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           {op.role} &middot; {op.shiftName}
                         </p>
                       </div>
-                      <Badge variant={op.isOnline ? 'default' : 'secondary'} className="text-xs">
-                        {op.isOnline ? 'En l\u00ednea' : 'Desconectado'}
+                      <Badge
+                        variant={op.isOnline ? "default" : "secondary"}
+                        className="text-xs"
+                      >
+                        {op.isOnline ? "En l\u00ednea" : "Desconectado"}
                       </Badge>
                     </div>
                   ))
@@ -264,7 +291,7 @@ export default function SupervisorPanelPage() {
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span>Operador: Usuario actual</span>
             <span>&middot;</span>
-            <span>{new Date().toLocaleString('es-CO')}</span>
+            <span>{new Date().toLocaleString("es-CO")}</span>
           </div>
           <Textarea
             placeholder="Notas de entrega de turno..."
@@ -278,7 +305,9 @@ export default function SupervisorPanelPage() {
               onClick={() => reportMutation.mutate()}
               disabled={reportMutation.isPending}
             >
-              {reportMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {reportMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               <FileText className="mr-2 h-4 w-4" />
               Generar Reporte
             </Button>

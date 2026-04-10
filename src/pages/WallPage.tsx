@@ -1,8 +1,8 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Shield,
   Grid2X2,
@@ -21,9 +21,9 @@ import {
   Info,
   ShieldAlert,
   Siren,
-} from 'lucide-react';
-import { SmartCameraCell } from '@/components/video/SmartCameraCell';
-import { useI18n } from '@/contexts/I18nContext';
+} from "lucide-react";
+import { SmartCameraCell } from "@/components/video/SmartCameraCell";
+import { useI18n } from "@/contexts/I18nContext";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ interface Camera {
   id: string;
   name: string;
   stream_key: string;
-  status: 'online' | 'offline' | 'degraded' | 'unknown' | 'maintenance';
+  status: "online" | "offline" | "degraded" | "unknown" | "maintenance";
   site_id: string;
 }
 
@@ -61,20 +61,29 @@ type GridSize = 2 | 3 | 4 | 5;
 
 function severityColor(severity: string): string {
   switch (severity?.toLowerCase()) {
-    case 'critical': return 'bg-red-600 text-white';
-    case 'high': return 'bg-orange-500 text-white';
-    case 'medium': return 'bg-yellow-500 text-black';
-    case 'low': return 'bg-blue-500 text-white';
-    default: return 'bg-zinc-600 text-white';
+    case "critical":
+      return "bg-red-600 text-white";
+    case "high":
+      return "bg-orange-500 text-white";
+    case "medium":
+      return "bg-yellow-500 text-black";
+    case "low":
+      return "bg-blue-500 text-white";
+    default:
+      return "bg-zinc-600 text-white";
   }
 }
 
 function severityIcon(severity: string) {
   switch (severity?.toLowerCase()) {
-    case 'critical': return <Siren className="w-3 h-3" />;
-    case 'high': return <ShieldAlert className="w-3 h-3" />;
-    case 'medium': return <AlertTriangle className="w-3 h-3" />;
-    default: return <Info className="w-3 h-3" />;
+    case "critical":
+      return <Siren className="w-3 h-3" />;
+    case "high":
+      return <ShieldAlert className="w-3 h-3" />;
+    case "medium":
+      return <AlertTriangle className="w-3 h-3" />;
+    default:
+      return <Info className="w-3 h-3" />;
   }
 }
 
@@ -87,10 +96,10 @@ function EventItem({
   event: DeviceEvent;
   onClick: () => void;
 }) {
-  const time = new Date(event.createdAt).toLocaleTimeString('es-CO', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
+  const time = new Date(event.createdAt).toLocaleTimeString("es-CO", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   });
 
   return (
@@ -113,7 +122,7 @@ function EventItem({
         {event.description || event.eventType}
       </p>
       <p className="text-[10px] text-zinc-500 truncate">
-        {event.siteName} {event.cameraName ? `- ${event.cameraName}` : ''}
+        {event.siteName} {event.cameraName ? `- ${event.cameraName}` : ""}
       </p>
     </button>
   );
@@ -129,10 +138,10 @@ function LiveClock() {
   }, []);
   return (
     <span className="text-sm font-mono text-zinc-300 tabular-nums">
-      {now.toLocaleTimeString('es-CR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
+      {now.toLocaleTimeString("es-CR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
       })}
     </span>
   );
@@ -143,7 +152,7 @@ function LiveClock() {
 export default function WallPage() {
   const { t } = useI18n();
   const { screenNumber } = useParams<{ screenNumber: string }>();
-  const screen = parseInt(screenNumber || '1', 10);
+  const screen = parseInt(screenNumber || "1", 10);
   const { isAuthenticated } = useAuth();
 
   // ── State ──
@@ -153,7 +162,7 @@ export default function WallPage() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [focusedCameraId, setFocusedCameraId] = useState<string | null>(null);
   const [currentGroupIndex, setCurrentGroupIndex] = useState(0);
-  const [rotationSpeed, setRotationSpeed] = useState(30); // seconds
+  const [rotationSpeed, setRotationSpeed] = useState(120); // 2 minutes per group
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [kioskMode, setKioskMode] = useState(false);
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
@@ -163,9 +172,9 @@ export default function WallPage() {
   // ── Data fetching ──
 
   const { data: siteGroups = [] } = useQuery<SiteGroup[]>({
-    queryKey: ['wall-cameras-by-site', screen],
+    queryKey: ["wall-cameras-by-site", screen],
     queryFn: async () => {
-      const res = await apiClient.get<unknown>('/cameras/by-site');
+      const res = await apiClient.get<unknown>("/cameras/by-site");
       if (Array.isArray(res)) return res as SiteGroup[];
       const r = res as Record<string, unknown>;
       if (Array.isArray(r.items)) return r.items as SiteGroup[];
@@ -177,9 +186,11 @@ export default function WallPage() {
   });
 
   const { data: events = [] } = useQuery<DeviceEvent[]>({
-    queryKey: ['wall-events'],
+    queryKey: ["wall-events"],
     queryFn: async () => {
-      const res = await apiClient.get<unknown>('/device-events', { limit: '50' });
+      const res = await apiClient.get<unknown>("/device-events", {
+        limit: "50",
+      });
       if (Array.isArray(res)) return res as DeviceEvent[];
       const r = res as Record<string, unknown>;
       if (Array.isArray(r.items)) return r.items as DeviceEvent[];
@@ -203,7 +214,10 @@ export default function WallPage() {
   }, [siteGroups, gridSize]);
 
   const totalGroups = cameraGroups.length;
-  const totalCameras = siteGroups.reduce((sum, sg) => sum + sg.cameras.length, 0);
+  const totalCameras = siteGroups.reduce(
+    (sum, sg) => sum + sg.cameras.length,
+    0,
+  );
 
   // ── Focused camera overrides grid ──
 
@@ -225,11 +239,11 @@ export default function WallPage() {
 
     const bar = progressBarRef.current;
     if (bar) {
-      bar.style.transition = 'none';
-      bar.style.width = '0%';
+      bar.style.transition = "none";
+      bar.style.width = "0%";
       void bar.offsetWidth;
       bar.style.transition = `width ${rotationSpeed}s linear`;
-      bar.style.width = '100%';
+      bar.style.width = "100%";
     }
 
     const id = setTimeout(() => {
@@ -263,34 +277,42 @@ export default function WallPage() {
 
   useEffect(() => {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', handler);
-    return () => document.removeEventListener('fullscreenchange', handler);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
   // ── Kiosk mode ──
 
   const enableKiosk = useCallback(async () => {
     try {
-      if ('wakeLock' in navigator) {
-        const lock = await navigator.wakeLock.request('screen');
+      if ("wakeLock" in navigator) {
+        const lock = await navigator.wakeLock.request("screen");
         setWakeLock(lock);
       }
-    } catch { /* wake lock not supported or denied */ }
+    } catch {
+      /* wake lock not supported or denied */
+    }
     setKioskMode(true);
     setSidebarOpen(false);
     try {
       await containerRef.current?.requestFullscreen();
-    } catch { /* fullscreen denied */ }
+    } catch {
+      /* fullscreen denied */
+    }
   }, []);
 
   const disableKiosk = useCallback(async () => {
     setKioskMode(false);
     if (wakeLock) {
-      try { await wakeLock.release(); } catch {}
+      try {
+        await wakeLock.release();
+      } catch {}
       setWakeLock(null);
     }
     if (document.fullscreenElement) {
-      try { await document.exitFullscreen(); } catch {}
+      try {
+        await document.exitFullscreen();
+      } catch {}
     }
   }, [wakeLock]);
 
@@ -298,17 +320,17 @@ export default function WallPage() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'F11') {
+      if (e.key === "F11") {
         e.preventDefault();
         toggleFullscreen();
-      } else if (e.code === 'Space') {
+      } else if (e.code === "Space") {
         e.preventDefault();
         setIsPaused((p) => !p);
-      } else if (e.key === 'ArrowRight') {
+      } else if (e.key === "ArrowRight") {
         goNext();
-      } else if (e.key === 'ArrowLeft') {
+      } else if (e.key === "ArrowLeft") {
         goPrev();
-      } else if (e.key === 'Escape') {
+      } else if (e.key === "Escape") {
         if (kioskMode) {
           disableKiosk();
         } else {
@@ -316,20 +338,17 @@ export default function WallPage() {
         }
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [toggleFullscreen, goNext, goPrev, kioskMode, disableKiosk]);
 
   // ── Focus camera from event click ──
 
-  const focusCameraFromEvent = useCallback(
-    (event: DeviceEvent) => {
-      if (event.camera_id) {
-        setFocusedCameraId(event.camera_id);
-      }
-    },
-    [],
-  );
+  const focusCameraFromEvent = useCallback((event: DeviceEvent) => {
+    if (event.camera_id) {
+      setFocusedCameraId(event.camera_id);
+    }
+  }, []);
 
   // ── Grid cells (pad to fill grid) ──
 
@@ -346,7 +365,7 @@ export default function WallPage() {
     <div
       ref={containerRef}
       className="flex flex-col w-screen h-screen overflow-hidden select-none"
-      style={{ background: '#030810' }}
+      style={{ background: "#030810" }}
     >
       {/* ── Kiosk exit overlay ── */}
       {kioskMode && (
@@ -354,161 +373,170 @@ export default function WallPage() {
           onClick={disableKiosk}
           className="fixed top-3 right-3 z-50 px-3 py-1.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-[11px] font-mono font-semibold text-white/80 tracking-wider opacity-30 hover:opacity-100 transition-opacity"
         >
-          {t('wall.exit_kiosk')}
+          {t("wall.exit_kiosk")}
         </button>
       )}
 
       {/* ── Toolbar ─────────────────────────────────── */}
       {!kioskMode && (
-      <div className="flex items-center justify-between h-12 px-3 border-b border-white/5 shrink-0 bg-[#030810]/95 backdrop-blur-sm z-30">
-        {/* Left: Brand */}
-        <div className="flex items-center gap-2">
-          <Shield className="w-5 h-5 text-[#D4A017]" />
-          <span className="text-sm font-bold text-white tracking-wider">
-            AION <span className="text-[#D4A017]">{t('wall.monitoring')}</span>
-          </span>
-          <span className="text-[10px] text-zinc-500 font-mono ml-2">
-            P{screen}
-          </span>
-        </div>
+        <div className="flex items-center justify-between h-12 px-3 border-b border-white/5 shrink-0 bg-[#030810]/95 backdrop-blur-sm z-30">
+          {/* Left: Brand */}
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-[#D4A017]" />
+            <span className="text-sm font-bold text-white tracking-wider">
+              AION{" "}
+              <span className="text-[#D4A017]">{t("wall.monitoring")}</span>
+            </span>
+            <span className="text-[10px] text-zinc-500 font-mono ml-2">
+              P{screen}
+            </span>
+          </div>
 
-        {/* Center: Controls */}
-        <div className="flex items-center gap-1">
-          {/* Layout buttons */}
-          {([2, 3, 4, 5] as GridSize[]).map((size) => (
+          {/* Center: Controls */}
+          <div className="flex items-center gap-1">
+            {/* Layout buttons */}
+            {([2, 3, 4, 5] as GridSize[]).map((size) => (
+              <button
+                key={size}
+                onClick={() => {
+                  setGridSize(size);
+                  setFocusedCameraId(null);
+                }}
+                className={`px-2 py-1 rounded text-[11px] font-mono transition-colors ${
+                  gridSize === size && !focusedCameraId
+                    ? "bg-[#D4A017] text-black font-bold"
+                    : "text-zinc-400 hover:text-white hover:bg-white/10"
+                }`}
+                title={`${size}x${size} grid`}
+              >
+                {size}x{size}
+              </button>
+            ))}
+
+            <div className="w-px h-5 bg-white/10 mx-1" />
+
+            {/* Prev / Pause / Next */}
             <button
-              key={size}
-              onClick={() => {
-                setGridSize(size);
-                setFocusedCameraId(null);
-              }}
-              className={`px-2 py-1 rounded text-[11px] font-mono transition-colors ${
-                gridSize === size && !focusedCameraId
-                  ? 'bg-[#D4A017] text-black font-bold'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/10'
-              }`}
-              title={`${size}x${size} grid`}
+              onClick={goPrev}
+              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+              title="Previous group (Left arrow)"
+              aria-label="Grupo anterior"
             >
-              {size}x{size}
+              <ChevronLeft className="w-4 h-4" />
             </button>
-          ))}
 
-          <div className="w-px h-5 bg-white/10 mx-1" />
+            <button
+              onClick={() => setIsPaused((p) => !p)}
+              className={`p-1 rounded transition-colors ${
+                isPaused
+                  ? "text-[#D4A017] bg-[#D4A017]/10"
+                  : "text-zinc-400 hover:text-white hover:bg-white/10"
+              }`}
+              title={isPaused ? "Resume (Space)" : "Pause (Space)"}
+              aria-label={isPaused ? "Reanudar rotación" : "Pausar rotación"}
+            >
+              {isPaused ? (
+                <Play className="w-4 h-4" />
+              ) : (
+                <Pause className="w-4 h-4" />
+              )}
+            </button>
 
-          {/* Prev / Pause / Next */}
-          <button
-            onClick={goPrev}
-            className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-            title="Previous group (Left arrow)"
-            aria-label="Grupo anterior"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
+            <button
+              onClick={goNext}
+              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+              title="Next group (Right arrow)"
+              aria-label="Grupo siguiente"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
 
-          <button
-            onClick={() => setIsPaused((p) => !p)}
-            className={`p-1 rounded transition-colors ${
-              isPaused
-                ? 'text-[#D4A017] bg-[#D4A017]/10'
-                : 'text-zinc-400 hover:text-white hover:bg-white/10'
-            }`}
-            title={isPaused ? 'Resume (Space)' : 'Pause (Space)'}
-            aria-label={isPaused ? 'Reanudar rotación' : 'Pausar rotación'}
-          >
-            {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-          </button>
+            <div className="w-px h-5 bg-white/10 mx-1" />
 
-          <button
-            onClick={goNext}
-            className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-            title="Next group (Right arrow)"
-            aria-label="Grupo siguiente"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
+            {/* Speed slider */}
+            <label className="flex items-center gap-1.5">
+              <span className="text-[10px] text-zinc-500">
+                {rotationSpeed}s
+              </span>
+              <input
+                type="range"
+                min={5}
+                max={120}
+                step={5}
+                value={rotationSpeed}
+                onChange={(e) => setRotationSpeed(Number(e.target.value))}
+                className="w-16 h-1 accent-[#D4A017] cursor-pointer"
+              />
+            </label>
 
-          <div className="w-px h-5 bg-white/10 mx-1" />
+            {/* Group indicator */}
+            <span className="text-[10px] text-zinc-500 font-mono ml-2">
+              {currentGroupIndex + 1}/{totalGroups}
+            </span>
+          </div>
 
-          {/* Speed slider */}
-          <label className="flex items-center gap-1.5">
-            <span className="text-[10px] text-zinc-500">{rotationSpeed}s</span>
-            <input
-              type="range"
-              min={5}
-              max={120}
-              step={5}
-              value={rotationSpeed}
-              onChange={(e) => setRotationSpeed(Number(e.target.value))}
-              className="w-16 h-1 accent-[#D4A017] cursor-pointer"
-            />
-          </label>
+          {/* Right: Toggles & Info */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSidebarOpen((o) => !o)}
+              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+              title="Toggle event sidebar"
+              aria-label="Panel de eventos"
+            >
+              {sidebarOpen ? (
+                <PanelRightClose className="w-4 h-4" />
+              ) : (
+                <PanelRightOpen className="w-4 h-4" />
+              )}
+            </button>
 
-          {/* Group indicator */}
-          <span className="text-[10px] text-zinc-500 font-mono ml-2">
-            {currentGroupIndex + 1}/{totalGroups}
-          </span>
+            <button
+              onClick={() => setSoundEnabled((s) => !s)}
+              className={`p-1 rounded transition-colors ${
+                soundEnabled
+                  ? "text-[#D4A017] bg-[#D4A017]/10"
+                  : "text-zinc-400 hover:text-white hover:bg-white/10"
+              }`}
+              title="Toggle sound alerts"
+              aria-label={
+                soundEnabled ? "Silenciar alertas" : "Activar alertas sonoras"
+              }
+            >
+              {soundEnabled ? (
+                <Volume2 className="w-4 h-4" />
+              ) : (
+                <VolumeX className="w-4 h-4" />
+              )}
+            </button>
+
+            <span className="text-[10px] text-zinc-500 font-mono">
+              {totalCameras} cam
+            </span>
+
+            <LiveClock />
+
+            <button
+              onClick={enableKiosk}
+              className="px-2 py-1 rounded text-[11px] font-mono text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+              title="Kiosk mode (hides toolbar, prevents screen sleep)"
+            >
+              KIOSK
+            </button>
+
+            <button
+              onClick={toggleFullscreen}
+              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+              title="Fullscreen (F11)"
+              aria-label="Pantalla completa"
+            >
+              {isFullscreen ? (
+                <Minimize className="w-4 h-4" />
+              ) : (
+                <Maximize className="w-4 h-4" />
+              )}
+            </button>
+          </div>
         </div>
-
-        {/* Right: Toggles & Info */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setSidebarOpen((o) => !o)}
-            className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-            title="Toggle event sidebar"
-            aria-label="Panel de eventos"
-          >
-            {sidebarOpen ? (
-              <PanelRightClose className="w-4 h-4" />
-            ) : (
-              <PanelRightOpen className="w-4 h-4" />
-            )}
-          </button>
-
-          <button
-            onClick={() => setSoundEnabled((s) => !s)}
-            className={`p-1 rounded transition-colors ${
-              soundEnabled
-                ? 'text-[#D4A017] bg-[#D4A017]/10'
-                : 'text-zinc-400 hover:text-white hover:bg-white/10'
-            }`}
-            title="Toggle sound alerts"
-            aria-label={soundEnabled ? 'Silenciar alertas' : 'Activar alertas sonoras'}
-          >
-            {soundEnabled ? (
-              <Volume2 className="w-4 h-4" />
-            ) : (
-              <VolumeX className="w-4 h-4" />
-            )}
-          </button>
-
-          <span className="text-[10px] text-zinc-500 font-mono">
-            {totalCameras} cam
-          </span>
-
-          <LiveClock />
-
-          <button
-            onClick={enableKiosk}
-            className="px-2 py-1 rounded text-[11px] font-mono text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-            title="Kiosk mode (hides toolbar, prevents screen sleep)"
-          >
-            KIOSK
-          </button>
-
-          <button
-            onClick={toggleFullscreen}
-            className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-            title="Fullscreen (F11)"
-            aria-label="Pantalla completa"
-          >
-            {isFullscreen ? (
-              <Minimize className="w-4 h-4" />
-            ) : (
-              <Maximize className="w-4 h-4" />
-            )}
-          </button>
-        </div>
-      </div>
       )}
 
       {/* ── Body: Grid + Sidebar ────────────────────── */}
@@ -518,7 +546,7 @@ export default function WallPage() {
           <div
             className="w-full h-full gap-1"
             style={{
-              display: 'grid',
+              display: "grid",
               gridTemplateColumns: `repeat(${effectiveGridSize}, 1fr)`,
               gridTemplateRows: `repeat(${effectiveGridSize}, 1fr)`,
             }}
@@ -547,7 +575,7 @@ export default function WallPage() {
               <div
                 ref={progressBarRef}
                 className="h-full"
-                style={{ width: '0%', background: '#D4A017' }}
+                style={{ width: "0%", background: "#D4A017" }}
               />
             </div>
           )}
@@ -558,7 +586,7 @@ export default function WallPage() {
           <div className="w-[280px] border-l border-white/5 flex flex-col bg-[#040b14] shrink-0">
             <div className="flex items-center justify-between px-3 h-9 border-b border-white/5">
               <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
-                {t('wall.events')}
+                {t("wall.events")}
               </span>
               <span className="text-[10px] text-zinc-600 font-mono">
                 {events.length}
@@ -567,7 +595,7 @@ export default function WallPage() {
             <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
               {events.length === 0 && (
                 <div className="flex items-center justify-center h-32 text-zinc-600 text-xs">
-                  {t('wall.no_events')}
+                  {t("wall.no_events")}
                 </div>
               )}
               {events.map((ev) => (
