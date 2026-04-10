@@ -70,6 +70,7 @@ import {
   Siren,
   Camera,
   Image,
+  Eye,
 } from "lucide-react";
 import {
   SmartCameraCell,
@@ -1137,6 +1138,16 @@ export default function LiveViewPage() {
               {t("live.auto")}
             </Button>
 
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setPickerOpen(true)}
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              Cámaras
+            </Button>
+
             <div className="ml-auto flex items-center gap-1.5">
               <Badge variant="outline" className="text-[10px] h-5">
                 <Wifi className="h-2.5 w-2.5 mr-1 text-green-500" />
@@ -1229,6 +1240,8 @@ export default function LiveViewPage() {
                     allCameras.find((c) => c.id === focusedCamera) ?? null
                   }
                   variant="liveview"
+                  displayMode={cameraModes.get(focusedCamera!) ?? "auto"}
+                  onModeChange={setCameraMode}
                 />
                 <Button
                   variant="secondary"
@@ -1253,6 +1266,10 @@ export default function LiveViewPage() {
                     key={camera?.id ?? `empty-${i}`}
                     camera={camera}
                     variant="liveview"
+                    displayMode={
+                      camera ? (cameraModes.get(camera.id) ?? "auto") : "auto"
+                    }
+                    onModeChange={setCameraMode}
                     onClick={() => camera && setFocusedCamera(camera.id)}
                   />
                 ))}
@@ -1354,6 +1371,34 @@ export default function LiveViewPage() {
           </div>
         )}
       </div>
+      <CameraPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        siteGroups={siteGroups}
+        hiddenCameras={hiddenCameras}
+        cameraModes={cameraModes}
+        onToggleVisibility={toggleCameraVisibility}
+        onToggleMode={setCameraMode}
+        onShowAll={() => setHiddenCameras(new Set())}
+        onHideAll={() => {
+          const all = siteGroups.flatMap((sg) => sg.cameras.map((c) => c.id));
+          setHiddenCameras(new Set(all));
+        }}
+        onAllVideo={() => {
+          const m = new Map<string, CameraDisplayMode>();
+          siteGroups
+            .flatMap((sg) => sg.cameras)
+            .forEach((c) => m.set(c.id, "video"));
+          setCameraModes(m);
+        }}
+        onAllSnapshot={() => {
+          const m = new Map<string, CameraDisplayMode>();
+          siteGroups
+            .flatMap((sg) => sg.cameras)
+            .forEach((c) => m.set(c.id, "snapshot"));
+          setCameraModes(m);
+        }}
+      />
     </TooltipProvider>
   );
 }
