@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Cog, PlayCircle, CheckCircle, XCircle, Plus, Loader2, Shield, Zap, Clock, History } from "lucide-react";
+import { Cog, PlayCircle, CheckCircle, XCircle, Plus, Loader2, Shield, Zap, Clock, History, AlertTriangle, Camera, Lock, User } from "lucide-react";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -394,6 +394,40 @@ export default function AutomationPage() {
 
         {/* ── Rules Tab ───────────────────────────────────── */}
         <TabsContent value="rules" className="space-y-4">
+          {/* ── Plantillas de Automatización ──────────────── */}
+          <div className="mb-2">
+            <h3 className="text-base font-semibold mb-3">Plantillas de Automatización</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { name: 'Intruso → Luces + Sirena', desc: 'Enciende luces y sirena ante intruso', icon: AlertTriangle,
+                  trigger: { type: 'event', config: { eventType: 'intrusion_detected' } },
+                  actions: [{ type: 'toggle_device', config: { deviceType: 'light', action: 'on' } }, { type: 'toggle_device', config: { deviceType: 'siren', action: 'on' } }] },
+                { name: 'Cámara offline → Alerta', desc: 'Alerta cuando cámara se desconecta', icon: Camera,
+                  trigger: { type: 'device_status', config: { status: 'offline', delayMinutes: 5 } },
+                  actions: [{ type: 'send_alert', config: { severity: 'critical' } }] },
+                { name: 'Puerta forzada → Incidente', desc: 'Incidente y WhatsApp ante puerta forzada', icon: Lock,
+                  trigger: { type: 'event', config: { eventType: 'door_forced' } },
+                  actions: [{ type: 'create_incident', config: { severity: 'high' } }, { type: 'send_whatsapp', config: { template: 'door_forced' } }] },
+                { name: 'Persona detectada → Log', desc: 'Registra detección de persona', icon: User,
+                  trigger: { type: 'event', config: { eventType: 'person_detected' } },
+                  actions: [{ type: 'webhook', config: { event: 'snapshot_log' } }] },
+              ].map((tpl, i) => (
+                <Card key={i} className="cursor-pointer hover:border-primary transition-colors" onClick={async () => {
+                  try {
+                    await automationRulesApi.create({ name: tpl.name, trigger: tpl.trigger, actions: tpl.actions, conditions: [], cooldown_minutes: 5, is_active: true } as any);
+                    queryClient.invalidateQueries({ queryKey: ['automation-rules'] });
+                    toast({ title: `Automatización "${tpl.name}" creada` });
+                  } catch { toast({ title: 'Error al crear automatización', variant: 'destructive' }); }
+                }}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1"><tpl.icon className="h-4 w-4 text-primary" /><span className="font-medium text-sm">{tpl.name}</span></div>
+                    <p className="text-xs text-muted-foreground">{tpl.desc}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
           <div className="flex justify-end">
             <Button className="gap-1" onClick={() => { resetForm(); setShowCreateRule(true); }}>
               <Plus className="h-4 w-4" /> Nueva Regla

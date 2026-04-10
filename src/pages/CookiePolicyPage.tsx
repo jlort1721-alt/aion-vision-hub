@@ -220,11 +220,6 @@ export default function CookiePolicyPage() {
                 </thead>
                 <tbody className="divide-y">
                   <tr>
-                    <td className="p-3">Supabase</td>
-                    <td className="p-3">Autenticacion y gestion de sesiones de usuario.</td>
-                    <td className="p-3">https://supabase.com/privacy</td>
-                  </tr>
-                  <tr>
                     <td className="p-3">Google Maps / Mapbox</td>
                     <td className="p-3">Visualizacion de mapas y ubicaciones de sitios vigilados.</td>
                     <td className="p-3">https://policies.google.com/privacy</td>

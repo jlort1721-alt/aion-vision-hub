@@ -194,7 +194,7 @@ export interface SipHealthCheck {
 
 // ── Intercom Connector Abstraction ────────────────────────
 
-export type IntercomBrand = 'fanvil' | 'hikvision' | 'dahua' | 'akuvox' | 'generic_sip';
+export type IntercomBrand = 'fanvil' | 'grandstream' | 'hikvision' | 'dahua' | 'akuvox' | 'generic_sip';
 
 export interface IntercomConnector {
   readonly brand: IntercomBrand;
@@ -414,7 +414,7 @@ export interface VoipSystemConfig {
   welcomeOrchestration: WelcomeOrchestrationConfig;
   recording: {
     enabled: boolean;
-    storageProvider: 'local' | 's3' | 'supabase';
+    storageProvider: 'local' | 's3';
     storagePath?: string;
     maxDurationSeconds: number;
     format: 'wav' | 'mp3' | 'ogg';

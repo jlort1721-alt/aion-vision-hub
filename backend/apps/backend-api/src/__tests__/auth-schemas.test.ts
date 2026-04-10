@@ -3,23 +3,18 @@ import { loginSchema, refreshTokenSchema, verifyTokenSchema } from '../modules/a
 
 describe('Auth Zod Schemas', () => {
   describe('loginSchema', () => {
-    it('accepts valid supabaseToken', () => {
-      const result = loginSchema.safeParse({ supabaseToken: 'eyJhbGciOiJIUzI1NiJ9.test' });
+    it('accepts valid email + password', () => {
+      const result = loginSchema.safeParse({ email: 'admin@aion.dev', password: 'secret123' });
       expect(result.success).toBe(true);
     });
 
-    it('rejects missing supabaseToken', () => {
-      const result = loginSchema.safeParse({});
+    it('rejects missing email', () => {
+      const result = loginSchema.safeParse({ password: 'secret123' });
       expect(result.success).toBe(false);
     });
 
-    it('rejects empty supabaseToken', () => {
-      const result = loginSchema.safeParse({ supabaseToken: '' });
-      expect(result.success).toBe(false);
-    });
-
-    it('rejects non-string supabaseToken', () => {
-      const result = loginSchema.safeParse({ supabaseToken: 12345 });
+    it('rejects missing password', () => {
+      const result = loginSchema.safeParse({ email: 'admin@aion.dev' });
       expect(result.success).toBe(false);
     });
 

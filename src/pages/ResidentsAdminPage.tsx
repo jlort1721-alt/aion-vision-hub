@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import ResidentImportDialog from '@/components/residents/ResidentImportDialog';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { PageShell } from '@/components/shared/PageShell';
@@ -201,6 +202,7 @@ export default function ResidentsAdminPage() {
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'flat' | 'grouped'>('flat');
+  const [importOpen, setImportOpen] = useState(false);
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -259,6 +261,7 @@ export default function ResidentsAdminPage() {
   // ── Render ─────────────────────────────────────────────
 
   return (
+    <>
     <PageShell
       title="Residentes"
       description="Gestion y consulta de residentes de todas las sedes"
@@ -319,7 +322,7 @@ export default function ResidentsAdminPage() {
           </div>
 
           {/* Import button */}
-          <Button variant="outline" size="sm" className="h-9 gap-1.5">
+          <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4" />
             Importar
           </Button>
@@ -536,5 +539,7 @@ export default function ResidentsAdminPage() {
         )}
       </div>
     </PageShell>
+    <ResidentImportDialog open={importOpen} onOpenChange={setImportOpen} />
+    </>
   );
 }
