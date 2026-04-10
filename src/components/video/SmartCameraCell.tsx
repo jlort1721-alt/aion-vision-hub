@@ -318,16 +318,14 @@ function SmartCameraCellInner({
         onError={() => setImgLoaded(false)}
       />
 
-      {/* Video stream */}
-      {mode === "video" && (
-        <video
-          ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover"
-          autoPlay
-          muted
-          playsInline
-        />
-      )}
+      {/* Video stream — always mounted so videoRef is available for MSE setup */}
+      <video
+        ref={videoRef}
+        className={`absolute inset-0 w-full h-full object-cover ${mode === "video" ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        autoPlay
+        muted
+        playsInline
+      />
 
       {/* Stream failed overlay */}
       {isOnline && streamFailed && !imgLoaded && mode === "snapshot" && (
