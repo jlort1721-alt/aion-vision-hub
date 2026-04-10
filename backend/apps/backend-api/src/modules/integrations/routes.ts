@@ -24,6 +24,12 @@ export async function registerIntegrationRoutes(app: FastifyInstance) {
     },
   );
 
+  // ── GET /n8n/status — n8n health check ──────────────────────
+  app.get('/n8n/status', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async () => {
+    const health = await n8nWebhookClient.checkHealth();
+    return { success: true, data: health };
+  });
+
   // ── GET /:id — Get single integration ───────────────────────
   app.get<{ Params: { id: string } }>(
     '/:id',
@@ -90,12 +96,6 @@ export async function registerIntegrationRoutes(app: FastifyInstance) {
       return reply.code(204).send();
     },
   );
-
-  // ── GET /n8n/status — n8n health check ──────────────────────
-  app.get('/n8n/status', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async () => {
-    const health = await n8nWebhookClient.checkHealth();
-    return { success: true, data: health };
-  });
 
   // ── POST /:id/test — Test integration connectivity ──────────
   app.post<{ Params: { id: string } }>(

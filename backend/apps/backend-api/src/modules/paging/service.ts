@@ -1,7 +1,6 @@
 import { eq, and, sql, desc } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { pagingBroadcasts, pagingTemplates } from '../../db/schema/index.js';
-import { sites } from '../../db/schema/index.js';
+import { pagingBroadcasts, pagingTemplates, sites } from '../../db/schema/index.js';
 import { NotFoundError } from '@aion/shared-contracts';
 import type { BroadcastInput, BroadcastFilters, PagingTemplateInput } from './schemas.js';
 
