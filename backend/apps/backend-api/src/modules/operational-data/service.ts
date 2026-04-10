@@ -193,6 +193,62 @@ export class OperationalDataService {
     return result as unknown as Record<string, unknown>[];
   }
 
+  async residentsGroupedByModule(tenantId: string) {
+    const rows = await db.execute(sql`
+      SELECT r.*, s.name as site_name
+      FROM residents r
+      LEFT JOIN sites s ON s.id = r.site_id
+      WHERE r.tenant_id = ${tenantId} AND r.deleted_at IS NULL
+      ORDER BY s.name ASC, r.unit_number ASC
+    `);
+
+    const grouped: Record<string, Record<string, Record<string, unknown[]>>> = {};
+    for (const row of rows.rows) {
+      const siteName = (row as Record<string, unknown>).site_name as string ?? 'Sin sitio';
+      const unitNumber = (row as Record<string, unknown>).unit_number as string ?? '';
+      const parts = unitNumber.match(/^(.*?)(?:\s*-\s*(.*))?$/);
+      const module = parts?.[1]?.trim() || 'General';
+      const apartment = parts?.[2]?.trim() || unitNumber || 'Sin unidad';
+
+      if (!grouped[siteName]) grouped[siteName] = {};
+      if (!grouped[siteName][module]) grouped[siteName][module] = {};
+      if (!grouped[siteName][module][apartment]) grouped[siteName][module][apartment] = [];
+      grouped[siteName][module][apartment].push(row);
+    }
+    return grouped;
+  }
+
+  async residentsBulkImport(tenantId: string, records: Array<Record<string, unknown>>) {
+    let imported = 0;
+    let skipped = 0;
+    const errors: Array<{ row: number; reason: string }> = [];
+
+    for (let i = 0; i < records.length; i++) {
+      const rec = records[i];
+      const fullName = rec.full_name as string;
+      const unitNumber = rec.unit_number as string;
+      if (!fullName || !unitNumber) {
+        errors.push({ row: i + 1, reason: 'full_name y unit_number son obligatorios' });
+        skipped++;
+        continue;
+      }
+      try {
+        await db.execute(sql`
+          INSERT INTO residents (tenant_id, site_id, full_name, unit_number, phone, email, id_number, vehicle_plate, notes, status)
+          VALUES (${tenantId}, ${rec.site_id as string ?? null}, ${fullName}, ${unitNumber},
+                  ${rec.phone as string ?? null}, ${rec.email as string ?? null},
+                  ${rec.id_number as string ?? null}, ${rec.vehicle_plate as string ?? null},
+                  ${rec.notes as string ?? null}, ${rec.status as string ?? 'active'})
+        `);
+        imported++;
+      } catch (err) {
+        errors.push({ row: i + 1, reason: (err as Error).message });
+        skipped++;
+      }
+    }
+    return { imported, skipped, errors };
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   //  VEHICLES
   // ═══════════════════════════════════════════════════════════════════════════

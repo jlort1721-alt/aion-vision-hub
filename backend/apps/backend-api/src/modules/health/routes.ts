@@ -131,6 +131,20 @@ export async function registerHealthRoutes(app: FastifyInstance) {
       }),
     ]);
 
+    // Disk check (non-critical)
+    try {
+      const { execSync } = await import('child_process');
+      const dfOutput = execSync('df -P / | tail -1').toString();
+      const parts = dfOutput.trim().split(/\s+/);
+      const usedPct = parseInt(parts[4]);
+      const freePct = 100 - usedPct;
+      checks.disk = {
+        status: freePct < 10 ? 'unhealthy' : freePct < 20 ? 'warning' : 'healthy',
+        detail: `${freePct}% free`,
+      };
+      if (freePct < 10) allHealthy = false;
+    } catch { /* skip on non-unix */ }
+
     // Disk + memory (sync, non-critical)
     try {
       const mem = process.memoryUsage();

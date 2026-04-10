@@ -158,6 +158,15 @@ export const envSchema = z.object({
     .default('true')
     .transform((v) => v === 'true'),
   GRAFANA_ADMIN_PASSWORD: z.string().optional(),
+
+  // MQTT
+  MQTT_BROKER_URL: z.string().url().optional(),
+  MQTT_USERNAME: z.string().optional(),
+  MQTT_PASSWORD: z.string().optional(),
+
+  // n8n
+  N8N_WEBHOOK_URL: z.string().url().optional(),
+  N8N_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export const config = envSchema.parse(process.env);

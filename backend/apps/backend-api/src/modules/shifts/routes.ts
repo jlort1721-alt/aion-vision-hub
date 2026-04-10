@@ -33,6 +33,17 @@ export async function registerShiftRoutes(app: FastifyInstance) {
     },
   );
 
+  app.post<{ Params: { id: string } }>(
+    '/:id/report',
+    { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] },
+    async (request, reply) => {
+      const { id } = request.params;
+      const report = await shiftService.generateShiftReport(request.tenantId, id);
+      if (!report) return reply.code(404).send({ success: false, error: 'Turno no encontrado' });
+      return { success: true, data: report };
+    },
+  );
+
   app.get<{ Params: { id: string } }>(
     '/:id',
     { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },

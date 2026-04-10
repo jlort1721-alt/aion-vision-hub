@@ -39,6 +39,9 @@ export { evidence } from './evidence.js';
 export { knowledgeBase } from './knowledge-base.js';
 export { communicationLogs, twilioNotificationRules } from './communication-logs.js';
 export { operationalNotes } from './operational-notes.js';
+export { cameraDetections } from './camera-detections.js';
+export { domoticScenes, domoticSceneExecutions } from './domotic-scenes.js';
+export { pagingBroadcasts, pagingTemplates } from './paging.js';
 
 import { pgTable, uuid, text, boolean, integer, timestamp, jsonb, varchar, index } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';

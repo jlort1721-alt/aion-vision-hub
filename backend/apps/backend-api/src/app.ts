@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import compress from '@fastify/compress';
 import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
 import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -89,6 +90,9 @@ import { registerFaceRecognitionRoutes } from './modules/face-recognition/routes
 import { registerHeatMappingRoutes } from './modules/heat-mapping/routes.js';
 import { registerTwilioRoutes, registerTwilioWebhookRoutes } from './modules/twilio/routes.js';
 import { registerNoteRoutes } from './modules/notes/routes.js';
+import { registerCameraDetectionRoutes } from './modules/camera-detections/routes.js';
+import { registerSceneRoutes } from './modules/scenes/routes.js';
+import { registerPagingRoutes } from './modules/paging/routes.js';
 import { registerRemoteAccessRoutes } from './modules/remote-access/routes.js';
 import { registerFloorPlanRoutes } from './modules/floor-plans/routes.js';
 import { registerClipRoutes } from './modules/clips/routes.js';
@@ -141,6 +145,9 @@ export async function buildApp() {
     exposedHeaders: ['X-Request-Id', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'Retry-After'],
     maxAge: 86400,
   });
+
+  // Response compression
+  await app.register(compress, { global: true, threshold: 1024 });
 
   // Security headers
   await app.register(helmet, {
@@ -321,6 +328,11 @@ export async function buildApp() {
 
   // Operational Notes — operator notes, shift handoffs, observations
   await app.register(registerNoteRoutes, { prefix: '/notes' });
+
+  // Phase 5: Detection analytics, domotic scenes, paging
+  await app.register(registerCameraDetectionRoutes, { prefix: '/camera-detections' });
+  await app.register(registerSceneRoutes, { prefix: '/scenes' });
+  await app.register(registerPagingRoutes, { prefix: '/paging' });
 
   // Twilio — WhatsApp, SMS, Voice calls (Colombian PSTN via Twilio)
   await app.register(registerTwilioRoutes, { prefix: '/twilio' });
