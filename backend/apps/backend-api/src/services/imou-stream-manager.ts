@@ -1,14 +1,13 @@
 /**
  * IMOU Stream Manager — Maintains live HLS streams from Dahua XVR via IMOU Cloud P2P
  *
- * Flow:
- * 1. Get IMOU access token
- * 2. For each online XVR: bindDeviceLive (streamId=0 INTEGER) for each channel
- * 3. Extract HLS URLs from response
- * 4. Register HLS URLs in go2rtc via API
- * 5. Refresh every 20 minutes (URLs expire ~30min)
- *
- * No DSS Express, no Windows, no port forwarding needed.
+ * Resilience features for 24/7 operation:
+ * - Token caching (72h expiry, refreshes 1h before expiry)
+ * - Retry with backoff on token/API failures (3 attempts)
+ * - Per-device try/catch — one device failure doesn't stop others
+ * - 15-minute refresh cycle (URLs expire ~30min, gives margin)
+ * - Detailed logging per cycle with stats
+ * - Health status exposure for monitoring
  */
 import crypto from "crypto";
 import { createLogger } from "@aion/common-utils";
@@ -19,7 +18,7 @@ const APP_ID = process.env.IMOU_APP_ID || "";
 const APP_SECRET = process.env.IMOU_APP_SECRET || "";
 const API_BASE = "https://openapi-or.easy4ip.com/openapi";
 const GO2RTC_API = "http://localhost:1984/api/streams";
-const REFRESH_INTERVAL = 20 * 60 * 1000; // 20 minutes
+const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes (URLs expire ~30min)
 
 interface ImouDevice {
   serial: string;
@@ -42,11 +41,14 @@ const DEVICES: ImouDevice[] = [
   { serial: "9B02D09PAZ4C0D2", name: "factory", user: "admin" },
 ];
 
+// ── Token Cache ─────────────────────────────────────────
+let cachedToken: { token: string; expiresAt: number } | null = null;
+
 function generateNonce(): string {
   return crypto.randomBytes(8).toString("hex");
 }
 
-function sign(ts: number, nonce: string): string {
+function signRequest(ts: number, nonce: string): string {
   return crypto
     .createHash("md5")
     .update(`time:${ts},nonce:${nonce},appSecret:${APP_SECRET}`)
@@ -63,7 +65,7 @@ async function imouApi(
   const body = JSON.stringify({
     system: {
       ver: "1.0",
-      sign: sign(ts, nonce),
+      sign: signRequest(ts, nonce),
       appId: APP_ID,
       time: ts,
       nonce,
@@ -82,10 +84,57 @@ async function imouApi(
 }
 
 async function getToken(): Promise<string> {
-  const resp = await imouApi("accessToken", { phone: "", email: "" });
-  const result = resp.result as Record<string, unknown>;
-  const data = result.data as Record<string, unknown>;
-  return data.accessToken as string;
+  // Return cached token if still valid (refresh 1 hour before expiry)
+  if (cachedToken && Date.now() / 1000 < cachedToken.expiresAt - 3600) {
+    return cachedToken.token;
+  }
+
+  // Retry up to 3 times with backoff
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const resp = await imouApi("accessToken", { phone: "", email: "" });
+      const result = resp.result as Record<string, unknown>;
+
+      if (result.code !== "0") {
+        logger.warn(
+          { code: result.code, msg: result.msg, attempt },
+          "IMOU token request failed",
+        );
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+          continue;
+        }
+        throw new Error(`IMOU token error: ${result.msg}`);
+      }
+
+      const data = result.data as Record<string, unknown>;
+      const token = data.accessToken as string;
+      const expireTime = data.expireTime as number;
+
+      cachedToken = { token, expiresAt: Date.now() / 1000 + expireTime };
+      logger.info(
+        { expiresIn: `${Math.round(expireTime / 3600)}h` },
+        "IMOU token refreshed",
+      );
+      return token;
+    } catch (err) {
+      if (attempt < 2) {
+        logger.warn(
+          { attempt, err: (err as Error).message },
+          "IMOU token attempt failed, retrying",
+        );
+        await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+      } else {
+        // If we have a cached token (even expired), use it as last resort
+        if (cachedToken) {
+          logger.warn("Using expired cached IMOU token as fallback");
+          return cachedToken.token;
+        }
+        throw err;
+      }
+    }
+  }
+  throw new Error("Failed to get IMOU token after 3 attempts");
 }
 
 async function getOnlineChannels(
@@ -114,20 +163,13 @@ async function bindLiveStream(
       token,
       deviceId: serial,
       channelId,
-      streamId: 0, // INTEGER 0, not string "0" — this is critical
+      streamId: 0,
     });
-
     const result = resp.result as Record<string, unknown>;
     if (result.code !== "0" && result.code !== "LV1001") return null;
-
     const data = result.data as Record<string, unknown>;
     const streams = data.streams as Array<Record<string, string>> | undefined;
-
-    if (streams && streams.length > 0) {
-      return streams[0].hls || null;
-    }
-
-    return null;
+    return streams?.[0]?.hls || null;
   } catch {
     return null;
   }
@@ -146,14 +188,9 @@ async function getLiveStreamUrl(
     });
     const result = resp.result as Record<string, unknown>;
     if (result.code !== "0") return null;
-
     const data = result.data as Record<string, unknown>;
     const streams = data.streams as Array<Record<string, string>> | undefined;
-
-    if (streams && streams.length > 0) {
-      return streams[0].hls || null;
-    }
-    return null;
+    return streams?.[0]?.hls || null;
   } catch {
     return null;
   }
@@ -176,10 +213,20 @@ async function addToGo2rtc(
   }
 }
 
+// ── Manager Class ───────────────────────────────────────
+
 export class ImouStreamManager {
   private refreshTimer: NodeJS.Timeout | null = null;
   private activeStreams = new Map<string, string>();
   private running = false;
+  private cycleCount = 0;
+  private lastRefreshAt: Date | null = null;
+  private lastRefreshResult: {
+    total: number;
+    online: number;
+    streams: number;
+    errors: number;
+  } | null = null;
 
   isConfigured(): boolean {
     return !!APP_ID && !!APP_SECRET;
@@ -192,19 +239,30 @@ export class ImouStreamManager {
     }
 
     this.running = true;
-    logger.info("IMOU Stream Manager starting");
+    logger.info(
+      { interval: `${intervalMs / 1000}s`, devices: DEVICES.length },
+      "IMOU Stream Manager starting",
+    );
 
-    // Initial bind
-    await this.refreshAllStreams();
+    // Initial bind (with short delay to let API stabilize)
+    setTimeout(() => {
+      this.refreshAllStreams().catch((err) => {
+        logger.error(
+          { err: (err as Error).message },
+          "Initial IMOU refresh failed",
+        );
+      });
+    }, 5000);
 
     // Periodic refresh
     this.refreshTimer = setInterval(() => {
       this.refreshAllStreams().catch((err) => {
-        logger.error({ err: (err as Error).message }, "Stream refresh failed");
+        logger.error(
+          { err: (err as Error).message },
+          "IMOU refresh cycle failed",
+        );
       });
     }, intervalMs);
-
-    logger.info({ interval: intervalMs / 1000 }, "IMOU Stream Manager running");
   }
 
   stop(): void {
@@ -220,70 +278,123 @@ export class ImouStreamManager {
     total: number;
     online: number;
     streams: number;
+    errors: number;
   }> {
-    if (!this.isConfigured()) return { total: 0, online: 0, streams: 0 };
+    if (!this.isConfigured())
+      return { total: 0, online: 0, streams: 0, errors: 0 };
 
-    const token = await getToken();
+    const startTime = Date.now();
+    this.cycleCount++;
     let totalDevices = 0;
     let onlineDevices = 0;
     let totalStreams = 0;
+    let errorCount = 0;
+
+    let token: string;
+    try {
+      token = await getToken();
+    } catch (err) {
+      logger.error(
+        { err: (err as Error).message, cycle: this.cycleCount },
+        "IMOU token fetch failed — skipping cycle",
+      );
+      return { total: DEVICES.length, online: 0, streams: 0, errors: 1 };
+    }
 
     for (const device of DEVICES) {
       totalDevices++;
 
-      const channels = await getOnlineChannels(token, device.serial);
-      if (channels.length === 0) continue;
-
-      onlineDevices++;
-      logger.debug(
-        { device: device.name, channels: channels.length },
-        "Device online",
-      );
-
-      for (const chId of channels) {
-        // First try to get existing stream URL
-        let hlsUrl = await getLiveStreamUrl(token, device.serial, chId);
-
-        // If no existing stream, bind new one
-        if (!hlsUrl) {
-          hlsUrl = await bindLiveStream(token, device.serial, chId);
+      try {
+        const channels = await getOnlineChannels(token, device.serial);
+        if (channels.length === 0) {
+          logger.debug(
+            { device: device.name },
+            "Device offline or no channels",
+          );
+          continue;
         }
 
-        if (hlsUrl) {
-          const streamKey = `da-${device.name}-ch${chId}`;
-          const added = await addToGo2rtc(streamKey, hlsUrl);
+        onlineDevices++;
 
-          if (added) {
-            this.activeStreams.set(streamKey, hlsUrl);
-            totalStreams++;
+        for (const chId of channels) {
+          // First try existing stream URL, then bind new
+          let hlsUrl = await getLiveStreamUrl(token, device.serial, chId);
+          if (!hlsUrl) {
+            hlsUrl = await bindLiveStream(token, device.serial, chId);
           }
-        }
 
-        // Small delay to avoid rate limiting
-        await new Promise((r) => setTimeout(r, 300));
+          if (hlsUrl) {
+            const streamKey = `da-${device.name}-ch${chId}`;
+            const added = await addToGo2rtc(streamKey, hlsUrl);
+            if (added) {
+              this.activeStreams.set(streamKey, hlsUrl);
+              totalStreams++;
+            } else {
+              logger.warn({ streamKey }, "Failed to register stream in go2rtc");
+              errorCount++;
+            }
+          }
+
+          // Rate limit: 300ms between API calls
+          await new Promise((r) => setTimeout(r, 300));
+        }
+      } catch (err) {
+        errorCount++;
+        logger.error(
+          { device: device.name, err: (err as Error).message },
+          "Device refresh failed, continuing",
+        );
       }
     }
 
+    const elapsed = Date.now() - startTime;
+    this.lastRefreshAt = new Date();
+    this.lastRefreshResult = {
+      total: totalDevices,
+      online: onlineDevices,
+      streams: totalStreams,
+      errors: errorCount,
+    };
+
     logger.info(
       {
+        cycle: this.cycleCount,
         devices: `${onlineDevices}/${totalDevices}`,
         streams: totalStreams,
+        errors: errorCount,
+        elapsed: `${elapsed}ms`,
       },
-      "IMOU streams refreshed",
+      "IMOU refresh cycle complete",
     );
 
     return {
       total: totalDevices,
       online: onlineDevices,
       streams: totalStreams,
+      errors: errorCount,
     };
   }
 
-  getStatus(): { running: boolean; streams: number; devices: number } {
+  getStatus(): {
+    running: boolean;
+    streams: number;
+    devices: number;
+    cycleCount: number;
+    lastRefreshAt: string | null;
+    lastResult: {
+      total: number;
+      online: number;
+      streams: number;
+      errors: number;
+    } | null;
+  } {
     return {
       running: this.running,
       streams: this.activeStreams.size,
       devices: DEVICES.length,
+      cycleCount: this.cycleCount,
+      lastRefreshAt: this.lastRefreshAt?.toISOString() || null,
+      lastResult: this.lastRefreshResult,
     };
   }
 }
