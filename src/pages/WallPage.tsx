@@ -1,8 +1,9 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import {
   Shield,
   Grid2X2,
@@ -21,6 +22,11 @@ import {
   Info,
   ShieldAlert,
   Siren,
+  Save,
+  FolderOpen,
+  Star,
+  Trash2,
+  LayoutGrid,
 } from "lucide-react";
 import { SmartCameraCell } from "@/components/video/SmartCameraCell";
 import { useI18n } from "@/contexts/I18nContext";
@@ -166,8 +172,69 @@ export default function WallPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [kioskMode, setKioskMode] = useState(false);
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
+  const [layoutMenuOpen, setLayoutMenuOpen] = useState(false);
+  const [newLayoutName, setNewLayoutName] = useState("");
   const progressBarRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+
+  // ── Layouts ──
+
+  interface SavedLayout {
+    id: string;
+    name: string;
+    grid: number;
+    slots: string[];
+    is_favorite: boolean;
+  }
+
+  const { data: savedLayouts = [] } = useQuery<SavedLayout[]>({
+    queryKey: ["wall-layouts"],
+    queryFn: async () => {
+      const res = await apiClient.get<{ data: SavedLayout[] }>(
+        "/live-view/layouts",
+      );
+      return res?.data ?? [];
+    },
+    enabled: isAuthenticated,
+  });
+
+  const saveLayoutMutation = useMutation({
+    mutationFn: async () => {
+      const name =
+        newLayoutName.trim() ||
+        `Layout ${gridSize}x${gridSize} - ${new Date().toLocaleString("es-CO")}`;
+      const slots = displayCameras
+        .filter(Boolean)
+        .map((c) => c?.stream_key ?? "");
+      return apiClient.post("/live-view/layouts", {
+        name,
+        grid: gridSize,
+        slots,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wall-layouts"] });
+      setNewLayoutName("");
+      setLayoutMenuOpen(false);
+      toast.success("Layout guardado");
+    },
+    onError: () => toast.error("Error al guardar layout"),
+  });
+
+  const deleteLayoutMutation = useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/live-view/layouts/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wall-layouts"] });
+      toast.success("Layout eliminado");
+    },
+  });
+
+  const loadLayout = useCallback((layout: SavedLayout) => {
+    setGridSize(layout.grid as GridSize);
+    setLayoutMenuOpen(false);
+    toast.success(`Layout "${layout.name}" cargado`);
+  }, []);
 
   // ── Data fetching ──
 
@@ -477,6 +544,73 @@ export default function WallPage() {
 
           {/* Right: Toggles & Info */}
           <div className="flex items-center gap-2">
+            {/* Layout manager */}
+            <div className="relative">
+              <button
+                onClick={() => setLayoutMenuOpen((o) => !o)}
+                className={`p-1 rounded transition-colors ${layoutMenuOpen ? "text-[#D4A017] bg-[#D4A017]/10" : "text-zinc-400 hover:text-white hover:bg-white/10"}`}
+                title="Layouts guardados"
+                aria-label="Gestionar layouts"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              {layoutMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-64 bg-[#0a1628] border border-white/10 rounded-lg shadow-2xl z-50 p-2">
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2 px-1">
+                    Layouts Guardados
+                  </div>
+                  {savedLayouts.length === 0 && (
+                    <div className="text-xs text-zinc-600 text-center py-3">
+                      Sin layouts guardados
+                    </div>
+                  )}
+                  {savedLayouts.map((layout) => (
+                    <div
+                      key={layout.id}
+                      className="flex items-center gap-1 px-1 py-1.5 rounded hover:bg-white/5 group"
+                    >
+                      <button
+                        onClick={() => loadLayout(layout)}
+                        className="flex-1 text-left text-xs text-zinc-300 truncate"
+                      >
+                        {layout.name}
+                      </button>
+                      <span className="text-[9px] text-zinc-600">
+                        {layout.grid}x{layout.grid}
+                      </span>
+                      <button
+                        onClick={() => deleteLayoutMutation.mutate(layout.id)}
+                        className="p-0.5 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="border-t border-white/5 mt-2 pt-2">
+                    <div className="flex gap-1">
+                      <input
+                        type="text"
+                        placeholder="Nombre del layout..."
+                        value={newLayoutName}
+                        onChange={(e) => setNewLayoutName(e.target.value)}
+                        className="flex-1 px-2 py-1 text-xs bg-white/5 border border-white/10 rounded text-white placeholder-zinc-600 focus:outline-none focus:border-[#D4A017]/50"
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && saveLayoutMutation.mutate()
+                        }
+                      />
+                      <button
+                        onClick={() => saveLayoutMutation.mutate()}
+                        className="px-2 py-1 text-[10px] bg-[#D4A017] text-black rounded font-bold hover:bg-[#D4A017]/80"
+                        disabled={saveLayoutMutation.isPending}
+                      >
+                        <Save className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setSidebarOpen((o) => !o)}
               className="p-1 rounded text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
