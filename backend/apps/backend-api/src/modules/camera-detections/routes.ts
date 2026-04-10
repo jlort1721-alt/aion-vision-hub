@@ -1,11 +1,10 @@
 import type { FastifyInstance } from 'fastify';
-import fp from 'fastify-plugin';
 import { requireRole } from '../../plugins/auth.js';
 import { cameraDetectionService } from './service.js';
 import { createDetectionSchema, listDetectionsFilterSchema, reviewDetectionSchema } from './schemas.js';
 import type { ApiResponse } from '@aion/shared-contracts';
 
-async function cameraDetectionRoutes(app: FastifyInstance) {
+export async function registerCameraDetectionRoutes(app: FastifyInstance) {
   // GET / — List detections with filters
   app.get(
     '/',
@@ -74,6 +73,4 @@ async function cameraDetectionRoutes(app: FastifyInstance) {
   );
 }
 
-export const registerCameraDetectionRoutes = fp(cameraDetectionRoutes, {
-  name: 'camera-detection-routes',
-});
+// Exported directly — encapsulated by prefix in app.ts

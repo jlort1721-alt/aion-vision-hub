@@ -1,11 +1,10 @@
 import type { FastifyInstance } from 'fastify';
-import fp from 'fastify-plugin';
 import { requireRole } from '../../plugins/auth.js';
 import { pagingService } from './service.js';
 import { broadcastSchema, broadcastFiltersSchema, pagingTemplateSchema } from './schemas.js';
 import type { ApiResponse } from '@aion/shared-contracts';
 
-async function pagingRoutes(app: FastifyInstance) {
+export async function registerPagingRoutes(app: FastifyInstance) {
   // POST /broadcast — Send broadcast message
   app.post(
     '/broadcast',
@@ -89,6 +88,4 @@ async function pagingRoutes(app: FastifyInstance) {
   );
 }
 
-export const registerPagingRoutes = fp(pagingRoutes, {
-  name: 'paging-routes',
-});
+// Exported directly — encapsulated by prefix in app.ts
