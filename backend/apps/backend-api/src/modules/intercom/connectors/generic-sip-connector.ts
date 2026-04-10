@@ -26,7 +26,7 @@ export class GenericSipConnector implements IntercomConnector {
   readonly brand: IntercomBrand = 'generic_sip';
   readonly displayName: string = 'Generic SIP Intercom';
 
-  async testDevice(ipAddress: string): Promise<DeviceTestResult> {
+  async testDevice(ipAddress: string, _config?: Record<string, unknown>): Promise<DeviceTestResult> {
     const start = Date.now();
 
     try {
@@ -98,7 +98,7 @@ export class GenericSipConnector implements IntercomConnector {
     };
   }
 
-  getAutoProvisionUrl(deviceIp: string): string {
+  getAutoProvisionUrl(deviceIp: string, _param: string, _value: string): string {
     return `http://${deviceIp}/`;
   }
 }

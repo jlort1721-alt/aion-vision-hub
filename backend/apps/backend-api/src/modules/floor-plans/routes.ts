@@ -79,24 +79,14 @@ export async function registerFloorPlanRoutes(app: FastifyInstance) {
       await fs.writeFile(filePath, buffer);
       logger.info({ siteId, tenantId, filename, size: buffer.length }, 'Floor plan uploaded');
 
+      const imageUrl = `/uploads/floor-plans/${filename}`;
       try {
         await db.execute(sql`
-          INSERT INTO floor_plans (id, tenant_id, site_id, filename, mime_type, file_size, file_path, created_at)
-          VALUES (
-            ${fileId},
-            ${tenantId},
-            ${siteId},
-            ${filename},
-            ${contentType},
-            ${buffer.length},
-            ${filePath},
-            NOW()
-          )
+          INSERT INTO floor_plans (id, tenant_id, site_id, name, image_url, is_active, created_at)
+          VALUES (${fileId}, ${tenantId}::text, ${siteId}, ${filename}, ${imageUrl}, true, NOW())
           ON CONFLICT (tenant_id, site_id) DO UPDATE SET
-            filename = EXCLUDED.filename,
-            mime_type = EXCLUDED.mime_type,
-            file_size = EXCLUDED.file_size,
-            file_path = EXCLUDED.file_path,
+            name = EXCLUDED.name,
+            image_url = EXCLUDED.image_url,
             updated_at = NOW()
         `);
       } catch (err) {
@@ -117,7 +107,7 @@ export async function registerFloorPlanRoutes(app: FastifyInstance) {
 
       return reply.code(201).send({
         success: true,
-        data: { id: fileId, siteId, filename, mimeType: contentType, fileSize: buffer.length },
+        data: { id: fileId, siteId, name: filename, imageUrl },
       });
     },
   );
@@ -136,9 +126,9 @@ export async function registerFloorPlanRoutes(app: FastifyInstance) {
       const tenantId = request.tenantId;
 
       const rows = await db.execute(sql`
-        SELECT id, site_id, filename, mime_type, file_size, created_at, updated_at
+        SELECT id, site_id, name, image_url, width, height, floor_number, is_active, created_at, updated_at
         FROM floor_plans
-        WHERE tenant_id = ${tenantId}
+        WHERE tenant_id = ${tenantId}::text
         ORDER BY created_at DESC
       `);
 
@@ -161,11 +151,11 @@ export async function registerFloorPlanRoutes(app: FastifyInstance) {
       const tenantId = request.tenantId;
 
       const rows = await db.execute(sql`
-        SELECT id, site_id, filename, mime_type, file_size, file_path, created_at, updated_at
+        SELECT id, site_id, name, image_url, width, height, floor_number, device_markers, is_active, created_at, updated_at
         FROM floor_plans
-        WHERE tenant_id = ${tenantId} AND site_id = ${siteId}
+        WHERE tenant_id = ${tenantId}::text AND site_id = ${siteId}
         LIMIT 1
-      `) as unknown as Array<{ file_path: string; mime_type: string; [k: string]: unknown }>;
+      `) as unknown as Array<{ image_url: string | null; [k: string]: unknown }>;
 
       if (!rows.length) {
         return reply.code(404).send({
@@ -176,26 +166,24 @@ export async function registerFloorPlanRoutes(app: FastifyInstance) {
 
       const row = rows[0];
 
-      // If Accept header wants the image, serve the file directly
+      // If Accept header wants the image and we have an image_url, try to serve it
       const accept = request.headers.accept || '';
-      if (accept.includes('image/') || accept.includes('*/*')) {
+      if ((accept.includes('image/') || accept.includes('*/*')) && row.image_url) {
         try {
-          const fileBuffer = await fs.readFile(row.file_path);
+          const diskPath = row.image_url.startsWith('/uploads/')
+            ? path.resolve(UPLOAD_DIR, '..', '..', row.image_url.replace(/^\//, ''))
+            : path.join(UPLOAD_DIR, path.basename(row.image_url));
+          const fileBuffer = await fs.readFile(diskPath);
           return reply
-            .header('Content-Type', row.mime_type)
-            .header('Content-Disposition', `inline; filename="${row.filename}"`)
+            .header('Content-Type', 'image/png')
+            .header('Content-Disposition', `inline; filename="${row.name}"`)
             .send(fileBuffer);
         } catch {
-          return reply.code(404).send({
-            success: false,
-            error: { code: 'FILE_MISSING', message: 'Floor plan file not found on disk' },
-          });
+          // Image file not on disk — return metadata instead
         }
       }
 
-      // Otherwise return metadata JSON
-      const { file_path: _fp, ...meta } = row;
-      return reply.send({ success: true, data: meta });
+      return reply.send({ success: true, data: row });
     },
   );
 
@@ -215,9 +203,9 @@ export async function registerFloorPlanRoutes(app: FastifyInstance) {
 
       const rows = await db.execute(sql`
         DELETE FROM floor_plans
-        WHERE tenant_id = ${tenantId} AND site_id = ${siteId}
-        RETURNING id, file_path
-      `) as unknown as Array<{ id: string; file_path: string }>;
+        WHERE tenant_id = ${tenantId}::text AND site_id = ${siteId}
+        RETURNING id, image_url
+      `) as unknown as Array<{ id: string; image_url: string | null }>;
 
       if (!rows.length) {
         return reply.code(404).send({
@@ -226,11 +214,14 @@ export async function registerFloorPlanRoutes(app: FastifyInstance) {
         });
       }
 
-      // Remove file from disk
-      const { id, file_path: filePath } = rows[0];
-      await fs.unlink(filePath).catch((err) => {
-        logger.warn({ err, filePath }, 'Failed to delete floor plan file from disk');
-      });
+      const { id, image_url: imageUrl } = rows[0];
+      // Try to remove file from disk if it was uploaded
+      if (imageUrl?.startsWith('/uploads/')) {
+        const diskPath = path.resolve(UPLOAD_DIR, '..', '..', imageUrl.replace(/^\//, ''));
+        await fs.unlink(diskPath).catch((err) => {
+          logger.warn({ err, diskPath }, 'Failed to delete floor plan file from disk');
+        });
+      }
 
       await request.audit('floor_plan.delete', 'floor_plans', id, { siteId });
 
