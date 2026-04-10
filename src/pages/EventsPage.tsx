@@ -56,14 +56,14 @@ export default function EventsPage() {
   const [bulkLoading, setBulkLoading] = useState<{ action: string; done: number; total: number } | null>(null);
 
   const { data: result, isLoading, isError, error, refetch } = useEvents(filters);
-  const events: any[] = result?.data ?? [];
+  const events = (result?.data ?? []) as Record<string, unknown>[];
   const totalCount = result?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const { data: rawDevices = [] } = useDevices();
   const { data: rawSites = [] } = useSites();
-  const devices = rawDevices as any[];
-  const sites = rawSites as any[];
+  const devices = rawDevices as Record<string, unknown>[];
+  const sites = rawSites as Record<string, unknown>[];
   const queryClient = useQueryClient();
   useRealtimeEvents();
 
@@ -72,7 +72,7 @@ export default function EventsPage() {
     if (prevEventCountRef.current !== null && events.length > 0) {
       const prevCount = prevEventCountRef.current;
       if (totalCount > prevCount && events[0]) {
-        const severity = (events[0] as any).severity as 'critical' | 'high' | 'medium' | 'low' | 'info';
+        const severity = String(events[0].severity ?? 'info') as 'critical' | 'high' | 'medium' | 'low' | 'info';
         playAlert(severity);
       }
     }
@@ -209,14 +209,14 @@ export default function EventsPage() {
             onClick={() => {
               const csv = [
                 ['Fecha', 'Tipo', 'Severidad', 'Título', 'Estado', 'Dispositivo', 'Sitio'].join(','),
-                ...events.map((e: any) => [
-                  new Date(e.created_at).toLocaleString('es-CO'),
-                  (e.event_type || '').replace(/_/g, ' '),
-                  e.severity || '',
-                  `"${(e.title || '').replace(/"/g, '""')}"`,
-                  e.status || '',
-                  (devices.find((d: any) => d.id === e.device_id) as any)?.name || '',
-                  (sites.find((s: any) => s.id === e.site_id) as any)?.name || '',
+                ...events.map((e) => [
+                  new Date(String(e.created_at)).toLocaleString('es-CO'),
+                  String(e.event_type ?? '').replace(/_/g, ' '),
+                  String(e.severity ?? ''),
+                  `"${String(e.title ?? '').replace(/"/g, '""')}"`,
+                  String(e.status ?? ''),
+                  String(devices.find((d) => d.id === e.device_id)?.name ?? ''),
+                  String(sites.find((s) => s.id === e.site_id)?.name ?? ''),
                 ].join(','))
               ].join('\n');
               const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });

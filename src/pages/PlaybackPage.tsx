@@ -20,6 +20,7 @@ import {
   Wifi, WifiOff, ZoomIn, ZoomOut, Clock, AlertTriangle, Info,
   Loader2, Volume2, VolumeX, FastForward, Rewind
 } from 'lucide-react';
+import { useI18n } from '@/contexts/I18nContext';
 
 // ── Helpers ─────────────────────────────────────────────────
 function formatTime(seconds: number): string {
@@ -69,6 +70,7 @@ function InteractiveTimeline({
   onClipEndSet: () => void;
   isClipping: boolean;
 }) {
+  const { t } = useI18n();
   const timelineRef = useRef<HTMLDivElement>(null);
 
   // Zoom affects visible range
@@ -96,20 +98,20 @@ function InteractiveTimeline({
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-2 mb-1">
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onZoomOut} disabled={zoomLevel <= 1}>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onZoomOut} disabled={zoomLevel <= 1} aria-label="Alejar zoom">
           <ZoomOut className="h-3 w-3" />
         </Button>
         <span className="text-[10px] text-muted-foreground font-mono">{zoomLevel}×</span>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onZoomIn} disabled={zoomLevel >= 16}>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onZoomIn} disabled={zoomLevel >= 16} aria-label="Acercar zoom">
           <ZoomIn className="h-3 w-3" />
         </Button>
         {isClipping && (
           <div className="flex items-center gap-1 ml-2">
             <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={onClipStartSet}>
-              Set Start {clipStart !== null && `(${formatTime(clipStart)})`}
+              {t('playback.set_start')} {clipStart !== null && `(${formatTime(clipStart)})`}
             </Button>
             <Button variant="outline" size="sm" className="h-6 text-[10px]" onClick={onClipEndSet}>
-              Set End {clipEnd !== null && `(${formatTime(clipEnd)})`}
+              {t('playback.set_end')} {clipEnd !== null && `(${formatTime(clipEnd)})`}
             </Button>
           </div>
         )}
@@ -183,13 +185,13 @@ function InteractiveTimeline({
 
       {/* Legend */}
       <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-        <span className="flex items-center gap-1"><span className="w-3 h-2 bg-primary/25 rounded-sm" /> Continuous</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-2 bg-warning/30 rounded-sm" /> Motion</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-2 bg-destructive/30 rounded-sm" /> Alarm</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-destructive" /> Critical Event</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-warning" /> High</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-info" /> Info</span>
-        {clipStart !== null && <span className="flex items-center gap-1"><span className="w-3 h-2 bg-primary/20 border border-primary rounded-sm" /> Clip Selection</span>}
+        <span className="flex items-center gap-1"><span className="w-3 h-2 bg-primary/25 rounded-sm" /> {t('playback.continuous')}</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-2 bg-warning/30 rounded-sm" /> {t('playback.motion')}</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-2 bg-destructive/30 rounded-sm" /> {t('playback.alarm')}</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-destructive" /> {t('playback.critical_event')}</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-warning" /> {t('playback.high')}</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-info" /> {t('playback.info')}</span>
+        {clipStart !== null && <span className="flex items-center gap-1"><span className="w-3 h-2 bg-primary/20 border border-primary rounded-sm" /> {t('playback.clip_selection')}</span>}
       </div>
     </div>
   );
@@ -197,6 +199,7 @@ function InteractiveTimeline({
 
 // ── Main Page ───────────────────────────────────────────────
 export default function PlaybackPage() {
+  const { t } = useI18n();
   const { data: devices = [], isLoading: devLoading } = useDevices();
   const { data: sites = [] } = useSites();
   const { data: events = [] } = useEventsLegacy();
@@ -242,7 +245,8 @@ export default function PlaybackPage() {
     queryFn: async () => {
       try {
         const res = await apiClient.post('/playback/search', { date: selectedDate, cameraId: device?.id });
-        return (res as any)?.data?.segments || (res as any)?.segments || [];
+        const r = res as Record<string, unknown>;
+        return ((r?.data as Record<string, unknown>)?.segments ?? r?.segments ?? []) as Record<string, unknown>[];
       } catch { return []; }
     },
     enabled: !!device,
@@ -374,10 +378,10 @@ export default function PlaybackPage() {
       <div className="w-64 border-r bg-card flex flex-col shrink-0">
         <div className="p-3 border-b space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Camera</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('playback.camera')}</Label>
             {isLoading ? <Skeleton className="h-8 w-full" /> : (
               <Select value={selectedDevice || device?.id || ''} onValueChange={setSelectedDevice}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Seleccionar cámara" /></SelectTrigger>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t('playback.select_camera')} /></SelectTrigger>
                 <SelectContent>
                   {cameras.map((d: any) => (
                     <SelectItem key={d.id} value={d.id}>
@@ -392,20 +396,20 @@ export default function PlaybackPage() {
             )}
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Channel</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('playback.channel')}</Label>
             <Select value={selectedChannel} onValueChange={setSelectedChannel}>
               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {Array.from({ length: device?.channels || 1 }, (_, i) => (
-                  <SelectItem key={i + 1} value={String(i + 1)}>Channel {i + 1}</SelectItem>
+                  <SelectItem key={i + 1} value={String(i + 1)}>{t('playback.channel')} {i + 1}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Date</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('playback.date')}</Label>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDateNav(-1)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDateNav(-1)} aria-label="Día anterior">
                 <ChevronLeft className="h-3 w-3" />
               </Button>
               <Input
@@ -414,7 +418,7 @@ export default function PlaybackPage() {
                 onChange={e => { setSelectedDate(e.target.value); setCurrentTime(0); setPlaying(false); }}
                 className="h-8 text-xs flex-1"
               />
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDateNav(1)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDateNav(1)} aria-label="Día siguiente">
                 <ChevronRight className="h-3 w-3" />
               </Button>
             </div>
@@ -439,10 +443,10 @@ export default function PlaybackPage() {
         {/* Events for this device/date */}
         <div className="p-2 border-b space-y-1.5">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1">
-            Events ({deviceEvents.length})
+            {t('playback.events')} ({deviceEvents.length})
           </p>
           <Input
-            placeholder="Buscar eventos..."
+            placeholder={t('playback.search_events')}
             value={eventSearchQuery}
             onChange={e => setEventSearchQuery(e.target.value)}
             className="h-7 text-xs"
@@ -451,7 +455,7 @@ export default function PlaybackPage() {
         <ScrollArea className="flex-1">
           <div className="p-1 space-y-0.5">
             {deviceEvents.length === 0 ? (
-              <p className="text-xs text-muted-foreground p-3 text-center">Sin eventos en esta fecha</p>
+              <p className="text-xs text-muted-foreground p-3 text-center">{t('playback.no_events_date')}</p>
             ) : deviceEvents.filter((evt: any) => !eventSearchQuery || (evt.title || '').toLowerCase().includes(eventSearchQuery.toLowerCase()) || (evt.event_type || '').toLowerCase().includes(eventSearchQuery.toLowerCase())).map((evt: any) => {
               const evtDate = new Date(evt.created_at || evt.createdAt);
               const evtSeconds = evtDate.getHours() * 3600 + evtDate.getMinutes() * 60 + evtDate.getSeconds();
@@ -477,7 +481,7 @@ export default function PlaybackPage() {
         {/* Export History */}
         <div className="p-2 border-t">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-1 mb-1">
-            Exportaciones Recientes ({playbackRequests.length})
+            {t('playback.recent_exports')} ({playbackRequests.length})
           </p>
           <ScrollArea className="max-h-32">
             {playbackRequests.slice(0, 5).map((req: any) => (
@@ -501,7 +505,7 @@ export default function PlaybackPage() {
           {!device ? (
             <div className="text-center">
               <Camera className="h-16 w-16 mx-auto mb-3 text-muted-foreground/20" />
-              <p className="text-sm text-muted-foreground">Seleccione una cámara para reproducir</p>
+              <p className="text-sm text-muted-foreground">{t('playback.select_camera_to_play')}</p>
             </div>
           ) : isInRecording && device.status === 'online' ? (
             /* Real video stream from go2rtc */
@@ -523,10 +527,10 @@ export default function PlaybackPage() {
                 {selectedDate} • {formatTime(currentTime)}
               </p>
               <Badge variant={isInRecording ? 'default' : 'secondary'} className="text-[10px] mt-2">
-                {isInRecording ? '● Grabación disponible' : '○ Sin grabación en este horario'}
+                {isInRecording ? t('playback.recording_available') : t('playback.no_recording')}
               </Badge>
               {videoError && (
-                <p className="text-[10px] text-destructive/60 mt-2">Stream no disponible — mostrando timeline</p>
+                <p className="text-[10px] text-destructive/60 mt-2">{t('playback.stream_unavailable')}</p>
               )}
             </div>
           )}
@@ -570,10 +574,10 @@ export default function PlaybackPage() {
         {/* Transport controls */}
         <div className="border-t bg-card p-3 space-y-2">
           <div className="flex items-center justify-center gap-2">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={prevSpeed} title="Slower">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={prevSpeed} title="Slower" aria-label="Más lento">
               <Rewind className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={skipBack} title="-30s">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={skipBack} title="-30s" aria-label="Retroceder 30 segundos">
               <SkipBack className="h-4 w-4" />
             </Button>
             <Button
@@ -585,10 +589,10 @@ export default function PlaybackPage() {
             >
               {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={skipForward} title="+30s">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={skipForward} title="+30s" aria-label="Adelantar 30 segundos">
               <SkipForward className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={nextSpeed} title="Faster">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={nextSpeed} title="Faster" aria-label="Más rápido">
               <FastForward className="h-3.5 w-3.5" />
             </Button>
 
@@ -598,7 +602,7 @@ export default function PlaybackPage() {
               {speed}×
             </Badge>
 
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setMuted(!muted)}>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setMuted(!muted)} aria-label={muted ? 'Activar sonido' : 'Silenciar'}>
               {muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
             </Button>
 
@@ -615,10 +619,10 @@ export default function PlaybackPage() {
                 className="h-7 text-xs"
                 onClick={() => isClipping ? setIsClipping(false) : startClipping()}
               >
-                <Scissors className="mr-1 h-3 w-3" /> {isClipping ? 'Cancelar' : 'Clip'}
+                <Scissors className="mr-1 h-3 w-3" /> {isClipping ? t('playback.cancel') : t('playback.clip')}
               </Button>
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleSnapshot}>
-                <Image className="mr-1 h-3 w-3" /> Snapshot
+                <Image className="mr-1 h-3 w-3" /> {t('playback.snapshot')}
               </Button>
 
               <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
@@ -629,23 +633,22 @@ export default function PlaybackPage() {
                     className="h-7 text-xs"
                     disabled={clipStart === null || clipEnd === null}
                   >
-                    <Download className="mr-1 h-3 w-3" /> Exportar
+                    <Download className="mr-1 h-3 w-3" /> {t('playback.export')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
-                  <DialogHeader><DialogTitle>Exportar Clip de Video</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>{t('playback.export_clip_title')}</DialogTitle></DialogHeader>
                   <div className="space-y-4">
                     <div className="p-3 rounded-md bg-muted text-xs space-y-1">
-                      <p><strong>Camera:</strong> {device?.name}</p>
-                      <p><strong>Channel:</strong> {selectedChannel}</p>
-                      <p><strong>Date:</strong> {selectedDate}</p>
-                      <p><strong>Start:</strong> {clipStart !== null ? formatTime(clipStart) : '—'}</p>
-                      <p><strong>End:</strong> {clipEnd !== null ? formatTime(clipEnd) : '—'}</p>
-                      <p><strong>Duration:</strong> {clipStart !== null && clipEnd !== null ? formatTime(clipEnd - clipStart) : '—'}</p>
+                      <p><strong>{t('playback.export_camera')}:</strong> {device?.name}</p>
+                      <p><strong>{t('playback.export_channel')}:</strong> {selectedChannel}</p>
+                      <p><strong>{t('playback.export_date')}:</strong> {selectedDate}</p>
+                      <p><strong>{t('playback.export_start')}:</strong> {clipStart !== null ? formatTime(clipStart) : '—'}</p>
+                      <p><strong>{t('playback.export_end')}:</strong> {clipEnd !== null ? formatTime(clipEnd) : '—'}</p>
+                      <p><strong>{t('playback.export_duration')}:</strong> {clipStart !== null && clipEnd !== null ? formatTime(clipEnd - clipStart) : '—'}</p>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      La solicitud de exportación se enviará al gateway para procesamiento.
-                      Una vez listo, el clip estará disponible en el panel de Exportaciones.
+                      {t('playback.export_desc')}
                     </p>
                     <Button
                       className="w-full"
@@ -653,7 +656,7 @@ export default function PlaybackPage() {
                       disabled={createExport.isPending || clipStart === null || clipEnd === null}
                     >
                       {createExport.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}
-                      Crear Solicitud de Exportación
+                      {t('playback.create_export')}
                     </Button>
                   </div>
                 </DialogContent>

@@ -42,7 +42,7 @@ const statusLabels: Record<string, string> = {
 export default function RebootsPage() {
   const { t } = useI18n();
   const { data: rawDevices = [] } = useDevices();
-  const devices = rawDevices as any[];
+  const devices = rawDevices as Record<string, unknown>[];
   const queryClient = useQueryClient();
   const [selectedProcedure, setSelectedProcedure] = useState<string | null>(null);
   const [search, setSearch] = useState('');

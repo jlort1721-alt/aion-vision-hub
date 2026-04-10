@@ -84,7 +84,7 @@ export default function SLAPage() {
   const allDefinitions: any[] = definitionsData?.data ?? [];
   const definitions = severityFilter === 'all' ? allDefinitions : allDefinitions.filter((d: any) => d.severity === severityFilter);
   const tracking: any[] = trackingData?.data ?? [];
-  const stats = statsData?.data as any;
+  const stats = statsData?.data as Record<string, unknown> | undefined;
 
   const breachedCount = tracking.filter((t: any) => t.deadline && getDeadlineInfo(t.deadline).isBreached).length;
   const activeTrackingCount = tracking.filter((t: any) => t.status !== 'resolved').length;

@@ -3,6 +3,11 @@ import { db } from '../../db/client.js';
 import { aiSessions } from '../../db/schema/index.js';
 import { config } from '../../config/env.js';
 import { AppError, ErrorCodes } from '@aion/shared-contracts';
+import {
+  openaiCircuitBreaker,
+  anthropicCircuitBreaker,
+  CircuitBreakerError,
+} from '../../lib/circuit-breaker.js';
 import type { ChatRequestInput, ChatRequestRawInput, UsageQueryInput } from './schemas.js';
 import {
   getAllTools,
@@ -225,10 +230,25 @@ export class AIBridgeService {
 
     let result: ChatCompletionResult;
 
-    if (provider === 'openai') {
-      result = await this.chatOpenAI(enrichedParams, model, apiKey);
-    } else {
-      result = await this.chatAnthropic(enrichedParams, model, apiKey);
+    try {
+      if (provider === 'openai') {
+        result = await openaiCircuitBreaker.execute(
+          () => this.chatOpenAI(enrichedParams, model, apiKey),
+        );
+      } else {
+        result = await anthropicCircuitBreaker.execute(
+          () => this.chatAnthropic(enrichedParams, model, apiKey),
+        );
+      }
+    } catch (error) {
+      if (error instanceof CircuitBreakerError) {
+        throw new AppError(
+          ErrorCodes.AI_PROVIDER_ERROR,
+          `AI provider "${provider}" is temporarily unavailable (circuit open). Try again later.`,
+          503,
+        );
+      }
+      throw error;
     }
 
     // Persist session record for usage tracking

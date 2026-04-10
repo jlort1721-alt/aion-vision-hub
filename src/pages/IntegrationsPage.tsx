@@ -41,8 +41,8 @@ export default function IntegrationsPage() {
   const { t } = useI18n();
   const { data: rawIntegrations = [], isLoading: li, isError: integrationsError, error: intError, refetch: refetchInt } = useIntegrations();
   const { data: rawConnectors = [], isLoading: lc, isError: connectorsError, error: connError, refetch: refetchConn } = useMcpConnectors();
-  const integrations = rawIntegrations as any[];
-  const connectors = rawConnectors as any[];
+  const integrations = rawIntegrations as Record<string, unknown>[];
+  const connectors = rawConnectors as Record<string, unknown>[];
   const queryClient = useQueryClient();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 

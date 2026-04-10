@@ -150,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err: unknown) {
         // Token invalid — try refresh
         const isUnauthorized =
-          err instanceof Error && 'status' in err && (err as any).status === 401;
+          err instanceof Error && 'status' in err && (err as unknown as { status: number }).status === 401;
 
         if (isUnauthorized && stored.refreshToken) {
           try {

@@ -607,7 +607,7 @@ export default function TrainingPage() {
                           <td className="p-3 font-medium">{c.userName}</td>
                           <td className="p-3 text-xs">{c.programName || '-'}</td>
                           <td className="p-3">
-                            <Badge variant={certStatusColor[c.status] as any} className="capitalize">
+                            <Badge variant={certStatusColor[c.status] as "default" | "secondary" | "destructive" | "outline"} className="capitalize">
                               {c.status?.replace('_', ' ')}
                             </Badge>
                           </td>

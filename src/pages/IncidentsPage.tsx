@@ -52,8 +52,8 @@ export default function IncidentsPage() {
 
   const { data: rawIncidents = [], isLoading, isError, error, refetch } = useIncidents();
   const { data: rawSites = [] } = useSites();
-  const incidents = rawIncidents as any[];
-  const sites = rawSites as any[];
+  const incidents = rawIncidents as Record<string, unknown>[];
+  const sites = rawSites as Record<string, unknown>[];
   const queryClient = useQueryClient();
 
   const filtered = incidents.filter((i: any) => {
@@ -294,7 +294,7 @@ export default function IncidentsPage() {
             <TabsContent value="activity">
               <Card>
                 <CardContent className="space-y-3 pt-4">
-                  {Array.isArray(selectedInc.comments) && (selectedInc.comments as any[]).map((c: any, idx: number) => (
+                  {Array.isArray(selectedInc.comments) && (selectedInc.comments as Record<string, unknown>[]).map((c, idx) => (
                     <div key={c.id || idx} className="flex gap-3">
                       <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold shrink-0">
                         {(c.user_name || 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}

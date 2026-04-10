@@ -41,7 +41,7 @@ export default function LiveViewEventsPanel({ onClose }: LiveViewEventsPanelProp
       if (Array.isArray(resp)) return resp;
       return resp?.items ?? resp?.data ?? [];
     },
-    refetchInterval: 10000,
+    refetchInterval: 30_000,
   });
   const navigate = useNavigate();
 

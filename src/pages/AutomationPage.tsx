@@ -239,7 +239,7 @@ export default function AutomationPage() {
 
   const rules: any[] = rulesData?.data ?? [];
   const executions: any[] = executionsData?.data ?? [];
-  const stats = statsData?.data as any;
+  const stats = statsData?.data as Record<string, unknown> | undefined;
 
   const triggerTypeSpanish: Record<string, string> = {
     event_severity: 'Severidad', device_offline: 'Offline', schedule: 'Programado', manual: 'Manual',

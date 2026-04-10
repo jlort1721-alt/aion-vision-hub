@@ -106,8 +106,8 @@ export default function DomoticsPage() {
   const { t } = useI18n();
   const { data: rawSections = [], isLoading: sectionsLoading } = useSections();
   const { data: rawDevices = [], isLoading: devicesLoading, isError, refetch } = useDomoticDevices();
-  const sections = rawSections as any[];
-  const devices = rawDevices as any[];
+  const sections = rawSections as Record<string, unknown>[];
+  const devices = rawDevices as Record<string, unknown>[];
   const { create, toggleState, remove } = useDomoticMutations();
 
   // eWeLink MCP devices from backend

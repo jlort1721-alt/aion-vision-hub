@@ -90,7 +90,7 @@ function saveHistory(messages: ChatMessage[]) {
     const trimmed = messages.slice(-MAX_STORED_MESSAGES);
     const stored: StoredHistory = {
       sessionTimestamp: new Date().toISOString(),
-      messages: trimmed.map(m => ({ ...m, timestamp: (m.timestamp ? new Date(m.timestamp).toISOString() : new Date().toISOString()) as any })),
+      messages: trimmed.map(m => ({ ...m, timestamp: m.timestamp ? new Date(m.timestamp).toISOString() : new Date().toISOString() })),
     };
     localStorage.setItem(HISTORY_KEY, JSON.stringify(stored));
   } catch { /* storage full or unavailable */ }

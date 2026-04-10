@@ -70,6 +70,8 @@ import {
   Camera,
   Image,
 } from 'lucide-react';
+import { SmartCameraCell } from '@/components/video/SmartCameraCell';
+import { useI18n } from '@/contexts/I18nContext';
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -136,190 +138,10 @@ interface RecentEvent {
 
 type GridSize = 4 | 9 | 16;
 
-const SDK_ONLY_PREFIXES = ['ss-', 'ag-', 'pq-', 'tl-', 'se-', 'ar-', 'br-'];
-const isSnapshotOnly = (key: string) =>
-  SDK_ONLY_PREFIXES.some((p) => key.startsWith(p));
-
-// ── Camera Cell ─────────────────────────────────────────────
-
-function CameraCell({
-  camera,
-  isSelected,
-  onClick,
-  onDoubleClick,
-}: {
-  camera: Camera | null;
-  isSelected?: boolean;
-  onClick?: () => void;
-  onDoubleClick?: () => void;
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<number>(0);
-  const [mode, setMode] = useState<'video' | 'snapshot' | 'init'>('init');
-
-  useEffect(() => {
-    if (!camera || camera.status !== 'online') return;
-    setMode(isSnapshotOnly(camera.stream_key) ? 'snapshot' : 'video');
-    return () => {
-      if (timerRef.current) window.clearInterval(timerRef.current);
-    };
-  }, [camera]);
-
-  useEffect(() => {
-    if (!camera || camera.status !== 'online' || mode !== 'snapshot') return;
-    const key = camera.stream_key;
-    const refreshFrame = () => {
-      if (imgRef.current)
-        imgRef.current.src = `/snapshots/${encodeURIComponent(key)}.jpg?t=${Date.now()}`;
-    };
-    refreshFrame();
-    timerRef.current = window.setInterval(refreshFrame, 3000);
-    return () => { if (timerRef.current) window.clearInterval(timerRef.current); };
-  }, [camera, mode]);
-
-  useEffect(() => {
-    if (!camera || camera.status !== 'online' || mode !== 'video') return;
-    const video = videoRef.current;
-    if (!video) return;
-    const key = camera.stream_key;
-    video.src = `/go2rtc/api/stream.mp4?src=${encodeURIComponent(key)}`;
-    video.play().catch(() => {});
-    const handleError = () => setMode('snapshot');
-    const handleStall = () => {
-      setTimeout(() => { if (video.readyState < 2) setMode('snapshot'); }, 5000);
-    };
-    video.addEventListener('error', handleError);
-    video.addEventListener('stalled', handleStall);
-    return () => {
-      video.removeEventListener('error', handleError);
-      video.removeEventListener('stalled', handleStall);
-      video.src = '';
-      video.load();
-    };
-  }, [camera, mode]);
-
-  const handleDoubleClick = useCallback(() => {
-    onDoubleClick?.();
-    const el = containerRef.current;
-    if (el?.requestFullscreen) el.requestFullscreen().catch(() => {});
-  }, [onDoubleClick]);
-
-  if (!camera) {
-    return (
-      <Card className="relative flex items-center justify-center bg-muted/30 border-dashed">
-        <div className="text-center text-muted-foreground">
-          <Video className="h-8 w-8 mx-auto mb-2 opacity-30" />
-          <p className="text-xs opacity-50">Sin cámara</p>
-        </div>
-      </Card>
-    );
-  }
-
-  const isOnline = camera.status === 'online';
-
-  return (
-    <Card
-      ref={containerRef}
-      className={`relative overflow-hidden bg-black border-border/50 group cursor-pointer transition-all ${
-        isSelected ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''
-      }`}
-      onClick={onClick}
-      onDoubleClick={handleDoubleClick}
-    >
-      {mode === 'snapshot' ? (
-        <img
-          ref={imgRef}
-          alt={camera.name}
-          className="absolute inset-0 w-full h-full object-cover"
-          loading="lazy"
-        />
-      ) : (
-        <video
-          ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover"
-          autoPlay
-          muted
-          playsInline
-        />
-      )}
-
-      {!isOnline && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/90 z-10">
-          <WifiOff className="h-8 w-8 text-destructive/60 mb-2" />
-          <p className="text-xs text-muted-foreground">Offline</p>
-        </div>
-      )}
-
-      <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 bg-gradient-to-t from-black/90 to-transparent z-20 pointer-events-none">
-        <div className="flex items-center gap-1.5">
-          <span
-            className={`w-2 h-2 rounded-full shrink-0 ${
-              isOnline
-                ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]'
-                : 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]'
-            }`}
-          />
-          <span className="text-xs font-medium text-white truncate drop-shadow-md">
-            {camera.name}
-          </span>
-        </div>
-      </div>
-
-      {isOnline && (
-        <>
-          {/* Stream mode badge */}
-          <div className="absolute top-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-black/60 backdrop-blur-sm border border-white/10 z-20">
-            {mode === 'video' ? (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-[9px] text-white/90 font-mono font-medium tracking-widest">LIVE</span>
-              </>
-            ) : (
-              <>
-                <Image className="w-2.5 h-2.5 text-yellow-400" />
-                <span className="text-[9px] text-yellow-300/90 font-mono font-medium tracking-widest">SNAP</span>
-              </>
-            )}
-          </div>
-
-          {/* Snapshot capture button — visible on hover */}
-          <button
-            className="absolute top-1.5 left-1.5 p-1 rounded-sm bg-black/60 backdrop-blur-sm border border-white/10 z-20 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/20"
-            title="Capturar imagen"
-            onClick={(e) => {
-              e.stopPropagation();
-              const canvas = document.createElement('canvas');
-              const source = mode === 'video' ? videoRef.current : imgRef.current;
-              if (!source) return;
-              if (mode === 'video' && videoRef.current) {
-                canvas.width = videoRef.current.videoWidth || 640;
-                canvas.height = videoRef.current.videoHeight || 480;
-                canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
-              } else if (imgRef.current) {
-                canvas.width = imgRef.current.naturalWidth || 640;
-                canvas.height = imgRef.current.naturalHeight || 480;
-                canvas.getContext('2d')?.drawImage(imgRef.current, 0, 0);
-              }
-              const a = document.createElement('a');
-              a.href = canvas.toDataURL('image/jpeg', 0.92);
-              a.download = `${camera.name}-${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
-              a.click();
-              toast.success(`Captura: ${camera.name}`);
-            }}
-          >
-            <Camera className="h-3.5 w-3.5 text-white" />
-          </button>
-        </>
-      )}
-    </Card>
-  );
-}
-
 // ── Operator Panel: Resident/Vehicle Search ────────────────
 
 function SearchPanel() {
+  const { t } = useI18n();
   const [searchType, setSearchType] = useState<'resident' | 'vehicle'>('resident');
   const [query, setQuery] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -333,8 +155,8 @@ function SearchPanel() {
   const { data: vehicles = [], isFetching: fetchingVehicles } = useQuery<Vehicle[]>({
     queryKey: ['op-search-vehicles', searchTerm],
     queryFn: async () => {
-      const res = await apiClient.get<{ data: Vehicle[] }>(`/operational-data/vehicles?search=${encodeURIComponent(searchTerm)}&limit=10`);
-      return Array.isArray(res) ? res : (res as any)?.data ?? (res as any) ?? [];
+      const res = await apiClient.get<Vehicle[] | { data?: Vehicle[] }>(`/operational-data/vehicles?search=${encodeURIComponent(searchTerm)}&limit=10`);
+      return Array.isArray(res) ? res : (res as { data?: Vehicle[] })?.data ?? [];
     },
     enabled: searchType === 'vehicle' && searchTerm.length >= 2,
   });
@@ -356,7 +178,7 @@ function SearchPanel() {
           onClick={() => { setSearchType('resident'); setSearchTerm(''); setQuery(''); }}
         >
           <User className="h-3 w-3 mr-1" />
-          Persona
+          {t('live.search_person')}
         </Button>
         <Button
           variant={searchType === 'vehicle' ? 'default' : 'outline'}
@@ -365,13 +187,13 @@ function SearchPanel() {
           onClick={() => { setSearchType('vehicle'); setSearchTerm(''); setQuery(''); }}
         >
           <Car className="h-3 w-3 mr-1" />
-          Vehículo
+          {t('live.search_vehicle')}
         </Button>
       </div>
 
       <div className="flex gap-1">
         <Input
-          placeholder={searchType === 'resident' ? 'Nombre o apartamento...' : 'Placa del vehículo...'}
+          placeholder={searchType === 'resident' ? t('live.search_person_placeholder') : t('live.search_vehicle_placeholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && doSearch()}
@@ -385,8 +207,8 @@ function SearchPanel() {
       {searchTerm && (
         <ScrollArea className="max-h-[200px]">
           <div className="space-y-1">
-            {(results as any[]).length === 0 && !isFetching && (
-              <p className="text-xs text-muted-foreground text-center py-3">Sin resultados</p>
+            {(results as unknown[]).length === 0 && !isFetching && (
+              <p className="text-xs text-muted-foreground text-center py-3">{t('live.no_results')}</p>
             )}
             {searchType === 'resident'
               ? (results as Resident[]).map((r) => (
@@ -435,6 +257,7 @@ function SearchPanel() {
 // ── Operator Panel: Door/Gate Control ───────────────────────
 
 function DoorControlPanel() {
+  const { t } = useI18n();
   const [selectedDevice, setSelectedDevice] = useState('');
   const [reason, setReason] = useState('');
   const [confirming, setConfirming] = useState(false);
@@ -466,7 +289,7 @@ function DoorControlPanel() {
   const openGate = useMutation({
     mutationFn: (deviceId: string) => deviceControlApi.openGate(deviceId, reason || 'Apertura desde Live View'),
     onSuccess: () => {
-      toast.success('Puerta abierta correctamente');
+      toast.success(t('live.door_opened'));
       setConfirming(false);
       setReason('');
     },
@@ -476,7 +299,7 @@ function DoorControlPanel() {
   const toggleRelay = useMutation({
     mutationFn: (deviceId: string) =>
       apiClient.post('/ewelink/devices/control', { deviceId, action: 'toggle' }),
-    onSuccess: () => toast.success('Relay activado'),
+    onSuccess: () => toast.success(t('live.relay_activated')),
     onError: (err: Error) => toast.error(`Error: ${err.message}`),
   });
 
@@ -486,7 +309,7 @@ function DoorControlPanel() {
         Hikvision / Control Acceso
       </p>
       {devices.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-2">No hay dispositivos de acceso online</p>
+        <p className="text-xs text-muted-foreground text-center py-2">{t('live.no_access_devices')}</p>
       ) : (
         <div className="space-y-1">
           {devices.slice(0, 6).map((d: GateDevice) => (
@@ -502,7 +325,7 @@ function DoorControlPanel() {
                 }}
               >
                 <DoorOpen className="h-3 w-3 mr-1" />
-                Abrir
+                {t('live.open')}
               </Button>
             </div>
           ))}
@@ -515,7 +338,7 @@ function DoorControlPanel() {
         eWeLink / Relays
       </p>
       {relays.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-2">No hay relays online</p>
+        <p className="text-xs text-muted-foreground text-center py-2">{t('live.no_relays')}</p>
       ) : (
         <div className="grid grid-cols-2 gap-1">
           {relays.slice(0, 8).map((r) => (
@@ -540,24 +363,24 @@ function DoorControlPanel() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShieldAlert className="h-5 w-5 text-orange-500" />
-              Confirmar apertura
+              {t('live.confirm_open')}
             </DialogTitle>
             <DialogDescription>
               {devices.find((d: GateDevice) => d.id === selectedDevice)?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label className="text-xs">Motivo (opcional)</Label>
+            <Label className="text-xs">{t('live.reason_label')}</Label>
             <Input
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Ej: Visitante autorizado"
+              placeholder={t('live.reason_placeholder')}
               className="h-8 text-xs"
             />
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setConfirming(false)}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button
               size="sm"
@@ -570,7 +393,7 @@ function DoorControlPanel() {
               ) : (
                 <DoorOpen className="h-4 w-4 mr-1" />
               )}
-              Abrir puerta
+              {t('live.open_door')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -582,6 +405,7 @@ function DoorControlPanel() {
 // ── Operator Panel: Quick Visitor Registration ──────────────
 
 function VisitorPanel() {
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [docNumber, setDocNumber] = useState('');
   const [destination, setDestination] = useState('');
@@ -597,7 +421,7 @@ function VisitorPanel() {
         checkInAt: new Date().toISOString(),
       }),
     onSuccess: () => {
-      toast.success('Visitante registrado');
+      toast.success(t('live.visitor_registered'));
       setName('');
       setDocNumber('');
       setDestination('');
@@ -610,7 +434,7 @@ function VisitorPanel() {
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label className="text-[10px]">Nombre completo</Label>
+          <Label className="text-[10px]">{t('live.full_name')}</Label>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -619,7 +443,7 @@ function VisitorPanel() {
           />
         </div>
         <div>
-          <Label className="text-[10px]">Documento</Label>
+          <Label className="text-[10px]">{t('live.document')}</Label>
           <Input
             value={docNumber}
             onChange={(e) => setDocNumber(e.target.value)}
@@ -629,7 +453,7 @@ function VisitorPanel() {
         </div>
       </div>
       <div>
-        <Label className="text-[10px]">Destino (apto/oficina)</Label>
+        <Label className="text-[10px]">{t('live.destination')}</Label>
         <Input
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
@@ -638,11 +462,11 @@ function VisitorPanel() {
         />
       </div>
       <div>
-        <Label className="text-[10px]">Observaciones</Label>
+        <Label className="text-[10px]">{t('live.observations')}</Label>
         <Textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Motivo de visita..."
+          placeholder={t('live.visit_reason')}
           className="h-14 text-xs resize-none"
         />
       </div>
@@ -657,7 +481,7 @@ function VisitorPanel() {
         ) : (
           <UserPlus className="h-3.5 w-3.5 mr-1" />
         )}
-        Registrar visitante
+        {t('live.register_visitor')}
       </Button>
     </div>
   );
@@ -666,6 +490,7 @@ function VisitorPanel() {
 // ── Operator Panel: AI Assistant ────────────────────────────
 
 function AIAssistantPanel() {
+  const { t } = useI18n();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -702,7 +527,7 @@ function AIAssistantPanel() {
             <div className="text-center py-4">
               <Bot className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
               <p className="text-[10px] text-muted-foreground">
-                Pregunta sobre cámaras, residentes, eventos, o pide ayuda operativa
+                {t('live.ai_help_prompt')}
               </p>
             </div>
           )}
@@ -721,7 +546,7 @@ function AIAssistantPanel() {
           {isLoading && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
-              Pensando...
+              {t('live.ai_thinking')}
             </div>
           )}
         </div>
@@ -731,7 +556,7 @@ function AIAssistantPanel() {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-          placeholder="¿Cuántas cámaras offline?"
+          placeholder={t('live.ai_placeholder')}
           className="h-7 text-xs"
         />
         <Button size="sm" className="h-7 px-2" onClick={sendMessage} disabled={!message.trim() || isLoading}>
@@ -745,13 +570,14 @@ function AIAssistantPanel() {
 // ── Operator Panel: Live Events ─────────────────────────────
 
 function EventsPanel() {
+  const { t } = useI18n();
   const { data: events = [] } = useQuery<RecentEvent[]>({
     queryKey: ['live-events'],
     queryFn: async () => {
       const res = await apiClient.get<any[]>('/events?limit=15&sort_by=created_at&sort_order=desc');
       return Array.isArray(res) ? res : [];
     },
-    refetchInterval: 10_000,
+    refetchInterval: 30_000,
   });
 
   const severityColor: Record<string, string> = {
@@ -766,7 +592,7 @@ function EventsPanel() {
     <ScrollArea className="max-h-[280px]">
       <div className="space-y-1">
         {events.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-4">Sin eventos recientes</p>
+          <p className="text-xs text-muted-foreground text-center py-4">{t('live.no_recent_events')}</p>
         )}
         {events.map((e) => (
           <div key={e.id} className="flex items-start gap-2 px-1 py-1.5 rounded hover:bg-muted/50">
@@ -794,6 +620,7 @@ function EventsPanel() {
 // ══════════════════════════════════════════════════════════════
 
 export default function LiveViewPage() {
+  const { t } = useI18n();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
 
@@ -864,7 +691,7 @@ export default function LiveViewPage() {
     mutationFn: () => apiClient.post('/cameras/sync-status'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cameras-by-site'] });
-      toast.success('Estado de cámaras sincronizado');
+      toast.success(t('live.cameras_synced'));
     },
     onError: (err: Error) => toast.error(`Error sincronizando: ${err.message}`),
   });
@@ -957,11 +784,11 @@ export default function LiveViewPage() {
       <div className="flex items-center justify-center h-[calc(100vh-3.5rem)]">
         <Card className="p-6 max-w-md text-center">
           <WifiOff className="h-10 w-10 mx-auto mb-3 text-destructive" />
-          <h3 className="text-lg font-semibold mb-1">Error cargando cámaras</h3>
+          <h3 className="text-lg font-semibold mb-1">{t('live.error_loading')}</h3>
           <p className="text-sm text-muted-foreground mb-4">{(error as Error)?.message}</p>
           <Button onClick={() => refetch()}>
             <RefreshCw className="mr-2 h-4 w-4" />
-            Reintentar
+            {t('live.retry')}
           </Button>
         </Card>
       </div>
@@ -978,7 +805,7 @@ export default function LiveViewPage() {
           <div className="p-2.5 border-b">
             <h2 className="text-xs font-bold tracking-tight flex items-center gap-1.5">
               <Building2 className="h-3.5 w-3.5" />
-              Puestos
+              {t('live.sites')}
             </h2>
           </div>
 
@@ -990,7 +817,7 @@ export default function LiveViewPage() {
                 }`}
                 onClick={() => setSelectedSite('all')}
               >
-                <span className="font-medium">Todos</span>
+                <span className="font-medium">{t('live.all_sites')}</span>
                 {siteStats['all'] && (
                   <span className="text-[10px] tabular-nums opacity-80">
                     {siteStats['all'].online}/{siteStats['all'].total}
@@ -1027,7 +854,7 @@ export default function LiveViewPage() {
           </ScrollArea>
 
           <div className="p-2 border-t text-[10px] text-muted-foreground">
-            {filteredCameras.length} cámaras {selectedSite !== 'all' ? 'en puesto' : 'total'}
+            {filteredCameras.length} {t('live.cameras_count')} {selectedSite !== 'all' ? t('live.cameras_at_site') : t('live.cameras_total')}
           </div>
         </div>
 
@@ -1051,13 +878,13 @@ export default function LiveViewPage() {
 
             {totalPages > 1 && (
               <div className="flex items-center gap-0.5">
-                <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={goToPrevPage} disabled={currentPage === 0}>
+                <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={goToPrevPage} disabled={currentPage === 0} aria-label="Página anterior">
                   <ChevronLeft className="h-3.5 w-3.5" />
                 </Button>
                 <span className="text-[10px] text-muted-foreground px-1.5 tabular-nums">
                   {currentPage + 1}/{totalPages}
                 </span>
-                <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={goToNextPage} disabled={currentPage >= totalPages - 1}>
+                <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={goToNextPage} disabled={currentPage >= totalPages - 1} aria-label="Página siguiente">
                   <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -1070,7 +897,7 @@ export default function LiveViewPage() {
               onClick={() => setAutoRotate(!autoRotate)}
             >
               {autoRotate ? <Pause className="h-3 w-3 mr-1" /> : <Play className="h-3 w-3 mr-1" />}
-              Auto
+              {t('live.auto')}
             </Button>
 
             <div className="ml-auto flex items-center gap-1.5">
@@ -1081,20 +908,20 @@ export default function LiveViewPage() {
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => syncStatus.mutate()} disabled={syncStatus.isPending}>
+                  <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => syncStatus.mutate()} disabled={syncStatus.isPending} aria-label={t('live.sync_status')}>
                     {syncStatus.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Sincronizar estado</TooltipContent>
+                <TooltipContent>{t('live.sync_status')}</TooltipContent>
               </Tooltip>
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={toggleFullscreen}>
+                  <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={toggleFullscreen} aria-label={t('live.fullscreen')}>
                     <Maximize className="h-3 w-3" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Pantalla completa</TooltipContent>
+                <TooltipContent>{t('live.fullscreen')}</TooltipContent>
               </Tooltip>
 
               <Tooltip>
@@ -1108,7 +935,7 @@ export default function LiveViewPage() {
                     {opsOpen ? <PanelRightClose className="h-3 w-3" /> : <PanelRightOpen className="h-3 w-3" />}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{opsOpen ? 'Cerrar panel' : 'Panel de operaciones'}</TooltipContent>
+                <TooltipContent>{opsOpen ? t('live.close_panel') : t('live.operations_panel')}</TooltipContent>
               </Tooltip>
             </div>
           </div>
@@ -1129,9 +956,10 @@ export default function LiveViewPage() {
             ) : focusedCamera ? (
               /* Focused 1x1 view — single camera expanded */
               <div className="h-full relative">
-                <CameraCell
+                <SmartCameraCell
                   key={focusedCamera}
                   camera={allCameras.find(c => c.id === focusedCamera) ?? null}
+                  variant="liveview"
                 />
                 <Button
                   variant="secondary"
@@ -1140,7 +968,7 @@ export default function LiveViewPage() {
                   onClick={() => setFocusedCamera(null)}
                 >
                   <Minimize2 className="h-3 w-3" />
-                  Volver al grid
+                  {t('live.back_to_grid')}
                 </Button>
               </div>
             ) : (
@@ -1149,9 +977,10 @@ export default function LiveViewPage() {
                 style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${cols}, 1fr)` }}
               >
                 {paginatedCameras.map((camera, i) => (
-                  <CameraCell
+                  <SmartCameraCell
                     key={camera?.id ?? `empty-${i}`}
                     camera={camera}
+                    variant="liveview"
                     onClick={() => camera && setFocusedCamera(camera.id)}
                   />
                 ))}
@@ -1166,7 +995,7 @@ export default function LiveViewPage() {
             <div className="p-2.5 border-b flex items-center justify-between">
               <h2 className="text-xs font-bold tracking-tight flex items-center gap-1.5">
                 <ShieldAlert className="h-3.5 w-3.5 text-primary" />
-                Centro de Operaciones
+                {t('live.operations_center')}
               </h2>
               <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setOpsOpen(false)}>
                 <X className="h-3 w-3" />
@@ -1181,7 +1010,7 @@ export default function LiveViewPage() {
                       <Search className="h-3.5 w-3.5" />
                     </TabsTrigger>
                   </TooltipTrigger>
-                  <TooltipContent>Buscar persona / vehículo</TooltipContent>
+                  <TooltipContent>{t('live.search_tooltip')}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1189,7 +1018,7 @@ export default function LiveViewPage() {
                       <DoorOpen className="h-3.5 w-3.5" />
                     </TabsTrigger>
                   </TooltipTrigger>
-                  <TooltipContent>Control de puertas / relays</TooltipContent>
+                  <TooltipContent>{t('live.doors_tooltip')}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1197,7 +1026,7 @@ export default function LiveViewPage() {
                       <UserPlus className="h-3.5 w-3.5" />
                     </TabsTrigger>
                   </TooltipTrigger>
-                  <TooltipContent>Registrar visitante</TooltipContent>
+                  <TooltipContent>{t('live.visitor_tooltip')}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1205,7 +1034,7 @@ export default function LiveViewPage() {
                       <AlertTriangle className="h-3.5 w-3.5" />
                     </TabsTrigger>
                   </TooltipTrigger>
-                  <TooltipContent>Eventos en vivo</TooltipContent>
+                  <TooltipContent>{t('live.events_tooltip')}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1213,7 +1042,7 @@ export default function LiveViewPage() {
                       <Bot className="h-3.5 w-3.5" />
                     </TabsTrigger>
                   </TooltipTrigger>
-                  <TooltipContent>Asistente IA</TooltipContent>
+                  <TooltipContent>{t('live.ai_tooltip')}</TooltipContent>
                 </Tooltip>
               </TabsList>
 

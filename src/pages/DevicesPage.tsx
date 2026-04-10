@@ -44,8 +44,8 @@ export default function DevicesPage() {
 
   const { data: rawDevices = [], isLoading, isError, error, refetch } = useDevices();
   const { data: rawSites = [] } = useSites();
-  const devices = rawDevices as any[];
-  const sites = rawSites as any[];
+  const devices = rawDevices as Record<string, unknown>[];
+  const sites = rawSites as Record<string, unknown>[];
 
   const filtered = devices.filter((d: any) => {
     if (search) {
@@ -206,7 +206,7 @@ export default function DevicesPage() {
                       <TableCell><Badge variant={device.status === 'online' || device.status === 'active' ? 'default' : device.status === 'offline' ? 'destructive' : 'secondary'} className="text-[10px] capitalize">{device.status === 'pending_configuration' ? 'pendiente' : device.status}</Badge></TableCell>
                       <TableCell>
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => e.stopPropagation()} aria-label="Acciones del dispositivo"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setSelectedDevice(device.id)}><Eye className="mr-2 h-3 w-3" /> {t('devices.view_details')}</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => openEdit(device)}><Pencil className="mr-2 h-3 w-3" /> {t('common.edit')}</DropdownMenuItem>
@@ -244,7 +244,7 @@ export default function DevicesPage() {
             </div>
             <div className="flex items-center gap-2">
               <Badge variant={selected.status === 'online' ? 'default' : 'destructive'} className="capitalize">{selected.status}</Badge>
-              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => openEdit(selected)}><Pencil className="h-3 w-3" /></Button>
+              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => openEdit(selected)} aria-label="Editar dispositivo"><Pencil className="h-3 w-3" /></Button>
             </div>
           </div>
           <Card>

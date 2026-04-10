@@ -79,9 +79,13 @@ export default function KeysPage() {
   const { data: logsResult, isLoading: loadingLogs } = useQuery({ queryKey: ['key-logs'], queryFn: () => keyLogsApi.list() });
   const { data: statsResult } = useQuery({ queryKey: ['key-stats'], queryFn: () => keysApi.getStats() });
 
-  const keys: any[] = (keysResult as any)?.data ?? [];
-  const logs: any[] = (logsResult as any)?.data ?? [];
-  const s: any = (statsResult as any)?.data ?? statsResult;
+  const keysEnvelope = keysResult as Record<string, unknown> | undefined;
+  const logsEnvelope = logsResult as Record<string, unknown> | undefined;
+  const statsEnvelope = statsResult as Record<string, unknown> | undefined;
+
+  const keys: Record<string, unknown>[] = (keysEnvelope?.data as Record<string, unknown>[] | undefined) ?? [];
+  const logs: Record<string, unknown>[] = (logsEnvelope?.data as Record<string, unknown>[] | undefined) ?? [];
+  const s: Record<string, unknown> | undefined = (statsEnvelope?.data as Record<string, unknown> | undefined) ?? statsEnvelope;
 
   // Mutations
   const createMut = useMutation({
