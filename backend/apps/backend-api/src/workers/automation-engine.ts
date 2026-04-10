@@ -23,11 +23,13 @@ const logger = createLogger({ name: 'automation-engine' });
 // ---------------------------------------------------------------------------
 
 export interface AutomationEvent {
+  id: string;
   tenantId: string;
   siteId: string;
   deviceId: string;
   eventType: string;
   severity: string;
+  description?: string | null;
   metadata: Record<string, unknown>;
 }
 
@@ -922,6 +924,7 @@ export async function processScheduledRules(db: Database): Promise<void> {
 
       // Build a synthetic event for scheduled rules
       const syntheticEvent: AutomationEvent = {
+        id: crypto.randomUUID(),
         tenantId: rule.tenantId,
         siteId: '',
         deviceId: '',
