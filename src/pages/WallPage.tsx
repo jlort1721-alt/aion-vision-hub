@@ -59,7 +59,7 @@ interface DeviceEvent {
   camera_id?: string;
 }
 
-type GridSize = 2 | 3 | 4 | 5;
+type GridSize = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 10;
 
 // SmartCameraCell handles all stream types — no snapshot-only prefixes needed
 
@@ -462,7 +462,7 @@ export default function WallPage() {
           {/* Center: Controls */}
           <div className="flex items-center gap-1">
             {/* Layout buttons */}
-            {([2, 3, 4, 5] as GridSize[]).map((size) => (
+            {([2, 3, 4, 5, 6, 7, 8, 10] as GridSize[]).map((size) => (
               <button
                 key={size}
                 onClick={() => {
@@ -691,7 +691,14 @@ export default function WallPage() {
                 camera={cam}
                 variant="wall"
                 isFocused={cam?.id === focusedCameraId}
-                snapshotInterval={15_000}
+                forceSnapshot={effectiveGridSize > 5}
+                snapshotInterval={
+                  effectiveGridSize > 7
+                    ? 5_000
+                    : effectiveGridSize > 5
+                      ? 3_000
+                      : 15_000
+                }
                 onClick={() => {
                   if (cam) {
                     setFocusedCameraId(

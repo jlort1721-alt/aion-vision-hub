@@ -21,6 +21,8 @@ interface SmartCameraCellProps {
   onDoubleClick?: () => void;
   /** Force video mode (skip snapshot-first) */
   forceVideo?: boolean;
+  /** Force snapshot mode (skip video, for large grids 6x6+) */
+  forceSnapshot?: boolean;
   /** Snapshot refresh interval in ms (default 10000) */
   snapshotInterval?: number;
 }
@@ -28,7 +30,7 @@ interface SmartCameraCellProps {
 type CellMode = "idle" | "snapshot" | "video";
 
 /** Max concurrent video streams across all SmartCameraCell instances */
-const MAX_CONCURRENT_STREAMS = 9;
+const MAX_CONCURRENT_STREAMS = 25;
 const activeStreams = new Set<string>();
 
 function SmartCameraCellInner({
@@ -39,6 +41,7 @@ function SmartCameraCellInner({
   onClick,
   onDoubleClick,
   forceVideo = false,
+  forceSnapshot = false,
   snapshotInterval = 10_000,
 }: SmartCameraCellProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -54,9 +57,15 @@ function SmartCameraCellInner({
   const isOnline = camera?.status === "online" || camera?.status === "active";
 
   // ── Determine target mode based on visibility ──
-  // Always try video when visible + online. If stream limit hit, fall back to snapshot.
+  // forceSnapshot=true for large grids (6x6+), uses lightweight img polling
   const targetMode: CellMode =
-    !camera || !isOnline ? "idle" : !isVisible ? "idle" : "video";
+    !camera || !isOnline
+      ? "idle"
+      : !isVisible
+        ? "idle"
+        : forceSnapshot
+          ? "snapshot"
+          : "video";
 
   const wsRef = useRef<WebSocket | null>(null);
   const msRef = useRef<MediaSource | null>(null);
