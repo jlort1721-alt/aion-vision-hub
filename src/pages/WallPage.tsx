@@ -27,8 +27,13 @@ import {
   Star,
   Trash2,
   LayoutGrid,
+  Eye,
 } from "lucide-react";
-import { SmartCameraCell } from "@/components/video/SmartCameraCell";
+import {
+  SmartCameraCell,
+  type CameraDisplayMode,
+} from "@/components/video/SmartCameraCell";
+import { CameraPicker } from "@/components/live-view/CameraPicker";
 import { useI18n } from "@/contexts/I18nContext";
 
 // ── Types ──────────────────────────────────────────────────
@@ -174,8 +179,65 @@ export default function WallPage() {
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
   const [layoutMenuOpen, setLayoutMenuOpen] = useState(false);
   const [newLayoutName, setNewLayoutName] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [hiddenCameras, setHiddenCameras] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("aion-wall-hidden");
+      return saved ? new Set(JSON.parse(saved) as string[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  const [cameraModes, setCameraModes] = useState<
+    Map<string, CameraDisplayMode>
+  >(() => {
+    try {
+      const saved = localStorage.getItem("aion-wall-modes");
+      return saved
+        ? new Map(
+            Object.entries(
+              JSON.parse(saved) as Record<string, CameraDisplayMode>,
+            ),
+          )
+        : new Map();
+    } catch {
+      return new Map();
+    }
+  });
   const progressBarRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Persist hidden/modes to localStorage
+  useEffect(() => {
+    localStorage.setItem(
+      "aion-wall-hidden",
+      JSON.stringify([...hiddenCameras]),
+    );
+  }, [hiddenCameras]);
+  useEffect(() => {
+    localStorage.setItem(
+      "aion-wall-modes",
+      JSON.stringify(Object.fromEntries(cameraModes)),
+    );
+  }, [cameraModes]);
+
+  const toggleCameraVisibility = useCallback((id: string) => {
+    setHiddenCameras((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const setCameraMode = useCallback((id: string, mode: CameraDisplayMode) => {
+    setCameraModes((prev) => {
+      const next = new Map(prev);
+      if (mode === "auto") next.delete(id);
+      else next.set(id, mode);
+      return next;
+    });
+  }, []);
   const queryClient = useQueryClient();
 
   // ── Layouts ──
@@ -272,13 +334,15 @@ export default function WallPage() {
 
   const cameraGroups = useMemo(() => {
     const cellsPerPage = gridSize * gridSize;
-    const allCameras: Camera[] = siteGroups.flatMap((sg) => sg.cameras);
+    const allCameras: Camera[] = siteGroups
+      .flatMap((sg) => sg.cameras)
+      .filter((c) => !hiddenCameras.has(c.id));
     const groups: Camera[][] = [];
     for (let i = 0; i < allCameras.length; i += cellsPerPage) {
       groups.push(allCameras.slice(i, i + cellsPerPage));
     }
     return groups.length > 0 ? groups : [[]];
-  }, [siteGroups, gridSize]);
+  }, [siteGroups, gridSize, hiddenCameras]);
 
   const totalGroups = cameraGroups.length;
   const totalCameras = siteGroups.reduce(
@@ -544,6 +608,16 @@ export default function WallPage() {
 
           {/* Right: Toggles & Info */}
           <div className="flex items-center gap-2">
+            {/* Camera picker */}
+            <button
+              onClick={() => setPickerOpen(true)}
+              className="p-1 rounded transition-colors text-zinc-400 hover:text-white hover:bg-white/10"
+              title="Seleccionar cámaras"
+              aria-label="Selector de cámaras"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+
             {/* Layout manager */}
             <div className="relative">
               <button
@@ -692,6 +766,8 @@ export default function WallPage() {
                 variant="wall"
                 isFocused={cam?.id === focusedCameraId}
                 forceSnapshot={effectiveGridSize > 5}
+                displayMode={cam ? (cameraModes.get(cam.id) ?? "auto") : "auto"}
+                onModeChange={setCameraMode}
                 snapshotInterval={
                   effectiveGridSize > 7
                     ? 5_000
@@ -750,6 +826,36 @@ export default function WallPage() {
           </div>
         )}
       </div>
+
+      {/* Camera Picker Dialog */}
+      <CameraPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        siteGroups={siteGroups}
+        hiddenCameras={hiddenCameras}
+        cameraModes={cameraModes}
+        onToggleVisibility={toggleCameraVisibility}
+        onToggleMode={setCameraMode}
+        onShowAll={() => setHiddenCameras(new Set())}
+        onHideAll={() => {
+          const all = siteGroups.flatMap((sg) => sg.cameras.map((c) => c.id));
+          setHiddenCameras(new Set(all));
+        }}
+        onAllVideo={() => {
+          const m = new Map<string, CameraDisplayMode>();
+          siteGroups
+            .flatMap((sg) => sg.cameras)
+            .forEach((c) => m.set(c.id, "video"));
+          setCameraModes(m);
+        }}
+        onAllSnapshot={() => {
+          const m = new Map<string, CameraDisplayMode>();
+          siteGroups
+            .flatMap((sg) => sg.cameras)
+            .forEach((c) => m.set(c.id, "snapshot"));
+          setCameraModes(m);
+        }}
+      />
     </div>
   );
 }

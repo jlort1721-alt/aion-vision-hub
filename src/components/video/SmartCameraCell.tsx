@@ -12,6 +12,8 @@ export interface SmartCamera {
   site_name?: string;
 }
 
+export type CameraDisplayMode = "video" | "snapshot" | "auto";
+
 interface SmartCameraCellProps {
   camera: SmartCamera | null;
   isSelected?: boolean;
@@ -25,6 +27,10 @@ interface SmartCameraCellProps {
   forceSnapshot?: boolean;
   /** Snapshot refresh interval in ms (default 10000) */
   snapshotInterval?: number;
+  /** User-selected display mode override */
+  displayMode?: CameraDisplayMode;
+  /** Called when user toggles mode via hover button */
+  onModeChange?: (cameraId: string, mode: CameraDisplayMode) => void;
 }
 
 type CellMode = "idle" | "snapshot" | "video";
@@ -43,6 +49,8 @@ function SmartCameraCellInner({
   forceVideo = false,
   forceSnapshot = false,
   snapshotInterval = 10_000,
+  displayMode = "auto",
+  onModeChange,
 }: SmartCameraCellProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -56,16 +64,19 @@ function SmartCameraCellInner({
   const streamKey = camera?.stream_key ?? "";
   const isOnline = camera?.status === "online" || camera?.status === "active";
 
-  // ── Determine target mode based on visibility ──
-  // forceSnapshot=true for large grids (6x6+), uses lightweight img polling
+  // ── Determine target mode based on visibility + user preference ──
   const targetMode: CellMode =
     !camera || !isOnline
       ? "idle"
       : !isVisible
         ? "idle"
-        : forceSnapshot
+        : displayMode === "snapshot"
           ? "snapshot"
-          : "video";
+          : displayMode === "video"
+            ? "video"
+            : forceSnapshot
+              ? "snapshot"
+              : "video";
 
   const wsRef = useRef<WebSocket | null>(null);
   const msRef = useRef<MediaSource | null>(null);
@@ -405,15 +416,39 @@ function SmartCameraCellInner({
             )}
           </div>
 
-          {!isWall && (
-            <button
-              className="absolute top-1.5 left-1.5 p-1 rounded-sm bg-black/60 backdrop-blur-sm border border-white/10 z-20 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/20"
-              title="Capturar imagen"
-              onClick={captureSnapshot}
-            >
-              <Camera className="h-3.5 w-3.5 text-white" />
-            </button>
-          )}
+          {/* Mode toggle + capture — visible on hover */}
+          <div className="absolute top-1.5 left-1.5 flex gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+            {onModeChange && camera && (
+              <button
+                className="p-1 rounded-sm bg-black/60 backdrop-blur-sm border border-white/10 hover:bg-white/20"
+                title={
+                  mode === "video"
+                    ? "Cambiar a snapshot"
+                    : "Cambiar a video en vivo"
+                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const next = mode === "video" ? "snapshot" : "video";
+                  onModeChange(camera.id, next);
+                }}
+              >
+                {mode === "video" ? (
+                  <Image className="h-3.5 w-3.5 text-yellow-400" />
+                ) : (
+                  <Video className="h-3.5 w-3.5 text-green-400" />
+                )}
+              </button>
+            )}
+            {!isWall && (
+              <button
+                className="p-1 rounded-sm bg-black/60 backdrop-blur-sm border border-white/10 hover:bg-white/20"
+                title="Capturar imagen"
+                onClick={captureSnapshot}
+              >
+                <Camera className="h-3.5 w-3.5 text-white" />
+              </button>
+            )}
+          </div>
         </>
       )}
     </Container>
