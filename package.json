@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "generate-icons": "node scripts/generate-icons.js",
-    "prebuild": "node scripts/generate-icons.js"
+    "prebuild": "node scripts/generate-icons.js",
+    "analyze": "ANALYZE=true vite build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

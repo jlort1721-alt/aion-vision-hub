@@ -203,7 +203,7 @@ export class OperationalDataService {
     `);
 
     const grouped: Record<string, Record<string, Record<string, unknown[]>>> = {};
-    for (const row of rows.rows) {
+    for (const row of rows) {
       const siteName = (row as Record<string, unknown>).site_name as string ?? 'Sin sitio';
       const unitNumber = (row as Record<string, unknown>).unit_number as string ?? '';
       const parts = unitNumber.match(/^(.*?)(?:\s*-\s*(.*))?$/);

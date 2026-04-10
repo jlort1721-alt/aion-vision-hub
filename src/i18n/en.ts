@@ -900,6 +900,69 @@ const en: Record<string, string> = {
   'password.acceptable': 'Acceptable',
   'password.strong': 'Strong',
   'password.very_strong': 'Very strong',
+
+  // Nav — new pages
+  'nav.detections': 'Detections',
+  'nav.paging': 'Voice & Paging',
+  'nav.call_log': 'Call History',
+  'nav.supervisor': 'Supervisor Panel',
+
+  // Detections
+  'detections.title': 'Camera Detections',
+  'detections.stats.total': 'Total',
+  'detections.stats.persons': 'Persons',
+  'detections.stats.vehicles': 'Vehicles',
+  'detections.stats.pending': 'Pending',
+  'detections.markReviewed': 'Mark as reviewed',
+  'detections.analyzeAI': 'Analyze with AI',
+
+  // Paging
+  'paging.title': 'Central Voice & Paging',
+  'paging.destinations': 'Destinations',
+  'paging.transmit': 'Transmit',
+  'paging.emergency': 'EMERGENCY',
+  'paging.emergencyConfirm': 'Confirm emergency broadcast to all sites?',
+  'paging.history': 'History',
+  'paging.templates': 'Quick Templates',
+  'paging.textMessage': 'Text Message',
+
+  // Supervisor
+  'supervisor.title': 'Supervisor Panel',
+  'supervisor.kpis': 'Real-time KPIs',
+  'supervisor.alerts': 'Alerts & Escalations',
+  'supervisor.operators': 'Operators on Shift',
+  'supervisor.shiftHandoff': 'Shift Handoff',
+  'supervisor.generateReport': 'Generate Report',
+  'supervisor.signClose': 'Sign & Close Shift',
+
+  // Call Log
+  'callLog.title': 'Call History',
+  'callLog.totalCalls': 'Total Calls',
+  'callLog.avgDuration': 'Avg Duration',
+  'callLog.aiHandled': 'AI Handled',
+  'callLog.humanHandled': 'Human Handled',
+  'callLog.missed': 'Missed',
+  'callLog.playRecording': 'Play Recording',
+  'callLog.viewTranscript': 'View Transcript',
+
+  // Scenes
+  'scenes.title': 'Scenes',
+  'scenes.execute': 'Execute',
+  'scenes.create': 'New Scene',
+  'scenes.history': 'Execution History',
+
+  // Schedule
+  'schedule.title': 'Scheduling',
+  'schedule.create': 'Create Schedule',
+  'schedule.days': 'Days',
+  'schedule.time': 'Time',
+  'schedule.device': 'Device',
+  'schedule.action': 'Action',
+
+  // Residents
+  'residents.import': 'Import',
+  'residents.viewFlat': 'Flat list',
+  'residents.viewGrouped': 'By module',
 };
 
 export default en;

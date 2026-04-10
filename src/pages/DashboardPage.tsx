@@ -184,11 +184,18 @@ export default function DashboardPage() {
   const { isAuthenticated, user } = useAuth();
   const { data: healthData } = useQuery({
     queryKey: ['system-health'],
-    queryFn: () => apiClient.edgeFunction<{ status: string; timestamp: string; checks: Array<{ component: string; status: string; latency_ms?: number; details?: Record<string, unknown> }> }>('health-api', undefined, { method: 'GET' }),
+    queryFn: () => apiClient.edgeFunction<{ status: string; timestamp: string; checks: Record<string, { status: string; latency_ms?: number; detail?: string }> }>('health-api', undefined, { method: 'GET' }),
     enabled: isAuthenticated,
     refetchInterval: 60000,
   });
-  const healthChecks = healthData?.checks || [];
+  const healthChecks = healthData?.checks
+    ? Object.entries(healthData.checks).map(([component, info]) => ({
+        component,
+        status: info.status,
+        latency_ms: info.latency_ms,
+        details: info.detail ? { detail: info.detail } : undefined,
+      }))
+    : [];
   useRealtimeEvents();
   const { permission, subscribe, unsubscribe, isSubscribed } = usePushNotifications();
   const { t } = useI18n();

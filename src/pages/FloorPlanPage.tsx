@@ -341,28 +341,42 @@ export default function FloorPlanPage() {
     setLoadingPlan(true);
 
     (async () => {
-      // Try localStorage first (operator-saved positions)
+      // Try localStorage cache first for instant display
       try {
         const saved = localStorage.getItem(`aion-fp-${selectedSiteId}`);
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
             if (!cancelled) { setPositions(parsed); setLoadingPlan(false); }
-            return;
           }
         }
       } catch { /* ignore */ }
 
+      // Fetch from backend (floor-plans positions API)
       try {
-        const data = await apiClient.get<{ positions?: FloorPlanPosition[] }>(`/sites/${selectedSiteId}/floor-plan`);
-        if (!cancelled && data?.positions && Array.isArray(data.positions) && data.positions.length > 0) {
-          setPositions(data.positions);
+        const data = await apiClient.get<FloorPlanPosition[]>(`/floor-plans/${selectedSiteId}/positions`);
+        if (!cancelled && Array.isArray(data) && data.length > 0) {
+          const mapped = data.map((p: any) => ({
+            deviceId: p.deviceId,
+            x: Number(p.x),
+            y: Number(p.y),
+          }));
+          setPositions(mapped);
+          try { localStorage.setItem(`aion-fp-${selectedSiteId}`, JSON.stringify(mapped)); } catch { /* */ }
         } else if (!cancelled) {
-          setPositions(generateDefaultPositions(siteDevices));
+          // Fallback to default positions if no saved positions
+          const cachedPositions = localStorage.getItem(`aion-fp-${selectedSiteId}`);
+          if (!cachedPositions) {
+            setPositions(generateDefaultPositions(siteDevices));
+          }
         }
       } catch {
         if (!cancelled) {
-          setPositions(generateDefaultPositions(siteDevices));
+          // API not available — use defaults if no localStorage cache
+          const cachedPositions = localStorage.getItem(`aion-fp-${selectedSiteId}`);
+          if (!cachedPositions) {
+            setPositions(generateDefaultPositions(siteDevices));
+          }
         }
       } finally {
         if (!cancelled) setLoadingPlan(false);
@@ -507,6 +521,10 @@ export default function FloorPlanPage() {
                 setPositions(prev => {
                   const next = prev.map(p => p.deviceId === deviceId ? { ...p, x, y } : p);
                   try { localStorage.setItem(`aion-fp-${selectedSiteId}`, JSON.stringify(next)); } catch { /* */ }
+                  // Persist to backend (non-blocking)
+                  apiClient.put(`/floor-plans/${selectedSiteId}/positions`, {
+                    positions: [{ deviceId, x, y }],
+                  }).catch(() => { /* localStorage is the fallback */ });
                   return next;
                 });
                 toast.success('Posición guardada');

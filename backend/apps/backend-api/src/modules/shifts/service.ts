@@ -245,13 +245,13 @@ export class ShiftService {
              count(*) FILTER (WHERE severity = 'critical')::int as critical_events,
              count(*) FILTER (WHERE severity = 'high')::int as high_events
       FROM events WHERE tenant_id = ${tenantId} AND created_at BETWEEN ${shiftStart.toISOString()} AND ${shiftEnd.toISOString()}
-    `).then(r => r.rows);
+    `);
 
     const [incidentStats] = await db.execute(sql`
       SELECT count(*)::int as total_incidents,
              count(*) FILTER (WHERE status = 'resolved')::int as resolved
       FROM incidents WHERE tenant_id = ${tenantId} AND created_at BETWEEN ${shiftStart.toISOString()} AND ${shiftEnd.toISOString()}
-    `).then(r => r.rows);
+    `);
 
     return {
       shift: { id: shift.id, name: shift.name, startTime: shift.startTime, endTime: shift.endTime },

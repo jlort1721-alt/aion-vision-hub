@@ -8,10 +8,10 @@ export const createDetectionSchema = z.object({
   ts: z.coerce.date().optional(),
   type: z.enum(detectionTypes).default('unknown'),
   confidence: z.number().min(0).max(1).default(0),
-  bboxJson: z.record(z.unknown()).default({}),
+  bboxJson: z.record(z.string(), z.unknown()).default({}),
   snapshotPath: z.string().optional(),
   videoClipPath: z.string().optional(),
-  metadata: z.record(z.unknown()).default({}),
+  metadata: z.record(z.string(), z.unknown()).default({}),
 });
 export type CreateDetectionInput = z.infer<typeof createDetectionSchema>;
 

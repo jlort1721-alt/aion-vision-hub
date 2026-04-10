@@ -82,6 +82,10 @@ const SitePortalPage = lazy(() => import("@/pages/SitePortalPage"));
 const TVDashboardPage = lazy(() => import("@/pages/TVDashboardPage"));
 const OperationalReportsPage = lazy(() => import("@/pages/OperationalReportsPage"));
 const CommunicationsPage = lazy(() => import("@/pages/CommunicationsPage"));
+const DetectionsTimelinePage = lazy(() => import("@/pages/DetectionsTimelinePage"));
+const CentralVoicePage = lazy(() => import("@/pages/CentralVoicePage"));
+const SupervisorPanelPage = lazy(() => import("@/pages/SupervisorPanelPage"));
+const CallLogPage = lazy(() => import("@/pages/CallLogPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = createQueryClient();
@@ -196,6 +200,10 @@ function AppRoutes() {
           <Route path="admin/dashboard" element={<ModuleGuard module="admin"><OperationalDashboardPage /></ModuleGuard>} />
           <Route path="admin/residents" element={<ModuleGuard module="admin"><ResidentsAdminPage /></ModuleGuard>} />
           <Route path="operational-reports" element={<ModuleGuard module="operations"><OperationalReportsPage /></ModuleGuard>} />
+          <Route path="detections" element={<ModuleGuard module="analytics"><DetectionsTimelinePage /></ModuleGuard>} />
+          <Route path="paging" element={<ModuleGuard module="domotics"><CentralVoicePage /></ModuleGuard>} />
+          <Route path="supervisor" element={<ModuleGuard module="admin"><SupervisorPanelPage /></ModuleGuard>} />
+          <Route path="call-log" element={<ModuleGuard module="intercom"><CallLogPage /></ModuleGuard>} />
           <Route path="manual" element={<UserManualPage />} />
           <Route path="guard" element={<GuardMobilePage />} />
           <Route path="onboarding" element={<OnboardingWizardPage />} />

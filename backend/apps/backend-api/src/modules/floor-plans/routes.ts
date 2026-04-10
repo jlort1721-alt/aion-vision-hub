@@ -1,11 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth.js';
 import { db } from '../../db/client.js';
-import { sql } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
+import { floorPlanPositions } from '../../db/schema/index.js';
 import { createLogger } from '@aion/common-utils';
 import path from 'path';
 import fs from 'fs/promises';
 import crypto from 'crypto';
+import { z } from 'zod';
 
 const logger = createLogger({ name: 'floor-plans' });
 
@@ -233,6 +235,87 @@ export async function registerFloorPlanRoutes(app: FastifyInstance) {
       await request.audit('floor_plan.delete', 'floor_plans', id, { siteId });
 
       return reply.send({ success: true, data: { id, siteId, deleted: true } });
+    },
+  );
+
+  // ══════════════════════════════════════════════════════════
+  // DEVICE POSITIONS ON FLOOR PLAN
+  // ══════════════════════════════════════════════════════════
+
+  const positionSchema = z.object({
+    positions: z.array(z.object({
+      deviceId: z.string().uuid(),
+      x: z.number().min(0).max(99999),
+      y: z.number().min(0).max(99999),
+    })).min(1).max(500),
+  });
+
+  // GET /:siteId/positions — list device positions for a site
+  app.get<{ Params: { siteId: string } }>(
+    '/:siteId/positions',
+    {
+      preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')],
+      schema: { tags: ['Floor Plans'], summary: 'Get device positions on floor plan' },
+    },
+    async (request, reply) => {
+      const rows = await db
+        .select({
+          id: floorPlanPositions.id,
+          deviceId: floorPlanPositions.deviceId,
+          x: floorPlanPositions.x,
+          y: floorPlanPositions.y,
+        })
+        .from(floorPlanPositions)
+        .where(
+          and(
+            eq(floorPlanPositions.tenantId, request.tenantId),
+            eq(floorPlanPositions.siteId, request.params.siteId),
+          ),
+        );
+
+      return reply.send({ success: true, data: rows });
+    },
+  );
+
+  // PUT /:siteId/positions — bulk upsert device positions
+  app.put<{ Params: { siteId: string } }>(
+    '/:siteId/positions',
+    {
+      preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')],
+      schema: { tags: ['Floor Plans'], summary: 'Save device positions on floor plan' },
+    },
+    async (request, reply) => {
+      const { siteId } = request.params;
+      const tenantId = request.tenantId;
+      const body = positionSchema.parse(request.body);
+
+      // Upsert each position
+      for (const pos of body.positions) {
+        await db
+          .insert(floorPlanPositions)
+          .values({
+            tenantId,
+            siteId,
+            deviceId: pos.deviceId,
+            x: String(pos.x),
+            y: String(pos.y),
+          })
+          .onConflictDoUpdate({
+            target: [floorPlanPositions.siteId, floorPlanPositions.deviceId],
+            set: {
+              x: String(pos.x),
+              y: String(pos.y),
+              updatedAt: new Date(),
+            },
+          });
+      }
+
+      await request.audit('floor_plan.positions_update', 'floor_plan_positions', undefined, {
+        siteId,
+        count: body.positions.length,
+      });
+
+      return reply.send({ success: true, data: { updated: body.positions.length } });
     },
   );
 }

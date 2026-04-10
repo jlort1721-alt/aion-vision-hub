@@ -338,7 +338,7 @@ export class AnalyticsService {
       GROUP BY user_id, user_email
       ORDER BY action_count DESC
     `);
-    return result.rows;
+    return [...result];
   }
 }
 

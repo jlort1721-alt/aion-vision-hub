@@ -47,9 +47,11 @@ function SmartCameraCellInner({
   const { containerRef, isVisible } = useIntersectionVideo<HTMLDivElement>();
   const [mode, setMode] = useState<CellMode>('idle');
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [streamFailed, setStreamFailed] = useState(false);
+  const retryTimerRef = useRef<number>(0);
 
   const streamKey = camera?.stream_key ?? '';
-  const isOnline = camera?.status === 'online';
+  const isOnline = camera?.status === 'online' || camera?.status === 'active';
 
   // ── Determine target mode based on visibility ──
   // Always try video when visible + online. If stream limit hit, fall back to snapshot.
@@ -94,7 +96,13 @@ function SmartCameraCellInner({
 
     const handleError = () => {
       activeStreams.delete(streamKey);
+      setStreamFailed(true);
       setMode('snapshot');
+      // Auto-retry after 30s
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = window.setTimeout(() => {
+        setStreamFailed(false);
+      }, 30_000);
     };
     const handleStall = () => {
       setTimeout(() => {
@@ -121,6 +129,8 @@ function SmartCameraCellInner({
     if (targetMode !== 'idle') return;
     if (timerRef.current) window.clearInterval(timerRef.current);
     timerRef.current = 0;
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    retryTimerRef.current = 0;
     const video = videoRef.current;
     if (video && video.src) {
       video.src = '';
@@ -129,6 +139,7 @@ function SmartCameraCellInner({
     activeStreams.delete(streamKey);
     setMode('idle');
     setImgLoaded(false);
+    setStreamFailed(false);
   }, [targetMode, streamKey]);
 
   const handleDoubleClick = useCallback(() => {
@@ -222,6 +233,15 @@ function SmartCameraCellInner({
           muted
           playsInline
         />
+      )}
+
+      {/* Stream failed overlay */}
+      {isOnline && streamFailed && !imgLoaded && mode === 'snapshot' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/90 z-10">
+          <Camera className={`${isWall ? 'h-5 w-5' : 'h-7 w-7'} text-muted-foreground/40 mb-1.5`} />
+          <p className={`${isWall ? 'text-[9px]' : 'text-[11px]'} text-muted-foreground font-medium`}>{camera.name}</p>
+          <p className={`${isWall ? 'text-[8px]' : 'text-[10px]'} text-muted-foreground/60 mt-0.5`}>Stream no disponible</p>
+        </div>
       )}
 
       {/* Offline overlay */}

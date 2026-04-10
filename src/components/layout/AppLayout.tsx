@@ -25,7 +25,7 @@ import {
   Zap, DoorOpen, RotateCcw, Phone, Database, MessageSquare, StickyNote,
   Clock, Timer, AlertOctagon, Navigation, CalendarClock,
   Cog, UserCheck, BarChart3, FileText, KeyRound, ShieldCheck, GraduationCap, Building2,
-  FolderOpen, ClipboardList, PhoneCall, Scan, Map
+  FolderOpen, ClipboardList, PhoneCall, Scan, Map, Eye, Megaphone
 } from 'lucide-react';
 import { hasModuleAccess, ALL_MODULES, DEFAULT_ROLE_PERMISSIONS } from '@/lib/permissions';
 import { useQuery } from '@tanstack/react-query';
@@ -66,6 +66,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { labelKey: 'nav.events', path: '/events', icon: <Bell size={18} />, badgeKey: 'events' },
       { labelKey: 'nav.alerts', path: '/alerts', icon: <Shield size={18} />, badgeKey: 'alerts' },
       { labelKey: 'nav.incidents', path: '/incidents', icon: <AlertTriangle size={18} />, badgeKey: 'incidents' },
+      { labelKey: 'nav.detections', path: '/detections', icon: <Eye size={18} /> },
     ],
   },
   {
@@ -78,6 +79,8 @@ const NAV_CATEGORIES: NavCategory[] = [
       { labelKey: 'nav.access_control', path: '/access-control', icon: <DoorOpen size={18} /> },
       { labelKey: 'nav.reboots', path: '/reboots', icon: <RotateCcw size={18} /> },
       { labelKey: 'nav.intercom', path: '/intercom', icon: <Phone size={18} /> },
+      { labelKey: 'nav.paging', path: '/paging', icon: <Megaphone size={18} /> },
+      { labelKey: 'nav.call_log', path: '/call-log', icon: <PhoneCall size={18} /> },
     ],
   },
   {
@@ -130,6 +133,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { labelKey: 'nav.system', path: '/system', icon: <Activity size={18} /> },
       { labelKey: 'nav.settings', path: '/settings', icon: <Settings size={18} /> },
       { labelKey: 'nav.admin', path: '/admin', icon: <Users size={18} /> },
+      { labelKey: 'nav.supervisor', path: '/supervisor', icon: <Shield size={18} /> },
       { labelKey: 'nav.network', path: '/network', icon: <Scan size={18} /> },
       { labelKey: 'nav.remoteAccess', path: '/remote-access', icon: <Globe size={18} /> },
       { labelKey: 'nav.cameraHealth', path: '/camera-health', icon: <Activity size={18} /> },

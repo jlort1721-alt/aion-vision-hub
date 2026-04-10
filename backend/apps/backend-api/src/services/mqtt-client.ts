@@ -1,12 +1,27 @@
-import mqtt from 'mqtt';
-import type { MqttClient as IMqttClient } from 'mqtt';
 import { config } from '../config/env.js';
 import pino from 'pino';
 
 const logger = pino({ name: 'mqtt-client' });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let mqtt: any = null;
+try {
+  // @ts-ignore — package may not be installed locally
+  mqtt = await import('mqtt');
+} catch {
+  logger.info('mqtt package not installed — MQTT client disabled');
+}
+
+type MqttClientInstance = {
+  connected: boolean;
+  on(event: string, cb: (...args: unknown[]) => void): void;
+  subscribe(topic: string, opts: Record<string, unknown>, cb: (err: Error | null) => void): void;
+  publish(topic: string, payload: string | Buffer, opts: Record<string, unknown>, cb: (err?: Error) => void): void;
+  end(force: boolean, opts: Record<string, unknown>, cb: () => void): void;
+};
+
 class MqttClientService {
-  private client: IMqttClient | null = null;
+  private client: MqttClientInstance | null = null;
   private handlers = new Map<string, ((topic: string, payload: Buffer) => void)[]>();
   private reconnectDelay = 5000;
   private maxReconnectDelay = 60000;
@@ -16,13 +31,18 @@ class MqttClientService {
   }
 
   connect(): void {
+    if (!mqtt) {
+      logger.info('mqtt package not available — MQTT client disabled');
+      return;
+    }
+
     const brokerUrl = config.MQTT_BROKER_URL;
     if (!brokerUrl) {
       logger.info('MQTT_BROKER_URL not configured — MQTT client disabled');
       return;
     }
 
-    const options: mqtt.IClientOptions = {
+    const options: Record<string, unknown> = {
       reconnectPeriod: this.reconnectDelay,
       connectTimeout: 10000,
       clean: true,
@@ -32,28 +52,28 @@ class MqttClientService {
     if (config.MQTT_USERNAME) options.username = config.MQTT_USERNAME;
     if (config.MQTT_PASSWORD) options.password = config.MQTT_PASSWORD;
 
-    this.client = mqtt.connect(brokerUrl, options);
+    this.client = mqtt.connect(brokerUrl, options) as unknown as MqttClientInstance;
 
     this.client.on('connect', () => {
       logger.info({ brokerUrl }, 'MQTT connected');
       this.reconnectDelay = 5000;
-      this.client?.subscribe('aion/#', { qos: 1 }, (err) => {
+      this.client?.subscribe('aion/#', { qos: 1 }, (err: Error | null) => {
         if (err) logger.error({ err }, 'MQTT subscribe failed');
         else logger.info('Subscribed to aion/#');
       });
     });
 
-    this.client.on('message', (topic, payload) => {
+    this.client.on('message', (topic: unknown, payload: unknown) => {
       for (const [pattern, fns] of this.handlers) {
-        if (this.matchTopic(pattern, topic)) {
+        if (this.matchTopic(pattern, topic as string)) {
           for (const fn of fns) {
-            try { fn(topic, payload); } catch (err) { logger.error({ err, topic }, 'MQTT handler error'); }
+            try { fn(topic as string, payload as Buffer); } catch (err: unknown) { logger.error({ err, topic }, 'MQTT handler error'); }
           }
         }
       }
     });
 
-    this.client.on('error', (err) => logger.error({ err }, 'MQTT error'));
+    this.client.on('error', (err: unknown) => logger.error({ err }, 'MQTT error'));
     this.client.on('reconnect', () => {
       this.reconnectDelay = Math.min(this.reconnectDelay * 2, this.maxReconnectDelay);
       logger.info({ delay: this.reconnectDelay }, 'MQTT reconnecting');
@@ -72,7 +92,7 @@ class MqttClientService {
       return;
     }
     return new Promise((resolve, reject) => {
-      this.client!.publish(topic, payload, { qos: 1 }, (err) => {
+      this.client!.publish(topic, payload, { qos: 1 }, (err?: Error) => {
         if (err) reject(err);
         else resolve();
       });

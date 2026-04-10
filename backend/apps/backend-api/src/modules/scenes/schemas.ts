@@ -5,7 +5,7 @@ const sceneActions = ['on', 'off', 'toggle', 'pulse'] as const;
 export const sceneActionSchema = z.object({
   deviceId: z.string().uuid(),
   action: z.enum(sceneActions),
-  params: z.record(z.unknown()).optional(),
+  params: z.record(z.string(), z.unknown()).optional(),
 });
 export type SceneAction = z.infer<typeof sceneActionSchema>;
 

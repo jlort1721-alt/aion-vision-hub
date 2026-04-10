@@ -13,6 +13,7 @@ export { callSessions, voipConfig } from './call-sessions.js';
 export { databaseRecords } from './database-records.js';
 export { waConversations, waMessages, waTemplates } from './whatsapp.js';
 export { alertRules, escalationPolicies, alertInstances, notificationChannels, notificationLog } from './alerts.js';
+export { floorPlanPositions } from './floor-plan-positions.js';
 export {
   shifts, shiftAssignments,
   slaDefinitions, slaTracking,

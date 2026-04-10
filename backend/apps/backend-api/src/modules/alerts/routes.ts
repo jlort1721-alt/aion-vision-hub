@@ -32,6 +32,17 @@ export async function registerAlertRoutes(app: FastifyInstance) {
   // ALERT RULES
   // ══════════════════════════════════════════════════════════
 
+  // Seed default alert rules for tenant (idempotent — no-op if rules already exist)
+  app.post(
+    '/seed-defaults',
+    { preHandler: [requireRole('tenant_admin', 'super_admin')] },
+    async (request, reply) => {
+      const count = await alertService.seedDefaultRules(request.tenantId, request.userId);
+      await request.audit('alerts.seed_defaults', 'alert_rules', undefined, { rulesCreated: count });
+      return reply.send({ success: true, data: { rulesCreated: count } });
+    },
+  );
+
   app.get<{ Querystring: AlertRuleFilters }>(
     '/rules',
     { preHandler: [requireRole('viewer', 'operator', 'tenant_admin', 'super_admin')] },

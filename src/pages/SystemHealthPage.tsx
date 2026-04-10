@@ -19,7 +19,7 @@ import {
 import {
   Activity, CheckCircle2, AlertCircle, XCircle, RefreshCw,
   Server, Database, Cpu, Radio, Shield, Cog, Wifi, WifiOff,
-  AlertTriangle, Clock,
+  AlertTriangle, Clock, Phone,
 } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────
@@ -68,6 +68,8 @@ const SERVICE_CARDS: ServiceCardConfig[] = [
   { name: 'MediaMTX', key: 'mediamtx', icon: <Radio className="h-5 w-5" />, description: 'RTSP/WebRTC streaming' },
   { name: 'Gateway', key: 'gateway', icon: <Shield className="h-5 w-5" />, description: 'Nginx reverse proxy' },
   { name: 'Workers', key: 'workers', icon: <Cog className="h-5 w-5" />, description: 'Background jobs' },
+  { name: 'Asterisk PBX', key: 'asterisk', icon: <Phone className="h-5 w-5" />, description: 'Telefonía IP' },
+  { name: 'MQTT Broker', key: 'mqtt', icon: <Radio className="h-5 w-5" />, description: 'IoT messaging' },
 ];
 
 // ── Status Helpers ───────────────────────────────────────────
@@ -154,7 +156,7 @@ export default function SystemHealthPage() {
 
   const { data: healthData, isLoading: loadingHealth, isError, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['system-health'],
-    queryFn: () => apiClient.edgeFunction<{ status: string; timestamp: string; checks: Array<{ component: string; status: string; latency_ms?: number; details?: Record<string, unknown> }> }>('health-api', undefined, { method: 'GET' }),
+    queryFn: () => apiClient.edgeFunction<{ status: string; timestamp: string; checks: Record<string, { status: string; latency_ms?: number; detail?: string }> }>('health-api', undefined, { method: 'GET' }),
     enabled: isAuthenticated,
     refetchInterval: autoRefresh ? 15_000 : false,
     staleTime: 10_000,
@@ -176,7 +178,15 @@ export default function SystemHealthPage() {
     staleTime: 10_000,
   });
 
-  const checks: HealthCheck[] = (healthData?.checks ?? []).map((c: any) => ({
+  const rawChecks = healthData?.checks
+    ? Object.entries(healthData.checks).map(([component, info]) => ({
+        component,
+        status: info.status,
+        latency_ms: info.latency_ms,
+        details: info.detail ? { detail: info.detail } : undefined,
+      }))
+    : [];
+  const checks: HealthCheck[] = rawChecks.map((c: any) => ({
     ...c,
     status: (['healthy', 'degraded', 'down', 'unknown'].includes(c.status) ? c.status : 'unknown') as HealthCheck['status'],
   }));
@@ -576,6 +586,26 @@ export default function SystemHealthPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Uso de Disco */}
+      {(healthData as any)?.checks?.disk && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Uso de Disco</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-secondary rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full ${(healthData as any).checks.disk.status === 'healthy' ? 'bg-green-500' : (healthData as any).checks.disk.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'}`}
+                  style={{ width: `${100 - parseInt((healthData as any).checks.disk.detail)}%` }}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground">{(healthData as any).checks.disk.detail}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Errores Recientes */}
       <Card>

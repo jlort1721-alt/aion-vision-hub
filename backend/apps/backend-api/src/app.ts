@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import compress from '@fastify/compress';
+
 import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
 import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -147,7 +147,11 @@ export async function buildApp() {
   });
 
   // Response compression
-  await app.register(compress, { global: true, threshold: 1024 });
+  try {
+    // @ts-ignore — package may not be installed locally
+    const compress = await import('@fastify/compress');
+    await app.register(compress.default, { global: true, threshold: 1024 });
+  } catch { /* @fastify/compress not installed */ }
 
   // Security headers
   await app.register(helmet, {

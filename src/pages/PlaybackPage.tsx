@@ -42,8 +42,8 @@ function parseApiSegments(apiSegments: Array<{ start: string; end: string }>): A
     const startDate = new Date(seg.start);
     const endDate = new Date(seg.end);
     return {
-      start: startDate.getHours() * 3600 + startDate.getMinutes() * 60 + startDate.getSeconds(),
-      end: endDate.getHours() * 3600 + endDate.getMinutes() * 60 + endDate.getSeconds(),
+      start: startDate.getUTCHours() * 3600 + startDate.getUTCMinutes() * 60 + startDate.getUTCSeconds(),
+      end: endDate.getUTCHours() * 3600 + endDate.getUTCMinutes() * 60 + endDate.getUTCSeconds(),
       type: 'continuous' as const,
     };
   });
@@ -141,7 +141,7 @@ function InteractiveTimeline({
         {/* Event markers */}
         {events.map((evt, i) => {
           const evtTime = new Date(evt.created_at);
-          const seconds = evtTime.getHours() * 3600 + evtTime.getMinutes() * 60 + evtTime.getSeconds();
+          const seconds = evtTime.getUTCHours() * 3600 + evtTime.getUTCMinutes() * 60 + evtTime.getUTCSeconds();
           const pos = timeToPercent(seconds);
           if (pos < 0 || pos > 100) return null;
           const color = evt.severity === 'critical' ? 'bg-destructive' :
@@ -263,6 +263,36 @@ export default function PlaybackPage() {
       return e.device_id === device.id && eventDate === selectedDate;
     });
   }, [events, device, selectedDate]);
+
+  // Fetch camera detections for timeline markers
+  const { data: detectionsRaw } = useQuery({
+    queryKey: ['camera-detections-timeline', device?.id, selectedDate],
+    queryFn: () =>
+      apiClient.get<any>(`/camera-detections`, {
+        cameraId: device?.id,
+        dateFrom: `${selectedDate}T00:00:00Z`,
+        dateTo: `${selectedDate}T23:59:59Z`,
+        perPage: '100',
+      }),
+    enabled: !!device?.id && !!selectedDate,
+    staleTime: 60_000,
+  });
+
+  // Map detections to event-like objects for the timeline
+  const detectionEvents = useMemo(() => {
+    const items = detectionsRaw?.data ?? (Array.isArray(detectionsRaw) ? detectionsRaw : []);
+    return (items as Array<Record<string, unknown>>).map((d) => ({
+      created_at: d.ts as string,
+      title: `Detección: ${d.type}`,
+      severity: 'info',
+    }));
+  }, [detectionsRaw]);
+
+  // Merge device events with detection events for timeline
+  const mergedTimelineEvents = useMemo(
+    () => [...deviceEvents, ...detectionEvents],
+    [deviceEvents, detectionEvents],
+  );
 
   // Playback simulation timer
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -458,7 +488,7 @@ export default function PlaybackPage() {
               <p className="text-xs text-muted-foreground p-3 text-center">{t('playback.no_events_date')}</p>
             ) : deviceEvents.filter((evt: any) => !eventSearchQuery || (evt.title || '').toLowerCase().includes(eventSearchQuery.toLowerCase()) || (evt.event_type || '').toLowerCase().includes(eventSearchQuery.toLowerCase())).map((evt: any) => {
               const evtDate = new Date(evt.created_at || evt.createdAt);
-              const evtSeconds = evtDate.getHours() * 3600 + evtDate.getMinutes() * 60 + evtDate.getSeconds();
+              const evtSeconds = evtDate.getUTCHours() * 3600 + evtDate.getUTCMinutes() * 60 + evtDate.getUTCSeconds();
               return (
                 <div
                   key={evt.id}
@@ -669,7 +699,7 @@ export default function PlaybackPage() {
             currentTime={currentTime}
             onSeek={handleSeek}
             segments={segments}
-            events={deviceEvents}
+            events={mergedTimelineEvents}
             zoomLevel={zoomLevel}
             onZoomIn={() => setZoomLevel(prev => Math.min(16, prev * 2))}
             onZoomOut={() => setZoomLevel(prev => Math.max(1, prev / 2))}

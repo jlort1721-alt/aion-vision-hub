@@ -7,13 +7,13 @@ import { useIntegrations, useMcpConnectors } from '@/hooks/use-api-data';
 import { apiClient } from '@/lib/api-client';
 import { MCP_CONNECTOR_CATALOG } from '@/services/mcp-registry';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ErrorState from '@/components/ui/ErrorState';
 import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';
 import {
   Puzzle, Bot, Webhook, Mail, Cloud, Shield, DoorOpen, MessageCircle,
-  Ticket, Video, Plus, RefreshCw, Loader2, Power, Zap,
+  Ticket, Video, Plus, RefreshCw, Loader2, Power, Zap, Workflow,
 } from 'lucide-react';
 
 const iconMap: Record<string, any> = {
@@ -45,6 +45,11 @@ export default function IntegrationsPage() {
   const connectors = rawConnectors as Record<string, unknown>[];
   const queryClient = useQueryClient();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const { data: n8nStatus, refetch: refetchN8n } = useQuery({
+    queryKey: ['n8n-status'],
+    queryFn: () => apiClient.get('/integrations/n8n/status'),
+  });
 
   const handleIntegrationTest = async (id: string) => {
     setActionLoading(`test-${id}`);
@@ -151,6 +156,31 @@ export default function IntegrationsPage() {
               ))}
             </div>
           )}
+
+          {/* n8n Integration Card */}
+          <div className="mt-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Workflow className="h-5 w-5" />
+                  n8n Automatizaciones
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <Badge variant={(n8nStatus as any)?.data?.connected ? 'default' : 'destructive'}>
+                    {(n8nStatus as any)?.data?.connected ? 'Conectado' : 'Desconectado'}
+                  </Badge>
+                  <Button size="sm" variant="outline" onClick={() => refetchN8n()}>
+                    Probar Conexión
+                  </Button>
+                </div>
+                {(n8nStatus as any)?.data?.url && (
+                  <p className="text-xs text-muted-foreground mt-2">URL: {(n8nStatus as any).data.url.replace(/^https?:\/\//, '***')}</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="mcp" className="mt-4">

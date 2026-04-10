@@ -32,6 +32,8 @@ const ICON_MAP: Record<string, any> = {
 };
 import { DomoticsHeader } from './domotics/components/DomoticsHeader';
 import { DeviceSidebar } from './domotics/components/DeviceSidebar';
+import ScenesPanel from '@/components/domotics/ScenesPanel';
+import SchedulePanel from '@/components/domotics/SchedulePanel';
 
 // ── eWeLink Device Card ──────────────────────────────────
 
@@ -348,6 +350,8 @@ export default function DomoticsPage() {
                     <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">{devices.length}</Badge>
                   )}
                 </TabsTrigger>
+                <TabsTrigger value="scenes" className="gap-1.5">Escenas</TabsTrigger>
+                <TabsTrigger value="schedules" className="gap-1.5">Programación</TabsTrigger>
               </TabsList>
 
               {/* ── eWeLink Tab ── */}
@@ -426,6 +430,16 @@ export default function DomoticsPage() {
                     className="flex-1 p-0 border-0"
                   />
                 </div>
+              </TabsContent>
+
+              {/* ── Escenas Tab ── */}
+              <TabsContent value="scenes" className="flex-1 overflow-auto mt-0">
+                <ScenesPanel />
+              </TabsContent>
+
+              {/* ── Programación Tab ── */}
+              <TabsContent value="schedules" className="flex-1 overflow-auto mt-0">
+                <SchedulePanel />
               </TabsContent>
             </Tabs>
           </div>

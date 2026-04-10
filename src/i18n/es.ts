@@ -945,6 +945,69 @@ const es: Record<string, string> = {
   'password.acceptable': 'Aceptable',
   'password.strong': 'Fuerte',
   'password.very_strong': 'Muy fuerte',
+
+  // Nav — new pages
+  'nav.detections': 'Detecciones',
+  'nav.paging': 'Central de Voz',
+  'nav.call_log': 'Historial Llamadas',
+  'nav.supervisor': 'Panel Supervisor',
+
+  // Detections
+  'detections.title': 'Detecciones de Cámaras',
+  'detections.stats.total': 'Total',
+  'detections.stats.persons': 'Personas',
+  'detections.stats.vehicles': 'Vehículos',
+  'detections.stats.pending': 'Pendientes',
+  'detections.markReviewed': 'Marcar como revisado',
+  'detections.analyzeAI': 'Analizar con IA',
+
+  // Paging
+  'paging.title': 'Central de Voz y Voceo',
+  'paging.destinations': 'Destinos',
+  'paging.transmit': 'Transmitir',
+  'paging.emergency': 'EMERGENCIA',
+  'paging.emergencyConfirm': '¿Confirmar transmisión de emergencia a todas las sedes?',
+  'paging.history': 'Historial',
+  'paging.templates': 'Plantillas Rápidas',
+  'paging.textMessage': 'Mensaje de Texto',
+
+  // Supervisor
+  'supervisor.title': 'Panel del Supervisor',
+  'supervisor.kpis': 'KPIs en Tiempo Real',
+  'supervisor.alerts': 'Alertas y Escalamientos',
+  'supervisor.operators': 'Operadores en Turno',
+  'supervisor.shiftHandoff': 'Entrega de Turno',
+  'supervisor.generateReport': 'Generar Reporte',
+  'supervisor.signClose': 'Firmar y Cerrar Turno',
+
+  // Call Log
+  'callLog.title': 'Historial de Llamadas',
+  'callLog.totalCalls': 'Total de Llamadas',
+  'callLog.avgDuration': 'Duración Promedio',
+  'callLog.aiHandled': 'Atendidas por IA',
+  'callLog.humanHandled': 'Atendidas por Humano',
+  'callLog.missed': 'Perdidas',
+  'callLog.playRecording': 'Reproducir Grabación',
+  'callLog.viewTranscript': 'Ver Transcripción',
+
+  // Scenes
+  'scenes.title': 'Escenas',
+  'scenes.execute': 'Ejecutar',
+  'scenes.create': 'Nueva Escena',
+  'scenes.history': 'Historial de Ejecuciones',
+
+  // Schedule
+  'schedule.title': 'Programación',
+  'schedule.create': 'Crear Programación',
+  'schedule.days': 'Días',
+  'schedule.time': 'Hora',
+  'schedule.device': 'Dispositivo',
+  'schedule.action': 'Acción',
+
+  // Residents
+  'residents.import': 'Importar',
+  'residents.viewFlat': 'Lista plana',
+  'residents.viewGrouped': 'Por módulo',
 };
 
 export default es;
