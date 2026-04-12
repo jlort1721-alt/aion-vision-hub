@@ -214,6 +214,152 @@ export interface FloorPlanPosition {
   y: number;
 }
 
+/** Integration record */
+export interface ApiIntegration {
+  id: string;
+  name: string;
+  type?: string;
+  status: string;
+  last_sync?: string;
+  error_message?: string;
+  [key: string]: unknown;
+}
+
+/** MCP connector record */
+export interface ApiMcpConnector {
+  id: string;
+  name: string;
+  type?: string;
+  status: string;
+  scopes?: string[];
+  error_count?: number;
+  health?: string;
+  last_check?: string;
+  [key: string]: unknown;
+}
+
+/** Shift record */
+export interface ApiShift {
+  id: string;
+  guard_name?: string;
+  site_id?: string;
+  site_name?: string;
+  start_time?: string;
+  end_time?: string;
+  status?: string;
+  type?: string;
+  notes?: string;
+  checkpoints_total?: number;
+  checkpoints_completed?: number;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+/** Contract record */
+export interface ApiContract {
+  id: string;
+  client_name?: string;
+  name?: string;
+  title?: string;
+  start_date?: string;
+  end_date?: string;
+  status?: string;
+  value?: number;
+  monthly_value?: number;
+  type?: string;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+/** Training record */
+export interface ApiTraining {
+  id: string;
+  title?: string;
+  name?: string;
+  type?: string;
+  status?: string;
+  instructor?: string;
+  date?: string;
+  duration?: number;
+  participants?: number;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+/** Visitor record */
+export interface ApiVisitor {
+  id: string;
+  name?: string;
+  full_name?: string;
+  document_id?: string;
+  company?: string;
+  host?: string;
+  purpose?: string;
+  status?: string;
+  check_in?: string;
+  check_out?: string;
+  site_id?: string;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+/** Patrol record */
+export interface ApiPatrol {
+  id: string;
+  name?: string;
+  guard_name?: string;
+  route_name?: string;
+  site_id?: string;
+  status?: string;
+  started_at?: string;
+  completed_at?: string;
+  checkpoints_total?: number;
+  checkpoints_completed?: number;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+/** Key record */
+export interface ApiKey {
+  id: string;
+  name?: string;
+  label?: string;
+  key_number?: string;
+  location?: string;
+  assigned_to?: string;
+  status?: string;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+/** SLA record */
+export interface ApiSla {
+  id: string;
+  name?: string;
+  client_name?: string;
+  target?: number;
+  actual?: number;
+  status?: string;
+  metric?: string;
+  period?: string;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+/** Reboot record */
+export interface ApiReboot {
+  id: string;
+  device_id?: string;
+  device_name?: string;
+  site_id?: string;
+  status?: string;
+  scheduled_at?: string;
+  completed_at?: string;
+  reason?: string;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
 /** Generic envelope response with nested data */
 export interface ApiEnvelope<T = unknown> {
   data?: T;

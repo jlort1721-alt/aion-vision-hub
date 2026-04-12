@@ -101,6 +101,12 @@
         "hooks": [
           {
             "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/update-memory.sh",
+            "timeout": 30,
+            "statusMessage": "Updating session memory..."
+          },
+          {
+            "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-audit.sh",
             "timeout": 30,
             "statusMessage": "Running session audit..."
