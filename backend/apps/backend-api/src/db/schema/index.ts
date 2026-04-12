@@ -65,6 +65,13 @@ export { cameraDetections } from "./camera-detections.js";
 export { domoticScenes, domoticSceneExecutions } from "./domotic-scenes.js";
 export { pagingBroadcasts, pagingTemplates } from "./paging.js";
 export { hikRecordings } from "./hik-recordings.js";
+export {
+  reverseDevices,
+  reverseSessions,
+  reverseStreams,
+  reverseEvents,
+  reverseAuditLog,
+} from "./reverse.js";
 
 import {
   pgTable,

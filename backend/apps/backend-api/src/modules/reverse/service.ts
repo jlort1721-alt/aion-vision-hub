@@ -1,80 +1,134 @@
-import { sql } from "drizzle-orm";
+import { sql, eq, and, desc, gte, lte } from "drizzle-orm";
 import { db } from "../../db/client.js";
+import {
+  reverseDevices,
+  reverseSessions,
+  reverseStreams,
+  reverseEvents,
+  reverseAuditLog,
+} from "../../db/schema/reverse.js";
 import type {
   DeviceFilter,
   ApproveDeviceInput,
   EventFilter,
 } from "./schemas.js";
 
-type Row = Record<string, unknown>;
-
-async function query(q: ReturnType<typeof sql>): Promise<Row[]> {
-  const result = await db.execute(q);
-  return result as unknown as Row[];
-}
-
-async function queryOne(q: ReturnType<typeof sql>): Promise<Row | null> {
-  const rows = await query(q);
-  return rows[0] ?? null;
-}
-
-// ── Devices ──────────────────────────────────────────────
-
 async function listDevices(filter: DeviceFilter) {
-  let q = sql`SELECT * FROM reverse.devices WHERE 1=1`;
-  if (filter.vendor) q = sql`${q} AND vendor = ${filter.vendor}`;
-  if (filter.status) q = sql`${q} AND status = ${filter.status}`;
-  if (filter.site_id) q = sql`${q} AND site_id = ${filter.site_id}`;
-  q = sql`${q} ORDER BY last_seen_at DESC NULLS LAST`;
-  return query(q);
+  const conds = [];
+  if (filter.vendor) conds.push(eq(reverseDevices.vendor, filter.vendor));
+  if (filter.status) conds.push(eq(reverseDevices.status, filter.status));
+  if (filter.site_id) conds.push(eq(reverseDevices.siteId, filter.site_id));
+
+  const rows = await db
+    .select({
+      id: reverseDevices.id,
+      vendor: reverseDevices.vendor,
+      device_id: reverseDevices.deviceId,
+      display_name: reverseDevices.displayName,
+      status: reverseDevices.status,
+      site_id: reverseDevices.siteId,
+      channel_count: reverseDevices.channelCount,
+      first_seen_at: reverseDevices.firstSeenAt,
+      last_seen_at: reverseDevices.lastSeenAt,
+      metadata: reverseDevices.metadata,
+    })
+    .from(reverseDevices)
+    .where(conds.length ? and(...conds) : undefined)
+    .orderBy(desc(reverseDevices.lastSeenAt))
+    .limit(filter.limit ?? 50)
+    .offset(filter.offset ?? 0);
+
+  const [countResult] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(reverseDevices)
+    .where(conds.length ? and(...conds) : undefined);
+
+  return {
+    items: rows,
+    total: countResult?.total ?? 0,
+    limit: filter.limit ?? 50,
+    offset: filter.offset ?? 0,
+  };
 }
 
 async function getDevice(id: string) {
-  return queryOne(sql`SELECT * FROM reverse.devices WHERE id = ${id}`);
+  const [device] = await db
+    .select()
+    .from(reverseDevices)
+    .where(eq(reverseDevices.id, id))
+    .limit(1);
+  return device ?? null;
 }
 
 async function approveDevice(id: string, input: ApproveDeviceInput) {
-  return queryOne(sql`UPDATE reverse.devices SET
-    status = 'approved',
-    display_name = COALESCE(${input.display_name ?? null}, display_name),
-    site_id = COALESCE(${input.site_id ?? null}, site_id),
-    channel_count = COALESCE(${input.channel_count ?? null}, channel_count)
-  WHERE id = ${id} RETURNING *`);
+  const [device] = await db
+    .update(reverseDevices)
+    .set({
+      status: "approved",
+      displayName: input.display_name ?? undefined,
+      siteId: input.site_id ?? undefined,
+      channelCount: input.channel_count ?? undefined,
+    })
+    .where(eq(reverseDevices.id, id))
+    .returning();
+  return device ?? null;
 }
 
 async function blockDevice(id: string) {
-  return queryOne(
-    sql`UPDATE reverse.devices SET status = 'blocked' WHERE id = ${id} RETURNING *`,
-  );
+  const [device] = await db
+    .update(reverseDevices)
+    .set({ status: "blocked" })
+    .where(eq(reverseDevices.id, id))
+    .returning();
+  return device ?? null;
 }
 
-// ── Sessions ─────────────────────────────────────────────
-
 async function listSessions(state?: string) {
-  const q = state
-    ? sql`SELECT s.*, d.vendor, d.device_id, d.display_name
-          FROM reverse.sessions s JOIN reverse.devices d ON s.device_pk = d.id
-          WHERE s.state = ${state} ORDER BY s.opened_at DESC`
-    : sql`SELECT s.*, d.vendor, d.device_id, d.display_name
-          FROM reverse.sessions s JOIN reverse.devices d ON s.device_pk = d.id
-          ORDER BY s.opened_at DESC`;
-  return query(q);
+  const conds = [];
+  if (state) conds.push(eq(reverseSessions.state, state));
+
+  return db
+    .select({
+      id: reverseSessions.id,
+      device_pk: reverseSessions.devicePk,
+      remote_addr: reverseSessions.remoteAddr,
+      state: reverseSessions.state,
+      opened_at: reverseSessions.openedAt,
+      closed_at: reverseSessions.closedAt,
+      last_heartbeat: reverseSessions.lastHeartbeat,
+      firmware: reverseSessions.firmware,
+      vendor: reverseDevices.vendor,
+      device_id: reverseDevices.deviceId,
+      display_name: reverseDevices.displayName,
+      channel_count: reverseDevices.channelCount,
+    })
+    .from(reverseSessions)
+    .innerJoin(reverseDevices, eq(reverseDevices.id, reverseSessions.devicePk))
+    .where(conds.length ? and(...conds) : undefined)
+    .orderBy(desc(reverseSessions.openedAt));
 }
 
 async function getSession(id: string) {
-  return queryOne(
-    sql`SELECT s.*, d.vendor, d.device_id, d.display_name, d.channel_count
-        FROM reverse.sessions s JOIN reverse.devices d ON s.device_pk = d.id
-        WHERE s.id = ${id}`,
-  );
-}
-
-// ── Streams ──────────────────────────────────────────────
-
-async function listStreams(sessionId: string) {
-  return query(
-    sql`SELECT * FROM reverse.streams WHERE session_id = ${sessionId} AND stopped_at IS NULL ORDER BY channel`,
-  );
+  const [session] = await db
+    .select({
+      id: reverseSessions.id,
+      device_pk: reverseSessions.devicePk,
+      remote_addr: reverseSessions.remoteAddr,
+      state: reverseSessions.state,
+      opened_at: reverseSessions.openedAt,
+      last_heartbeat: reverseSessions.lastHeartbeat,
+      firmware: reverseSessions.firmware,
+      capabilities: reverseSessions.capabilities,
+      vendor: reverseDevices.vendor,
+      device_id: reverseDevices.deviceId,
+      display_name: reverseDevices.displayName,
+      channel_count: reverseDevices.channelCount,
+    })
+    .from(reverseSessions)
+    .innerJoin(reverseDevices, eq(reverseDevices.id, reverseSessions.devicePk))
+    .where(eq(reverseSessions.id, id))
+    .limit(1);
+  return session ?? null;
 }
 
 async function startStream(
@@ -82,62 +136,80 @@ async function startStream(
   channel: number,
   go2rtcName: string,
 ) {
-  return queryOne(
-    sql`INSERT INTO reverse.streams (session_id, channel, go2rtc_name)
-        VALUES (${sessionId}, ${channel}, ${go2rtcName})
-        ON CONFLICT DO NOTHING RETURNING *`,
-  );
+  const [stream] = await db
+    .insert(reverseStreams)
+    .values({ sessionId, channel, go2rtcName })
+    .onConflictDoNothing()
+    .returning();
+  return stream ?? null;
 }
 
 async function stopStream(sessionId: string, channel: number) {
-  await db.execute(
-    sql`UPDATE reverse.streams SET stopped_at = now()
-        WHERE session_id = ${sessionId} AND channel = ${channel} AND stopped_at IS NULL`,
-  );
+  await db
+    .update(reverseStreams)
+    .set({ stoppedAt: new Date() })
+    .where(
+      and(
+        eq(reverseStreams.sessionId, sessionId),
+        eq(reverseStreams.channel, channel),
+        sql`${reverseStreams.stoppedAt} IS NULL`,
+      ),
+    );
 }
-
-// ── Events ───────────────────────────────────────────────
 
 async function listEvents(filter: EventFilter) {
-  let q = sql`SELECT e.*, d.display_name, d.vendor FROM reverse.events e
-              JOIN reverse.devices d ON e.device_pk = d.id WHERE 1=1`;
-  if (filter.device_id) q = sql`${q} AND e.device_pk = ${filter.device_id}`;
-  if (filter.kind) q = sql`${q} AND e.kind = ${filter.kind}`;
-  if (filter.from) q = sql`${q} AND e.created_at >= ${filter.from}`;
-  if (filter.to) q = sql`${q} AND e.created_at <= ${filter.to}`;
-  q = sql`${q} ORDER BY e.created_at DESC LIMIT ${filter.limit}`;
-  return query(q);
+  const conds = [];
+  if (filter.device_id)
+    conds.push(eq(reverseEvents.devicePk, filter.device_id));
+  if (filter.kind) conds.push(eq(reverseEvents.kind, filter.kind));
+  if (filter.from)
+    conds.push(gte(reverseEvents.createdAt, new Date(filter.from)));
+  if (filter.to) conds.push(lte(reverseEvents.createdAt, new Date(filter.to)));
+
+  return db
+    .select()
+    .from(reverseEvents)
+    .where(conds.length ? and(...conds) : undefined)
+    .orderBy(desc(reverseEvents.createdAt))
+    .limit(filter.limit ?? 50);
 }
 
-// ── Health ───────────────────────────────────────────────
-
 async function getHealth() {
-  const devices = await queryOne(
-    sql`SELECT count(*) as total, count(*) FILTER (WHERE status = 'online') as online FROM reverse.devices`,
-  );
-  const sessions = await queryOne(
-    sql`SELECT count(*) as total, count(*) FILTER (WHERE state = 'online') as online FROM reverse.sessions`,
-  );
-  const streams = await queryOne(
-    sql`SELECT count(*) as total FROM reverse.streams WHERE stopped_at IS NULL`,
-  );
+  const [deviceStats] = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+      online: sql<number>`count(*) FILTER (WHERE ${reverseDevices.status} = 'online')::int`,
+    })
+    .from(reverseDevices);
+
+  const [sessionStats] = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+      online: sql<number>`count(*) FILTER (WHERE ${reverseSessions.state} = 'online')::int`,
+    })
+    .from(reverseSessions);
+
+  const [streamStats] = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+    })
+    .from(reverseStreams)
+    .where(sql`${reverseStreams.stoppedAt} IS NULL`);
 
   return {
     status: "ok",
     devices: {
-      total: Number(devices?.total ?? 0),
-      online: Number(devices?.online ?? 0),
+      total: deviceStats?.total ?? 0,
+      online: deviceStats?.online ?? 0,
     },
     sessions: {
-      total: Number(sessions?.total ?? 0),
-      online: Number(sessions?.online ?? 0),
+      total: sessionStats?.total ?? 0,
+      online: sessionStats?.online ?? 0,
     },
-    activeStreams: Number(streams?.total ?? 0),
+    activeStreams: streamStats?.total ?? 0,
     timestamp: new Date().toISOString(),
   };
 }
-
-// ── Audit ────────────────────────────────────────────────
 
 async function logAudit(
   actor: string,
@@ -145,10 +217,12 @@ async function logAudit(
   target?: string,
   details?: Record<string, unknown>,
 ) {
-  await db.execute(
-    sql`INSERT INTO reverse.audit_log (actor, action, target, details)
-        VALUES (${actor}, ${action}, ${target ?? null}, ${JSON.stringify(details ?? {})}::jsonb)`,
-  );
+  await db.insert(reverseAuditLog).values({
+    actor,
+    action,
+    target: target ?? null,
+    details: details ?? null,
+  });
 }
 
 export const reverseService = {
@@ -158,7 +232,6 @@ export const reverseService = {
   blockDevice,
   listSessions,
   getSession,
-  listStreams,
   startStream,
   stopStream,
   listEvents,

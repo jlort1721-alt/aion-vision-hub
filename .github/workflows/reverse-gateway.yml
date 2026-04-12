@@ -1,0 +1,164 @@
+# .github/workflows/reverse-gateway.yml
+
+name: reverse-gateway
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/reverse-gateway/**'
+      - 'apps/api/src/routes/reverse/**'
+      - 'apps/web/src/features/reverse/**'
+      - '.github/workflows/reverse-gateway.yml'
+  pull_request:
+    paths:
+      - 'services/reverse-gateway/**'
+      - 'apps/api/src/routes/reverse/**'
+      - 'apps/web/src/features/reverse/**'
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------- go
+  go-build-and-unit:
+    runs-on: ubuntu-22.04
+    defaults: { run: { working-directory: services/reverse-gateway } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+          cache-dependency-path: services/reverse-gateway/go.sum
+      - run: go mod download
+      - run: go vet ./...
+      - name: staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          staticcheck ./...
+      - name: build (stub, no SDKs)
+        run: go build -trimpath -o bin/gateway ./cmd/gateway
+      - name: unit tests
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./internal/... ./test/unit/...
+      - name: coverage gate
+        run: |
+          pct=$(go tool cover -func=coverage.out | awk '/^total:/ {print $3}' | tr -d '%')
+          echo "coverage: ${pct}%"
+          awk -v p="$pct" 'BEGIN{ exit (p+0 >= 80)?0:1 }'
+      - uses: actions/upload-artifact@v4
+        with: { name: coverage, path: services/reverse-gateway/coverage.out }
+
+  # ---------------------------------------------------------------- security
+  security:
+    runs-on: ubuntu-22.04
+    needs: go-build-and-unit
+    defaults: { run: { working-directory: services/reverse-gateway } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.22' }
+      - name: gosec
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          gosec -severity medium -confidence medium -quiet ./...
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+      - name: trivy image
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: services/reverse-gateway
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+
+  # ---------------------------------------------------------------- integration
+  integration:
+    runs-on: ubuntu-22.04
+    needs: go-build-and-unit
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: aion
+          POSTGRES_USER: aion
+          POSTGRES_DB: aion_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U aion"
+          --health-interval 3s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.22' }
+      - name: apply migrations
+        run: |
+          psql "postgres://aion:aion@localhost/aion_test" \
+            -f services/reverse-gateway/migrations/001_reverse_schema.sql
+      - name: integration tests
+        working-directory: services/reverse-gateway
+        env:
+          AION_PG_DSN: postgres://aion:aion@localhost/aion_test?sslmode=disable
+          AION_REDIS_ADDR: 127.0.0.1:6379
+        run: go test -race -tags integration ./test/integration/...
+
+  # ---------------------------------------------------------------- e2e
+  e2e:
+    runs-on: ubuntu-22.04
+    needs: integration
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - run: pnpm install --frozen-lockfile
+      - name: docker compose up
+        run: docker compose -f services/reverse-gateway/test/docker-compose.test.yml up -d --wait
+      - name: playwright install
+        run: pnpm --filter @aion/web exec playwright install --with-deps chromium
+      - name: e2e tests
+        env:
+          AION_E2E_BASE_URL: http://localhost:15173
+          E2E_TOKEN: ${{ secrets.E2E_TOKEN }}
+        run: pnpm exec playwright test --config services/reverse-gateway/test/e2e/playwright.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: services/reverse-gateway/test/e2e/report
+      - name: docker compose down
+        if: always()
+        run: docker compose -f services/reverse-gateway/test/docker-compose.test.yml down -v
+
+  # ---------------------------------------------------------------- load
+  load:
+    runs-on: ubuntu-22.04
+    needs: e2e
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose -f services/reverse-gateway/test/docker-compose.test.yml up -d --wait
+      - uses: grafana/setup-k6-action@v1
+      - run: |
+          k6 run \
+            -e BASE_URL=http://localhost:13000 \
+            -e TOKEN=${{ secrets.E2E_TOKEN }} \
+            services/reverse-gateway/test/load/reverse-gateway.k6.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-summary
+          path: services/reverse-gateway/test/load/summary.json

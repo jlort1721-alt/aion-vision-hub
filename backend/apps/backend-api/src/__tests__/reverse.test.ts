@@ -36,6 +36,20 @@ describe("Reverse Module — Zod Schemas", () => {
       });
       expect(result.success).toBe(true);
     });
+
+    it("defaults limit to 50 and offset to 0", () => {
+      const result = deviceFilterSchema.safeParse({});
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.limit).toBe(50);
+        expect(result.data.offset).toBe(0);
+      }
+    });
+
+    it("accepts custom limit and offset", () => {
+      const result = deviceFilterSchema.safeParse({ limit: 100, offset: 50 });
+      expect(result.success).toBe(true);
+    });
   });
 
   describe("approveDeviceSchema", () => {
@@ -51,17 +65,25 @@ describe("Reverse Module — Zod Schemas", () => {
       expect(result.success).toBe(true);
     });
 
-    it("accepts full input", () => {
+    it("accepts full input with credentials", () => {
       const result = approveDeviceSchema.safeParse({
         display_name: "NVR San Nicolas",
         site_id: "a0000000-0000-4000-8000-000000000001",
         channel_count: 16,
+        username: "admin",
+        password: "Secure123!",
+        isup_key: "abc123",
       });
       expect(result.success).toBe(true);
     });
 
-    it("rejects channel_count > 64", () => {
-      const result = approveDeviceSchema.safeParse({ channel_count: 128 });
+    it("accepts channel_count up to 256", () => {
+      const result = approveDeviceSchema.safeParse({ channel_count: 256 });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects channel_count > 256", () => {
+      const result = approveDeviceSchema.safeParse({ channel_count: 300 });
       expect(result.success).toBe(false);
     });
 
@@ -77,9 +99,14 @@ describe("Reverse Module — Zod Schemas", () => {
       expect(result.success).toBe(true);
     });
 
-    it("accepts channel 0", () => {
-      const result = startStreamSchema.safeParse({ channel: 0 });
+    it("accepts channel 256", () => {
+      const result = startStreamSchema.safeParse({ channel: 256 });
       expect(result.success).toBe(true);
+    });
+
+    it("rejects channel 0", () => {
+      const result = startStreamSchema.safeParse({ channel: 0 });
+      expect(result.success).toBe(false);
     });
 
     it("rejects missing channel", () => {
@@ -87,25 +114,51 @@ describe("Reverse Module — Zod Schemas", () => {
       expect(result.success).toBe(false);
     });
 
-    it("rejects channel > 64", () => {
-      const result = startStreamSchema.safeParse({ channel: 65 });
+    it("rejects channel > 256", () => {
+      const result = startStreamSchema.safeParse({ channel: 257 });
       expect(result.success).toBe(false);
+    });
+
+    it("defaults format to webrtc", () => {
+      const result = startStreamSchema.safeParse({ channel: 1 });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.format).toBe("webrtc");
+      }
+    });
+
+    it("accepts hls format", () => {
+      const result = startStreamSchema.safeParse({
+        channel: 1,
+        format: "hls",
+      });
+      expect(result.success).toBe(true);
     });
   });
 
   describe("ptzSchema", () => {
     it("accepts valid PTZ command", () => {
-      const result = ptzSchema.safeParse({ action: "up", speed: 4 });
+      const result = ptzSchema.safeParse({ action: "tilt_up", speed: 4 });
       expect(result.success).toBe(true);
     });
 
-    it("accepts preset_goto with preset", () => {
+    it("accepts pan_left action", () => {
+      const result = ptzSchema.safeParse({ action: "pan_left" });
+      expect(result.success).toBe(true);
+    });
+
+    it("accepts goto_preset with preset", () => {
       const result = ptzSchema.safeParse({
-        action: "preset_goto",
+        action: "goto_preset",
         speed: 5,
         preset: 1,
       });
       expect(result.success).toBe(true);
+    });
+
+    it("rejects old action names", () => {
+      const result = ptzSchema.safeParse({ action: "up" });
+      expect(result.success).toBe(false);
     });
 
     it("rejects invalid action", () => {
@@ -113,17 +166,28 @@ describe("Reverse Module — Zod Schemas", () => {
       expect(result.success).toBe(false);
     });
 
-    it("defaults speed to 4", () => {
+    it("defaults speed to 4 and channel to 1", () => {
       const result = ptzSchema.safeParse({ action: "stop" });
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.speed).toBe(4);
+        expect(result.data.channel).toBe(1);
       }
     });
 
-    it("rejects speed > 7", () => {
-      const result = ptzSchema.safeParse({ action: "up", speed: 10 });
+    it("accepts speed up to 8", () => {
+      const result = ptzSchema.safeParse({ action: "zoom_in", speed: 8 });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects speed > 8", () => {
+      const result = ptzSchema.safeParse({ action: "tilt_up", speed: 10 });
       expect(result.success).toBe(false);
+    });
+
+    it("accepts iris_open and iris_close", () => {
+      expect(ptzSchema.safeParse({ action: "iris_open" }).success).toBe(true);
+      expect(ptzSchema.safeParse({ action: "iris_close" }).success).toBe(true);
     });
   });
 
@@ -152,8 +216,13 @@ describe("Reverse Module — Zod Schemas", () => {
       expect(result.success).toBe(true);
     });
 
-    it("rejects limit > 500", () => {
+    it("accepts limit up to 1000", () => {
       const result = eventFilterSchema.safeParse({ limit: 1000 });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects limit > 1000", () => {
+      const result = eventFilterSchema.safeParse({ limit: 1001 });
       expect(result.success).toBe(false);
     });
   });

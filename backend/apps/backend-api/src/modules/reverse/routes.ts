@@ -10,18 +10,14 @@ import {
 } from "./schemas.js";
 
 export async function registerReverseRoutes(app: FastifyInstance) {
-  // ── Health ─────────────────────────────────────────────
   app.get("/health", async (_request, reply) => {
     const health = await reverseService.getHealth();
     return reply.send(health);
   });
 
-  // ── Devices ────────────────────────────────────────────
   app.get(
     "/devices",
-    {
-      preHandler: [requireRole("operator", "tenant_admin", "super_admin")],
-    },
+    { preHandler: [requireRole("operator", "tenant_admin", "super_admin")] },
     async (request, reply) => {
       const filter = deviceFilterSchema.parse(request.query);
       const data = await reverseService.listDevices(filter);
@@ -31,9 +27,7 @@ export async function registerReverseRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>(
     "/devices/:id",
-    {
-      preHandler: [requireRole("operator", "tenant_admin", "super_admin")],
-    },
+    { preHandler: [requireRole("operator", "tenant_admin", "super_admin")] },
     async (request, reply) => {
       const device = await reverseService.getDevice(request.params.id);
       if (!device)
@@ -46,9 +40,7 @@ export async function registerReverseRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>(
     "/devices/:id/approve",
-    {
-      preHandler: [requireRole("tenant_admin", "super_admin")],
-    },
+    { preHandler: [requireRole("tenant_admin", "super_admin")] },
     async (request, reply) => {
       const input = approveDeviceSchema.parse(request.body);
       const device = await reverseService.approveDevice(
@@ -60,7 +52,7 @@ export async function registerReverseRoutes(app: FastifyInstance) {
           .code(404)
           .send({ success: false, error: "Device not found" });
       await reverseService.logAudit(
-        request.userId ?? "unknown",
+        (request as any).userId ?? "unknown",
         "device.approved",
         request.params.id,
         input as Record<string, unknown>,
@@ -71,9 +63,7 @@ export async function registerReverseRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string } }>(
     "/devices/:id/block",
-    {
-      preHandler: [requireRole("tenant_admin", "super_admin")],
-    },
+    { preHandler: [requireRole("tenant_admin", "super_admin")] },
     async (request, reply) => {
       const device = await reverseService.blockDevice(request.params.id);
       if (!device)
@@ -81,7 +71,7 @@ export async function registerReverseRoutes(app: FastifyInstance) {
           .code(404)
           .send({ success: false, error: "Device not found" });
       await reverseService.logAudit(
-        request.userId ?? "unknown",
+        (request as any).userId ?? "unknown",
         "device.blocked",
         request.params.id,
       );
@@ -89,12 +79,9 @@ export async function registerReverseRoutes(app: FastifyInstance) {
     },
   );
 
-  // ── Sessions ───────────────────────────────────────────
   app.get(
     "/sessions",
-    {
-      preHandler: [requireRole("operator", "tenant_admin", "super_admin")],
-    },
+    { preHandler: [requireRole("operator", "tenant_admin", "super_admin")] },
     async (request, reply) => {
       const state = (request.query as Record<string, string>).state;
       const data = await reverseService.listSessions(state);
@@ -104,9 +91,7 @@ export async function registerReverseRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>(
     "/sessions/:id",
-    {
-      preHandler: [requireRole("operator", "tenant_admin", "super_admin")],
-    },
+    { preHandler: [requireRole("operator", "tenant_admin", "super_admin")] },
     async (request, reply) => {
       const session = await reverseService.getSession(request.params.id);
       if (!session)
@@ -117,12 +102,9 @@ export async function registerReverseRoutes(app: FastifyInstance) {
     },
   );
 
-  // ── Streams ────────────────────────────────────────────
   app.post<{ Params: { id: string } }>(
     "/sessions/:id/streams",
-    {
-      preHandler: [requireRole("operator", "tenant_admin", "super_admin")],
-    },
+    { preHandler: [requireRole("operator", "tenant_admin", "super_admin")] },
     async (request, reply) => {
       const { channel } = startStreamSchema.parse(request.body);
       const session = await reverseService.getSession(request.params.id);
@@ -131,25 +113,31 @@ export async function registerReverseRoutes(app: FastifyInstance) {
           .code(404)
           .send({ success: false, error: "Session not found" });
 
-      const go2rtcName = `rv_${(session as Record<string, unknown>).vendor}_${(session as Record<string, unknown>).device_id}_ch${channel}`;
+      const go2rtcName = `rv_${session.vendor}_${session.device_id}_ch${channel}`;
       const stream = await reverseService.startStream(
         request.params.id,
         channel,
         go2rtcName,
       );
+
+      const publicBase =
+        process.env.PUBLIC_GO2RTC_URL ?? "https://aionseg.co/stream";
       return reply.code(201).send({
         success: true,
         data: stream,
-        streamUrl: `/go2rtc/api/stream.mp4?src=${go2rtcName}`,
+        go2rtcName,
+        urls: {
+          mp4: `${publicBase}/api/stream.mp4?src=${encodeURIComponent(go2rtcName)}`,
+          hls: `${publicBase}/api/stream.m3u8?src=${encodeURIComponent(go2rtcName)}`,
+          webrtc: `${publicBase}/api/webrtc?src=${encodeURIComponent(go2rtcName)}`,
+        },
       });
     },
   );
 
   app.delete<{ Params: { id: string; ch: string } }>(
     "/sessions/:id/streams/:ch",
-    {
-      preHandler: [requireRole("operator", "tenant_admin", "super_admin")],
-    },
+    { preHandler: [requireRole("operator", "tenant_admin", "super_admin")] },
     async (request, reply) => {
       await reverseService.stopStream(
         request.params.id,
@@ -159,12 +147,9 @@ export async function registerReverseRoutes(app: FastifyInstance) {
     },
   );
 
-  // ── PTZ ────────────────────────────────────────────────
   app.post<{ Params: { id: string } }>(
     "/sessions/:id/ptz",
-    {
-      preHandler: [requireRole("operator", "tenant_admin", "super_admin")],
-    },
+    { preHandler: [requireRole("operator", "tenant_admin", "super_admin")] },
     async (request, reply) => {
       const ptz = ptzSchema.parse(request.body);
       const session = await reverseService.getSession(request.params.id);
@@ -173,9 +158,14 @@ export async function registerReverseRoutes(app: FastifyInstance) {
           .code(404)
           .send({ success: false, error: "Session not found" });
 
-      // PTZ via ISAPI proxy — device must have HTTP access
+      if (ptz.action === "goto_preset" && typeof ptz.preset !== "number") {
+        return reply
+          .code(400)
+          .send({ success: false, error: "preset required for goto_preset" });
+      }
+
       await reverseService.logAudit(
-        request.userId ?? "unknown",
+        (request as any).userId ?? "unknown",
         "ptz.command",
         request.params.id,
         ptz as Record<string, unknown>,
@@ -187,12 +177,9 @@ export async function registerReverseRoutes(app: FastifyInstance) {
     },
   );
 
-  // ── Snapshot ───────────────────────────────────────────
   app.post<{ Params: { id: string } }>(
     "/sessions/:id/snapshot",
-    {
-      preHandler: [requireRole("operator", "tenant_admin", "super_admin")],
-    },
+    { preHandler: [requireRole("operator", "tenant_admin", "super_admin")] },
     async (request, reply) => {
       const session = await reverseService.getSession(request.params.id);
       if (!session)
@@ -200,7 +187,7 @@ export async function registerReverseRoutes(app: FastifyInstance) {
           .code(404)
           .send({ success: false, error: "Session not found" });
 
-      const go2rtcName = `rv_${(session as Record<string, unknown>).vendor}_${(session as Record<string, unknown>).device_id}_ch1`;
+      const go2rtcName = `rv_${session.vendor}_${session.device_id}_ch1`;
       return reply.send({
         success: true,
         snapshotUrl: `/go2rtc/api/frame.jpeg?src=${go2rtcName}`,
@@ -208,12 +195,9 @@ export async function registerReverseRoutes(app: FastifyInstance) {
     },
   );
 
-  // ── Events ─────────────────────────────────────────────
   app.get(
     "/events",
-    {
-      preHandler: [requireRole("operator", "tenant_admin", "super_admin")],
-    },
+    { preHandler: [requireRole("operator", "tenant_admin", "super_admin")] },
     async (request, reply) => {
       const filter = eventFilterSchema.parse(request.query);
       const data = await reverseService.listEvents(filter);

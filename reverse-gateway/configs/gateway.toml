@@ -1,0 +1,47 @@
+# /etc/aion/reverse/gateway.toml
+#
+# AION Reverse-Connect Gateway — production config.
+# Copy this file to /etc/aion/reverse/gateway.toml on the VPS and fill in
+# the DSN / key file path. All secrets MUST stay out of this file; the KEK
+# lives in a separate 0400 file referenced here.
+
+env = "production"
+
+[postgres]
+# Uses the SAME Postgres instance as AION but the `reverse` schema.
+# The aion user must have CREATE privilege on that schema.
+dsn = "postgres://aion:REPLACE_ME@127.0.0.1:5432/aion?sslmode=disable&application_name=reverse-gateway"
+
+[redis]
+addr = "127.0.0.1:6379"
+db   = 3          # reserved; the rest of AION uses 0-2
+
+[crypto]
+# Generate with: make keygen > /etc/aion/reverse/kek.key && chmod 0400 /etc/aion/reverse/kek.key
+key_file = "/etc/aion/reverse/kek.key"
+
+[dahua]
+addr                    = ":7681"
+sdk_lib_path            = "/opt/aion/services/reverse-gateway/sdks/dahua/lib"
+heartbeat_timeout_s     = 90
+max_concurrent_sessions = 256
+
+[hikvision]
+signaling_addr          = ":7660"
+stream_addr             = ":7661"
+sdk_lib_path            = "/opt/aion/services/reverse-gateway/sdks/hikvision/lib"
+heartbeat_timeout_s     = 60
+max_concurrent_sessions = 256
+
+[media]
+go2rtc_url    = "http://127.0.0.1:1984"
+stream_prefix = "rv_"              # namespace guard; do NOT change after first deploy
+ffmpeg_path   = "/usr/bin/ffmpeg"
+
+[grpc]
+# Bound to loopback only. Fastify reaches it over localhost.
+addr = "127.0.0.1:50551"
+
+[metrics]
+# Prometheus scrape target. Only exposed via nginx to Grafana; never public.
+addr = "127.0.0.1:9464"

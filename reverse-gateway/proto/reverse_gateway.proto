@@ -1,0 +1,100 @@
+// proto/reverse_gateway.proto
+//
+// gRPC service exposed by the Go gateway to Fastify over loopback (50551).
+// Regenerate stubs with `make proto` which runs `buf generate`.
+
+syntax = "proto3";
+
+package aion.reverse.v1;
+
+option go_package = "github.com/claveseg/aion/reverse-gateway/proto;rgpb";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+service ReverseGateway {
+  // Session inventory
+  rpc ListSessions(google.protobuf.Empty) returns (ListSessionsResponse);
+  rpc GetSession(GetSessionRequest) returns (Session);
+
+  // Streams
+  rpc StartStream(StartStreamRequest) returns (StartStreamResponse);
+  rpc StopStream(StopStreamRequest) returns (google.protobuf.Empty);
+
+  // PTZ / snapshot
+  rpc PTZ(PTZRequest) returns (google.protobuf.Empty);
+  rpc Snapshot(SnapshotRequest) returns (SnapshotResponse);
+
+  // Crypto delegated to gateway (Fastify never holds the KEK)
+  rpc EncryptSecret(EncryptRequest) returns (EncryptResponse);
+
+  // Health
+  rpc Health(google.protobuf.Empty) returns (HealthResponse);
+}
+
+message Session {
+  string session_id                       = 1;
+  string device_id                        = 2;
+  string vendor                           = 3; // "dahua" | "hikvision"
+  string remote_addr                      = 4;
+  google.protobuf.Timestamp opened_at     = 5;
+  google.protobuf.Timestamp last_heartbeat = 6;
+  string state                            = 7;
+}
+
+message ListSessionsResponse {
+  repeated Session sessions = 1;
+}
+
+message GetSessionRequest {
+  string session_id = 1;
+}
+
+message StartStreamRequest {
+  string session_id = 1;
+  int32  channel    = 2;
+  bool   sub_stream = 3;
+}
+
+message StartStreamResponse {
+  string rtsp_url     = 1;
+  string go2rtc_name  = 2;
+  string codec        = 3;
+  string resolution   = 4;
+}
+
+message StopStreamRequest {
+  string session_id = 1;
+  int32  channel    = 2;
+}
+
+message PTZRequest {
+  string session_id = 1;
+  int32  channel    = 2;
+  string action     = 3; // pan_left | pan_right | tilt_up | tilt_down | zoom_in | zoom_out | focus_near | focus_far | iris_open | iris_close | stop | goto_preset
+  int32  speed      = 4; // 1..8
+  int32  preset     = 5; // for goto_preset
+}
+
+message SnapshotRequest {
+  string session_id = 1;
+  int32  channel    = 2;
+}
+
+message SnapshotResponse {
+  bytes jpeg = 1;
+}
+
+message EncryptRequest {
+  bytes plaintext = 1;
+}
+
+message EncryptResponse {
+  bytes ciphertext = 1;
+}
+
+message HealthResponse {
+  bool   ok       = 1;
+  string version  = 2;
+  int32  sessions_online = 3;
+}
