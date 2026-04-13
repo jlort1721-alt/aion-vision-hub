@@ -23,14 +23,14 @@
     "@aion/shared-contracts": "workspace:*",
     "@aion/common-utils": "workspace:*",
     "pino": "^10.3.1",
-    "undici": "^7.24.6",
+    "undici": "^8.1.0",
     "onvif": "^0.8.1",
-    "fast-xml-parser": "^5.5.9",
+    "fast-xml-parser": "^5.5.12",
     "node-digest-auth-client": "^1.0.0"
   },
   "devDependencies": {
     "typescript": "^6.0.2",
-    "@types/node": "^25.5.0",
-    "vitest": "^4.1.2"
+    "@types/node": "^25.6.0",
+    "vitest": "^4.1.4"
   }
 }
