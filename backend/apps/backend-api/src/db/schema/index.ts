@@ -71,6 +71,11 @@ export {
   reverseStreams,
   reverseEvents,
   reverseAuditLog,
+  reverseRoutes,
+  reverseRouteEvents,
+  reverseGb28181Devices,
+  reverseP2pWorkers,
+  reverseHealthChecks,
 } from "./reverse.js";
 
 import {

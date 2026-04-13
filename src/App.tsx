@@ -30,6 +30,7 @@ const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const LiveViewPage = lazy(() => import("@/pages/LiveViewPage"));
 const ReverseFleetPage = lazy(() => import("@/pages/ReverseFleetPage"));
+const VisionHubPage = lazy(() => import("@/pages/vision-hub/VisionHubPage"));
 const PlaybackPage = lazy(() => import("@/pages/PlaybackPage"));
 const EventsPage = lazy(() => import("@/pages/EventsPage"));
 const IncidentsPage = lazy(() => import("@/pages/IncidentsPage"));
@@ -205,6 +206,7 @@ function AppRoutes() {
                 }
               />
               <Route path="reverse" element={<ReverseFleetPage />} />
+              <Route path="vision-hub" element={<VisionHubPage />} />
               <Route
                 path="floor-plan"
                 element={

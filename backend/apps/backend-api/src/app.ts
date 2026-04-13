@@ -93,6 +93,7 @@ import { registerImouRoutes } from "./modules/imou/routes.js";
 import { registerHikConnectRoutes } from "./modules/hikconnect/routes.js";
 import { registerDahuaRoutes } from "./modules/dahua/routes.js";
 import { registerReverseRoutes } from "./modules/reverse/routes.js";
+import { registerVisionHubRoutes } from "./modules/vision-hub/routes.js";
 import { registerFaceRecognitionRoutes } from "./modules/face-recognition/routes.js";
 import { registerHeatMappingRoutes } from "./modules/heat-mapping/routes.js";
 import {
@@ -371,6 +372,9 @@ export async function buildApp() {
 
   // Reverse-Connect Gateway (ISUP + Platform Access fleet management)
   await app.register(registerReverseRoutes, { prefix: "/reverse" });
+
+  // Vision Hub v1.2.0 (GB28181 + P2P + orchestrator multi-route)
+  await app.register(registerVisionHubRoutes, { prefix: "/vision-hub" });
 
   // Hik-Connect P2P Cloud Streaming (requires tpp.hikvision.com AK/SK)
   await app.register(registerHikConnectRoutes, { prefix: "/hikconnect" });

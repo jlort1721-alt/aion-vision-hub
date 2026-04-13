@@ -114,3 +114,100 @@ export const reverseAuditLog = reverse.table("audit_log", {
   details: jsonb("details"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
+
+// ─── Vision Hub v1.2.0 (additive tables) ───────────────────────
+
+export const reverseRoutes = reverse.table(
+  "routes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    devicePk: uuid("device_pk")
+      .notNull()
+      .references(() => reverseDevices.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    priority: integer("priority").notNull().default(100),
+    config: jsonb("config").notNull().default({}),
+    state: text("state").notNull().default("unknown"),
+    lastCheckAt: timestamp("last_check_at", { withTimezone: true }),
+    lastOkAt: timestamp("last_ok_at", { withTimezone: true }),
+    failCount: integer("fail_count").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => ({
+    deviceKindUnique: uniqueIndex("routes_device_kind_key").on(
+      t.devicePk,
+      t.kind,
+    ),
+    activeIdx: index("routes_active_idx").on(t.devicePk, t.priority),
+    stateIdx: index("routes_by_state_idx").on(t.state, t.lastCheckAt),
+  }),
+);
+
+export const reverseRouteEvents = reverse.table(
+  "route_events",
+  {
+    id: bigserial("id", { mode: "bigint" }).primaryKey(),
+    routeId: uuid("route_id")
+      .notNull()
+      .references(() => reverseRoutes.id, { onDelete: "cascade" }),
+    event: text("event").notNull(),
+    fromState: text("from_state"),
+    toState: text("to_state"),
+    details: jsonb("details"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => ({
+    routeTimeIdx: index("route_events_route_time_idx").on(
+      t.routeId,
+      t.createdAt,
+    ),
+  }),
+);
+
+export const reverseGb28181Devices = reverse.table(
+  "gb28181_devices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    devicePk: uuid("device_pk")
+      .notNull()
+      .references(() => reverseDevices.id, { onDelete: "cascade" }),
+    sipDeviceId: text("sip_device_id").notNull(),
+    sipDomain: text("sip_domain").notNull(),
+    password: text("password").notNull(),
+    lastKeepalive: timestamp("last_keepalive", { withTimezone: true }),
+    channels: jsonb("channels").notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => ({
+    sipUnique: uniqueIndex("gb28181_sip_idx").on(t.sipDeviceId),
+  }),
+);
+
+export const reverseP2pWorkers = reverse.table("p2p_workers", {
+  workerId: text("worker_id").primaryKey(),
+  state: text("state").notNull(),
+  restartCount: bigserial("restart_count", { mode: "bigint" }),
+  lastError: text("last_error"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+export const reverseHealthChecks = reverse.table(
+  "health_checks",
+  {
+    id: bigserial("id", { mode: "bigint" }).primaryKey(),
+    routeId: uuid("route_id")
+      .notNull()
+      .references(() => reverseRoutes.id, { onDelete: "cascade" }),
+    ok: text("ok").notNull(),
+    latencyMs: integer("latency_ms"),
+    error: text("error"),
+    checkedAt: timestamp("checked_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => ({
+    routeTimeIdx: index("health_checks_route_time_idx").on(
+      t.routeId,
+      t.checkedAt,
+    ),
+  }),
+);
