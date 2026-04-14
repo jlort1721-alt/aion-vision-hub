@@ -75,7 +75,7 @@ func main() {
 	}
 	defer pg.Close()
 
-	rdb, err := store.OpenRedis(ctx, cfg.Redis.Addr, cfg.Redis.DB)
+	rdb, err := store.OpenRedis(ctx, cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
 		log.Fatal().Err(err).Msg("redis connect failed")
 	}

@@ -91,7 +91,7 @@ export const reverseStreams = reverse.table(
 export const reverseEvents = reverse.table(
   "events",
   {
-    id: bigserial("id", { mode: "bigint" }).primaryKey(),
+    id: bigserial("id", { mode: "number" }).primaryKey(),
     devicePk: uuid("device_pk")
       .notNull()
       .references(() => reverseDevices.id, { onDelete: "cascade" }),
@@ -107,7 +107,7 @@ export const reverseEvents = reverse.table(
 );
 
 export const reverseAuditLog = reverse.table("audit_log", {
-  id: bigserial("id", { mode: "bigint" }).primaryKey(),
+  id: bigserial("id", { mode: "number" }).primaryKey(),
   actor: text("actor").notNull(),
   action: text("action").notNull(),
   target: text("target"),
@@ -147,7 +147,7 @@ export const reverseRoutes = reverse.table(
 export const reverseRouteEvents = reverse.table(
   "route_events",
   {
-    id: bigserial("id", { mode: "bigint" }).primaryKey(),
+    id: bigserial("id", { mode: "number" }).primaryKey(),
     routeId: uuid("route_id")
       .notNull()
       .references(() => reverseRoutes.id, { onDelete: "cascade" }),
@@ -187,7 +187,7 @@ export const reverseGb28181Devices = reverse.table(
 export const reverseP2pWorkers = reverse.table("p2p_workers", {
   workerId: text("worker_id").primaryKey(),
   state: text("state").notNull(),
-  restartCount: bigserial("restart_count", { mode: "bigint" }),
+  restartCount: integer("restart_count").default(0),
   lastError: text("last_error"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
@@ -195,7 +195,7 @@ export const reverseP2pWorkers = reverse.table("p2p_workers", {
 export const reverseHealthChecks = reverse.table(
   "health_checks",
   {
-    id: bigserial("id", { mode: "bigint" }).primaryKey(),
+    id: bigserial("id", { mode: "number" }).primaryKey(),
     routeId: uuid("route_id")
       .notNull()
       .references(() => reverseRoutes.id, { onDelete: "cascade" }),

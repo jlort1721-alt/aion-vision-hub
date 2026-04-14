@@ -15,6 +15,7 @@ import (
 	"github.com/claveseg/aion/reverse-gateway/internal/config"
 	"github.com/claveseg/aion/reverse-gateway/internal/media"
 	"github.com/claveseg/aion/reverse-gateway/internal/session"
+	"github.com/claveseg/aion/reverse-gateway/internal/store"
 )
 
 // Listener is the top-level object main.go wires up.
@@ -270,9 +271,9 @@ func (l *Listener) reapStale(ctx context.Context) {
 }
 
 // Helpers: in production these come from store.Device lookups; tiny shim for clarity.
-func mustDev(_, _ string) *devStub { return &devStub{} }
-
-type devStub struct{}
+func mustDev(_, _ string) *store.Device {
+	return &store.Device{}
+}
 
 func safeName(s string) string {
 	b := make([]byte, 0, len(s))

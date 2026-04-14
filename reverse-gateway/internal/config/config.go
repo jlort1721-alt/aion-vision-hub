@@ -33,8 +33,9 @@ type PostgresConfig struct {
 }
 
 type RedisConfig struct {
-	Addr string `toml:"addr"`
-	DB   int    `toml:"db"`
+	Addr     string `toml:"addr"`
+	Password string `toml:"password"`
+	DB       int    `toml:"db"`
 }
 
 type CryptoConfig struct {

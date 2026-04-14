@@ -187,8 +187,8 @@ type Redis struct {
 	cli *redis.Client
 }
 
-func OpenRedis(ctx context.Context, addr string, db int) (*Redis, error) {
-	cli := redis.NewClient(&redis.Options{Addr: addr, DB: db})
+func OpenRedis(ctx context.Context, addr, password string, db int) (*Redis, error) {
+	cli := redis.NewClient(&redis.Options{Addr: addr, Password: password, DB: db})
 	if err := cli.Ping(ctx).Err(); err != nil {
 		return nil, err
 	}

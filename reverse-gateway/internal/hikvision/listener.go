@@ -14,6 +14,7 @@ import (
 	"github.com/claveseg/aion/reverse-gateway/internal/config"
 	"github.com/claveseg/aion/reverse-gateway/internal/media"
 	"github.com/claveseg/aion/reverse-gateway/internal/session"
+	"github.com/claveseg/aion/reverse-gateway/internal/store"
 )
 
 type Listener struct {
@@ -258,9 +259,9 @@ func (l *Listener) reapStale(ctx context.Context) {
 	}
 }
 
-func mustDev() *devStub { return &devStub{} }
-
-type devStub struct{}
+func mustDev() *store.Device {
+	return &store.Device{}
+}
 
 func safeName(s string) string {
 	b := make([]byte, 0, len(s))
