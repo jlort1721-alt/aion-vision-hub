@@ -142,7 +142,7 @@ interface RecentEvent {
   siteName?: string;
 }
 
-type GridSize = 4 | 9 | 16;
+type GridSize = 1 | 4 | 9 | 16 | 25 | 36 | 49 | 64;
 
 // ── Operator Panel: Resident/Vehicle Search ────────────────
 
@@ -979,9 +979,14 @@ export default function LiveViewPage() {
 
   const cols = Math.sqrt(gridSize);
   const gridOptions: { size: GridSize; label: string }[] = [
+    { size: 1, label: "1×1" },
     { size: 4, label: "2×2" },
     { size: 9, label: "3×3" },
     { size: 16, label: "4×4" },
+    { size: 25, label: "5×5" },
+    { size: 36, label: "6×6" },
+    { size: 49, label: "7×7" },
+    { size: 64, label: "8×8" },
   ];
 
   // ── Error state ───────────────────────────────────────────
