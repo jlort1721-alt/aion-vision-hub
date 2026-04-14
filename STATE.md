@@ -4,18 +4,18 @@
 
 ## Sesión
 
-- **Inicio:** _por completar al primer commit_
-- **Bloque actual:** 0 (pre-flight)
-- **Tiempo transcurrido:** 0 min
-- **Última actualización:** _por completar_
+- **Inicio:** 2026-04-14 04:38 UTC-5 (09:38 UTC)
+- **Bloque actual:** 1 (completado) -> 2
+- **Tiempo transcurrido:** 10 min
+- **Última actualización:** 2026-04-14T09:48Z
 
 ## Avance global
 
-- **Hallazgos abiertos al inicio:** _por completar tras Bloque 1_
+- **Hallazgos abiertos al inicio:** 4 (H-01 media, H-02..H-04 bajos)
 - **Hallazgos cerrados:** 0
 - **Hallazgos nuevos detectados:** 0
-- **Commits aplicados:** 0
-- **Tag actual:** _ninguno_
+- **Commits aplicados:** 1 (preflight)
+- **Tag actual:** v1.2.0-vision-hub-rc2 (previo a sesión)
 
 ## Estado por módulo (41 módulos)
 
@@ -76,7 +76,7 @@
 
 ## Próxima acción
 
-_Bloque 1: Reconocimiento y línea base_
+_Bloque 2: Plan de ataque → Bloque 3: Remediación intensiva_
 
 ## Notas
 
