@@ -81,7 +81,7 @@ export class TwilioNotificationWorker {
         const rows = await db.execute(sql`
           SELECT count(*) as cnt FROM database_records
           WHERE category ='service_tickets'
-            AND data->>'status' = 'Pendiente'
+            AND content->>'status' = 'Pendiente'
             AND created_at < NOW() - INTERVAL '24 hours'
         `);
         const count = Number((rows[0] as any)?.cnt || 0);
@@ -96,7 +96,7 @@ export class TwilioNotificationWorker {
         const rows = await db.execute(sql`
           SELECT count(*) as cnt FROM database_records
           WHERE category ='tech_services'
-            AND data->>'status' = 'PENDIENTE'
+            AND content->>'status' = 'PENDIENTE'
             AND created_at < NOW() - INTERVAL '7 days'
         `);
         const count = Number((rows[0] as any)?.cnt || 0);
@@ -115,7 +115,7 @@ export class TwilioNotificationWorker {
         const rows = await db.execute(sql`
           SELECT
             (SELECT count(*) FROM devices WHERE status = 'offline') as cameras_offline,
-            (SELECT count(*) FROM database_records WHERE category ='service_tickets' AND data->>'status' = 'Pendiente') as tickets_pending
+            (SELECT count(*) FROM database_records WHERE category ='service_tickets' AND content->>'status' = 'Pendiente') as tickets_pending
         `);
         const data = (rows[0] as any) || {};
         shouldFire = true;
