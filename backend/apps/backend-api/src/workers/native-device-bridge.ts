@@ -93,6 +93,10 @@ const DEFAULT_CREDS: Record<string, DeviceCreds[]> = {
     { user: "admin", pass: "Clave.seg2023" },
     { user: "admin", pass: "admin" },
     { user: "admin", pass: "admin123" },
+    { user: "admin", pass: "Admin123" },
+    { user: "admin", pass: "Clave2020" },
+    { user: "admin", pass: "Clave2021" },
+    { user: "888888", pass: "888888" },
   ],
 };
 
@@ -439,6 +443,15 @@ async function pollCycle(): Promise<void> {
       );
     }
 
+    // Every 10th cycle, try direct CGI fallback for unhealthy Dahua devices
+    if (cycleNum % 10 === 0) {
+      try {
+        await probeDahuaFallbacks();
+      } catch (err) {
+        log.warn(`dahua fallback probe error: ${(err as Error).message}`);
+      }
+    }
+
     healthy = await getHealthyCount();
   } catch (err) {
     log.error(`poll cycle error: ${(err as Error).message}`);
@@ -541,6 +554,174 @@ async function getHealthyCount(): Promise<number> {
     `SELECT count(*) FROM reverse.routes WHERE state = 'healthy'`,
   );
   return parseInt(result.rows[0].count, 10);
+}
+
+// ── TCP Probe ──
+
+import { createConnection, Socket } from "net";
+
+function tcpTest(
+  host: string,
+  port: number,
+  timeoutMs = 3000,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket: Socket = createConnection({ host, port });
+    const timer = setTimeout(() => {
+      socket.destroy();
+      resolve(false);
+    }, timeoutMs);
+    socket.on("connect", () => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve(true);
+    });
+    socket.on("error", () => {
+      clearTimeout(timer);
+      resolve(false);
+    });
+  });
+}
+
+// ── Dahua Direct CGI Fallback ──
+// Probes unhealthy Dahua devices by trying all default credentials against
+// their known IP (if any). Creates dahua_direct_cgi route on success.
+
+interface DirectProbeResult {
+  reachable: boolean;
+  method?: string;
+  model?: string;
+  rtspUrl?: string;
+  creds?: DeviceCreds;
+  reason?: string;
+}
+
+async function probeDahuaDirect(
+  ip: string,
+  deviceId: string,
+): Promise<DirectProbeResult> {
+  // Test TCP connectivity first
+  const http80 = await tcpTest(ip, 80, 3000);
+  const rtsp554 = await tcpTest(ip, 554, 3000);
+
+  if (!http80 && !rtsp554) {
+    return { reachable: false, reason: "no_tcp_80_554" };
+  }
+
+  if (http80) {
+    // Try all Dahua default credentials
+    const creds = DEVICE_CREDS[deviceId]
+      ? [DEVICE_CREDS[deviceId], ...DEFAULT_CREDS.dahua]
+      : DEFAULT_CREDS.dahua;
+
+    for (const cred of creds) {
+      const result = await probeDahuaCGI(ip, 80, cred.user, cred.pass);
+      if (result.ok) {
+        return {
+          reachable: true,
+          method: "direct_cgi",
+          model: result.model,
+          rtspUrl: `rtsp://${encodeURIComponent(cred.user)}:${encodeURIComponent(cred.pass)}@${ip}:554/cam/realmonitor?channel=1&subtype=0`,
+          creds: cred,
+        };
+      }
+    }
+  }
+
+  return {
+    reachable: false,
+    reason: http80 ? "no_creds_matched" : "only_rtsp",
+  };
+}
+
+async function loadUnhealthyDahua(): Promise<DeviceRow[]> {
+  const result = await pool.query(`
+    SELECT d.id, d.vendor, d.device_id, d.display_name, d.channel_count, d.status, d.metadata
+    FROM reverse.devices d
+    WHERE d.vendor = 'dahua'
+      AND NOT EXISTS (
+        SELECT 1 FROM reverse.routes r
+        WHERE r.device_pk = d.id AND r.state = 'healthy'
+      )
+      AND (d.metadata->>'public_ip' IS NOT NULL OR d.metadata->>'wan_ip' IS NOT NULL)
+    ORDER BY d.device_id
+  `);
+  return result.rows;
+}
+
+async function upsertDirectCgiRoute(
+  devicePk: string,
+  config: Record<string, unknown>,
+): Promise<void> {
+  await pool.query(
+    `
+    INSERT INTO reverse.routes (device_pk, kind, priority, config, state)
+    VALUES ($1, 'dahua_direct_cgi', 20, $2::jsonb, 'healthy')
+    ON CONFLICT (device_pk, kind) DO UPDATE SET
+      config = $2::jsonb,
+      state = 'healthy',
+      last_ok_at = NOW(),
+      last_check_at = NOW(),
+      fail_count = 0,
+      consecutive_ok = 1,
+      updated_at = NOW()
+  `,
+    [devicePk, JSON.stringify(config)],
+  );
+}
+
+async function probeDahuaFallbacks(): Promise<void> {
+  const unhealthy = await loadUnhealthyDahua();
+  if (unhealthy.length === 0) return;
+
+  for (const device of unhealthy) {
+    const ip =
+      (device.metadata.public_ip as string) ||
+      (device.metadata.wan_ip as string);
+    if (!ip) continue;
+
+    const result = await probeDahuaDirect(ip, device.device_id);
+    if (result.reachable && result.rtspUrl) {
+      log.info(
+        `Dahua direct CGI success: ${device.device_id} @ ${ip} model=${result.model}`,
+      );
+
+      // Create/update route
+      await upsertDirectCgiRoute(device.id, {
+        method: "direct_cgi",
+        ip,
+        model: result.model,
+        rtsp_url: result.rtspUrl,
+      });
+
+      // Register streams in go2rtc
+      const channelCount = device.channel_count || 1;
+      for (let ch = 1; ch <= Math.min(channelCount, 32); ch++) {
+        const streamName = `${STREAM_PREFIX}${device.device_id}_ch${ch}`;
+        const rtspUrl = `rtsp://${encodeURIComponent(result.creds!.user)}:${encodeURIComponent(result.creds!.pass)}@${ip}:554/cam/realmonitor?channel=${ch}&subtype=0`;
+        await registerStream(streamName, rtspUrl);
+      }
+
+      // Update device metadata
+      await pool.query(
+        `UPDATE reverse.devices SET metadata = metadata || $1::jsonb, last_seen_at = NOW() WHERE id = $2`,
+        [
+          JSON.stringify({
+            direct_cgi: true,
+            model: result.model,
+            last_direct_probe: new Date().toISOString(),
+            probe_method: "direct_cgi",
+          }),
+          device.id,
+        ],
+      );
+
+      await logAudit("dahua_direct_cgi_activated", device.device_id, {
+        ip,
+        model: result.model,
+      });
+    }
+  }
 }
 
 // ── Startup ──
