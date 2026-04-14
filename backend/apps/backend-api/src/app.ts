@@ -128,6 +128,14 @@ export async function buildApp() {
     bodyLimit: 15 * 1024 * 1024, // 15 MB — supports file uploads
   }).withTypeProvider<ZodTypeProvider>();
 
+  // BigInt-safe JSON serializer — PostgreSQL bigserial columns return BigInt
+  // which JSON.stringify cannot handle natively.
+  app.setReplySerializer((payload) =>
+    JSON.stringify(payload, (_key, value) =>
+      typeof value === "bigint" ? Number(value) : value,
+    ),
+  );
+
   // Add Zod validation/serialization compilers BEFORE registering routes
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
