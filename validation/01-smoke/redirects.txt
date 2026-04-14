@@ -1,0 +1,19 @@
+=== REDIRECT HTTP→HTTPS ===
+HTTP/1.1 301 Moved Permanently
+Server: nginx/1.24.0 (Ubuntu)
+Date: Tue, 14 Apr 2026 06:43:46 GMT
+Content-Type: text/html
+Content-Length: 178
+
+=== PUBLIC ENDPOINTS ===
+200 /api/health
+200 /api/health/ready
+404 /api/auth/login
+
+=== PRIVATE ENDPOINTS MUST REQUIRE AUTH ===
+401 /api/sites (expect 401)
+401 /api/devices (expect 401)
+401 /api/cameras (expect 401)
+401 /api/users (expect 401)
+401 /api/audit (expect 401)
+401 /api/incidents (expect 401)

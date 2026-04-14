@@ -1,0 +1,7 @@
+=== TLS CERTIFICATE ===
+
+=== TLS PROTOCOL ===
+tls1: 1
+tls1_1: 1
+tls1_2: 1
+tls1_3: 1
