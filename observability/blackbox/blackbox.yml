@@ -1,0 +1,60 @@
+# /opt/aion/observability/blackbox/blackbox.yml
+# blackbox_exporter modules. The QA bot bearer token is loaded from
+# /opt/aion/observability/blackbox/.bearer at container start (mounted secret).
+
+modules:
+  # Standard 2xx HTTP probe
+  http_2xx:
+    prober: http
+    timeout: 10s
+    http:
+      preferred_ip_protocol: ip4
+      valid_status_codes: [200]
+      valid_http_versions: [HTTP/1.1, HTTP/2.0]
+      method: GET
+      fail_if_ssl: false
+      fail_if_not_ssl: true
+      tls_config:
+        insecure_skip_verify: false
+
+  # Authenticated probe — bearer token in Authorization header.
+  # Render this file with envsubst at container start so $QA_BOT_BEARER is filled in.
+  http_2xx_with_auth:
+    prober: http
+    timeout: 10s
+    http:
+      preferred_ip_protocol: ip4
+      # 200 OK if logged in; 302 if redirected to /login (still acceptable as "page exists")
+      valid_status_codes: [200, 302]
+      valid_http_versions: [HTTP/1.1, HTTP/2.0]
+      method: GET
+      headers:
+        Authorization: "Bearer ${QA_BOT_BEARER}"
+        X-QA-Probe: "blackbox"
+      fail_if_not_ssl: true
+
+  # Vision Hub JSON probe — fails if any service is not "healthy"
+  vision_hub_health:
+    prober: http
+    timeout: 15s
+    http:
+      method: GET
+      headers:
+        Authorization: "Bearer ${QA_BOT_BEARER}"
+      fail_if_body_not_matches_regexp:
+        - '"healthy"'
+      # Expect at least 23 services
+      fail_if_body_matches_regexp:
+        - '"unhealthy_count"\s*:\s*[1-9]'
+
+  # TCP probes (e.g., go2rtc, asterisk AMI)
+  tcp_connect:
+    prober: tcp
+    timeout: 5s
+
+  # ICMP (for site connectivity checks via VPN mesh)
+  icmp:
+    prober: icmp
+    timeout: 5s
+    icmp:
+      preferred_ip_protocol: ip4

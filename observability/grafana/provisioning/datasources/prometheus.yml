@@ -1,0 +1,26 @@
+# /etc/grafana/provisioning/datasources/prometheus.yml
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: 15s
+      httpMethod: POST
+      manageAlerts: true
+
+  - name: Postgres
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    user: aion_grafana_ro
+    secureJsonData:
+      password: '${PG_GRAFANA_PASS}'
+    jsonData:
+      database: aion
+      sslmode: disable
+      postgresVersion: 1600
+      timescaledb: false

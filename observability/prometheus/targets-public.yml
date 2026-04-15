@@ -1,0 +1,12 @@
+# /etc/prometheus/targets/public.yml
+# 6 unauthenticated URLs of aionseg.co probed every 30s by blackbox_exporter.
+- targets:
+    - https://aionseg.co/
+    - https://aionseg.co/login
+    - https://aionseg.co/api/health
+    - https://aionseg.co/privacy
+    - https://aionseg.co/terms
+    - https://aionseg.co/cookies
+  labels:
+    group: public
+    severity: critical

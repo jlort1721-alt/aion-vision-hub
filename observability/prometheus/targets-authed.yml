@@ -1,0 +1,106 @@
+# /etc/prometheus/targets/authed.yml
+# 64 protected URLs probed with QA bot bearer token (configured in blackbox.yml).
+# These are grouped so we can alert on whole-section outages.
+
+# --- Video & Monitoring (8) ---
+- targets:
+    - https://aionseg.co/dashboard
+    - https://aionseg.co/live-view
+    - https://aionseg.co/vision-hub
+    - https://aionseg.co/reverse
+    - https://aionseg.co/playback
+    - https://aionseg.co/camera-health
+    - https://aionseg.co/wall/1
+    - https://aionseg.co/tv
+  labels: { group: video, severity: critical }
+
+# --- Events & Security (5) ---
+- targets:
+    - https://aionseg.co/events
+    - https://aionseg.co/incidents
+    - https://aionseg.co/alerts
+    - https://aionseg.co/detections
+    - https://aionseg.co/emergency
+  labels: { group: events, severity: critical }
+
+# --- Devices & Sites (4) ---
+- targets:
+    - https://aionseg.co/devices
+    - https://aionseg.co/sites
+    - https://aionseg.co/domotics
+    - https://aionseg.co/network
+  labels: { group: devices, severity: high }
+
+# --- Access Control (2) ---
+- targets:
+    - https://aionseg.co/access-control
+    - https://aionseg.co/visitors
+  labels: { group: access, severity: critical }
+
+# --- Communications (6) ---
+- targets:
+    - https://aionseg.co/intercom
+    - https://aionseg.co/paging
+    - https://aionseg.co/phone
+    - https://aionseg.co/call-log
+    - https://aionseg.co/whatsapp
+    - https://aionseg.co/communications
+  labels: { group: comms, severity: high }
+
+# --- Operations (5) ---
+- targets:
+    - https://aionseg.co/shifts
+    - https://aionseg.co/patrols
+    - https://aionseg.co/minuta
+    - https://aionseg.co/operations
+    - https://aionseg.co/posts
+  labels: { group: operations, severity: high }
+
+# --- Intelligence & Reports (5) ---
+- targets:
+    - https://aionseg.co/ai-assistant
+    - https://aionseg.co/analytics
+    - https://aionseg.co/reports
+    - https://aionseg.co/scheduled-reports
+    - https://aionseg.co/operational-reports
+  labels: { group: intel, severity: medium }
+
+# --- Administration (7) ---
+- targets:
+    - https://aionseg.co/admin
+    - https://aionseg.co/admin/dashboard
+    - https://aionseg.co/admin/residents
+    - https://aionseg.co/supervisor
+    - https://aionseg.co/settings
+    - https://aionseg.co/system
+    - https://aionseg.co/integrations
+  labels: { group: admin, severity: high }
+
+# --- Management (11) ---
+- targets:
+    - https://aionseg.co/database
+    - https://aionseg.co/notes
+    - https://aionseg.co/documents
+    - https://aionseg.co/contracts
+    - https://aionseg.co/keys
+    - https://aionseg.co/compliance
+    - https://aionseg.co/training
+    - https://aionseg.co/sla
+    - https://aionseg.co/automation
+    - https://aionseg.co/reboots
+    - https://aionseg.co/notification-templates
+  labels: { group: management, severity: medium }
+
+# --- Advanced (10) ---
+- targets:
+    - https://aionseg.co/remote-access
+    - https://aionseg.co/skills
+    - https://aionseg.co/agent
+    - https://aionseg.co/floor-plan
+    - https://aionseg.co/immersive
+    - https://aionseg.co/biogenetic-search
+    - https://aionseg.co/predictive-criminology
+    - https://aionseg.co/manual
+    - https://aionseg.co/guard
+    - https://aionseg.co/onboarding
+  labels: { group: advanced, severity: medium }
