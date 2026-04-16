@@ -13,6 +13,8 @@ const categories = [
   "section",
   "manual",
   "policy",
+  "post",
+  "note",
 ] as const;
 const recordStatuses = ["active", "archived"] as const;
 
