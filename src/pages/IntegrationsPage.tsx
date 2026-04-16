@@ -311,7 +311,7 @@ export default function IntegrationsPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Workflow className="h-5 w-5" />
-                  n8n Automatizaciones
+                  {t("integrations.n8n_automations")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -324,15 +324,15 @@ export default function IntegrationsPage() {
                     }
                   >
                     {(n8nStatus as any)?.data?.connected
-                      ? "Conectado"
-                      : "Desconectado"}
+                      ? t("integrations.connected")
+                      : t("integrations.disconnected")}
                   </Badge>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => refetchN8n()}
                   >
-                    Probar Conexión
+                    {t("integrations.test_connection")}
                   </Button>
                 </div>
                 {(n8nStatus as any)?.data?.url && (

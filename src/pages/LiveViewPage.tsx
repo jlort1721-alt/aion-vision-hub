@@ -79,6 +79,12 @@ import {
 import { CameraPicker } from "@/components/live-view/CameraPicker";
 import { useI18n } from "@/contexts/I18nContext";
 
+// ── Live View Pro components ───────────────────────────────
+import { CameraGrid } from "@/components/liveview/CameraGrid";
+import { CameraContextPanel } from "@/components/liveview/CameraContextPanel";
+import { LiveViewToolbar } from "@/components/liveview/LiveViewToolbar";
+import { FF } from "@/lib/feature-flags";
+
 // ── Types ────────────────────────────────────────────────────
 
 interface Camera {
@@ -269,7 +275,7 @@ function SearchPanel() {
                         className="text-[9px] h-4 shrink-0"
                       >
                         <CheckCircle2 className="h-2.5 w-2.5 mr-0.5 text-green-500" />
-                        Registrado
+                        {t("live.registered")}
                       </Badge>
                     </div>
                   </Card>
@@ -293,7 +299,7 @@ function SearchPanel() {
                         className="text-[9px] h-4 shrink-0"
                       >
                         <CheckCircle2 className="h-2.5 w-2.5 mr-0.5 text-green-500" />
-                        Autorizado
+                        {t("live.authorized")}
                       </Badge>
                     </div>
                   </Card>
@@ -367,7 +373,7 @@ function DoorControlPanel() {
   return (
     <div className="space-y-3">
       <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-        Hikvision / Control Acceso
+        {t("live.hikvision_access")}
       </p>
       {devices.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-2">
@@ -398,7 +404,7 @@ function DoorControlPanel() {
       <Separator />
 
       <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-        eWeLink / Relays
+        {t("live.ewelink_relays")}
       </p>
       {relays.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-2">
@@ -1150,7 +1156,7 @@ export default function LiveViewPage() {
               onClick={() => setPickerOpen(true)}
             >
               <Eye className="h-3 w-3 mr-1" />
-              Cámaras
+              {t("liveview.cameras_btn")}
             </Button>
 
             <div className="ml-auto flex items-center gap-1.5">
@@ -1259,26 +1265,14 @@ export default function LiveViewPage() {
                 </Button>
               </div>
             ) : (
-              <div
-                className="grid gap-1 h-full"
-                style={{
-                  gridTemplateColumns: `repeat(${cols}, 1fr)`,
-                  gridTemplateRows: `repeat(${cols}, 1fr)`,
-                }}
-              >
-                {paginatedCameras.map((camera, i) => (
-                  <SmartCameraCell
-                    key={camera?.id ?? `empty-${i}`}
-                    camera={camera}
-                    variant="liveview"
-                    displayMode={
-                      camera ? (cameraModes.get(camera.id) ?? "auto") : "auto"
-                    }
-                    onModeChange={setCameraMode}
-                    onClick={() => camera && setFocusedCamera(camera.id)}
-                  />
-                ))}
-              </div>
+              <CameraGrid
+                cameras={paginatedCameras}
+                gridSize={gridSize}
+                focusedCameraId={null}
+                cameraModes={cameraModes}
+                onCellClick={(id) => setFocusedCamera(id)}
+                onModeChange={setCameraMode}
+              />
             )}
           </div>
         </div>
@@ -1306,7 +1300,7 @@ export default function LiveViewPage() {
               onValueChange={setOpsTab}
               className="flex-1 flex flex-col"
             >
-              <TabsList className="mx-2 mt-2 h-8 grid grid-cols-5">
+              <TabsList className="mx-2 mt-2 h-8 grid grid-cols-6">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <TabsTrigger value="search" className="h-7 px-1.5">
@@ -1347,6 +1341,14 @@ export default function LiveViewPage() {
                   </TooltipTrigger>
                   <TooltipContent>{t("live.ai_tooltip")}</TooltipContent>
                 </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger value="context" className="h-7 px-1.5">
+                      <Camera className="h-3.5 w-3.5" />
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Control de Cámara</TooltipContent>
+                </Tooltip>
               </TabsList>
 
               <ScrollArea className="flex-1">
@@ -1369,6 +1371,15 @@ export default function LiveViewPage() {
 
                   <TabsContent value="ai" className="mt-0">
                     <AIAssistantPanel />
+                  </TabsContent>
+
+                  <TabsContent value="context" className="mt-0">
+                    <CameraContextPanel
+                      cameraId={focusedCamera}
+                      cameraName={
+                        allCameras.find((c) => c.id === focusedCamera)?.name
+                      }
+                    />
                   </TabsContent>
                 </div>
               </ScrollArea>

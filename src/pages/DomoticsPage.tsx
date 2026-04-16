@@ -97,6 +97,7 @@ function EWeLinkDeviceCard({
   onToggle: (device: Record<string, unknown>) => void;
   isPending: boolean;
 }) {
+  const { t } = useI18n();
   const online = Boolean(device.online);
   const params = (device.params ?? {}) as Record<string, unknown>;
   const switchState =
@@ -139,7 +140,7 @@ function EWeLinkDeviceCard({
             <WifiOff className="h-3.5 w-3.5 text-red-400" />
           )}
           <span className="text-xs text-muted-foreground">
-            {online ? "En línea" : "Desconectado"}
+            {online ? t("common.online") : t("common.offline")}
           </span>
         </div>
         {switchState !== undefined && (
@@ -155,7 +156,9 @@ function EWeLinkDeviceCard({
       {/* Toggle control */}
       {switchState !== undefined && (
         <div className="flex items-center justify-between pt-2 border-t">
-          <span className="text-xs font-medium">Encendido</span>
+          <span className="text-xs font-medium">
+            {t("domotics.power_state")}
+          </span>
           <div className="flex items-center gap-2">
             {isPending && (
               <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
@@ -496,9 +499,9 @@ export default function DomoticsPage() {
   if (isError)
     return (
       <div className="p-6 text-center text-destructive">
-        Error al cargar datos.{" "}
+        {t("domotics.error_loading")}{" "}
         <Button variant="outline" onClick={() => refetch()}>
-          Reintentar
+          {t("domotics.retry")}
         </Button>
       </div>
     );
@@ -599,7 +602,7 @@ export default function DomoticsPage() {
                 </TabsTrigger>
                 <TabsTrigger value="db" className="gap-1.5">
                   <CircuitBoard className="h-3.5 w-3.5" />
-                  Base de Datos
+                  {t("domotics.tab_database")}
                   {devices.length > 0 && (
                     <Badge
                       variant="secondary"
@@ -610,10 +613,10 @@ export default function DomoticsPage() {
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="scenes" className="gap-1.5">
-                  Escenas
+                  {t("scenes.title")}
                 </TabsTrigger>
                 <TabsTrigger value="schedules" className="gap-1.5">
-                  Programación
+                  {t("schedule.title")}
                 </TabsTrigger>
               </TabsList>
 
@@ -627,7 +630,7 @@ export default function DomoticsPage() {
                   <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
-                      placeholder="Buscar dispositivo eWeLink..."
+                      placeholder={t("domotics.search_ewelink")}
                       value={ewelinkSearch}
                       onChange={(e) => setEwelinkSearch(e.target.value)}
                       className="pl-8 h-8 text-xs"
@@ -645,10 +648,10 @@ export default function DomoticsPage() {
                         onClick={() => setEwelinkStatusFilter(s)}
                       >
                         {s === "all"
-                          ? "Todos"
+                          ? t("common.all")
                           : s === "online"
-                            ? `En línea (${ewOnlineCount})`
-                            : `Offline (${ewOfflineCount})`}
+                            ? `${t("common.online")} (${ewOnlineCount})`
+                            : `${t("common.offline")} (${ewOfflineCount})`}
                       </Button>
                     ))}
                   </div>
@@ -658,11 +661,12 @@ export default function DomoticsPage() {
                     className="h-8"
                     onClick={() => refetchEwelink()}
                   >
-                    <RefreshCw className="mr-1.5 h-3 w-3" /> Actualizar
+                    <RefreshCw className="mr-1.5 h-3 w-3" />{" "}
+                    {t("common.refresh")}
                   </Button>
                   <span className="text-xs text-muted-foreground ml-auto">
                     {filteredEwelinkDevices.length} de {ewelinkDevices.length}{" "}
-                    dispositivos
+                    {t("domotics.devices_count")}
                   </span>
                 </div>
 
@@ -672,7 +676,7 @@ export default function DomoticsPage() {
                     <div className="flex items-center justify-center py-20">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                       <span className="ml-2 text-sm text-muted-foreground">
-                        Cargando dispositivos eWeLink...
+                        {t("domotics.loading_ewelink")}
                       </span>
                     </div>
                   ) : filteredEwelinkDevices.length === 0 ? (
@@ -680,13 +684,13 @@ export default function DomoticsPage() {
                       <WifiOff className="h-10 w-10 mb-3 opacity-40" />
                       <p className="text-sm font-medium">
                         {ewelinkDevices.length === 0
-                          ? "No se encontraron dispositivos eWeLink"
-                          : "Sin resultados para la busqueda"}
+                          ? t("domotics.no_ewelink_devices")
+                          : t("domotics.no_match")}
                       </p>
                       <p className="text-xs mt-1">
                         {ewelinkDevices.length === 0
-                          ? "Verifica la conexion con el backend o inicia sesion en eWeLink."
-                          : "Intenta con otro termino de busqueda."}
+                          ? t("domotics.verify_ewelink_connection")
+                          : t("domotics.try_other_search")}
                       </p>
                     </div>
                   ) : (
@@ -772,12 +776,11 @@ export default function DomoticsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t("common.delete")}</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Está seguro de eliminar este dispositivo? Esta acción no se puede
-              deshacer.
+              {t("domotics.confirm_delete_device")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
@@ -798,41 +801,47 @@ export default function DomoticsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-card border rounded-lg p-6 w-full max-w-lg mx-4 shadow-xl">
             <h3 className="text-lg font-semibold mb-4">
-              {editingDeviceId ? "Editar Dispositivo" : "Agregar Dispositivo"}
+              {editingDeviceId
+                ? t("domotics.edit_device")
+                : t("domotics.add_device")}
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Nombre</label>
-                <input
-                  type="text"
-                  className="w-full border rounded-md p-2 text-sm bg-background"
-                  placeholder="Nombre del dispositivo"
-                  id="device-name-input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Tipo</label>
-                <select
-                  className="w-full border rounded-md p-2 text-sm bg-background"
-                  id="device-type-input"
-                >
-                  <option value="switch">Interruptor</option>
-                  <option value="light">Luz</option>
-                  <option value="sensor">Sensor</option>
-                  <option value="camera">Cámara</option>
-                  <option value="lock">Cerradura</option>
-                  <option value="siren">Sirena</option>
-                  <option value="other">Otro</option>
-                </select>
-              </div>
-              <div>
                 <label className="block text-sm font-medium mb-1">
-                  Ubicación
+                  {t("common.name")}
                 </label>
                 <input
                   type="text"
                   className="w-full border rounded-md p-2 text-sm bg-background"
-                  placeholder="Ej: Portería Principal"
+                  placeholder={t("domotics.device_name_placeholder")}
+                  id="device-name-input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  {t("common.type")}
+                </label>
+                <select
+                  className="w-full border rounded-md p-2 text-sm bg-background"
+                  id="device-type-input"
+                >
+                  <option value="switch">{t("domotics.type_switch")}</option>
+                  <option value="light">{t("domotics.type_light")}</option>
+                  <option value="sensor">{t("domotics.type_sensor")}</option>
+                  <option value="camera">{t("domotics.type_camera")}</option>
+                  <option value="lock">{t("domotics.type_lock")}</option>
+                  <option value="siren">{t("domotics.type_siren")}</option>
+                  <option value="other">{t("domotics.type_other")}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  {t("domotics.location")}
+                </label>
+                <input
+                  type="text"
+                  className="w-full border rounded-md p-2 text-sm bg-background"
+                  placeholder={t("domotics.location_placeholder")}
                   id="device-location-input"
                 />
               </div>
@@ -845,7 +854,7 @@ export default function DomoticsPage() {
                   setEditingDeviceId(null);
                 }}
               >
-                Cancelar
+                {t("common.cancel")}
               </button>
               <button
                 className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
@@ -866,7 +875,7 @@ export default function DomoticsPage() {
                     ) as HTMLInputElement
                   )?.value;
                   if (!name?.trim()) {
-                    toast.error("El nombre es requerido");
+                    toast.error(t("domotics.name_required"));
                     return;
                   }
                   try {
@@ -875,7 +884,7 @@ export default function DomoticsPage() {
                         `/domotics/devices/${editingDeviceId}`,
                         { name, device_type: type, location },
                       );
-                      toast.success("Dispositivo actualizado");
+                      toast.success(t("domotics.device_updated"));
                     } else {
                       await apiClient.post("/domotics/devices", {
                         name,
@@ -883,19 +892,19 @@ export default function DomoticsPage() {
                         location,
                         site_id: selectedSite,
                       });
-                      toast.success("Dispositivo agregado");
+                      toast.success(t("domotics.device_added"));
                     }
                     queryClient.invalidateQueries({ queryKey: ["domotics"] });
                     setAddOpen(false);
                     setEditingDeviceId(null);
                   } catch (err) {
                     toast.error(
-                      err instanceof Error ? err.message : "Error al guardar",
+                      err instanceof Error ? err.message : t("common.error"),
                     );
                   }
                 }}
               >
-                {editingDeviceId ? "Guardar Cambios" : "Agregar"}
+                {editingDeviceId ? t("common.save") : t("domotics.add_device")}
               </button>
             </div>
           </div>

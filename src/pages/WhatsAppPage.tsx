@@ -1,17 +1,26 @@
-import { lazy, Suspense } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare, Settings, FileText } from 'lucide-react';
+import { lazy, Suspense } from "react";
+import { useI18n } from "@/contexts/I18nContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { MessageSquare, Settings, FileText } from "lucide-react";
 
-const WhatsAppConfig = lazy(() => import('@/components/whatsapp/WhatsAppConfig'));
-const WhatsAppConversations = lazy(() => import('@/components/whatsapp/WhatsAppConversations'));
-const WhatsAppTemplates = lazy(() => import('@/components/whatsapp/WhatsAppTemplates'));
+const WhatsAppConfig = lazy(
+  () => import("@/components/whatsapp/WhatsAppConfig"),
+);
+const WhatsAppConversations = lazy(
+  () => import("@/components/whatsapp/WhatsAppConversations"),
+);
+const WhatsAppTemplates = lazy(
+  () => import("@/components/whatsapp/WhatsAppTemplates"),
+);
 
 function TabLoader() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-4 gap-4">
-        {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-24 rounded-lg" />
+        ))}
       </div>
       <Skeleton className="h-96 rounded-lg" />
     </div>
@@ -19,28 +28,30 @@ function TabLoader() {
 }
 
 export default function WhatsAppPage() {
+  const { t } = useI18n();
+
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">WhatsApp Business</h1>
-        <p className="text-muted-foreground">
-          Gestione conversaciones, agente IA y configuración de WhatsApp
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {t("whatsapp.title")}
+        </h1>
+        <p className="text-muted-foreground">{t("whatsapp.subtitle")}</p>
       </div>
 
       <Tabs defaultValue="conversations" className="space-y-4">
         <TabsList>
           <TabsTrigger value="conversations" className="gap-2">
             <MessageSquare className="h-4 w-4" />
-            Conversaciones
+            {t("whatsapp.conversations")}
           </TabsTrigger>
           <TabsTrigger value="templates" className="gap-2">
             <FileText className="h-4 w-4" />
-            Plantillas
+            {t("whatsapp.templates")}
           </TabsTrigger>
           <TabsTrigger value="config" className="gap-2">
             <Settings className="h-4 w-4" />
-            Configuración
+            {t("whatsapp.config")}
           </TabsTrigger>
         </TabsList>
 

@@ -155,7 +155,7 @@ export default function IncidentsPage() {
 
   const handleCreate = async () => {
     if (!(newIncident.title || "").trim()) {
-      toast.error("El título es requerido");
+      toast.error(t("incidents.title_required"));
       return;
     }
     setActionLoading("create");
@@ -166,7 +166,7 @@ export default function IncidentsPage() {
         priority: newIncident.priority,
         site_id: newIncident.site_id || undefined,
       });
-      toast.success("Incidente creado");
+      toast.success(t("incidents.incident_created"));
       setCreateOpen(false);
       setNewIncident({
         title: "",
@@ -176,7 +176,7 @@ export default function IncidentsPage() {
       });
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al crear");
+      toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setActionLoading(null);
     }
@@ -189,7 +189,7 @@ export default function IncidentsPage() {
       await apiClient.post(`/incidents/${selectedInc.id}/comments`, {
         content: comment,
       });
-      toast.success("Comentario agregado");
+      toast.success(t("incidents.comment_added"));
       setComment("");
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
     } catch (err) {
@@ -234,7 +234,9 @@ export default function IncidentsPage() {
         status: newStatus,
         ...(resolution ? { resolution } : {}),
       });
-      toast.success(`Incidente ${statusLabels[newStatus] || newStatus}`);
+      toast.success(
+        `${t("incidents.title")} ${t(statusLabelKeys[newStatus]) || newStatus}`,
+      );
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error");
@@ -729,7 +731,7 @@ export default function IncidentsPage() {
             </p>
             <textarea
               className="w-full border rounded-md p-3 text-sm min-h-[100px] bg-background resize-none focus:ring-2 focus:ring-primary focus:outline-none"
-              placeholder="Describa cómo se resolvió el incidente..."
+              placeholder={t("incidents.resolution_placeholder")}
               value={resolutionText}
               onChange={(e) => setResolutionText(e.target.value)}
               autoFocus
@@ -742,7 +744,7 @@ export default function IncidentsPage() {
                   setPendingStatus(null);
                 }}
               >
-                Cancelar
+                {t("common.cancel")}
               </button>
               <button
                 className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
@@ -750,8 +752,8 @@ export default function IncidentsPage() {
                 disabled={!resolutionText.trim()}
               >
                 {pendingStatus === "resolved"
-                  ? "Confirmar Resolución"
-                  : "Confirmar Cierre"}
+                  ? t("incidents.confirm_resolution")
+                  : t("incidents.confirm_close")}
               </button>
             </div>
           </div>
