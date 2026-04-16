@@ -344,6 +344,50 @@ export class DahuaCGIService {
         : { id: devices[i].id, name: devices[i].name, online: false },
     );
   }
+  /** Get current device time */
+  async getDeviceTime(
+    deviceId: string,
+    tenantId: string,
+  ): Promise<string | null> {
+    try {
+      const { client } = await this.getClient(deviceId, tenantId);
+      const resp = await client.get(
+        "/cgi-bin/global.cgi?action=getCurrentTime",
+      );
+      const raw = resp.data?.result ?? resp.data?.time ?? "";
+      return typeof raw === "string" ? raw : String(raw);
+    } catch (err) {
+      logger.warn(
+        { deviceId, err: (err as Error).message },
+        "Dahua getDeviceTime failed",
+      );
+      return null;
+    }
+  }
+
+  /** Set device time to the given ISO timestamp */
+  async setDeviceTime(
+    deviceId: string,
+    tenantId: string,
+    isoTimestamp: string,
+  ): Promise<boolean> {
+    try {
+      const { client } = await this.getClient(deviceId, tenantId);
+      const dt = new Date(isoTimestamp);
+      const formatted = `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}%20${String(dt.getUTCHours()).padStart(2, "0")}:${String(dt.getUTCMinutes()).padStart(2, "0")}:${String(dt.getUTCSeconds()).padStart(2, "0")}`;
+      await client.get(
+        `/cgi-bin/global.cgi?action=setCurrentTime&time=${formatted}`,
+      );
+      logger.info({ deviceId, formatted }, "Dahua time set");
+      return true;
+    } catch (err) {
+      logger.error(
+        { deviceId, err: (err as Error).message },
+        "Dahua setDeviceTime failed",
+      );
+      return false;
+    }
+  }
 }
 
 export const dahuaCGI = new DahuaCGIService();

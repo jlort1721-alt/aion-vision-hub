@@ -13,12 +13,12 @@
  * - Event subscription (long-poll alertStream)
  * - go2rtc stream URL generation
  */
-import { ISAPIClient } from '@aion/device-adapters';
-import { db } from '../db/client.js';
-import { sql } from 'drizzle-orm';
-import { createLogger } from '@aion/common-utils';
+import { ISAPIClient } from "@aion/device-adapters";
+import { db } from "../db/client.js";
+import { sql } from "drizzle-orm";
+import { createLogger } from "@aion/common-utils";
 
-const logger = createLogger({ name: 'hikvision-isapi' });
+const logger = createLogger({ name: "hikvision-isapi" });
 
 export interface HikDeviceInfo {
   online: boolean;
@@ -43,13 +43,16 @@ export interface HikHDD {
 }
 
 function extractXml(xml: string, tag: string): string | undefined {
-  const match = xml.match(new RegExp(`<${tag}>(.*?)</${tag}>`, 's'));
+  const match = xml.match(new RegExp(`<${tag}>(.*?)</${tag}>`, "s"));
   return match?.[1];
 }
 
 export class HikvisionISAPIService {
   /** Create an ISAPIClient from database device record */
-  private async getClient(deviceId: string, tenantId: string): Promise<{ client: ISAPIClient; device: Record<string, unknown> }> {
+  private async getClient(
+    deviceId: string,
+    tenantId: string,
+  ): Promise<{ client: ISAPIClient; device: Record<string, unknown> }> {
     const results = await db.execute(sql`
       SELECT id, name, ip_address, port, username, password, brand, model, site_id
       FROM devices
@@ -58,34 +61,44 @@ export class HikvisionISAPIService {
     `);
     const device = (results as unknown as Record<string, unknown>[])[0];
     if (!device) throw new Error(`Device ${deviceId} not found`);
-    if (!device.ip_address) throw new Error(`Device ${deviceId} has no IP address`);
+    if (!device.ip_address)
+      throw new Error(`Device ${deviceId} has no IP address`);
 
-    const client = new ISAPIClient({
-      ip: device.ip_address as string,
-      port: (device.port as number) || 8000,
-      username: (device.username as string) || 'admin',
-      password: (device.password as string) || '',
-      brand: 'hikvision',
-      useTls: false,
-    }, 8000);
+    const client = new ISAPIClient(
+      {
+        ip: device.ip_address as string,
+        port: (device.port as number) || 8000,
+        username: (device.username as string) || "admin",
+        password: (device.password as string) || "",
+        brand: "hikvision",
+        useTls: false,
+      },
+      8000,
+    );
 
     return { client, device };
   }
 
   /** Test connectivity and get device info */
-  async getDeviceInfo(deviceId: string, tenantId: string): Promise<HikDeviceInfo> {
+  async getDeviceInfo(
+    deviceId: string,
+    tenantId: string,
+  ): Promise<HikDeviceInfo> {
     try {
       const { client } = await this.getClient(deviceId, tenantId);
-      const resp = await client.get('/ISAPI/System/deviceInfo');
+      const resp = await client.get("/ISAPI/System/deviceInfo");
       return {
         online: true,
-        model: extractXml(resp.body, 'model'),
-        serialNumber: extractXml(resp.body, 'serialNumber'),
-        firmwareVersion: extractXml(resp.body, 'firmwareVersion'),
-        macAddress: extractXml(resp.body, 'macAddress'),
+        model: extractXml(resp.body, "model"),
+        serialNumber: extractXml(resp.body, "serialNumber"),
+        firmwareVersion: extractXml(resp.body, "firmwareVersion"),
+        macAddress: extractXml(resp.body, "macAddress"),
       };
     } catch (err) {
-      logger.warn({ deviceId, err: (err as Error).message }, 'ISAPI device info failed');
+      logger.warn(
+        { deviceId, err: (err as Error).message },
+        "ISAPI device info failed",
+      );
       return { online: false };
     }
   }
@@ -93,55 +106,96 @@ export class HikvisionISAPIService {
   /** Get number of video input channels */
   async getChannels(deviceId: string, tenantId: string): Promise<HikChannel[]> {
     const { client } = await this.getClient(deviceId, tenantId);
-    const resp = await client.get('/ISAPI/System/Video/inputs/channels');
+    const resp = await client.get("/ISAPI/System/Video/inputs/channels");
     const channels: HikChannel[] = [];
     const matches = resp.body.matchAll(
-      /<VideoInputChannel>.*?<id>(\d+)<\/id>.*?<inputPort>(\d+)<\/inputPort>.*?<name>(.*?)<\/name>.*?<\/VideoInputChannel>/gs
+      /<VideoInputChannel>.*?<id>(\d+)<\/id>.*?<inputPort>(\d+)<\/inputPort>.*?<name>(.*?)<\/name>.*?<\/VideoInputChannel>/gs,
     );
     for (const m of matches) {
-      channels.push({ id: parseInt(m[1]), name: m[3] || `Channel ${m[2]}`, enabled: true });
+      channels.push({
+        id: parseInt(m[1]),
+        name: m[3] || `Channel ${m[2]}`,
+        enabled: true,
+      });
     }
     return channels;
   }
 
   /** Get snapshot from a specific channel (returns JPEG buffer) */
-  async getSnapshot(deviceId: string, tenantId: string, channel = 1): Promise<Buffer | null> {
+  async getSnapshot(
+    deviceId: string,
+    tenantId: string,
+    channel = 1,
+  ): Promise<Buffer | null> {
     try {
       const { client } = await this.getClient(deviceId, tenantId);
-      const resp = await client.get(`/ISAPI/Streaming/channels/${channel}01/picture`);
-      return Buffer.from(resp.body, 'binary');
+      const resp = await client.get(
+        `/ISAPI/Streaming/channels/${channel}01/picture`,
+      );
+      return Buffer.from(resp.body, "binary");
     } catch (err) {
-      logger.warn({ deviceId, channel, err: (err as Error).message }, 'Snapshot failed');
+      logger.warn(
+        { deviceId, channel, err: (err as Error).message },
+        "Snapshot failed",
+      );
       return null;
     }
   }
 
   /** PTZ continuous move */
-  async ptzMove(deviceId: string, tenantId: string, channel: number, direction: string, speed = 4): Promise<boolean> {
+  async ptzMove(
+    deviceId: string,
+    tenantId: string,
+    channel: number,
+    direction: string,
+    speed = 4,
+  ): Promise<boolean> {
     try {
       const { client } = await this.getClient(deviceId, tenantId);
-      const pan = direction === 'left' ? -speed * 10 : direction === 'right' ? speed * 10 : 0;
-      const tilt = direction === 'up' ? speed * 10 : direction === 'down' ? -speed * 10 : 0;
-      const zoom = direction === 'zoomIn' ? speed * 10 : direction === 'zoomOut' ? -speed * 10 : 0;
+      const pan =
+        direction === "left"
+          ? -speed * 10
+          : direction === "right"
+            ? speed * 10
+            : 0;
+      const tilt =
+        direction === "up"
+          ? speed * 10
+          : direction === "down"
+            ? -speed * 10
+            : 0;
+      const zoom =
+        direction === "zoomIn"
+          ? speed * 10
+          : direction === "zoomOut"
+            ? -speed * 10
+            : 0;
 
       await client.put(
         `/ISAPI/PTZCtrl/channels/${channel}/continuous`,
-        `<PTZData><pan>${pan}</pan><tilt>${tilt}</tilt><zoom>${zoom}</zoom></PTZData>`
+        `<PTZData><pan>${pan}</pan><tilt>${tilt}</tilt><zoom>${zoom}</zoom></PTZData>`,
       );
       return true;
     } catch (err) {
-      logger.warn({ deviceId, direction, err: (err as Error).message }, 'PTZ move failed');
+      logger.warn(
+        { deviceId, direction, err: (err as Error).message },
+        "PTZ move failed",
+      );
       return false;
     }
   }
 
   /** PTZ stop */
-  async ptzStop(deviceId: string, tenantId: string, channel: number): Promise<boolean> {
+  async ptzStop(
+    deviceId: string,
+    tenantId: string,
+    channel: number,
+  ): Promise<boolean> {
     try {
       const { client } = await this.getClient(deviceId, tenantId);
       await client.put(
         `/ISAPI/PTZCtrl/channels/${channel}/continuous`,
-        '<PTZData><pan>0</pan><tilt>0</tilt><zoom>0</zoom></PTZData>'
+        "<PTZData><pan>0</pan><tilt>0</tilt><zoom>0</zoom></PTZData>",
       );
       return true;
     } catch {
@@ -150,12 +204,17 @@ export class HikvisionISAPIService {
   }
 
   /** PTZ go to preset */
-  async ptzPreset(deviceId: string, tenantId: string, channel: number, preset: number): Promise<boolean> {
+  async ptzPreset(
+    deviceId: string,
+    tenantId: string,
+    channel: number,
+    preset: number,
+  ): Promise<boolean> {
     try {
       const { client } = await this.getClient(deviceId, tenantId);
       await client.put(
         `/ISAPI/PTZCtrl/channels/${channel}/presets/${preset}/goto`,
-        '<PTZData><AbsoluteHigh/></PTZData>'
+        "<PTZData><AbsoluteHigh/></PTZData>",
       );
       return true;
     } catch {
@@ -164,17 +223,24 @@ export class HikvisionISAPIService {
   }
 
   /** Open door / trigger relay (for access control devices) */
-  async openDoor(deviceId: string, tenantId: string, doorId = 1): Promise<boolean> {
+  async openDoor(
+    deviceId: string,
+    tenantId: string,
+    doorId = 1,
+  ): Promise<boolean> {
     try {
       const { client } = await this.getClient(deviceId, tenantId);
       await client.put(
         `/ISAPI/AccessControl/RemoteControl/door/${doorId}`,
-        '<RemoteControlDoor><cmd>open</cmd></RemoteControlDoor>'
+        "<RemoteControlDoor><cmd>open</cmd></RemoteControlDoor>",
       );
-      logger.info({ deviceId, doorId }, 'ISAPI door opened');
+      logger.info({ deviceId, doorId }, "ISAPI door opened");
       return true;
     } catch (err) {
-      logger.warn({ deviceId, doorId, err: (err as Error).message }, 'Door open failed');
+      logger.warn(
+        { deviceId, doorId, err: (err as Error).message },
+        "Door open failed",
+      );
       return false;
     }
   }
@@ -183,10 +249,10 @@ export class HikvisionISAPIService {
   async getHDDStatus(deviceId: string, tenantId: string): Promise<HikHDD[]> {
     try {
       const { client } = await this.getClient(deviceId, tenantId);
-      const resp = await client.get('/ISAPI/ContentMgmt/Storage');
+      const resp = await client.get("/ISAPI/ContentMgmt/Storage");
       const hdds: HikHDD[] = [];
       const matches = resp.body.matchAll(
-        /<hdd>.*?<id>(\d+)<\/id>.*?<capacity>(.*?)<\/capacity>.*?<freeSpace>(.*?)<\/freeSpace>.*?<status>(.*?)<\/status>.*?<\/hdd>/gs
+        /<hdd>.*?<id>(\d+)<\/id>.*?<capacity>(.*?)<\/capacity>.*?<freeSpace>(.*?)<\/freeSpace>.*?<status>(.*?)<\/status>.*?<\/hdd>/gs,
       );
       for (const m of matches) {
         hdds.push({
@@ -206,8 +272,8 @@ export class HikvisionISAPIService {
   async reboot(deviceId: string, tenantId: string): Promise<boolean> {
     try {
       const { client } = await this.getClient(deviceId, tenantId);
-      await client.put('/ISAPI/System/reboot', '<Reboot/>');
-      logger.info({ deviceId }, 'ISAPI device rebooted');
+      await client.put("/ISAPI/System/reboot", "<Reboot/>");
+      logger.info({ deviceId }, "ISAPI device rebooted");
       return true;
     } catch {
       return false;
@@ -215,14 +281,19 @@ export class HikvisionISAPIService {
   }
 
   /** Generate go2rtc ISAPI stream URL for a device channel */
-  async getStreamUrl(deviceId: string, tenantId: string, channel = 1, substream = true): Promise<string | null> {
+  async getStreamUrl(
+    deviceId: string,
+    tenantId: string,
+    channel = 1,
+    substream = true,
+  ): Promise<string | null> {
     try {
       const { device } = await this.getClient(deviceId, tenantId);
-      const stream = substream ? '02' : '01';
-      const user = device.username as string || 'admin';
-      const pass = device.password as string || '';
+      const stream = substream ? "02" : "01";
+      const user = (device.username as string) || "admin";
+      const pass = (device.password as string) || "";
       const ip = device.ip_address as string;
-      const port = device.port as number || 8000;
+      const port = (device.port as number) || 8000;
       return `isapi://${user}:${pass}@${ip}:${port}/Streaming/Channels/${channel}${stream}`;
     } catch {
       return null;
@@ -230,7 +301,11 @@ export class HikvisionISAPIService {
   }
 
   /** Batch test all Hikvision devices for a tenant */
-  async testAllDevices(tenantId: string): Promise<Array<{ id: string; name: string; online: boolean; model?: string }>> {
+  async testAllDevices(
+    tenantId: string,
+  ): Promise<
+    Array<{ id: string; name: string; online: boolean; model?: string }>
+  > {
     const results = await db.execute(sql`
       SELECT id, name FROM devices
       WHERE tenant_id = ${tenantId}
@@ -243,14 +318,57 @@ export class HikvisionISAPIService {
       devices.map(async (d) => {
         const info = await this.getDeviceInfo(d.id, tenantId);
         return { id: d.id, name: d.name, ...info };
-      })
+      }),
     );
 
     return statuses.map((s, i) =>
-      s.status === 'fulfilled'
+      s.status === "fulfilled"
         ? s.value
-        : { id: devices[i].id, name: devices[i].name, online: false }
+        : { id: devices[i].id, name: devices[i].name, online: false },
     );
+  }
+  /** Get current device time */
+  async getDeviceTime(
+    deviceId: string,
+    tenantId: string,
+  ): Promise<{ localTime: string; timeZone: string } | null> {
+    try {
+      const { client } = await this.getClient(deviceId, tenantId);
+      const resp = await client.get("/ISAPI/System/time");
+      const localTime = extractXml(resp.body, "localTime");
+      const timeZone = extractXml(resp.body, "timeZone");
+      return { localTime: localTime ?? "", timeZone: timeZone ?? "" };
+    } catch (err) {
+      logger.warn(
+        { deviceId, err: (err as Error).message },
+        "ISAPI getDeviceTime failed",
+      );
+      return null;
+    }
+  }
+
+  /** Set device time to the given ISO timestamp */
+  async setDeviceTime(
+    deviceId: string,
+    tenantId: string,
+    isoTimestamp: string,
+  ): Promise<boolean> {
+    try {
+      const { client } = await this.getClient(deviceId, tenantId);
+      const dt = new Date(isoTimestamp);
+      const localTime = dt.toISOString().replace("Z", "+00:00");
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Time><timeMode>manual</timeMode><localTime>${localTime}</localTime><timeZone>CST-5:00:00</timeZone></Time>`;
+      await client.put("/ISAPI/System/time", xml);
+      logger.info({ deviceId, localTime }, "ISAPI time set");
+      return true;
+    } catch (err) {
+      logger.error(
+        { deviceId, err: (err as Error).message },
+        "ISAPI setDeviceTime failed",
+      );
+      return false;
+    }
   }
 }
 

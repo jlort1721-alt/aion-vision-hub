@@ -18,3 +18,4 @@
 2026-04-16T03:18:55Z | F1 | Migration 032 deprecate_duplicates applied: 3 tables renamed to _deprecated_20260416 | OK |
 2026-04-16T03:25:00Z | F2 | FX-033 export clip: mutation rewired POST /clips/export (was /streams/playback) | OK |
 2026-04-16T03:30:00Z | F3 | FX-042/043/044 alertas: VERIFICADO YA COMPLETO — 20+ endpoints, AlertEngine.processEvent() integrado en events/routes.ts, AlertsPage 503 líneas con 4 tabs (instances/rules/escalation/channels), 5 reglas + 91 instancias + 4 canales + 8 templates en prod | DONE (no-op) |
+2026-04-16T03:40:00Z | F4 | FX-031 DVR time sync: setTime/getTime en Hikvision ISAPI + Dahua CGI, worker dvr-time-sync-worker.ts, endpoint POST /device-control/time-sync/:deviceId | OK |
