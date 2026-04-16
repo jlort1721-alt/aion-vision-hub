@@ -24,3 +24,4 @@
 2026-04-16T04:15:00Z | F7.1 | DocumentsPage: LIMPIO — 0 refs supabase (solo backend storage refs) | DONE (no-op) |
 2026-04-16T04:15:00Z | F7.2 | FX-047 export incidentes: EvidenceExport.tsx genera TXT desde BD real, montado en IncidentsPage:277 | DONE (ya implementado) |
 2026-04-16T04:15:00Z | F7.3 | I18N: EventsPage migrado a t(), +28 common keys en es.ts/en.ts, patrón documentado para 14 páginas restantes | OK |
+2026-04-16T05:00:00Z | F8 | Tests Opus-tier: 15/15 verdes — open_gate, toggle_relay, reboot_device, activate_emergency_protocol, get_compliance_status, hikvision_ptz_control, generate_incident_summary, check_visitor_blacklist | OK |
