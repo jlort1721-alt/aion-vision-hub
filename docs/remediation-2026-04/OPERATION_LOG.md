@@ -20,3 +20,4 @@
 2026-04-16T03:30:00Z | F3 | FX-042/043/044 alertas: VERIFICADO YA COMPLETO — 20+ endpoints, AlertEngine.processEvent() integrado en events/routes.ts, AlertsPage 503 líneas con 4 tabs (instances/rules/escalation/channels), 5 reglas + 91 instancias + 4 canales + 8 templates en prod | DONE (no-op) |
 2026-04-16T03:40:00Z | F4 | FX-031 DVR time sync: setTime/getTime en Hikvision ISAPI + Dahua CGI, worker dvr-time-sync-worker.ts, endpoint POST /device-control/time-sync/:deviceId | OK |
 2026-04-16T03:50:00Z | F5 | FX-064/065 escenas + programación IoT: VERIFICADO YA COMPLETO — backend 6 endpoints scenes/, frontend ScenesPanel 233L + SchedulePanel 256L, tabs en DomoticsPage líneas 612-740 | DONE (no-op) |
+2026-04-16T04:00:00Z | F6 | FX-083 Asterisk AMI: worker asterisk-call-logger.ts creado, AMI user aionapi configurado en VPS, login verificado OK, ENABLE_CALL_LOGGER=false (activar en F9 deploy) | OK |
