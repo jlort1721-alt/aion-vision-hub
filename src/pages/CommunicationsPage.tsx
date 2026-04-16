@@ -604,12 +604,12 @@ function HistoryTab() {
                 }
               >
                 {f === ""
-                  ? "Todos"
+                  ? t("common.all")
                   : f === "whatsapp"
                     ? "WhatsApp"
                     : f === "sms"
                       ? "SMS"
-                      : "Llamadas"}
+                      : t("communications.calls")}
               </Button>
             ))}
           </div>
