@@ -15,3 +15,4 @@
 2026-04-16T03:12:27Z | F0.2 | Tests baseline: 52 files pass / 11 fail; 879 tests pass / 37 fail (pre-existing) | BASELINE |
 2026-04-16T03:13:00Z | F0.3 | Backup 20260416-031258 (178M: pg 6.2M + www 172M) | OK |
 2026-04-16T03:14:00Z | F0.4 | Feature flags: 8 FX flags + NOTIFY_WS_BRIDGE en src/lib/feature-flags.ts | OK |
+2026-04-16T03:18:55Z | F1 | Migration 032 deprecate_duplicates applied: 3 tables renamed to _deprecated_20260416 | OK |
