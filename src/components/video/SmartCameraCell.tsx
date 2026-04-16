@@ -13,17 +13,25 @@ import { toast } from "sonner";
 import { useIntersectionVideo } from "@/hooks/use-intersection-video";
 import { FF } from "@/lib/feature-flags";
 
-const DetectionOverlay = lazy(
-  () => import("@/components/liveview/DetectionOverlay"),
+const DetectionOverlay = lazy(() =>
+  import("@/components/liveview/DetectionOverlay").then((m) => ({
+    default: m.DetectionOverlay,
+  })),
 );
-const PtzInlineControl = lazy(
-  () => import("@/components/liveview/PtzInlineControl"),
+const PtzInlineControl = lazy(() =>
+  import("@/components/liveview/PtzInlineControl").then((m) => ({
+    default: m.PtzInlineControl,
+  })),
 );
-const AiCopilotBanner = lazy(
-  () => import("@/components/liveview/AiCopilotBanner"),
+const AiCopilotBanner = lazy(() =>
+  import("@/components/liveview/AiCopilotBanner").then((m) => ({
+    default: m.AiCopilotBanner,
+  })),
 );
-const EventTimelineSparkline = lazy(
-  () => import("@/components/liveview/EventTimelineSparkline"),
+const EventTimelineSparkline = lazy(() =>
+  import("@/components/liveview/EventTimelineSparkline").then((m) => ({
+    default: m.EventTimelineSparkline,
+  })),
 );
 
 export interface SmartCamera {
@@ -475,18 +483,22 @@ function SmartCameraCellInner({
           {/* Live View Pro overlays */}
           {FF.LIVE_VIEW_AI_OVERLAY && camera && mode === "video" && (
             <Suspense fallback={null}>
-              <DetectionOverlay cameraId={camera.id} videoRef={videoRef} />
+              <DetectionOverlay
+                detections={[]}
+                videoWidth={640}
+                videoHeight={480}
+              />
             </Suspense>
           )}
           {FF.LIVE_VIEW_AI_COPILOT && camera && (
             <Suspense fallback={null}>
-              <AiCopilotBanner cameraId={camera.id} cameraName={camera.name} />
+              <AiCopilotBanner cameraId={camera.id} />
             </Suspense>
           )}
           {FF.LIVE_VIEW_PTZ_INLINE && camera && !isWall && (
             <Suspense fallback={null}>
               <div className="absolute bottom-1.5 right-1.5 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                <PtzInlineControl cameraId={camera.id} deviceId={camera.id} />
+                <PtzInlineControl sessionId={camera.id} />
               </div>
             </Suspense>
           )}

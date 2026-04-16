@@ -1422,7 +1422,11 @@ export default function LiveViewPage() {
                           </div>
                         }
                       >
-                        <SceneComposer cameras={allCameras} />
+                        <SceneComposer
+                          onSceneLoad={() => {
+                            /* TODO: apply scene layout */
+                          }}
+                        />
                       </Suspense>
                     </TabsContent>
                   )}
