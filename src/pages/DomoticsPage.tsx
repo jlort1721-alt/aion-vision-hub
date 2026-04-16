@@ -910,6 +910,6 @@ export default function DomoticsPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
