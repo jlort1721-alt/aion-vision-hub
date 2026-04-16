@@ -8,7 +8,7 @@ test.describe("Auth flow", () => {
 
     await expect(page).toHaveTitle(/aion|login|ingresar/i);
     await expect(page.getByLabel(/email|correo/i)).toBeVisible();
-    await expect(page.getByLabel(/password|contraseña/i)).toBeVisible();
+    await expect(page.locator('input[type="password"]').first()).toBeVisible();
     await expect(
       page.getByRole("button", { name: /log\s*in|ingresar|iniciar/i }),
     ).toBeEnabled();
@@ -23,7 +23,10 @@ test.describe("Auth flow", () => {
     await page.goto("/login");
 
     await page.getByLabel(/email|correo/i).fill("nobody@aionseg.co");
-    await page.getByLabel(/password|contraseña/i).fill("wrong-password-xyz");
+    await page
+      .locator('input[type="password"]')
+      .first()
+      .fill("wrong-password-xyz");
     await page.getByRole("button", { name: /log\s*in|ingresar/i }).click();
 
     await expect(

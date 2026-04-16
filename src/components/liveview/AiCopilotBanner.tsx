@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useState } from "react";
-import { useWebSocket } from "../../hooks/use-websocket";
-import { apiClient } from "../../lib/api-client";
+import { useWebSocket } from "@/hooks/use-websocket";
+import { apiClient } from "@/lib/api-client";
 import {
   AlertTriangle,
   Siren,

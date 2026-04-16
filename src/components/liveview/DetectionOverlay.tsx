@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef } from "react";
-import type { Detection } from "../../hooks/useDetectionStream";
+import type { Detection } from "@/hooks/useDetectionStream";
 
 interface DetectionOverlayProps {
   detections: Detection[];

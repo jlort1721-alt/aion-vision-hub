@@ -4,8 +4,8 @@ import {
   useCreateScene,
   useUpdateScene,
   useDeleteScene,
-} from "../../services/user-scenes-api";
-import type { UserScene } from "../../services/user-scenes-api";
+} from "@/services/user-scenes-api";
+import type { UserScene } from "@/services/user-scenes-api";
 import {
   Plus,
   Save,

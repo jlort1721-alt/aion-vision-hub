@@ -25,11 +25,39 @@ async function globalLogin(page: Page): Promise<void> {
   }
 
   await page.goto("/login", { waitUntil: "domcontentloaded" });
-  await page.getByLabel(/email|correo/i).fill(email);
-  await page.getByLabel(/password|contraseña/i).fill(pass);
-  await page
-    .getByRole("button", { name: /log\s*in|iniciar|ingresar/i })
-    .click();
+
+  // Dismiss cookie banner if present
+  const cookieBtn = page.locator(
+    'button:has-text("Aceptar todo"), button:has-text("Accept")',
+  );
+  if (await cookieBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    await cookieBtn.click();
+    await page.waitForTimeout(300);
+  }
+
+  const emailInput = page
+    .locator('input[type="email"], input[id*="email"], input[name*="email"]')
+    .first();
+  await emailInput.click();
+  await emailInput.fill(email);
+
+  const passInput = page.locator('input[type="password"]').first();
+  await passInput.click();
+  await passInput.fill(pass);
+
+  // Check privacy/terms checkbox (Radix UI — click the visible label/button, not hidden input)
+  const checkboxLabel = page
+    .locator(
+      'button[role="checkbox"], label:has-text("Acepto"), label:has-text("política"), [data-state="unchecked"]',
+    )
+    .first();
+  if (await checkboxLabel.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await checkboxLabel.click();
+  }
+
+  await page.waitForTimeout(500);
+  const btn = page.getByRole("button", { name: /iniciar|ingresar|log\s*in/i });
+  await btn.click({ timeout: 10_000 });
 
   await page.waitForURL(/\/(dashboard|live-view|admin)/, { timeout: 20_000 });
   await expect(page.locator("body")).toBeVisible();

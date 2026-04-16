@@ -1,8 +1,8 @@
 import { memo, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { useCameraLinks } from "../../services/camera-links-api";
-import { apiClient } from "../../lib/api-client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCameraLinks } from "@/services/camera-links-api";
+import { apiClient } from "@/lib/api-client";
 import { DoorOpen, Phone, Lightbulb, Bell, Users, Camera } from "lucide-react";
 
 interface CameraContextPanelProps {

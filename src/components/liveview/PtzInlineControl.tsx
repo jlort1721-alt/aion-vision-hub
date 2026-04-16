@@ -8,7 +8,7 @@ import {
   ZoomOut,
   Square,
 } from "lucide-react";
-import { apiClient } from "../../lib/api-client";
+import { apiClient } from "@/lib/api-client";
 
 interface PtzInlineControlProps {
   sessionId: string;

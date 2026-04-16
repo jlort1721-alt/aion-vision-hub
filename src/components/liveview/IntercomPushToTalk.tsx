@@ -1,6 +1,6 @@
 import { memo, useCallback, useRef, useState } from "react";
 import { Mic, MicOff, Phone, PhoneOff } from "lucide-react";
-import { apiClient } from "../../lib/api-client";
+import { apiClient } from "@/lib/api-client";
 
 type PttState = "idle" | "connecting" | "talking" | "ended" | "error";
 

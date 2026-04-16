@@ -1,8 +1,8 @@
 import { memo, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "../../lib/api-client";
-import { useWebSocket } from "../../hooks/use-websocket";
-import { useLiveViewEvents } from "../../hooks/use-live-view-events";
+import { apiClient } from "@/lib/api-client";
+import { useWebSocket } from "@/hooks/use-websocket";
+import { useLiveViewEvents } from "@/hooks/use-live-view-events";
 import { Camera, AlertTriangle } from "lucide-react";
 
 interface FloorPlanViewProps {
