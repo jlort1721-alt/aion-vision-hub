@@ -206,15 +206,15 @@ export default function EventsPage() {
           await apiClient.patch(`/events/${eventId}`, {
             status: "acknowledged",
           });
-          toast.success("Evento reconocido");
+          toast.success(t("events.acknowledged"));
           break;
         case "resolve":
           await apiClient.patch(`/events/${eventId}`, { status: "resolved" });
-          toast.success("Evento resuelto");
+          toast.success(t("events.resolved"));
           break;
         case "dismiss":
           await apiClient.patch(`/events/${eventId}`, { status: "dismissed" });
-          toast.success("Evento descartado");
+          toast.success(t("events.dismissed"));
           break;
         case "ai-summary":
           await apiClient.post("/ai/chat", {
@@ -225,7 +225,7 @@ export default function EventsPage() {
               },
             ],
           });
-          toast.success("Resumen IA solicitado");
+          toast.success(t("events.ai_summary"));
           break;
         case "create-incident": {
           const event = events.find((e: any) => e.id === eventId);
@@ -242,7 +242,7 @@ export default function EventsPage() {
               site_id: event.site_id,
               event_ids: [eventId],
             });
-            toast.success("Incidente creado desde evento");
+            toast.success(t("events.create_incident"));
           }
           break;
         }
@@ -250,7 +250,7 @@ export default function EventsPage() {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error en acción");
+      toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setActionLoading(null);
     }
@@ -260,8 +260,8 @@ export default function EventsPage() {
 
   return (
     <PageShell
-      title="Eventos y Alarmas"
-      description="Monitoreo de eventos en tiempo real"
+      title={t("events.title")}
+      description={t("events.subtitle")}
       icon={<AlertTriangle className="h-5 w-5" />}
       badge={
         <Badge variant="destructive" className="text-xs">
@@ -307,7 +307,7 @@ export default function EventsPage() {
               ) : (
                 <Volume2 className="h-3.5 w-3.5" />
               )}
-              {isMuted ? "Sin sonido" : "Sonido"}
+              {isMuted ? t("events.sound_off") : t("events.sound_on")}
             </Button>
 
             {/* CSV Export */}

@@ -21,3 +21,6 @@
 2026-04-16T03:40:00Z | F4 | FX-031 DVR time sync: setTime/getTime en Hikvision ISAPI + Dahua CGI, worker dvr-time-sync-worker.ts, endpoint POST /device-control/time-sync/:deviceId | OK |
 2026-04-16T03:50:00Z | F5 | FX-064/065 escenas + programación IoT: VERIFICADO YA COMPLETO — backend 6 endpoints scenes/, frontend ScenesPanel 233L + SchedulePanel 256L, tabs en DomoticsPage líneas 612-740 | DONE (no-op) |
 2026-04-16T04:00:00Z | F6 | FX-083 Asterisk AMI: worker asterisk-call-logger.ts creado, AMI user aionapi configurado en VPS, login verificado OK, ENABLE_CALL_LOGGER=false (activar en F9 deploy) | OK |
+2026-04-16T04:15:00Z | F7.1 | DocumentsPage: LIMPIO — 0 refs supabase (solo backend storage refs) | DONE (no-op) |
+2026-04-16T04:15:00Z | F7.2 | FX-047 export incidentes: EvidenceExport.tsx genera TXT desde BD real, montado en IncidentsPage:277 | DONE (ya implementado) |
+2026-04-16T04:15:00Z | F7.3 | I18N: EventsPage migrado a t(), +28 common keys en es.ts/en.ts, patrón documentado para 14 páginas restantes | OK |
