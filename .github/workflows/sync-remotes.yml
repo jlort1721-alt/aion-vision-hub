@@ -1,0 +1,23 @@
+name: Sync Remotes
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to aion-platform
+        run: |
+          git remote add aion https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/jlort1721-alt/aion-platform.git || true
+          git push aion HEAD:main --force-with-lease || echo "aion push failed (may need PAT)"
+
+      - name: Push to aionseg-platform
+        run: |
+          git remote add aionseg https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/jlort1721-alt/aionseg-platform.git || true
+          git push aionseg HEAD:main --force-with-lease || echo "aionseg push failed (may need PAT)"
