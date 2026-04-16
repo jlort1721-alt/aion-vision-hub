@@ -1,8 +1,30 @@
-import { useEffect, useRef, useState, useCallback, memo } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  memo,
+  lazy,
+  Suspense,
+} from "react";
 import { Card } from "@/components/ui/card";
 import { Video, WifiOff, Image, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { useIntersectionVideo } from "@/hooks/use-intersection-video";
+import { FF } from "@/lib/feature-flags";
+
+const DetectionOverlay = lazy(
+  () => import("@/components/liveview/DetectionOverlay"),
+);
+const PtzInlineControl = lazy(
+  () => import("@/components/liveview/PtzInlineControl"),
+);
+const AiCopilotBanner = lazy(
+  () => import("@/components/liveview/AiCopilotBanner"),
+);
+const EventTimelineSparkline = lazy(
+  () => import("@/components/liveview/EventTimelineSparkline"),
+);
 
 export interface SmartCamera {
   id: string;
@@ -449,6 +471,32 @@ function SmartCameraCellInner({
               </button>
             )}
           </div>
+
+          {/* Live View Pro overlays */}
+          {FF.LIVE_VIEW_AI_OVERLAY && camera && mode === "video" && (
+            <Suspense fallback={null}>
+              <DetectionOverlay cameraId={camera.id} videoRef={videoRef} />
+            </Suspense>
+          )}
+          {FF.LIVE_VIEW_AI_COPILOT && camera && (
+            <Suspense fallback={null}>
+              <AiCopilotBanner cameraId={camera.id} cameraName={camera.name} />
+            </Suspense>
+          )}
+          {FF.LIVE_VIEW_PTZ_INLINE && camera && !isWall && (
+            <Suspense fallback={null}>
+              <div className="absolute bottom-1.5 right-1.5 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                <PtzInlineControl cameraId={camera.id} deviceId={camera.id} />
+              </div>
+            </Suspense>
+          )}
+          {FF.LIVE_VIEW_AI_OVERLAY && camera && (
+            <Suspense fallback={null}>
+              <div className="absolute bottom-0 left-0 right-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                <EventTimelineSparkline cameraId={camera.id} />
+              </div>
+            </Suspense>
+          )}
         </>
       )}
     </Container>

@@ -86,6 +86,11 @@ import { CameraGrid } from "@/components/liveview/CameraGrid";
 import { CameraContextPanel } from "@/components/liveview/CameraContextPanel";
 import { LiveViewToolbar } from "@/components/liveview/LiveViewToolbar";
 import { FF } from "@/lib/feature-flags";
+import { lazy, Suspense } from "react";
+
+const FloorPlanView = lazy(() => import("@/components/liveview/FloorPlanView"));
+const SceneComposer = lazy(() => import("@/components/liveview/SceneComposer"));
+const TourEngine = lazy(() => import("@/components/liveview/TourEngine"));
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -1383,6 +1388,38 @@ export default function LiveViewPage() {
                       }
                     />
                   </TabsContent>
+
+                  {FF.LIVE_VIEW_FLOOR_PLAN && (
+                    <TabsContent value="floorplan" className="mt-0">
+                      <Suspense
+                        fallback={
+                          <div className="p-4 text-xs text-muted-foreground">
+                            Cargando mapa...
+                          </div>
+                        }
+                      >
+                        <FloorPlanView
+                          siteId={selectedSite}
+                          cameras={allCameras}
+                          onCameraSelect={(id: string) => setFocusedCamera(id)}
+                          selectedCameraId={focusedCamera}
+                        />
+                      </Suspense>
+                    </TabsContent>
+                  )}
+                  {FF.LIVE_VIEW_SCENE_COMPOSER && (
+                    <TabsContent value="scenes" className="mt-0">
+                      <Suspense
+                        fallback={
+                          <div className="p-4 text-xs text-muted-foreground">
+                            Cargando escenas...
+                          </div>
+                        }
+                      >
+                        <SceneComposer cameras={allCameras} />
+                      </Suspense>
+                    </TabsContent>
+                  )}
                 </div>
               </ScrollArea>
             </Tabs>
