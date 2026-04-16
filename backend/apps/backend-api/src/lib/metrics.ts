@@ -69,3 +69,41 @@ export const redisConnected = new Gauge({
   help: 'Whether Redis is connected (1) or not (0)',
   registers: [appRegistry],
 });
+
+// ── Database metrics ────────────────────────────────────────────────
+export const dbQueryDuration = new Histogram({
+  name: 'aion_db_query_duration_seconds',
+  help: 'Duration of database queries in seconds',
+  labelNames: ['operation', 'table'] as const,
+  buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5],
+  registers: [appRegistry],
+});
+
+export const dbPoolActive = new Gauge({
+  name: 'aion_db_pool_active',
+  help: 'Number of active database pool connections',
+  registers: [appRegistry],
+});
+
+// ── Cache metrics ───────────────────────────────────────────────────
+export const cacheHitRate = new Gauge({
+  name: 'aion_cache_hit_rate',
+  help: 'Cache hit rate ratio (0-1)',
+  labelNames: ['namespace'] as const,
+  registers: [appRegistry],
+});
+
+// ── Backup metrics ──────────────────────────────────────────────────
+export const backupLastSuccess = new Gauge({
+  name: 'aion_backup_last_success_timestamp',
+  help: 'Unix timestamp of last successful backup',
+  registers: [appRegistry],
+});
+
+// ── Worker metrics ──────────────────────────────────────────────────
+export const workerErrors = new Counter({
+  name: 'aion_worker_errors_total',
+  help: 'Total worker errors by worker name',
+  labelNames: ['worker'] as const,
+  registers: [appRegistry],
+});

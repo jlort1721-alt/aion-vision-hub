@@ -1,0 +1,242 @@
+{
+  "title": "AION — Plataforma Overview",
+  "uid": "aion-overview",
+  "tags": ["aion", "overview"],
+  "timezone": "America/Bogota",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "group",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(probe_success{job=\"blackbox-authed\"}, group)",
+        "includeAll": true,
+        "multi": true,
+        "current": { "selected": true, "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "URLs UP / Total (70)",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "targets": [
+        { "expr": "count(probe_success{job=~\"blackbox.*\"} == 1)", "refId": "A", "legendFormat": "Up" },
+        { "expr": "count(probe_success{job=~\"blackbox.*\"})",       "refId": "B", "legendFormat": "Total" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "yellow", "value": 60 },
+              { "color": "green",  "value": 70 }
+            ]
+          }
+        }
+      },
+      "options": { "graphMode": "area", "colorMode": "background" }
+    },
+    {
+      "type": "gauge",
+      "title": "Vision Hub healthy %",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "targets": [
+        { "expr": "(aion_vision_hub_healthy_services / aion_vision_hub_total_services) * 100", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0, "max": 100, "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "yellow", "value": 80 },
+              { "color": "green",  "value": 95 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Cameras online",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "expr": "aion_camera_online_total", "refId": "A" }]
+    },
+    {
+      "type": "stat",
+      "title": "IoT online",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "expr": "aion_iot_device_online_total", "refId": "A" }]
+    },
+    {
+      "type": "stat",
+      "title": "Tablas sin RLS",
+      "gridPos": { "x": 16, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "expr": "aion_pg_tables_without_rls", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red",   "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Costo IA hoy (USD)",
+      "gridPos": { "x": 20, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "expr": "sum(aion_ai_cost_usd_total)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2 } }
+    },
+
+    {
+      "type": "timeseries",
+      "title": "URL availability por sección (probe_success)",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "avg by (group) (probe_success{job=~\"blackbox.*\", group=~\"$group\"})",
+          "refId": "A",
+          "legendFormat": "{{group}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "min": 0, "max": 1, "unit": "percentunit" } }
+    },
+
+    {
+      "type": "table",
+      "title": "URLs caídas ahora",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "probe_success{job=~\"blackbox.*\"} == 0",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "job": true },
+            "indexByName": { "instance": 0, "group": 1, "severity": 2, "Value": 3 },
+            "renameByName": {
+              "instance": "URL",
+              "group": "Sección",
+              "severity": "Severidad",
+              "Value": "Up?"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Latencia probe (p95) por URL",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "topk(10, probe_duration_seconds{job=~\"blackbox.*\"})",
+          "refId": "A",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+
+    {
+      "type": "timeseries",
+      "title": "PM2 — RAM por app",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "pm2_memory_bytes",
+          "refId": "A",
+          "legendFormat": "{{app}} ({{color}})"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+
+    {
+      "type": "timeseries",
+      "title": "PM2 — CPU % por app",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "pm2_cpu_percent",
+          "refId": "A",
+          "legendFormat": "{{app}} ({{color}})"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent" } }
+    },
+
+    {
+      "type": "stat",
+      "title": "PM2 procesos online",
+      "gridPos": { "x": 0, "y": 28, "w": 6, "h": 4 },
+      "targets": [{ "expr": "sum(pm2_status == 1)", "refId": "A" }]
+    },
+
+    {
+      "type": "stat",
+      "title": "PM2 reinicios última hora",
+      "gridPos": { "x": 6, "y": 28, "w": 6, "h": 4 },
+      "targets": [{ "expr": "sum(increase(pm2_restarts_total[1h]))", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 3 },
+              { "color": "red",    "value": 10 }
+            ]
+          }
+        }
+      }
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Postgres — conexiones activas",
+      "gridPos": { "x": 12, "y": 28, "w": 12, "h": 4 },
+      "targets": [{ "expr": "pg_stat_activity_count", "refId": "A", "legendFormat": "{{state}}" }]
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Model router — requests por modelo",
+      "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (model) (rate(aion_model_router_requests_total[5m]))",
+          "refId": "A",
+          "legendFormat": "{{model}}"
+        }
+      ]
+    },
+
+    {
+      "type": "piechart",
+      "title": "AI cost hoy por modelo",
+      "gridPos": { "x": 12, "y": 32, "w": 12, "h": 8 },
+      "targets": [{ "expr": "aion_ai_cost_usd_total", "refId": "A", "legendFormat": "{{model}}" }]
+    }
+  ]
+}

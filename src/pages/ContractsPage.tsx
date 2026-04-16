@@ -70,7 +70,7 @@ const defaultContractForm = {
   paymentTerms: 'net_30' as string,
   autoRenew: false,
   notes: '',
-  services: [] as any[],
+  services: [] as string[],
 };
 
 const defaultInvoiceForm = {
@@ -83,7 +83,7 @@ const defaultInvoiceForm = {
   taxRate: '19',
   currency: 'COP',
   notes: '',
-  lineItems: [] as any[],
+  lineItems: [] as { description: string; quantity: number; unitPrice: number }[],
 };
 
 export default function ContractsPage() {
@@ -317,8 +317,8 @@ export default function ContractsPage() {
     return true;
   });
 
-  const s = stats?.data as any;
-  const is_ = invStats?.data as any;
+  const s = stats?.data as Record<string, unknown> | undefined;
+  const is_ = invStats?.data as Record<string, unknown> | undefined;
 
   // ── Expiry alert computation ──────────────────────────────
   const expiringContracts = useMemo(() => {
@@ -620,7 +620,7 @@ export default function ContractsPage() {
                           <Badge variant="outline" className="capitalize">{c.type?.replace('_', ' ')}</Badge>
                         </td>
                         <td className="p-3">
-                          <Badge variant={contractStatusColor[c.status] as any} className="capitalize">
+                          <Badge variant={contractStatusColor[c.status] as "default" | "secondary" | "destructive" | "outline"} className="capitalize">
                             {c.status}
                           </Badge>
                         </td>
@@ -716,7 +716,7 @@ export default function ContractsPage() {
                         <td className="p-3 font-mono text-xs">{inv.invoiceNumber}</td>
                         <td className="p-3">
                           <Badge
-                            variant={invoiceStatusColor[inv.status] as any}
+                            variant={invoiceStatusColor[inv.status] as "default" | "secondary" | "destructive" | "outline"}
                             className="capitalize"
                           >
                             {inv.status}

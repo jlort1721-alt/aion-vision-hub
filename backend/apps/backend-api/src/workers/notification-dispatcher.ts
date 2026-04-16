@@ -254,6 +254,7 @@ export async function dispatchDeviceStateChange(
   // 8. Evaluate automation rules (phase3 automation engine)
   try {
     await evaluateAutomationRules(db, {
+      id: crypto.randomUUID(),
       tenantId,
       siteId,
       deviceId,

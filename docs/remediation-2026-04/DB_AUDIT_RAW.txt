@@ -1,0 +1,842 @@
+============ COUNT ROWS POR TABLA (TOP 60) ============
+          tabla           | filas | tamaño  
+--------------------------+-------+---------
+ visual_patrol_logs       | 31603 | 6816 kB
+ camera_detections        |  3740 | 1912 kB
+ automation_executions    |  2129 | 1488 kB
+ residents                |  1824 | 1160 kB
+ access_people            |  1823 | 1224 kB
+ biometric_records        |  1410 | 368 kB
+ audit_logs               |  1275 | 1008 kB
+ access_vehicles          |   972 | 312 kB
+ vehicles                 |   971 | 352 kB
+ refresh_tokens           |   831 | 488 kB
+ events                   |   658 | 976 kB
+ device_restarts          |   460 | 136 kB
+ communication_logs       |   430 | 368 kB
+ sla_tracking             |   369 | 208 kB
+ device_channels          |   353 | 168 kB
+ cameras                  |   353 | 336 kB
+ devices                  |   318 | 360 kB
+ device_credentials       |   222 | 112 kB
+ incidents                |   202 | 224 kB
+ streams                  |   184 | 144 kB
+ tech_service_tracking    |   168 | 104 kB
+ authorized_workers       |   127 | 88 kB
+ network_devices_real     |    95 | 112 kB
+ ewelink_device_mappings  |    86 | 80 kB
+ domotic_devices          |    86 | 112 kB
+ alert_instances          |    83 | 176 kB
+ audit_log                |    82 | 272 kB
+ ai_sessions              |    69 | 96 kB
+ service_tickets          |    62 | 80 kB
+ access_logs              |    58 | 128 kB
+ cctv_equipment           |    44 | 80 kB
+ site_administrators      |    37 | 80 kB
+ access_doors             |    37 | 48 kB
+ role_module_permissions  |    37 | 80 kB
+ site_door_inventory      |    36 | 80 kB
+ automation_rules         |    34 | 144 kB
+ ai_vision_rules          |    34 | 112 kB
+ intercom_devices         |    29 | 80 kB
+ site_admins              |    28 | 32 kB
+ intercoms                |    28 | 80 kB
+ agent_tools              |    28 | 96 kB
+ sirens                   |    27 | 24 kB
+ operational_skills       |    26 | 144 kB
+ sites                    |    26 | 112 kB
+ device_groups            |    25 | 64 kB
+ site_profiles            |    24 | 104 kB
+ site_floor_plans         |    24 | 104 kB
+ site_equipment_inventory |    23 | 32 kB
+ emergency_activations    |    21 | 96 kB
+ patrol_logs              |    20 | 112 kB
+ guard_schedules          |    17 | 64 kB
+ integrations             |    16 | 48 kB
+ siren_tests              |    16 | 96 kB
+ resident_sessions        |    16 | 64 kB
+ agent_knowledge          |    13 | 192 kB
+ consignas                |    12 | 128 kB
+ ai_vision_presets        |    12 | 32 kB
+ database_records         |    11 | 80 kB
+ elevators                |    11 | 48 kB
+ knowledge_base           |    11 | 128 kB
+(60 rows)
+
+============ TABLAS SIN PRIMARY KEY ============
+ tablename 
+-----------
+(0 rows)
+
+============ RLS: resumen ============
+ rls_habilitado | tablas 
+----------------+--------
+ f              |      2
+ t              |    156
+(2 rows)
+
+============ RLS: lista tablas sin RLS ============
+     tablename     
+-------------------
+ audit_log
+ schema_migrations
+(2 rows)
+
+============ POLICIES RLS ============
+         tablename         |            policyname             |  cmd   
+---------------------------+-----------------------------------+--------
+ access_doors              | api_service_read                  | SELECT
+ access_doors              | api_service_write                 | INSERT
+ access_doors              | admin_full_access                 | ALL
+ access_doors              | api_service_update                | UPDATE
+ access_events             | api_service_update                | UPDATE
+ access_events             | admin_full_access                 | ALL
+ access_events             | access_events_tenant_read         | SELECT
+ access_events             | api_service_write                 | INSERT
+ access_events             | api_service_read                  | SELECT
+ access_events             | access_events_tenant_insert       | INSERT
+ access_logs               | api_service_read                  | SELECT
+ access_logs               | api_service_write                 | INSERT
+ access_logs               | api_service_update                | UPDATE
+ access_logs               | admin_full_access                 | ALL
+ access_people             | api_service_read                  | SELECT
+ access_people             | api_service_write                 | INSERT
+ access_people             | admin_full_access                 | ALL
+ access_people             | api_service_update                | UPDATE
+ access_points             | api_service_read                  | SELECT
+ access_points             | api_service_update                | UPDATE
+ access_points             | api_service_write                 | INSERT
+ access_points             | admin_full_access                 | ALL
+ access_schedules          | admin_full_access                 | ALL
+ access_schedules          | api_service_update                | UPDATE
+ access_schedules          | api_service_write                 | INSERT
+ access_schedules          | api_service_read                  | SELECT
+ access_vehicles           | api_service_update                | UPDATE
+ access_vehicles           | admin_full_access                 | ALL
+ access_vehicles           | api_service_read                  | SELECT
+ access_vehicles           | api_service_write                 | INSERT
+ agent_conversations       | admin_full_access                 | ALL
+ agent_conversations       | api_service_read                  | SELECT
+ agent_conversations       | api_service_update                | UPDATE
+ agent_conversations       | api_service_write                 | INSERT
+ agent_knowledge           | api_service_write                 | INSERT
+ agent_knowledge           | api_service_update                | UPDATE
+ agent_knowledge           | admin_full_access                 | ALL
+ agent_knowledge           | api_service_read                  | SELECT
+ agent_learning            | api_service_update                | UPDATE
+ agent_learning            | admin_full_access                 | ALL
+ agent_learning            | api_service_read                  | SELECT
+ agent_learning            | api_service_write                 | INSERT
+ agent_messages            | api_service_read                  | SELECT
+ agent_messages            | api_service_update                | UPDATE
+ agent_messages            | api_service_write                 | INSERT
+ agent_messages            | admin_full_access                 | ALL
+ agent_presets             | admin_full_access                 | ALL
+ agent_presets             | api_service_write                 | INSERT
+ agent_presets             | api_service_read                  | SELECT
+ agent_presets             | api_service_update                | UPDATE
+ agent_rate_limits         | api_service_read                  | SELECT
+ agent_rate_limits         | api_service_write                 | INSERT
+ agent_rate_limits         | api_service_update                | UPDATE
+ agent_rate_limits         | admin_full_access                 | ALL
+ agent_tool_logs           | api_service_write                 | INSERT
+ agent_tool_logs           | api_service_read                  | SELECT
+ agent_tool_logs           | api_service_update                | UPDATE
+ agent_tool_logs           | admin_full_access                 | ALL
+ agent_tools               | api_service_update                | UPDATE
+ agent_tools               | api_service_write                 | INSERT
+ agent_tools               | admin_full_access                 | ALL
+ agent_tools               | api_service_read                  | SELECT
+ ai_conversations          | api_service_write                 | INSERT
+ ai_conversations          | aic_user_isolation                | ALL
+ ai_conversations          | api_service_update                | UPDATE
+ ai_conversations          | admin_full_access                 | ALL
+ ai_conversations          | api_service_read                  | SELECT
+ ai_detection_zones        | api_service_read                  | SELECT
+ ai_detection_zones        | api_service_update                | UPDATE
+ ai_detection_zones        | api_service_write                 | INSERT
+ ai_detection_zones        | admin_full_access                 | ALL
+ ai_sessions               | api_service_update                | UPDATE
+ ai_sessions               | api_service_write                 | INSERT
+ ai_sessions               | api_service_read                  | SELECT
+ ai_sessions               | admin_full_access                 | ALL
+ ai_vision_detections      | api_service_read                  | SELECT
+ ai_vision_detections      | api_service_write                 | INSERT
+ ai_vision_detections      | api_service_update                | UPDATE
+ ai_vision_detections      | admin_full_access                 | ALL
+ ai_vision_presets         | api_service_read                  | SELECT
+ ai_vision_presets         | admin_full_access                 | ALL
+ ai_vision_presets         | api_service_update                | UPDATE
+ ai_vision_presets         | api_service_write                 | INSERT
+ ai_vision_rules           | admin_full_access                 | ALL
+ ai_vision_rules           | api_service_read                  | SELECT
+ ai_vision_rules           | api_service_write                 | INSERT
+ ai_vision_rules           | api_service_update                | UPDATE
+ alarm_verifications       | api_service_write                 | INSERT
+ alarm_verifications       | api_service_update                | UPDATE
+ alarm_verifications       | api_service_read                  | SELECT
+ alarm_verifications       | admin_full_access                 | ALL
+ alert_instances           | api_service_update                | UPDATE
+ alert_instances           | api_service_read                  | SELECT
+ alert_instances           | api_service_write                 | INSERT
+ alert_instances           | admin_full_access                 | ALL
+ alert_rules               | admin_full_access                 | ALL
+ alert_rules               | api_service_read                  | SELECT
+ alert_rules               | api_service_write                 | INSERT
+ alert_rules               | api_service_update                | UPDATE
+ audit_logs                | api_service_update                | UPDATE
+ audit_logs                | admin_full_access                 | ALL
+ audit_logs                | api_service_write                 | INSERT
+ audit_logs                | api_service_read                  | SELECT
+ authorized_workers        | admin_full_access                 | ALL
+ authorized_workers        | api_service_update                | UPDATE
+ authorized_workers        | api_service_write                 | INSERT
+ authorized_workers        | api_service_read                  | SELECT
+ automation_executions     | api_service_update                | UPDATE
+ automation_executions     | admin_full_access                 | ALL
+ automation_executions     | api_service_read                  | SELECT
+ automation_executions     | api_service_write                 | INSERT
+ automation_rules          | api_service_write                 | INSERT
+ automation_rules          | api_service_update                | UPDATE
+ automation_rules          | automation_tenant_write           | ALL
+ automation_rules          | api_service_read                  | SELECT
+ automation_rules          | admin_full_access                 | ALL
+ automation_rules          | automation_tenant_read            | SELECT
+ biomarkers                | api_service_update                | UPDATE
+ biomarkers                | admin_full_access                 | ALL
+ biomarkers                | api_service_write                 | INSERT
+ biomarkers                | api_service_read                  | SELECT
+ biometric_records         | api_service_read                  | SELECT
+ biometric_records         | admin_full_access                 | ALL
+ biometric_records         | api_service_write                 | INSERT
+ biometric_records         | api_service_update                | UPDATE
+ call_sessions             | api_service_update                | UPDATE
+ call_sessions             | api_service_write                 | INSERT
+ call_sessions             | admin_full_access                 | ALL
+ call_sessions             | api_service_read                  | SELECT
+ camera_detections         | admin_full_access                 | ALL
+ camera_detections         | api_service_read                  | SELECT
+ camera_detections         | api_service_write                 | INSERT
+ camera_detections         | api_service_update                | UPDATE
+ camera_events             | admin_full_access                 | ALL
+ camera_events             | api_service_read                  | SELECT
+ camera_events             | api_service_write                 | INSERT
+ camera_events             | api_service_update                | UPDATE
+ camera_snapshots          | api_service_read                  | SELECT
+ camera_snapshots          | api_service_write                 | INSERT
+ camera_snapshots          | api_service_update                | UPDATE
+ camera_snapshots          | admin_full_access                 | ALL
+ cameras                   | api_service_update                | UPDATE
+ cameras                   | api_service_read                  | SELECT
+ cameras                   | admin_full_access                 | ALL
+ cameras                   | api_service_write                 | INSERT
+ cctv_equipment            | api_service_write                 | INSERT
+ cctv_equipment            | api_service_update                | UPDATE
+ cctv_equipment            | api_service_read                  | SELECT
+ cctv_equipment            | admin_full_access                 | ALL
+ certifications            | api_service_update                | UPDATE
+ certifications            | api_service_read                  | SELECT
+ certifications            | api_service_write                 | INSERT
+ certifications            | admin_full_access                 | ALL
+ clip_exports              | api_service_read                  | SELECT
+ clip_exports              | api_service_update                | UPDATE
+ clip_exports              | api_service_write                 | INSERT
+ clip_exports              | admin_full_access                 | ALL
+ clips                     | admin_full_access                 | ALL
+ clips                     | api_service_read                  | SELECT
+ clips                     | api_service_update                | UPDATE
+ clips                     | api_service_write                 | INSERT
+ communication_logs        | api_service_write                 | INSERT
+ communication_logs        | api_service_read                  | SELECT
+ communication_logs        | api_service_update                | UPDATE
+ communication_logs        | admin_full_access                 | ALL
+ compliance_templates      | api_service_update                | UPDATE
+ compliance_templates      | admin_full_access                 | ALL
+ compliance_templates      | api_service_read                  | SELECT
+ compliance_templates      | api_service_write                 | INSERT
+ consignas                 | api_service_update                | UPDATE
+ consignas                 | admin_full_access                 | ALL
+ consignas                 | api_service_read                  | SELECT
+ consignas                 | api_service_write                 | INSERT
+ contracts                 | api_service_read                  | SELECT
+ contracts                 | admin_full_access                 | ALL
+ contracts                 | api_service_update                | UPDATE
+ contracts                 | api_service_write                 | INSERT
+ data_retention_policies   | api_service_write                 | INSERT
+ data_retention_policies   | admin_full_access                 | ALL
+ data_retention_policies   | api_service_read                  | SELECT
+ data_retention_policies   | api_service_update                | UPDATE
+ database_records          | api_service_update                | UPDATE
+ database_records          | api_service_write                 | INSERT
+ database_records          | api_service_read                  | SELECT
+ database_records          | admin_full_access                 | ALL
+ device_channels           | api_service_write                 | INSERT
+ device_channels           | admin_full_access                 | ALL
+ device_channels           | api_service_read                  | SELECT
+ device_channels           | api_service_update                | UPDATE
+ device_credentials        | api_service_read                  | SELECT
+ device_credentials        | admin_full_access                 | ALL
+ device_credentials        | api_service_write                 | INSERT
+ device_credentials        | api_service_update                | UPDATE
+ device_events             | admin_full_access                 | ALL
+ device_events             | api_service_update                | UPDATE
+ device_events             | api_service_read                  | SELECT
+ device_events             | api_service_write                 | INSERT
+ device_groups             | admin_full_access                 | ALL
+ device_groups             | api_service_read                  | SELECT
+ device_groups             | api_service_write                 | INSERT
+ device_groups             | api_service_update                | UPDATE
+ device_health_log         | api_service_update                | UPDATE
+ device_health_log         | api_service_read                  | SELECT
+ device_health_log         | admin_full_access                 | ALL
+ device_health_log         | api_service_write                 | INSERT
+ device_restarts           | admin_full_access                 | ALL
+ device_restarts           | api_service_read                  | SELECT
+ device_restarts           | api_service_update                | UPDATE
+ device_restarts           | api_service_write                 | INSERT
+ devices                   | api_service_write                 | INSERT
+ devices                   | api_service_update                | UPDATE
+ devices                   | admin_full_access                 | ALL
+ devices                   | api_service_read                  | SELECT
+ domotic_actions           | api_service_write                 | INSERT
+ domotic_actions           | admin_full_access                 | ALL
+ domotic_actions           | api_service_read                  | SELECT
+ domotic_actions           | api_service_update                | UPDATE
+ domotic_devices           | api_service_update                | UPDATE
+ domotic_devices           | admin_full_access                 | ALL
+ domotic_devices           | api_service_read                  | SELECT
+ domotic_devices           | api_service_write                 | INSERT
+ domotic_scene_executions  | api_service_read                  | SELECT
+ domotic_scene_executions  | admin_full_access                 | ALL
+ domotic_scene_executions  | api_service_update                | UPDATE
+ domotic_scene_executions  | api_service_write                 | INSERT
+ domotic_scenes            | api_service_read                  | SELECT
+ domotic_scenes            | admin_full_access                 | ALL
+ domotic_scenes            | api_service_write                 | INSERT
+ domotic_scenes            | api_service_update                | UPDATE
+ domotics_audit_logs       | api_service_write                 | INSERT
+ domotics_audit_logs       | api_service_update                | UPDATE
+ domotics_audit_logs       | api_service_read                  | SELECT
+ domotics_audit_logs       | admin_full_access                 | ALL
+ elevator_info             | admin_full_access                 | ALL
+ elevator_info             | api_service_write                 | INSERT
+ elevator_info             | api_service_read                  | SELECT
+ elevator_info             | api_service_update                | UPDATE
+ elevators                 | api_service_write                 | INSERT
+ elevators                 | api_service_update                | UPDATE
+ elevators                 | admin_full_access                 | ALL
+ elevators                 | api_service_read                  | SELECT
+ emergency_activations     | admin_full_access                 | ALL
+ emergency_activations     | api_service_write                 | INSERT
+ emergency_activations     | api_service_update                | UPDATE
+ emergency_activations     | api_service_read                  | SELECT
+ emergency_contacts        | api_service_update                | UPDATE
+ emergency_contacts        | admin_full_access                 | ALL
+ emergency_contacts        | api_service_write                 | INSERT
+ emergency_contacts        | api_service_read                  | SELECT
+ emergency_protocols       | api_service_update                | UPDATE
+ emergency_protocols       | admin_full_access                 | ALL
+ emergency_protocols       | api_service_read                  | SELECT
+ emergency_protocols       | api_service_write                 | INSERT
+ equipment_restarts        | api_service_update                | UPDATE
+ equipment_restarts        | api_service_write                 | INSERT
+ equipment_restarts        | api_service_read                  | SELECT
+ equipment_restarts        | admin_full_access                 | ALL
+ escalation_policies       | api_service_read                  | SELECT
+ escalation_policies       | api_service_write                 | INSERT
+ escalation_policies       | api_service_update                | UPDATE
+ escalation_policies       | admin_full_access                 | ALL
+ event_log                 | api_service_read                  | SELECT
+ event_log                 | admin_full_access                 | ALL
+ event_log                 | api_service_update                | UPDATE
+ event_log                 | api_service_write                 | INSERT
+ events                    | api_service_update                | UPDATE
+ events                    | admin_full_access                 | ALL
+ events                    | api_service_read                  | SELECT
+ events                    | api_service_write                 | INSERT
+ ewelink_device_mappings   | api_service_update                | UPDATE
+ ewelink_device_mappings   | api_service_write                 | INSERT
+ ewelink_device_mappings   | api_service_read                  | SELECT
+ ewelink_device_mappings   | admin_full_access                 | ALL
+ face_enrollments          | api_service_read                  | SELECT
+ face_enrollments          | api_service_update                | UPDATE
+ face_enrollments          | api_service_write                 | INSERT
+ face_enrollments          | admin_full_access                 | ALL
+ feature_flags             | admin_full_access                 | ALL
+ feature_flags             | api_service_read                  | SELECT
+ feature_flags             | api_service_write                 | INSERT
+ feature_flags             | api_service_update                | UPDATE
+ floor_plan_positions      | api_service_write                 | INSERT
+ floor_plan_positions      | admin_full_access                 | ALL
+ floor_plan_positions      | api_service_update                | UPDATE
+ floor_plan_positions      | api_service_read                  | SELECT
+ floor_plans               | admin_full_access                 | ALL
+ floor_plans               | api_service_update                | UPDATE
+ floor_plans               | api_service_read                  | SELECT
+ floor_plans               | api_service_write                 | INSERT
+ guard_schedules           | admin_full_access                 | ALL
+ guard_schedules           | api_service_write                 | INSERT
+ guard_schedules           | api_service_read                  | SELECT
+ guard_schedules           | api_service_update                | UPDATE
+ incident_notes            | admin_full_access                 | ALL
+ incident_notes            | api_service_read                  | SELECT
+ incident_notes            | api_service_write                 | INSERT
+ incident_notes            | api_service_update                | UPDATE
+ incidents                 | incidents_tenant_update           | UPDATE
+ incidents                 | api_service_read                  | SELECT
+ incidents                 | api_service_write                 | INSERT
+ incidents                 | api_service_update                | UPDATE
+ incidents                 | incidents_tenant_insert           | INSERT
+ incidents                 | incidents_tenant_read             | SELECT
+ incidents                 | admin_full_access                 | ALL
+ integrations              | admin_full_access                 | ALL
+ integrations              | api_service_read                  | SELECT
+ integrations              | api_service_write                 | INSERT
+ integrations              | api_service_update                | UPDATE
+ intercom_calls            | api_service_write                 | INSERT
+ intercom_calls            | api_service_update                | UPDATE
+ intercom_calls            | admin_full_access                 | ALL
+ intercom_calls            | api_service_read                  | SELECT
+ intercom_devices          | api_service_write                 | INSERT
+ intercom_devices          | admin_full_access                 | ALL
+ intercom_devices          | api_service_update                | UPDATE
+ intercom_devices          | api_service_read                  | SELECT
+ intercoms                 | api_service_read                  | SELECT
+ intercoms                 | admin_full_access                 | ALL
+ intercoms                 | api_service_update                | UPDATE
+ intercoms                 | api_service_write                 | INSERT
+ invoices                  | api_service_read                  | SELECT
+ invoices                  | api_service_update                | UPDATE
+ invoices                  | api_service_write                 | INSERT
+ invoices                  | admin_full_access                 | ALL
+ iot_scene_actions         | api_service_read                  | SELECT
+ iot_scene_actions         | admin_full_access                 | ALL
+ iot_scene_actions         | api_service_write                 | INSERT
+ iot_scene_actions         | api_service_update                | UPDATE
+ iot_scenes                | api_service_read                  | SELECT
+ iot_scenes                | admin_full_access                 | ALL
+ iot_scenes                | api_service_update                | UPDATE
+ iot_scenes                | api_service_write                 | INSERT
+ iot_schedules             | api_service_write                 | INSERT
+ iot_schedules             | api_service_read                  | SELECT
+ iot_schedules             | admin_full_access                 | ALL
+ iot_schedules             | api_service_update                | UPDATE
+ key_inventory             | admin_full_access                 | ALL
+ key_inventory             | api_service_write                 | INSERT
+ key_inventory             | api_service_update                | UPDATE
+ key_inventory             | api_service_read                  | SELECT
+ key_logs                  | api_service_read                  | SELECT
+ key_logs                  | api_service_update                | UPDATE
+ key_logs                  | api_service_write                 | INSERT
+ key_logs                  | admin_full_access                 | ALL
+ knowledge_base            | api_service_write                 | INSERT
+ knowledge_base            | kb_tenant_isolation               | ALL
+ knowledge_base            | admin_full_access                 | ALL
+ knowledge_base            | api_service_update                | UPDATE
+ knowledge_base            | api_service_read                  | SELECT
+ knowledge_uploads         | api_service_read                  | SELECT
+ knowledge_uploads         | admin_full_access                 | ALL
+ knowledge_uploads         | api_service_write                 | INSERT
+ knowledge_uploads         | api_service_update                | UPDATE
+ kpi_snapshots             | api_service_write                 | INSERT
+ kpi_snapshots             | api_service_read                  | SELECT
+ kpi_snapshots             | admin_full_access                 | ALL
+ kpi_snapshots             | api_service_update                | UPDATE
+ live_view_layouts         | api_service_write                 | INSERT
+ live_view_layouts         | admin_full_access                 | ALL
+ live_view_layouts         | api_service_update                | UPDATE
+ live_view_layouts         | api_service_read                  | SELECT
+ lpr_events                | api_service_update                | UPDATE
+ lpr_events                | admin_full_access                 | ALL
+ lpr_events                | api_service_write                 | INSERT
+ lpr_events                | api_service_read                  | SELECT
+ mcp_connectors            | mcp_connectors_tenant             | ALL
+ mcp_connectors            | api_service_update                | UPDATE
+ mcp_connectors            | api_service_write                 | INSERT
+ mcp_connectors            | api_service_read                  | SELECT
+ mcp_connectors            | admin_full_access                 | ALL
+ monitoring_credentials    | api_service_write                 | INSERT
+ monitoring_credentials    | api_service_read                  | SELECT
+ monitoring_credentials    | api_service_update                | UPDATE
+ monitoring_credentials    | admin_full_access                 | ALL
+ monitoring_layouts        | api_service_write                 | INSERT
+ monitoring_layouts        | admin_full_access                 | ALL
+ monitoring_layouts        | api_service_read                  | SELECT
+ monitoring_layouts        | api_service_update                | UPDATE
+ motion_events             | api_service_write                 | INSERT
+ motion_events             | api_service_read                  | SELECT
+ motion_events             | api_service_update                | UPDATE
+ motion_events             | admin_full_access                 | ALL
+ network_configs           | api_service_update                | UPDATE
+ network_configs           | admin_full_access                 | ALL
+ network_configs           | api_service_read                  | SELECT
+ network_configs           | api_service_write                 | INSERT
+ network_devices_real      | admin_full_access                 | ALL
+ network_devices_real      | api_service_read                  | SELECT
+ network_devices_real      | api_service_write                 | INSERT
+ network_devices_real      | api_service_update                | UPDATE
+ notification_channels     | admin_full_access                 | ALL
+ notification_channels     | api_service_read                  | SELECT
+ notification_channels     | api_service_write                 | INSERT
+ notification_channels     | api_service_update                | UPDATE
+ notification_log          | api_service_update                | UPDATE
+ notification_log          | admin_full_access                 | ALL
+ notification_log          | api_service_read                  | SELECT
+ notification_log          | api_service_write                 | INSERT
+ notification_rules        | admin_full_access                 | ALL
+ notification_rules        | api_service_update                | UPDATE
+ notification_rules        | api_service_write                 | INSERT
+ notification_rules        | api_service_read                  | SELECT
+ notification_templates    | notif_tenant_write                | ALL
+ notification_templates    | api_service_read                  | SELECT
+ notification_templates    | api_service_write                 | INSERT
+ notification_templates    | api_service_update                | UPDATE
+ notification_templates    | admin_full_access                 | ALL
+ notification_templates    | notif_tenant_read                 | SELECT
+ operational_notes         | api_service_update                | UPDATE
+ operational_notes         | admin_full_access                 | ALL
+ operational_notes         | api_service_read                  | SELECT
+ operational_notes         | api_service_write                 | INSERT
+ operational_skills        | api_service_update                | UPDATE
+ operational_skills        | api_service_write                 | INSERT
+ operational_skills        | api_service_read                  | SELECT
+ operational_skills        | admin_full_access                 | ALL
+ operator_site_assignments | api_service_update                | UPDATE
+ operator_site_assignments | api_service_write                 | INSERT
+ operator_site_assignments | admin_full_access                 | ALL
+ operator_site_assignments | api_service_read                  | SELECT
+ operator_trainings        | api_service_read                  | SELECT
+ operator_trainings        | admin_full_access                 | ALL
+ operator_trainings        | api_service_update                | UPDATE
+ operator_trainings        | api_service_write                 | INSERT
+ paging_broadcasts         | api_service_write                 | INSERT
+ paging_broadcasts         | api_service_read                  | SELECT
+ paging_broadcasts         | api_service_update                | UPDATE
+ paging_broadcasts         | admin_full_access                 | ALL
+ paging_templates          | admin_full_access                 | ALL
+ paging_templates          | api_service_read                  | SELECT
+ paging_templates          | api_service_write                 | INSERT
+ paging_templates          | api_service_update                | UPDATE
+ patrol_checkpoints        | patrol_cp_tenant_insert           | INSERT
+ patrol_checkpoints        | api_service_update                | UPDATE
+ patrol_checkpoints        | api_service_write                 | INSERT
+ patrol_checkpoints        | api_service_read                  | SELECT
+ patrol_checkpoints        | patrol_cp_tenant_read             | SELECT
+ patrol_checkpoints        | admin_full_access                 | ALL
+ patrol_logs               | admin_full_access                 | ALL
+ patrol_logs               | api_service_read                  | SELECT
+ patrol_logs               | api_service_update                | UPDATE
+ patrol_logs               | api_service_write                 | INSERT
+ patrol_routes             | api_service_read                  | SELECT
+ patrol_routes             | api_service_write                 | INSERT
+ patrol_routes             | admin_full_access                 | ALL
+ patrol_routes             | api_service_update                | UPDATE
+ playback_requests         | admin_full_access                 | ALL
+ playback_requests         | api_service_write                 | INSERT
+ playback_requests         | api_service_read                  | SELECT
+ playback_requests         | api_service_update                | UPDATE
+ profiles                  | api_service_read                  | SELECT
+ profiles                  | api_service_write                 | INSERT
+ profiles                  | api_service_update                | UPDATE
+ profiles                  | auth_login_read                   | SELECT
+ profiles                  | admin_full_access                 | ALL
+ profiles                  | auth_login_update                 | UPDATE
+ push_subscriptions        | api_service_update                | UPDATE
+ push_subscriptions        | admin_full_access                 | ALL
+ push_subscriptions        | api_service_read                  | SELECT
+ push_subscriptions        | api_service_write                 | INSERT
+ reboot_tasks              | api_service_update                | UPDATE
+ reboot_tasks              | admin_full_access                 | ALL
+ reboot_tasks              | api_service_read                  | SELECT
+ reboot_tasks              | api_service_write                 | INSERT
+ refresh_tokens            | api_service_write                 | INSERT
+ refresh_tokens            | admin_full_access                 | ALL
+ refresh_tokens            | auth_refresh_write                | ALL
+ refresh_tokens            | api_service_read                  | SELECT
+ refresh_tokens            | api_service_update                | UPDATE
+ reports                   | api_service_update                | UPDATE
+ reports                   | api_service_write                 | INSERT
+ reports                   | admin_full_access                 | ALL
+ reports                   | api_service_read                  | SELECT
+ resident_reports          | admin_full_access                 | ALL
+ resident_reports          | api_service_update                | UPDATE
+ resident_reports          | api_service_read                  | SELECT
+ resident_reports          | api_service_write                 | INSERT
+ resident_sessions         | api_service_write                 | INSERT
+ resident_sessions         | api_service_update                | UPDATE
+ resident_sessions         | api_service_read                  | SELECT
+ resident_sessions         | admin_full_access                 | ALL
+ residents                 | admin_full_access                 | ALL
+ residents                 | residents_tenant_read             | SELECT
+ residents                 | api_service_read                  | SELECT
+ residents                 | residents_tenant_update           | UPDATE
+ residents                 | api_service_write                 | INSERT
+ residents                 | api_service_update                | UPDATE
+ residents                 | residents_tenant_write            | INSERT
+ role_module_permissions   | api_service_read                  | SELECT
+ role_module_permissions   | admin_full_access                 | ALL
+ role_module_permissions   | api_service_update                | UPDATE
+ role_module_permissions   | api_service_write                 | INSERT
+ scheduled_reports         | api_service_write                 | INSERT
+ scheduled_reports         | admin_full_access                 | ALL
+ scheduled_reports         | api_service_read                  | SELECT
+ scheduled_reports         | api_service_update                | UPDATE
+ sections                  | admin_full_access                 | ALL
+ sections                  | api_service_read                  | SELECT
+ sections                  | api_service_write                 | INSERT
+ sections                  | api_service_update                | UPDATE
+ service_tickets           | api_service_read                  | SELECT
+ service_tickets           | admin_full_access                 | ALL
+ service_tickets           | api_service_write                 | INSERT
+ service_tickets           | api_service_update                | UPDATE
+ shift_assignments         | api_service_read                  | SELECT
+ shift_assignments         | api_service_update                | UPDATE
+ shift_assignments         | admin_full_access                 | ALL
+ shift_assignments         | api_service_write                 | INSERT
+ shifts                    | shifts_tenant_write               | ALL
+ shifts                    | shifts_tenant_read                | SELECT
+ shifts                    | api_service_update                | UPDATE
+ shifts                    | api_service_read                  | SELECT
+ shifts                    | api_service_write                 | INSERT
+ shifts                    | admin_full_access                 | ALL
+ siren_tests               | api_service_update                | UPDATE
+ siren_tests               | api_service_read                  | SELECT
+ siren_tests               | api_service_write                 | INSERT
+ siren_tests               | admin_full_access                 | ALL
+ sirens                    | api_service_read                  | SELECT
+ sirens                    | admin_full_access                 | ALL
+ sirens                    | api_service_update                | UPDATE
+ sirens                    | api_service_write                 | INSERT
+ site_administrators       | api_service_update                | UPDATE
+ site_administrators       | api_service_read                  | SELECT
+ site_administrators       | admin_full_access                 | ALL
+ site_administrators       | api_service_write                 | INSERT
+ site_admins               | admin_full_access                 | ALL
+ site_admins               | api_service_read                  | SELECT
+ site_admins               | api_service_write                 | INSERT
+ site_admins               | api_service_update                | UPDATE
+ site_cctv_description     | api_service_update                | UPDATE
+ site_cctv_description     | api_service_write                 | INSERT
+ site_cctv_description     | api_service_read                  | SELECT
+ site_cctv_description     | admin_full_access                 | ALL
+ site_door_inventory       | admin_full_access                 | ALL
+ site_door_inventory       | api_service_read                  | SELECT
+ site_door_inventory       | api_service_update                | UPDATE
+ site_door_inventory       | api_service_write                 | INSERT
+ site_equipment_inventory  | api_service_read                  | SELECT
+ site_equipment_inventory  | api_service_update                | UPDATE
+ site_equipment_inventory  | api_service_write                 | INSERT
+ site_equipment_inventory  | admin_full_access                 | ALL
+ site_floor_plans          | api_service_read                  | SELECT
+ site_floor_plans          | api_service_write                 | INSERT
+ site_floor_plans          | admin_full_access                 | ALL
+ site_floor_plans          | api_service_update                | UPDATE
+ site_profiles             | api_service_read                  | SELECT
+ site_profiles             | api_service_update                | UPDATE
+ site_profiles             | api_service_write                 | INSERT
+ site_profiles             | admin_full_access                 | ALL
+ sites                     | api_service_update                | UPDATE
+ sites                     | sites_tenant_write                | INSERT
+ sites                     | sites_tenant_update               | UPDATE
+ sites                     | sites_tenant_read                 | SELECT
+ sites                     | api_service_read                  | SELECT
+ sites                     | admin_full_access                 | ALL
+ sites                     | api_service_write                 | INSERT
+ skill_executions          | api_service_read                  | SELECT
+ skill_executions          | api_service_write                 | INSERT
+ skill_executions          | api_service_update                | UPDATE
+ skill_executions          | admin_full_access                 | ALL
+ sla_definitions           | api_service_write                 | INSERT
+ sla_definitions           | api_service_update                | UPDATE
+ sla_definitions           | admin_full_access                 | ALL
+ sla_definitions           | api_service_read                  | SELECT
+ sla_tracking              | admin_full_access                 | ALL
+ sla_tracking              | api_service_read                  | SELECT
+ sla_tracking              | api_service_write                 | INSERT
+ sla_tracking              | api_service_update                | UPDATE
+ stream_health             | admin_full_access                 | ALL
+ stream_health             | api_service_update                | UPDATE
+ stream_health             | api_service_read                  | SELECT
+ stream_health             | api_service_write                 | INSERT
+ stream_sessions           | api_service_update                | UPDATE
+ stream_sessions           | api_service_write                 | INSERT
+ stream_sessions           | api_service_read                  | SELECT
+ stream_sessions           | admin_full_access                 | ALL
+ streams                   | api_service_write                 | INSERT
+ streams                   | admin_full_access                 | ALL
+ streams                   | api_service_update                | UPDATE
+ streams                   | api_service_read                  | SELECT
+ system_credentials        | api_service_read                  | SELECT
+ system_credentials        | api_service_update                | UPDATE
+ system_credentials        | api_service_write                 | INSERT
+ system_credentials        | admin_full_access                 | ALL
+ tech_service_tracking     | api_service_read                  | SELECT
+ tech_service_tracking     | admin_full_access                 | ALL
+ tech_service_tracking     | api_service_update                | UPDATE
+ tech_service_tracking     | api_service_write                 | INSERT
+ tenants                   | api_service_write                 | INSERT
+ tenants                   | api_service_update                | UPDATE
+ tenants                   | api_service_read                  | SELECT
+ tenants                   | admin_full_access                 | ALL
+ tenants                   | tenants_read_all                  | SELECT
+ training_programs         | api_service_update                | UPDATE
+ training_programs         | api_service_read                  | SELECT
+ training_programs         | admin_full_access                 | ALL
+ training_programs         | api_service_write                 | INSERT
+ twilio_notification_rules | admin_full_access                 | ALL
+ twilio_notification_rules | api_service_read                  | SELECT
+ twilio_notification_rules | api_service_update                | UPDATE
+ twilio_notification_rules | api_service_write                 | INSERT
+ user_roles                | api_service_update                | UPDATE
+ user_roles                | admin_full_access                 | ALL
+ user_roles                | api_service_write                 | INSERT
+ user_roles                | api_service_read                  | SELECT
+ user_roles                | auth_login_roles                  | SELECT
+ vehicles                  | api_service_write                 | INSERT
+ vehicles                  | api_service_update                | UPDATE
+ vehicles                  | api_service_read                  | SELECT
+ vehicles                  | admin_full_access                 | ALL
+ video_search_index        | admin_full_access                 | ALL
+ video_search_index        | api_service_read                  | SELECT
+ video_search_index        | api_service_write                 | INSERT
+ video_search_index        | api_service_update                | UPDATE
+ visitor_passes            | api_service_update                | UPDATE
+ visitor_passes            | admin_full_access                 | ALL
+ visitor_passes            | api_service_read                  | SELECT
+ visitor_passes            | api_service_write                 | INSERT
+ visitor_preregistrations  | api_service_write                 | INSERT
+ visitor_preregistrations  | api_service_read                  | SELECT
+ visitor_preregistrations  | api_service_update                | UPDATE
+ visitor_preregistrations  | admin_full_access                 | ALL
+ visitors                  | api_service_update                | UPDATE
+ visitors                  | visitors_tenant_read              | SELECT
+ visitors                  | visitors_tenant_write             | INSERT
+ visitors                  | visitors_tenant_update            | UPDATE
+ visitors                  | admin_full_access                 | ALL
+ visitors                  | api_service_write                 | INSERT
+ visitors                  | api_service_read                  | SELECT
+ visual_patrol_logs        | api_service_write                 | INSERT
+ visual_patrol_logs        | api_service_update                | UPDATE
+ visual_patrol_logs        | api_service_read                  | SELECT
+ visual_patrol_logs        | admin_full_access                 | ALL
+ voip_config               | api_service_read                  | SELECT
+ voip_config               | api_service_update                | UPDATE
+ voip_config               | api_service_write                 | INSERT
+ voip_config               | admin_full_access                 | ALL
+ wa_conversations          | api_service_read                  | SELECT
+ wa_conversations          | wa_conversations_tenant_isolation | ALL
+ wa_conversations          | api_service_write                 | INSERT
+ wa_conversations          | admin_full_access                 | ALL
+ wa_conversations          | api_service_update                | UPDATE
+ wa_messages               | api_service_write                 | INSERT
+ wa_messages               | api_service_update                | UPDATE
+ wa_messages               | api_service_read                  | SELECT
+ wa_messages               | admin_full_access                 | ALL
+ wa_messages               | wa_messages_tenant_isolation      | ALL
+ wa_templates              | api_service_write                 | INSERT
+ wa_templates              | api_service_read                  | SELECT
+ wa_templates              | admin_full_access                 | ALL
+ wa_templates              | api_service_update                | UPDATE
+ wa_templates              | wa_templates_tenant_isolation     | ALL
+ zone_coordinators         | api_service_write                 | INSERT
+ zone_coordinators         | api_service_update                | UPDATE
+ zone_coordinators         | admin_full_access                 | ALL
+ zone_coordinators         | api_service_read                  | SELECT
+(657 rows)
+
+============ FKs SIN ÍNDICE ============
+          tabla           |           columnas            
+--------------------------+-------------------------------
+ access_logs              | vehicle_id
+ ai_sessions              | tenant_id
+ alert_instances          | escalation_policy_id
+ biometric_records        | tenant_id
+ cctv_equipment           | tenant_id
+ database_records         | section_id
+ devices                  | group_id
+ domotic_devices          | section_id
+ emergency_activations    | protocol_id,site_id
+ incidents                | site_id
+ intercom_calls           | device_id,section_id
+ intercom_devices         | section_id
+ intercoms                | tenant_id
+ patrol_logs              | checkpoint_id
+ playback_requests        | device_id,tenant_id,device_id
+ reboot_tasks             | section_id
+ sections                 | site_id
+ site_administrators      | tenant_id
+ system_credentials       | tenant_id
+ zone_coordinators        | tenant_id
+ agent_knowledge          | site_id
+ agent_learning           | knowledge_id
+ resident_sessions        | resident_id,site_id
+ ai_vision_detections     | rule_id
+ biomarkers               | tenant_id
+ iot_scene_actions        | scene_id
+ incident_notes           | incident_id
+ site_admins              | site_id
+ site_equipment_inventory | site_id
+ sirens                   | site_id
+ camera_detections        | reviewed_by
+ reverse.gb28181_devices  | device_pk
+(32 rows)
+
+============ TABLAS VACÍAS (posibles features no implementados) ============
+         relname          
+--------------------------
+ access_events
+ access_points
+ agent_learning
+ agent_tool_logs
+ ai_detection_zones
+ ai_vision_detections
+ alarm_verifications
+ call_sessions
+ camera_events
+ camera_snapshots
+ certifications
+ clip_exports
+ clips
+ device_health_log
+ domotic_actions
+ domotic_scene_executions
+ domotics_audit_logs
+ event_log
+ face_enrollments
+ floor_plan_positions
+ floor_plans
+ incident_notes
+ intercom_calls
+ invoices
+ iot_scene_actions
+ iot_scenes
+ iot_schedules
+ key_logs
+ knowledge_uploads
+ live_view_layouts
+ lpr_events
+ mcp_connectors
+ monitoring_layouts
+ motion_events
+ network_configs
+ notification_rules
+ paging_broadcasts
+ playback_requests
+ push_subscriptions
+ reboot_tasks
+ resident_reports
+ site_cctv_description
+ stream_health
+ stream_sessions
+ system_credentials
+ video_search_index
+ wa_conversations
+ wa_messages
+(48 rows)
+
+============ MIGRACIONES ============
+    table_name     
+-------------------
+ schema_migrations
+(1 row)
+

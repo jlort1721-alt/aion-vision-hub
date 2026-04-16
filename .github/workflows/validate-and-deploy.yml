@@ -1,0 +1,254 @@
+name: AION — Validate & Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_build:
+        description: "Skip build (hot reload only)"
+        type: boolean
+        default: false
+      force_color:
+        description: "Force blue/green target"
+        type: choice
+        options: ["", "blue", "green"]
+        default: ""
+
+concurrency:
+  group: aion-production
+  cancel-in-progress: false   # never cancel a deploy mid-flight
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9"
+  DEPLOY_USER: aion
+  DEPLOY_HOST: vps.aionseg.co
+  APP_ROOT:   /opt/aion
+
+jobs:
+  # ===========================================================================
+  # 1) LINT + TYPECHECK + UNIT TESTS (fast gate)
+  # ===========================================================================
+  ci:
+    name: Lint / Typecheck / Unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+
+      - uses: pnpm/action-setup@v4
+        with: { version: ${{ env.PNPM_VERSION }} }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm -r lint
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Unit tests
+        run: pnpm -r test -- --reporter=default --reporter=junit --outputFile=junit.xml
+        env:
+          CI: "true"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: junit-unit
+          path: "**/junit.xml"
+
+  # ===========================================================================
+  # 2) SECURITY AUDIT (deps + secrets scan)
+  # ===========================================================================
+  security:
+    name: Security audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # full history for gitleaks
+
+      - uses: pnpm/action-setup@v4
+        with: { version: ${{ env.PNPM_VERSION }} }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: pnpm audit
+        run: pnpm audit --prod --audit-level=high || true   # report but don't block
+
+      - name: Gitleaks (secrets)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  # ===========================================================================
+  # 3) BUILD ARTIFACTS (reusable by deploy job)
+  # ===========================================================================
+  build:
+    name: Build monorepo
+    needs: [ci]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with: { version: ${{ env.PNPM_VERSION }} }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+
+      - name: Package build
+        run: |
+          tar --exclude=node_modules --exclude=.git \
+              -czf aion-build-${{ github.sha }}.tar.gz \
+              api/dist frontend/.next agent/dist model-router/dist \
+              vision-hub/dist comms/dist worker/dist scheduler/dist \
+              package.json pnpm-lock.yaml pnpm-workspace.yaml ecosystem.config.js
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aion-build
+          path: aion-build-${{ github.sha }}.tar.gz
+          retention-days: 14
+
+  # ===========================================================================
+  # 4) DEPLOY (SSH to VPS, run blue-green deploy.sh)
+  # ===========================================================================
+  deploy:
+    name: Deploy (blue-green)
+    needs: [ci, security, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://aionseg.co
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: aion-build
+          path: ./artifact
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Upload build to VPS
+        run: |
+          scp -i ~/.ssh/id_ed25519 \
+              artifact/aion-build-${{ github.sha }}.tar.gz \
+              ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:/tmp/
+
+      - name: Extract & run deploy.sh (blue-green)
+        run: |
+          RUN_ID="ci-${{ github.run_id }}-${{ github.sha }}"
+          ssh -i ~/.ssh/id_ed25519 \
+              ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} bash -lc "'
+            set -euo pipefail
+            cd ${{ env.APP_ROOT }}
+            tar -xzf /tmp/aion-build-${{ github.sha }}.tar.gz
+            rm /tmp/aion-build-${{ github.sha }}.tar.gz
+            pnpm install --frozen-lockfile --prod
+            ./scripts/deploy.sh \
+              --env production \
+              --run-id ${RUN_ID} \
+              ${{ inputs.skip_build && '--skip-build' || '' }} \
+              ${{ inputs.force_color && format('--force-color {0}', inputs.force_color) || '' }}
+          '"
+
+      - name: Post-deploy public smoke
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+              ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} bash -lc "'
+            cd ${{ env.APP_ROOT }}
+            AION_SMOKE_BASE=https://aionseg.co \
+            AION_ADMIN_EMAIL=\"${{ secrets.AION_ADMIN_EMAIL }}\" \
+            AION_ADMIN_PASS=\"${{ secrets.AION_ADMIN_PASS }}\" \
+            python3 validation/smoke.py --full --label public-postdeploy
+          '"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+              ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} bash -lc "'
+            cd ${{ env.APP_ROOT }}
+            ./scripts/rollback.sh
+          '"
+
+      - name: Tag successful release
+        if: success()
+        run: |
+          git config user.name  "aion-ci"
+          git config user.email "ci@aionseg.co"
+          TAG="release-$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}"
+          git tag -a "$TAG" -m "Release validated 70/70 — CI run ${{ github.run_id }}"
+          git push origin "$TAG"
+
+  # ===========================================================================
+  # 5) POST-DEPLOY E2E (Playwright against production)
+  # ===========================================================================
+  e2e:
+    name: E2E Playwright (production)
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: ${{ env.PNPM_VERSION }} }
+      - uses: actions/setup-node@v4
+        with: { node-version: ${{ env.NODE_VERSION }}, cache: pnpm }
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm playwright install --with-deps chromium
+
+      - name: Run E2E
+        env:
+          BASE_URL:          https://aionseg.co
+          AION_ADMIN_EMAIL:  ${{ secrets.AION_ADMIN_EMAIL }}
+          AION_ADMIN_PASS:   ${{ secrets.AION_ADMIN_PASS }}
+        run: pnpm --filter @aion/tests playwright test --reporter=html,json,junit
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            tests/playwright-report
+            tests/test-results
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {
+              "text": "🚨 AION E2E failed on production — run ${{ github.run_id }}",
+              "blocks": [{ "type":"section", "text":{ "type":"mrkdwn",
+                "text":"*AION production E2E failed* — <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>" }}]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -4,10 +4,11 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import ResidentImportDialog from '@/components/residents/ResidentImportDialog';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { PageShell } from '@/components/shared/PageShell';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +47,9 @@ import {
   User,
   Home,
   Building2,
+  Upload,
+  List,
+  LayoutGrid,
 } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────
@@ -197,6 +201,8 @@ export default function ResidentsAdminPage() {
   const [siteFilter, setSiteFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'flat' | 'grouped'>('flat');
+  const [importOpen, setImportOpen] = useState(false);
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -232,6 +238,15 @@ export default function ResidentsAdminPage() {
     staleTime: 30_000,
   });
 
+  // ── Fetch Grouped Residents ────────────────────────────
+
+  const { data: groupedData, isLoading: groupedLoading } = useQuery<Record<string, unknown>>({
+    queryKey: ['residents-grouped'],
+    queryFn: () => apiClient.get<Record<string, unknown>>('/operational-data/residents/grouped'),
+    enabled: viewMode === 'grouped',
+    staleTime: 60_000,
+  });
+
   // ── Pagination ─────────────────────────────────────────
 
   const totalPages = useMemo(() => {
@@ -246,6 +261,7 @@ export default function ResidentsAdminPage() {
   // ── Render ─────────────────────────────────────────────
 
   return (
+    <>
     <PageShell
       title="Residentes"
       description="Gestion y consulta de residentes de todas las sedes"
@@ -282,6 +298,34 @@ export default function ResidentsAdminPage() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* View mode toggle */}
+          <div className="flex items-center gap-1 border rounded-md p-0.5">
+            <Button
+              variant={viewMode === 'flat' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('flat')}
+              className="h-8 gap-1.5 text-xs"
+            >
+              <List className="h-3.5 w-3.5" />
+              Lista plana
+            </Button>
+            <Button
+              variant={viewMode === 'grouped' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grouped')}
+              className="h-8 gap-1.5 text-xs"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Por módulo
+            </Button>
+          </div>
+
+          {/* Import button */}
+          <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4" />
+            Importar
+          </Button>
         </div>
 
         {/* ── Error State ──────────────────────────────── */}
@@ -296,8 +340,64 @@ export default function ResidentsAdminPage() {
           </Card>
         )}
 
+        {/* ── Grouped View ─────────────────────────────── */}
+        {viewMode === 'grouped' && (
+          groupedLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-32 rounded-lg" />
+              ))}
+            </div>
+          ) : groupedData?.data ? (
+            <div className="space-y-4">
+              {Object.entries(groupedData.data as Record<string, unknown>).map(([siteName, modules]) => (
+                <Card key={siteName}>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      {siteName}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {Object.entries(modules as Record<string, Record<string, unknown[]>>).map(([moduleName, apartments]) => (
+                      <div key={moduleName} className="border-l-2 border-primary/20 pl-4">
+                        <h4 className="font-semibold text-sm text-muted-foreground mb-2">
+                          {moduleName}
+                        </h4>
+                        {Object.entries(apartments).map(([apt, residents]) => (
+                          <div key={apt} className="ml-4 mb-2">
+                            <span className="text-xs font-medium flex items-center gap-1">
+                              <Home className="h-3 w-3 text-muted-foreground" />
+                              {apt}
+                            </span>
+                            <div className="ml-5 mt-1 space-y-0.5">
+                              {(residents as Array<Record<string, unknown>>).map((r, i) => (
+                                <div key={i} className="text-sm flex items-center gap-2">
+                                  <span>{r.full_name as string}</span>
+                                  <span className="text-muted-foreground">
+                                    {(r.phone as string) ?? 'Sin teléfono'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <Building2 className="h-8 w-8 opacity-50 mb-2" />
+              <p className="text-sm">No hay datos agrupados disponibles</p>
+            </div>
+          )
+        )}
+
         {/* ── Data Table ───────────────────────────────── */}
-        <Card>
+        {viewMode === 'flat' && <Card>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -401,10 +501,10 @@ export default function ResidentsAdminPage() {
               </TableBody>
             </Table>
           </div>
-        </Card>
+        </Card>}
 
         {/* ── Pagination ───────────────────────────────── */}
-        {residentsData && residentsData.total > PAGE_SIZE && (
+        {viewMode === 'flat' && residentsData && residentsData.total > PAGE_SIZE && (
           <div className="flex items-center justify-between pt-2">
             <p className="text-sm text-muted-foreground">
               Mostrando {((page - 1) * PAGE_SIZE) + 1}
@@ -439,5 +539,7 @@ export default function ResidentsAdminPage() {
         )}
       </div>
     </PageShell>
+    <ResidentImportDialog open={importOpen} onOpenChange={setImportOpen} />
+    </>
   );
 }

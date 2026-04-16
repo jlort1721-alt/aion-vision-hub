@@ -36,10 +36,6 @@ vi.mock('drizzle-orm', () => ({
   isNull: vi.fn((a: unknown) => ({ op: 'isNull', a })),
 }));
 
-vi.mock('../lib/supabase.js', () => ({
-  verifySupabaseToken: vi.fn().mockResolvedValue({ id: 'user-123', email: 'admin@aion.dev' }),
-}));
-
 vi.mock('../plugins/auth.js', () => ({
   requireRole: vi.fn().mockImplementation(() => async () => {}),
   default: {

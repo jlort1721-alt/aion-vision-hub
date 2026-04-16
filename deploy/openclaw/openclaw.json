@@ -49,7 +49,7 @@
   "channels": {
     "whatsapp": {
       "dmPolicy": "pairing",
-      "allowFrom": ["+57REEMPLAZA_TU_NUMERO"],
+      "allowFrom": ["+573102426225"],
       "groups": {
         "*": {
           "requireMention": true
@@ -214,7 +214,7 @@
           "elevated": {
             "enabled": true,
             "allowFrom": {
-              "whatsapp": ["+57REEMPLAZA_TU_NUMERO"]
+              "whatsapp": ["+573102426225"]
             }
           }
         },
@@ -308,7 +308,7 @@
           "elevated": {
             "enabled": true,
             "allowFrom": {
-              "whatsapp": ["+57REEMPLAZA_TU_NUMERO"]
+              "whatsapp": ["+573102426225"]
             }
           }
         },
@@ -368,7 +368,7 @@
           "elevated": {
             "enabled": true,
             "allowFrom": {
-              "whatsapp": ["+57REEMPLAZA_TU_NUMERO"]
+              "whatsapp": ["+573102426225"]
             }
           }
         },
@@ -452,7 +452,7 @@
           "elevated": {
             "enabled": true,
             "allowFrom": {
-              "whatsapp": ["+57REEMPLAZA_TU_NUMERO"]
+              "whatsapp": ["+573102426225"]
             }
           }
         },

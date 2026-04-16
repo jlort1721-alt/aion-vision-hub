@@ -1,0 +1,59 @@
+# ansible/roles/reverse_connect/tasks/dahua.yml
+#
+# Configura Auto Register en un XVR/NVR Dahua vía CGI HTTP.
+# Dahua expone su configuración en /cgi-bin/configManager.cgi; las claves
+# del namespace AutoRegister son documentadas en el manual CGI v2.77+.
+#
+# Referencias:
+#   - NetworkAutoRegister[0].Enable       → boolean
+#   - NetworkAutoRegister[0].Address      → IP del servidor
+#   - NetworkAutoRegister[0].Port         → puerto (7681)
+#   - NetworkAutoRegister[0].SubDeviceID  → nuestro Device ID
+
+- name: "Dahua[{{ device_id }}] — autenticar y habilitar Auto Register"
+  ansible.builtin.uri:
+    url: "http://{{ local_ip }}/cgi-bin/configManager.cgi?action=setConfig&NetworkAutoRegister[0].Enable=true"
+    method: GET
+    url_username: "{{ admin_user }}"
+    url_password: "{{ admin_password }}"
+    force_basic_auth: false
+    # Dahua usa Digest auth; ansible-uri lo negocia automáticamente si el
+    # servidor responde WWW-Authenticate: Digest.
+    status_code: 200
+    timeout: 20
+  register: dahua_enable
+  delegate_to: localhost
+  changed_when: dahua_enable.status == 200
+
+- name: "Dahua[{{ device_id }}] — apuntar al VPS"
+  ansible.builtin.uri:
+    url: >-
+      http://{{ local_ip }}/cgi-bin/configManager.cgi?action=setConfig&
+      NetworkAutoRegister[0].Address={{ aion_vps_ip }}&
+      NetworkAutoRegister[0].Port={{ dahua_port }}&
+      NetworkAutoRegister[0].SubDeviceID={{ device_id | urlencode }}
+    method: GET
+    url_username: "{{ admin_user }}"
+    url_password: "{{ admin_password }}"
+    status_code: 200
+    timeout: 20
+  delegate_to: localhost
+
+- name: "Dahua[{{ device_id }}] — verificar que quedó configurado"
+  ansible.builtin.uri:
+    url: "http://{{ local_ip }}/cgi-bin/configManager.cgi?action=getConfig&name=NetworkAutoRegister"
+    method: GET
+    url_username: "{{ admin_user }}"
+    url_password: "{{ admin_password }}"
+    return_content: true
+    status_code: 200
+  register: dahua_verify
+  delegate_to: localhost
+
+- name: "Dahua[{{ device_id }}] — aserciones sobre la config leída"
+  ansible.builtin.assert:
+    that:
+      - aion_vps_ip in dahua_verify.content
+      - (dahua_port | string) in dahua_verify.content
+      - device_id in dahua_verify.content
+    fail_msg: "La configuración NO se aplicó correctamente en {{ device_id }}"

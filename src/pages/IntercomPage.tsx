@@ -28,9 +28,9 @@ export default function IntercomPage() {
   const { data: rawSections = [] } = useSections();
   const { data: rawDevices = [], isLoading, isError, refetch } = useIntercomDevices();
   const { data: rawCalls = [] } = useIntercomCalls();
-  const sections = rawSections as any[];
-  const devices = rawDevices as any[];
-  const calls = rawCalls as any[];
+  const sections = rawSections as Record<string, unknown>[];
+  const devices = rawDevices as Record<string, unknown>[];
+  const calls = rawCalls as Record<string, unknown>[];
   const { create } = useIntercomMutations();
 
   const [activeTab, setActiveTab] = useState('devices');

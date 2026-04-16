@@ -8,8 +8,6 @@ import type {
 /**
  * SMTP Provider — fallback for self-hosted SMTP relays.
  *
- * Uses the Supabase edge function `event-alerts` as a relay since
- * Node's built-in net/tls APIs aren't available in edge runtimes.
  * For direct SMTP, install nodemailer and swap the send() body.
  */
 export class SmtpProvider implements EmailProvider {

@@ -10,7 +10,7 @@ import {
   Timer, Eye, Zap, MapPin, Activity, Settings
 } from 'lucide-react';
 
-export type TourMode = 'section' | 'motion' | 'scheduled' | 'manual';
+export type TourMode = 'section' | 'motion' | 'scheduled' | 'manual' | 'ai-priority';
 
 interface TourConfig {
   mode: TourMode;
@@ -26,9 +26,10 @@ interface TourEngineProps {
   sections: Array<{ id: string; name: string }>;
   onCameraFocus: (cameraId: string) => void;
   onClose: () => void;
+  eventCountByCamera?: Map<string, number>;
 }
 
-export default function TourEngine({ cameras, sections, onCameraFocus, onClose }: TourEngineProps) {
+export default function TourEngine({ cameras, sections, onCameraFocus, onClose, eventCountByCamera }: TourEngineProps) {
   const [config, setConfig] = useState<TourConfig>({
     mode: 'section',
     intervalSeconds: 8,
@@ -48,15 +49,20 @@ export default function TourEngine({ cameras, sections, onCameraFocus, onClose }
           ? onlineCams
           : onlineCams.filter(c => c.site_id === selectedSection);
       case 'motion':
-        // Prioritize cameras — in a real system this would use event data
-        // For now, shuffle to simulate motion-priority ordering
         return [...onlineCams].sort(() => Math.random() - 0.5);
+      case 'ai-priority': {
+        const counts = eventCountByCamera ?? new Map<string, number>();
+        const withEvents = onlineCams
+          .filter(c => (counts.get(c.id) ?? 0) > 0)
+          .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0));
+        return withEvents.length > 0 ? withEvents : onlineCams;
+      }
       case 'scheduled':
       case 'manual':
       default:
         return onlineCams;
     }
-  }, [cameras, config.mode, selectedSection]);
+  }, [cameras, config.mode, selectedSection, eventCountByCamera]);
 
   const activeCameras = tourCameras();
 
@@ -101,10 +107,11 @@ export default function TourEngine({ cameras, sections, onCameraFocus, onClose }
   };
 
   const modeLabels: Record<TourMode, { label: string; icon: React.ReactNode; desc: string }> = {
-    section: { label: 'By Section', icon: <MapPin className="h-3 w-3" />, desc: 'Cycle cameras within a section/site' },
-    motion: { label: 'By Motion', icon: <Activity className="h-3 w-3" />, desc: 'Prioritize cameras with recent activity' },
-    scheduled: { label: 'Scheduled', icon: <Timer className="h-3 w-3" />, desc: 'Time-based automatic cycling' },
-    manual: { label: 'Manual', icon: <Eye className="h-3 w-3" />, desc: 'Operator-controlled camera cycling' },
+    section: { label: 'Por Sección', icon: <MapPin className="h-3 w-3" />, desc: 'Rotar cámaras por sección/sitio' },
+    motion: { label: 'Por Movimiento', icon: <Activity className="h-3 w-3" />, desc: 'Priorizar cámaras con actividad reciente' },
+    'ai-priority': { label: 'IA Prioridad', icon: <Zap className="h-3 w-3" />, desc: 'IA ordena por eventos — más activas primero' },
+    scheduled: { label: 'Programado', icon: <Timer className="h-3 w-3" />, desc: 'Rotación automática por tiempo' },
+    manual: { label: 'Manual', icon: <Eye className="h-3 w-3" />, desc: 'Control manual del operador' },
   };
 
   const currentCam = activeCameras[config.currentIndex];

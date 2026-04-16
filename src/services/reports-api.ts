@@ -37,7 +37,7 @@ export const reportsApi = {
     };
 
     const created = await apiClient.post<{ success: boolean; data: Record<string, unknown> }>('/reports', createPayload);
-    const reportId = (created as any)?.data?.id ?? (created as any)?.id;
+    const reportId = created?.data?.id ?? (created as Record<string, unknown>)?.id;
 
     if (!reportId) {
       throw new Error('Failed to create report — no ID returned');

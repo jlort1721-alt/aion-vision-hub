@@ -238,3 +238,47 @@ groups:
         annotations:
           summary: "High number of WebSocket connections"
           description: "Active WebSocket connections ({{ $value }}) are unusually high. Monitor for resource exhaustion."
+
+  # ── Performance & Reliability ──────────────────────────────
+  - name: performance
+    interval: 30s
+    rules:
+      - alert: LatencyP95Above500ms
+        expr: histogram_quantile(0.95, rate(aion_http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API latency p95 above 500ms"
+
+      - alert: MemoryUsageAbove85
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Memory usage above 85%"
+
+      - alert: SlowDatabaseQuery
+        expr: histogram_quantile(0.95, rate(aion_db_query_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database query p95 above 1 second"
+
+      - alert: StaleBackup
+        expr: time() - aion_backup_last_success_timestamp > 90000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No successful backup in 25 hours"
+
+      - alert: ElevatedWorkerErrors
+        expr: rate(aion_worker_errors_total[15m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Worker errors elevated"

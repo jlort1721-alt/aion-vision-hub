@@ -1,0 +1,26 @@
+=== SECURITY HEADERS ===
+HTTP/2 200 
+server: nginx/1.24.0 (Ubuntu)
+date: Tue, 14 Apr 2026 06:43:43 GMT
+content-type: text/html
+content-length: 3078
+last-modified: Mon, 13 Apr 2026 03:41:08 GMT
+vary: Accept-Encoding
+etag: "69dc65d4-c06"
+x-frame-options: SAMEORIGIN
+x-content-type-options: nosniff
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+referrer-policy: strict-origin-when-cross-origin
+permissions-policy: camera=(self), microphone=(self), geolocation=()
+content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' wss: ws: https://api.openai.com https://api.elevenlabs.io https://*.ewelink.cc https://*.coolkit.cc; media-src 'self' blob:; frame-src 'self'; manifest-src 'self'; worker-src 'self' blob:;
+cache-control: no-cache, no-store, must-revalidate
+accept-ranges: bytes
+
+
+=== HEADER ANALYSIS ===
+PASS strict-transport-security: strict-transport-security: max-age=31536000; includeSubDomains; preload
+PASS content-security-policy: content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' wss: ws: https://api.openai.com https://api.elevenlabs.io https://*.ewelink.cc https://*.coolkit.cc; media-src 'self' blob:; frame-src 'self'; manifest-src 'self'; worker-src 'self' blob:;
+PASS x-content-type-options: x-content-type-options: nosniff
+PASS x-frame-options: x-frame-options: SAMEORIGIN
+PASS referrer-policy: referrer-policy: strict-origin-when-cross-origin
+PASS permissions-policy: permissions-policy: camera=(self), microphone=(self), geolocation=()

@@ -21,9 +21,9 @@ async function fetchSystemStatus(): Promise<SystemStatus> {
       apiClient.get<{ providerConfigured: boolean }>('/face-recognition/status'),
     ]);
 
-    const healthOk = health.status === 'fulfilled' && (health.value as any)?.status === 'ready';
-    const twilioOk = twilio.status === 'fulfilled' && (twilio.value as any)?.data?.status === 'healthy';
-    const faceOk = faceRec.status === 'fulfilled' && (faceRec.value as any)?.data !== undefined;
+    const healthOk = health.status === 'fulfilled' && (health.value as { status?: string })?.status === 'ready';
+    const twilioOk = twilio.status === 'fulfilled' && (twilio.value as { data?: { status?: string } })?.data?.status === 'healthy';
+    const faceOk = faceRec.status === 'fulfilled' && (faceRec.value as { data?: unknown })?.data !== undefined;
 
     let servicesOnline = 0;
     if (healthOk) servicesOnline++;

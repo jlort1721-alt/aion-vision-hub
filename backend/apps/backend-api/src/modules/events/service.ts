@@ -1,6 +1,6 @@
 import { eq, and, sql, desc, asc, gte, lte } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { events } from '../../db/schema/index.js';
+import { events, devices, sites } from '../../db/schema/index.js';
 import { NotFoundError } from '@aion/shared-contracts';
 import { broadcast } from '../../plugins/websocket.js';
 import type {
@@ -61,8 +61,33 @@ export class EventService {
     const orderFn = filters.sortOrder === 'asc' ? asc : desc;
 
     const rows = await db
-      .select()
+      .select({
+        id: events.id,
+        tenantId: events.tenantId,
+        siteId: events.siteId,
+        deviceId: events.deviceId,
+        channel: events.channel,
+        eventType: events.eventType,
+        severity: events.severity,
+        status: events.status,
+        title: events.title,
+        description: events.description,
+        metadata: events.metadata,
+        snapshotUrl: events.snapshotUrl,
+        clipUrl: events.clipUrl,
+        assignedTo: events.assignedTo,
+        resolvedBy: events.resolvedBy,
+        resolvedAt: events.resolvedAt,
+        aiSummary: events.aiSummary,
+        createdAt: events.createdAt,
+        updatedAt: events.updatedAt,
+        device_name: devices.name,
+        device_type: devices.type,
+        site_name: sites.name,
+      })
       .from(events)
+      .leftJoin(devices, eq(events.deviceId, devices.id))
+      .leftJoin(sites, eq(events.siteId, sites.id))
       .where(whereClause)
       .orderBy(orderFn(sortColumn))
       .limit(filters.perPage)

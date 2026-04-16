@@ -27,7 +27,7 @@ function useOps<T>(endpoint: string, params?: Record<string, string | number>) {
 function PatrolStats() {
   const { data, isLoading } = useOps<{ site_name: string; total_checks: number; with_visual: number; recording: number; last_check: string }>("visual-patrols/stats");
   if (isLoading) return <div className="animate-pulse h-40" />;
-  const stats = (data as any)?.data || [];
+  const stats = ((data as Record<string, unknown> | undefined)?.data as Record<string, unknown>[]) || [];
   return (
     <div className="grid gap-3">
       {stats.map((s: any) => (
@@ -55,7 +55,7 @@ function DataTable({ endpoint, columns, title }: { endpoint: string; columns: { 
   const [page, setPage] = useState(0);
   const limit = 20;
   const { data, isLoading } = useOps<Record<string, any>>(endpoint, { limit, offset: page * limit });
-  const result = data as any;
+  const result = data as Record<string, unknown> | undefined;
   const rows = result?.data || [];
   const total = result?.meta?.total || rows.length;
 
@@ -95,7 +95,7 @@ function DataTable({ endpoint, columns, title }: { endpoint: string; columns: { 
 function SummaryDashboard() {
   const { data, isLoading } = useOps<any>("operational-summary");
   if (isLoading) return <div className="animate-pulse h-60" />;
-  const sedes = (data as any)?.data || [];
+  const sedes = ((data as Record<string, unknown> | undefined)?.data as Record<string, unknown>[]) || [];
 
   const totals = sedes.reduce((acc: any, s: any) => ({
     residents: acc.residents + (s.residents || 0),

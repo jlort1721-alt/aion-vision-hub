@@ -14,19 +14,19 @@
  *   - useEWeLinkSectionMapping() → device-to-section mapping
  */
 
-import { useState, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ewelink } from '@/services/integrations/ewelink';
-import type { EWeLinkDeviceAction } from '@/services/integrations/ewelink';
-import { apiClient } from '@/lib/api-client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ewelink } from "@/services/integrations/ewelink";
+import type { EWeLinkDeviceAction } from "@/services/integrations/ewelink";
+import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const QUERY_KEYS = {
-  health: ['ewelink', 'health'],
-  devices: ['ewelink', 'devices'],
-  logs: ['ewelink', 'logs'],
-  status: ['ewelink', 'status'],
+  health: ["ewelink", "health"],
+  devices: ["ewelink", "devices"],
+  logs: ["ewelink", "logs"],
+  status: ["ewelink", "status"],
 } as const;
 
 // ── Auth Hook ──
@@ -44,7 +44,7 @@ export function useEWeLinkAuth() {
   });
 
   const login = useCallback(
-    async (email: string, password: string, countryCode: string = '+1') => {
+    async (email: string, password: string, countryCode: string = "+1") => {
       setIsLoggingIn(true);
       try {
         const result = await ewelink.login(email, password, countryCode);
@@ -54,7 +54,7 @@ export function useEWeLinkAuth() {
           qc.invalidateQueries({ queryKey: QUERY_KEYS.status });
           qc.invalidateQueries({ queryKey: QUERY_KEYS.devices });
           qc.invalidateQueries({ queryKey: QUERY_KEYS.health });
-          toast.success('eWeLink: Sesión iniciada correctamente');
+          toast.success("eWeLink: Sesión iniciada correctamente");
         } else {
           toast.error(`eWeLink: ${result.error}`);
         }
@@ -77,7 +77,7 @@ export function useEWeLinkAuth() {
           qc.invalidateQueries({ queryKey: QUERY_KEYS.status });
           qc.invalidateQueries({ queryKey: QUERY_KEYS.devices });
           qc.invalidateQueries({ queryKey: QUERY_KEYS.health });
-          toast.success('eWeLink: Conexión automática exitosa');
+          toast.success("eWeLink: Conexión automática exitosa");
         } else {
           toast.error(`eWeLink: ${result.error}`);
         }
@@ -118,7 +118,7 @@ export function useEWeLinkAuth() {
     qc.invalidateQueries({ queryKey: QUERY_KEYS.status });
     qc.invalidateQueries({ queryKey: QUERY_KEYS.devices });
     qc.invalidateQueries({ queryKey: QUERY_KEYS.health });
-    toast.info('eWeLink: Sesión cerrada');
+    toast.info("eWeLink: Sesión cerrada");
   }, [qc]);
 
   return {
@@ -129,7 +129,7 @@ export function useEWeLinkAuth() {
     isLoggingIn,
     isAuthenticated: status?.authenticated ?? ewelink.isAuthenticated(),
     isConfigured: status?.configured ?? ewelink.isConfigured(),
-    region: status?.region ?? 'unknown',
+    region: status?.region ?? "unknown",
     encryptionEnabled: status?.encryptionEnabled ?? false,
     activeAccount: status?.activeAccount ?? null,
     storedAccounts: status?.storedAccounts ?? [],
@@ -161,23 +161,25 @@ export function useEWeLinkControl() {
       const result = await ewelink.controlDevice(action);
 
       if (!result.success) {
-        throw new Error(result.error || 'Control command failed');
+        throw new Error(result.error || "Control command failed");
       }
 
       // Log action to domotic_actions table via Fastify
-      await apiClient.post('/domotics/actions', {
+      await apiClient.post("/domotics/actions", {
         device_id: action.deviceId,
         action: action.action,
-        result: 'success',
+        result: "success",
       });
 
       return result;
     },
     onSuccess: (_data, action) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.devices });
-      qc.invalidateQueries({ queryKey: ['domotic_devices'] });
-      qc.invalidateQueries({ queryKey: ['domotic_actions'] });
-      toast.success(`Dispositivo ${action.action === 'on' ? 'activado' : action.action === 'off' ? 'desactivado' : 'cambiado'}`);
+      qc.invalidateQueries({ queryKey: ["domotic_devices"] });
+      qc.invalidateQueries({ queryKey: ["domotic_actions"] });
+      toast.success(
+        `Dispositivo ${action.action === "on" ? "activado" : action.action === "off" ? "desactivado" : "cambiado"}`,
+      );
     },
     onError: (err: Error) => {
       toast.error(`Error de control: ${err.message}`);
@@ -197,15 +199,15 @@ export function useEWeLinkSync() {
 
       // Sync devices via Fastify backend
       if (syncResult.devices.length > 0) {
-        await apiClient.post('/ewelink/sync', {
-          devices: (syncResult.devices || []).map((device: Record<string, unknown>) => ({
+        await apiClient.post("/ewelink/sync", {
+          devices: (syncResult.devices || []).map((device) => ({
             id: device.deviceId,
             name: device.name,
-            type: inferDeviceType(device.productModel),
+            type: inferDeviceType(String(device.productModel ?? "")),
             brand: device.brandName,
             model: device.productModel,
-            status: device.online ? 'online' : 'offline',
-            state: extractDeviceState(device),
+            status: device.online ? "online" : "offline",
+            state: extractDeviceState(device as Record<string, unknown>),
             config: {
               ewelink_id: device.deviceId,
               firmware: device.firmware,
@@ -220,8 +222,10 @@ export function useEWeLinkSync() {
     },
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.devices });
-      qc.invalidateQueries({ queryKey: ['domotic_devices'] });
-      toast.success(`Sincronización completa: ${result.synced} dispositivos (${result.online} en línea)`);
+      qc.invalidateQueries({ queryKey: ["domotic_devices"] });
+      toast.success(
+        `Sincronización completa: ${result.synced} dispositivos (${result.online} en línea)`,
+      );
     },
     onError: (err: Error) => {
       toast.error(`Error de sincronización: ${err.message}`);
@@ -258,54 +262,76 @@ export function useEWeLinkSectionMapping() {
   const loadMappings = useCallback(async () => {
     if (!profile?.tenant_id) return;
 
-    const raw = await apiClient.get<Record<string, unknown>[]>('/domotics/devices', {
-      fields: 'id,section_id',
-      tenant_id: profile.tenant_id,
-      has_section: 'true',
-    });
+    const raw = await apiClient.get<Record<string, unknown>[]>(
+      "/domotics/devices",
+      {
+        fields: "id,section_id",
+        tenant_id: profile.tenant_id,
+        has_section: "true",
+      },
+    );
     const data = Array.isArray(raw) ? raw : [];
 
     if (data.length > 0) {
       ewelink.loadSectionMappings(
-        data.map((d: Record<string, unknown>) => ({ deviceId: d.id as string, sectionId: d.section_id as string })),
+        data.map((d: Record<string, unknown>) => ({
+          deviceId: d.id as string,
+          sectionId: d.section_id as string,
+        })),
       );
     }
   }, [profile?.tenant_id]);
 
-  const setMapping = useCallback(
-    (deviceId: string, sectionId: string) => {
-      ewelink.setSectionMapping(deviceId, sectionId);
-    },
-    [],
-  );
+  const setMapping = useCallback((deviceId: string, sectionId: string) => {
+    ewelink.setSectionMapping(deviceId, sectionId);
+  }, []);
 
-  return { loadMappings, setMapping, getMapping: () => ewelink.getSectionMapping() };
+  return {
+    loadMappings,
+    setMapping,
+    getMapping: () => ewelink.getSectionMapping(),
+  };
 }
 
 // ── Helpers ──
 
 function inferDeviceType(model: string): string {
   const m = model.toLowerCase();
-  if (m.includes('th')) return 'sensor';
-  if (m.includes('pow')) return 'sensor';
-  if (m.includes('4ch') || m.includes('dual')) return 'relay';
-  if (m.includes('mini') || m.includes('basic') || m.includes('r2') || m.includes('r3')) return 'switch';
-  if (m.includes('rf')) return 'switch';
-  if (m.includes('light') || m.includes('led') || m.includes('b1') || m.includes('b2')) return 'light';
-  if (m.includes('lock')) return 'lock';
-  if (m.includes('door') || m.includes('dw')) return 'door';
-  if (m.includes('siren') || m.includes('alarm')) return 'siren';
-  return 'relay';
+  if (m.includes("th")) return "sensor";
+  if (m.includes("pow")) return "sensor";
+  if (m.includes("4ch") || m.includes("dual")) return "relay";
+  if (
+    m.includes("mini") ||
+    m.includes("basic") ||
+    m.includes("r2") ||
+    m.includes("r3")
+  )
+    return "switch";
+  if (m.includes("rf")) return "switch";
+  if (
+    m.includes("light") ||
+    m.includes("led") ||
+    m.includes("b1") ||
+    m.includes("b2")
+  )
+    return "light";
+  if (m.includes("lock")) return "lock";
+  if (m.includes("door") || m.includes("dw")) return "door";
+  if (m.includes("siren") || m.includes("alarm")) return "siren";
+  return "relay";
 }
 
-function extractDeviceState(device: { params: Record<string, unknown>; switches?: Array<{ switch: 'on' | 'off' }> }): string {
+function extractDeviceState(device: {
+  params: Record<string, unknown>;
+  switches?: Array<{ switch: "on" | "off" }>;
+}): string {
   // Multi-channel: consider 'on' if any channel is on
   if (device.switches && device.switches.length > 0) {
-    return device.switches.some((s) => s.switch === 'on') ? 'on' : 'off';
+    return device.switches.some((s) => s.switch === "on") ? "on" : "off";
   }
   // Single channel
-  if (typeof device.params.switch === 'string') {
+  if (typeof device.params.switch === "string") {
     return device.params.switch as string;
   }
-  return 'off';
+  return "off";
 }

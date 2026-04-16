@@ -297,7 +297,7 @@ export default function PatrolsPage() {
   const routes: any[] = routesData?.data ?? [];
   const checkpoints: any[] = checkpointsData?.data ?? [];
   const logs: any[] = logsData?.data ?? [];
-  const stats = statsData?.data as any;
+  const stats = statsData?.data as Record<string, unknown> | undefined;
 
   if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 

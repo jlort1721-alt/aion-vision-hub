@@ -280,6 +280,14 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
     },
   );
 
+  // ── GET /operator-activity — Operator activity during shift ──────────
+  app.get('/operator-activity', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (request) => {
+    const { shiftStart, shiftEnd } = request.query as { shiftStart?: string; shiftEnd?: string };
+    if (!shiftStart || !shiftEnd) return { success: false, error: 'shiftStart and shiftEnd required' };
+    const data = await analyticsService.getOperatorActivity(request.tenantId, shiftStart, shiftEnd);
+    return { success: true, data };
+  });
+
   // ── GET /predictive/forecast — Neural model temporal prediction ──────
   app.get(
     '/predictive/forecast',

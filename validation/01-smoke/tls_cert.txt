@@ -1,0 +1,22 @@
+=== TLS CERT DETAILS ===
+* (304) (OUT), TLS handshake, Client hello (1):
+* (304) (IN), TLS handshake, Server hello (2):
+* (304) (IN), TLS handshake, Unknown (8):
+* (304) (IN), TLS handshake, Certificate (11):
+* (304) (IN), TLS handshake, CERT verify (15):
+* (304) (IN), TLS handshake, Finished (20):
+* (304) (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / AEAD-AES256-GCM-SHA384 / [blank] / UNDEF
+*  subject: CN=aionseg.co
+*  expire date: Jul  1 02:36:26 2026 GMT
+*  issuer: C=US; O=Let's Encrypt; CN=E7
+*  SSL certificate verify ok.
+
+=== TLS1.0 and TLS1.1 SHOULD BE DISABLED ===
+tls1: 1
+tls1_1: 1
+
+=== API HEALTH RESPONSE ===
+{"status":"healthy","version":"1.0.0","uptime":97526,"timestamp":"2026-04-14T06:44:17.685Z"}
+=== CHECK FOR NGINX VERSION LEAK ===
+server: nginx/1.24.0 (Ubuntu)

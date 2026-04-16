@@ -10,6 +10,10 @@ webrtc:
 ffmpeg:
   bin: ffmpeg
 
+# Dahua REGISTRO (Active Registration) — DVRs connect outbound to this port
+dvrip:
+  listen: ":5000"
+
 streams:
 
   # ══════════════════════════════════════════════════════════════

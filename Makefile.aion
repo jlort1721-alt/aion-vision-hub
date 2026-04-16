@@ -1,0 +1,88 @@
+# AION Platform — Makefile for convenience commands
+# Use `make help` to see all available targets.
+
+.DEFAULT_GOAL := help
+
+INSTALL := sudo ./install/install.sh
+
+.PHONY: help install install-auto status verify uninstall \
+        deploy migrate seed test obs \
+        e2e-smoke e2e-full e2e-report \
+        deploy-blue-green rollback \
+        smoke-public lint check tarball
+
+help:  ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
+	  awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+# ---- Installation ----------------------------------------------------------
+install:        ## Run interactive install
+	$(INSTALL)
+
+install-auto:   ## Run non-interactive install (requires install/install.env)
+	$(INSTALL) --auto
+
+status:         ## Show installation status of all phases
+	$(INSTALL) --status
+
+verify:         ## Run post-install verification
+	@sudo bash install/preflight/post-install-verify.sh
+
+uninstall:      ## Uninstall (preserves DB + logs)
+	@sudo bash install/uninstall.sh
+
+# ---- Individual phases -----------------------------------------------------
+deploy:         ## Run only the 'deploy' phase
+	$(INSTALL) --phase deploy
+
+migrate:        ## Run only the 'migrate-rls' phase
+	$(INSTALL) --phase migrate-rls
+
+seed:           ## Run only the 'seed-qa' phase
+	$(INSTALL) --phase seed-qa
+
+test:           ## Run only the 'tests' phase (install Playwright)
+	$(INSTALL) --phase tests
+
+obs:            ## Run only the 'observability' phase
+	$(INSTALL) --phase observability
+
+# ---- E2E (after install) ---------------------------------------------------
+e2e-smoke:      ## Run smoke tests (auth.spec only)
+	@sudo -u aion bash -c 'cd /opt/aion/qa && \
+	  set -a; source /opt/aion/.env.qa; set +a; \
+	  npx playwright test --project=smoke'
+
+e2e-full:       ## Run full E2E suite (10 specs)
+	@sudo -u aion bash -c 'cd /opt/aion/qa && \
+	  set -a; source /opt/aion/.env.qa; set +a; \
+	  npx playwright test --project=full'
+
+e2e-report:     ## Open Playwright HTML report
+	@sudo -u aion bash -c 'cd /opt/aion/qa && npx playwright show-report'
+
+# ---- Deploy operations -----------------------------------------------------
+deploy-blue-green:  ## Run blue-green deploy of current code
+	@sudo -u aion /opt/aion/scripts/deploy.sh --env production
+
+rollback:       ## Rollback to previous color
+	@sudo -u aion /opt/aion/scripts/rollback.sh
+
+smoke-public:   ## Smoke test against https://aionseg.co (public)
+	@sudo -u aion bash -c '\
+	  AION_SMOKE_BASE=https://aionseg.co \
+	  AION_ADMIN_EMAIL=$$(grep AION_QA_EMAIL /opt/aion/.env.qa | cut -d= -f2) \
+	  AION_ADMIN_PASS=$$(grep AION_QA_PASS  /opt/aion/.env.qa | cut -d= -f2) \
+	  python3 /opt/aion/validation/smoke.py --full --label cli-check'
+
+# ---- Validation (before packaging) -----------------------------------------
+lint:           ## Validate all bundle files (syntax checks)
+	@bash install/preflight/validate-bundle.sh
+
+check: lint     ## Alias for lint
+
+tarball:        ## Create distributable tarball
+	@cd .. && tar -czf aion-platform.tar.gz \
+	  --exclude='*.tar.gz' --exclude='node_modules' --exclude='.git' \
+	  aion-platform/
+	@echo "Created: ../aion-platform.tar.gz"

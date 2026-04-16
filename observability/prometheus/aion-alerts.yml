@@ -1,0 +1,266 @@
+# /etc/prometheus/rules/aion-alerts.yml
+# Alerting rules for AION platform. Each alert has severity + runbook link.
+
+groups:
+  # ===========================================================================
+  # 1. URL availability (blackbox)
+  # ===========================================================================
+  - name: aion.url-availability
+    interval: 30s
+    rules:
+      - alert: AionPublicUrlDown
+        expr: probe_success{job="blackbox-public"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Public URL down: {{ $labels.instance }}"
+          description: "{{ $labels.instance }} has returned non-2xx for 2 minutes."
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#url-down
+
+      - alert: AionAuthedUrlDown
+        expr: probe_success{job="blackbox-authed"} == 0
+        for: 5m
+        labels:
+          severity: "{{ $labels.severity }}"
+        annotations:
+          summary: "Authed URL down: {{ $labels.instance }} (group={{ $labels.group }})"
+          description: "Probe failing for 5min. Check group {{ $labels.group }}."
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#url-down
+
+      - alert: AionWholeSectionDown
+        expr: |
+          (count by(group) (probe_success{job="blackbox-authed"} == 0))
+          /
+          (count by(group) (probe_success{job="blackbox-authed"})) > 0.5
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Section {{ $labels.group }}: >50% URLs down"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#section-down
+
+      - alert: AionSlowResponse
+        expr: probe_duration_seconds{job=~"blackbox.*"} > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow response: {{ $labels.instance }} ({{ $value }}s)"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#performance
+
+      - alert: AionTLSExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 14 * 24 * 3600
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "TLS cert expires in <14 days for {{ $labels.instance }}"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#tls
+
+  # ===========================================================================
+  # 2. Vision Hub health
+  # ===========================================================================
+  - name: aion.vision-hub
+    interval: 30s
+    rules:
+      - alert: VisionHubServicesDegraded
+        expr: aion_vision_hub_healthy_services / aion_vision_hub_total_services < 0.95
+        for: 3m
+        labels:
+          severity: high
+        annotations:
+          summary: "Vision Hub: {{ $value | humanizePercentage }} services healthy (threshold 95%)"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#vision-hub
+
+      - alert: VisionHubServicesCritical
+        expr: aion_vision_hub_healthy_services / aion_vision_hub_total_services < 0.7
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Vision Hub: ONLY {{ $value | humanizePercentage }} healthy — most cameras unreachable"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#vision-hub
+
+      - alert: Go2RtcStreamsDropped
+        expr: go2rtc_streams_count < 200
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "go2rtc reports only {{ $value }} streams (expected ≥228)"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#vision-hub
+
+  # ===========================================================================
+  # 3. PM2 / process health
+  # ===========================================================================
+  - name: aion.pm2
+    interval: 30s
+    rules:
+      - alert: Pm2AppErrored
+        expr: pm2_status{status="errored"} > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PM2 app {{ $labels.app }} in errored state"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#pm2
+
+      - alert: Pm2AppRestartLoop
+        expr: rate(pm2_restarts_total[10m]) > 0.5
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "PM2 app {{ $labels.app }} restarting too often ({{ $value }}/min)"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#pm2
+
+      - alert: Pm2AppMemoryHigh
+        expr: pm2_memory_bytes / 1024 / 1024 > 1500
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PM2 app {{ $labels.app }} using {{ $value | humanize }}MB RAM"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#memory
+
+  # ===========================================================================
+  # 4. System resources
+  # ===========================================================================
+  - name: aion.system
+    interval: 30s
+    rules:
+      - alert: NodeDiskFull
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk free <10% on {{ $labels.instance }}"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#disk
+
+      - alert: NodeHighLoad
+        expr: node_load5 / count without (cpu) (node_cpu_seconds_total{mode="idle"}) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Load5 high on {{ $labels.instance }} ({{ $value }})"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#cpu
+
+      - alert: NodeMemoryPressure
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.92
+        for: 10m
+        labels:
+          severity: high
+        annotations:
+          summary: "Memory pressure on {{ $labels.instance }} (available <8%)"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#memory
+
+  # ===========================================================================
+  # 5. Database
+  # ===========================================================================
+  - name: aion.postgres
+    interval: 30s
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL DOWN on {{ $labels.instance }}"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#postgres
+
+      - alert: PostgresConnectionsHigh
+        expr: pg_stat_activity_count / pg_settings_max_connections > 0.85
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "Postgres at {{ $value | humanizePercentage }} of max connections"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#postgres
+
+      - alert: PostgresReplicationLag
+        expr: pg_replication_lag_seconds > 60
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Replication lag {{ $value }}s on {{ $labels.instance }}"
+
+      - alert: PostgresRlsDisabled
+        expr: aion_pg_tables_without_rls > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $value }} tables without RLS in public schema"
+          description: "Compliance violation: query SELECT tablename FROM pg_tables WHERE schemaname='public' AND rowsecurity=false"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#rls
+
+  # ===========================================================================
+  # 6. AI / Model Router
+  # ===========================================================================
+  - name: aion.ai
+    interval: 60s
+    rules:
+      - alert: AiCostSpike
+        expr: increase(aion_ai_cost_usd_total[1h]) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AI cost >$5 in last hour ({{ $value }})"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#ai-cost
+
+      - alert: ModelRouterFallbackHigh
+        expr: rate(aion_model_router_fallbacks_total[10m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Model router falling back >0.5/s — primary model errors"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#model-router
+
+      - alert: AiHaikuRoutingLow
+        expr: |
+          sum(rate(aion_model_router_requests_total{model="claude-haiku-4-5-20251001"}[10m]))
+          /
+          sum(rate(aion_model_router_requests_total[10m])) < 0.4
+        for: 15m
+        labels:
+          severity: info
+        annotations:
+          summary: "Haiku routing <40% — review cost optimization"
+
+  # ===========================================================================
+  # 7. Communications (Twilio + Asterisk + WhatsApp)
+  # ===========================================================================
+  - name: aion.comms
+    interval: 30s
+    rules:
+      - alert: AsteriskDown
+        expr: asterisk_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Asterisk PBX DOWN — no voice/SIP"
+          runbook: https://github.com/aionseg/runbooks/blob/main/RUNBOOK_INCIDENTS.md#asterisk
+
+      - alert: TwilioWebhookFailures
+        expr: rate(aion_twilio_webhook_errors_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "Twilio webhook errors {{ $value }}/s"
+
+      - alert: WhatsappQueueBacklog
+        expr: aion_whatsapp_queue_pending > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "WhatsApp pending queue: {{ $value }} messages"

@@ -1,118 +1,80 @@
 /**
- * GUARDRAIL: Prevent direct Supabase access bypass
+ * GUARDRAIL: Prevent any Supabase usage in production code.
  *
- * This test ensures all frontend data access goes through the Fastify backend
- * (apiClient) and not directly to Supabase. Direct Supabase access bypasses
- * plan limits, audit logging, rate limiting, and RBAC.
+ * Supabase was fully removed on 2026-04-15. Auth is backend-issued JWT
+ * (@fastify/jwt + scrypt + local profiles/refresh_tokens tables). Realtime
+ * is served by the native Fastify WebSocket plugin with Redis pub/sub.
  *
- * ALLOWED exceptions (documented and intentional):
- * - src/contexts/AuthContext.tsx — Supabase Auth (login, signup, session) per ADR-001
- * - src/lib/api-client.ts — getSession/refreshSession for token injection
- * - src/integrations/ — Supabase client initialization
- * - src/hooks/use-realtime-events.ts — Supabase Realtime channels (postgres_changes)
- * - src/test/ — Test files
- * - src/contexts/I18nContext.tsx — reads session for language preference
- * - src/integrations/lovable/ — Cloud auth integration
+ * Any reintroduction of `@supabase/*`, `supabase.from()`, `supabase.storage`,
+ * `supabase.auth`, `supabase.rpc`, `supabase.channel`, or
+ * `VITE_SUPABASE_URL/functions` is forbidden and must fail CI.
  */
 
-import { describe, it, expect } from 'vitest';
-import { execSync } from 'child_process';
-import { resolve } from 'path';
+import { describe, it, expect } from "vitest";
+import { execSync } from "child_process";
+import { resolve } from "path";
 
-const SRC_DIR = resolve(__dirname, '..');
+const SRC_DIR = resolve(__dirname, "..");
 
-const ALLOWED_FILES = [
-  'contexts/AuthContext.tsx',
-  'lib/api-client.ts',
-  'integrations/supabase/',
-  'integrations/lovable/',
-  'hooks/use-realtime-events.ts', // Supabase Realtime channels (allowed until WS migration)
-  'contexts/I18nContext.tsx',
-  'test/',
-];
+// Test files and the guardrail itself are exempt.
+const ALLOWED_FILES = ["test/"];
 
 function isAllowed(filePath: string): boolean {
   return ALLOWED_FILES.some((allowed) => filePath.includes(allowed));
 }
 
-describe('Supabase bypass guardrail', () => {
-  it('no supabase.from() calls in production code (except allowed files)', () => {
-    let output = '';
-    try {
-      output = execSync(
-        `grep -rn "supabase\\.from(" "${SRC_DIR}" --include="*.ts" --include="*.tsx" || true`,
-        { encoding: 'utf-8' },
-      );
-    } catch {
-      output = '';
-    }
+function grepSrc(pattern: string): string[] {
+  let output = "";
+  try {
+    output = execSync(
+      `grep -rn "${pattern}" "${SRC_DIR}" --include="*.ts" --include="*.tsx" || true`,
+      { encoding: "utf-8" },
+    );
+  } catch {
+    output = "";
+  }
+  return output
+    .split("\n")
+    .filter((line) => line.trim())
+    .filter((line) => !isAllowed(line));
+}
 
-    const violations = output
-      .split('\n')
-      .filter((line) => line.trim())
-      .filter((line) => !isAllowed(line));
+describe("Supabase bypass guardrail", () => {
+  it("no supabase.from() calls in production code", () => {
+    const violations = grepSrc("supabase\\.from(");
+    expect(
+      violations,
+      "Supabase removed; see no-supabase-bypass.test.ts",
+    ).toEqual([]);
+  });
 
-    if (violations.length > 0) {
-      console.error('SUPABASE BYPASS DETECTED in:');
-      violations.forEach((v) => console.error(`  ${v}`));
-    }
-
+  it("no supabase.storage calls in production code", () => {
+    const violations = grepSrc("supabase\\.storage");
     expect(violations).toEqual([]);
   });
 
-  it('no supabase.storage calls in production code (except allowed files)', () => {
-    let output = '';
-    try {
-      output = execSync(
-        `grep -rn "supabase\\.storage" "${SRC_DIR}" --include="*.ts" --include="*.tsx" || true`,
-        { encoding: 'utf-8' },
-      );
-    } catch {
-      output = '';
-    }
-
-    const violations = output
-      .split('\n')
-      .filter((line) => line.trim())
-      .filter((line) => !isAllowed(line));
-
-    // DocumentsPage still uses supabase.storage — document as known exception
-    const storageExceptions = ['pages/DocumentsPage.tsx'];
-    const realViolations = violations.filter(
-      (v) => !storageExceptions.some((exc) => v.includes(exc)),
-    );
-
-    if (realViolations.length > 0) {
-      console.error('SUPABASE STORAGE BYPASS DETECTED in:');
-      realViolations.forEach((v) => console.error(`  ${v}`));
-    }
-
-    expect(realViolations).toEqual([]);
+  it("no supabase.auth calls in production code", () => {
+    const violations = grepSrc("supabase\\.auth");
+    expect(violations).toEqual([]);
   });
 
-  it('no Edge Function calls via VITE_SUPABASE_URL/functions in production hooks/pages', () => {
-    let output = '';
-    try {
-      output = execSync(
-        `grep -rn "VITE_SUPABASE_URL.*functions" "${SRC_DIR}" --include="*.ts" --include="*.tsx" || true`,
-        { encoding: 'utf-8' },
-      );
-    } catch {
-      output = '';
-    }
+  it("no supabase.rpc calls in production code", () => {
+    const violations = grepSrc("supabase\\.rpc");
+    expect(violations).toEqual([]);
+  });
 
-    const violations = output
-      .split('\n')
-      .filter((line) => line.trim())
-      .filter((line) => !isAllowed(line))
-      // Legacy service files are tracked separately — allow for now
-      .filter((line) => !line.includes('services/'));
+  it("no supabase.channel calls in production code", () => {
+    const violations = grepSrc("supabase\\.channel");
+    expect(violations).toEqual([]);
+  });
 
-    if (violations.length > 0) {
-      console.error('EDGE FUNCTION BYPASS DETECTED in:');
-      violations.forEach((v) => console.error(`  ${v}`));
-    }
+  it("no @supabase/* imports in production code", () => {
+    const violations = grepSrc("from ['\"]@supabase");
+    expect(violations).toEqual([]);
+  });
 
+  it("no Edge Function URLs via VITE_SUPABASE_URL", () => {
+    const violations = grepSrc("VITE_SUPABASE_URL.*functions");
     expect(violations).toEqual([]);
   });
 });

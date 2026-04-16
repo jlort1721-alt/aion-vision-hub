@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/contexts/I18nContext';
+import { formatDateTime } from '@/lib/date-utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSections, useAccessPeople, useAccessPeopleMutations, useAccessVehicles, useAccessVehicleMutations, useAccessLogs } from '@/hooks/use-module-data';
 import { useQuery } from '@tanstack/react-query';
@@ -32,6 +33,7 @@ import DataImportDialog from '@/components/shared/DataImportDialog';
 import type { ImportEntityType } from '@/services/data-import-api';
 import { PageShell } from '@/components/shared/PageShell';
 import ErrorState from '@/components/ui/ErrorState';
+import type { ApiAccessPerson, ApiAccessVehicle, ApiAccessLog, ApiSection, ApiLprDetection } from '@/types/api-entities';
 
 // ══════════════════════════════════════════════════════════════
 // Types & Constants
@@ -89,21 +91,21 @@ export default function AccessControlPage() {
   const { t } = useI18n();
   const { isAuthenticated } = useAuth();
   const { data: rawSections = [] } = useSections();
-  const sections = rawSections as any[];
+  const sections = rawSections as ApiSection[];
   const { data: rawPeople = [], isLoading, isError, error, refetch } = useAccessPeople();
   const { data: rawVehicles = [] } = useAccessVehicles();
   const { data: rawLogs = [] } = useAccessLogs();
   const peopleMut = useAccessPeopleMutations();
   const vehicleMut = useAccessVehicleMutations();
 
-  const people = rawPeople as any[];
-  const vehicles = rawVehicles as any[];
-  const logs = rawLogs as any[];
+  const people = rawPeople as ApiAccessPerson[];
+  const vehicles = rawVehicles as ApiAccessVehicle[];
+  const logs = rawLogs as ApiAccessLog[];
 
   const { data: lprDetections = [] } = useQuery({
     queryKey: ['lpr-detections'],
     queryFn: async () => {
-      const resp = await apiClient.get<any>('/lpr/detections', { limit: '20' });
+      const resp = await apiClient.get<ApiLprDetection[] | { items?: ApiLprDetection[]; data?: ApiLprDetection[] }>('/lpr/detections', { limit: '20' });
       return Array.isArray(resp) ? resp : (resp?.items ?? resp?.data ?? []);
     },
     enabled: isAuthenticated,
@@ -137,10 +139,10 @@ export default function AccessControlPage() {
   useEffect(() => { persistSchedules(schedules); }, [schedules]);
 
   // ── Computed ──
-  const getSectionName = useCallback((id: string) => (sections as any[]).find(s => s.id === id)?.name || '—', [sections]);
+  const getSectionName = useCallback((id: string) => sections.find(s => s.id === id)?.name || '—', [sections]);
 
   const filtered = useMemo(() => {
-    return people.filter((p: any) => {
+    return people.filter((p) => {
       const q = search.toLowerCase();
       if (q && !(p.fullName || p.full_name || '').toLowerCase().includes(q) && !(p.unit || '').toLowerCase().includes(q) && !(p.phone || '').includes(q)) return false;
       const sid = p.sectionId || p.section_id;
@@ -150,24 +152,24 @@ export default function AccessControlPage() {
     });
   }, [people, search, sectionFilter, typeFilter]);
 
-  const selected = useMemo(() => selectedPerson ? people.find((p: any) => p.id === selectedPerson) : null, [selectedPerson, people]);
+  const selected = useMemo(() => selectedPerson ? people.find((p) => p.id === selectedPerson) : null, [selectedPerson, people]);
 
   const personVehicles = useMemo(() => {
     if (!selected) return [];
-    return vehicles.filter((v: any) => (v.personId || v.person_id) === selected.id);
+    return vehicles.filter((v) => (v.personId || v.person_id) === selected.id);
   }, [selected, vehicles]);
 
-  const personName = (p: any) => p.fullName || p.full_name || '—';
-  const personSection = (p: any) => p.sectionId || p.section_id;
-  const personDoc = (p: any) => p.documentId || p.document_id;
+  const personName = (p: ApiAccessPerson) => p.fullName || p.full_name || '—';
+  const personSection = (p: ApiAccessPerson) => p.sectionId || p.section_id;
+  const personDoc = (p: ApiAccessPerson) => p.documentId || p.document_id;
 
   // ── Stats ──
   const stats = useMemo(() => ({
     total: people.length,
-    residents: people.filter((p: any) => p.type === 'resident').length,
+    residents: people.filter((p) => p.type === 'resident').length,
     vehicles: vehicles.length,
-    todayLogs: logs.filter((l: any) => {
-      const d = new Date(l.createdAt || l.created_at);
+    todayLogs: logs.filter((l) => {
+      const d = new Date(String(l.createdAt || l.created_at));
       return d.toDateString() === new Date().toDateString();
     }).length,
   }), [people, vehicles, logs]);
@@ -179,7 +181,7 @@ export default function AccessControlPage() {
     setPersonDialogOpen(true);
   };
 
-  const openEditPerson = (p: any) => {
+  const openEditPerson = (p: ApiAccessPerson) => {
     setEditingPerson(p.id);
     setForm({
       full_name: personName(p), type: p.type || 'resident',
@@ -213,7 +215,7 @@ export default function AccessControlPage() {
     setVehicleDialogOpen(true);
   };
 
-  const openEditVehicle = (v: any) => {
+  const openEditVehicle = (v: ApiAccessVehicle) => {
     setEditingVehicle(v.id);
     setVehicleForm({
       plate: v.plate || '', brand: v.brand || '', model: v.model || '',
@@ -315,7 +317,7 @@ export default function AccessControlPage() {
               <SelectTrigger className="w-40 h-8 text-xs bg-slate-900/50 border-slate-700"><SelectValue placeholder="Todas las sedes" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las sedes</SelectItem>
-                {(sections as any[]).map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                {sections.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -458,7 +460,7 @@ export default function AccessControlPage() {
                     const person = people.find((p: any) => p.id === (log.personId || log.person_id));
                     return (
                       <TableRow key={log.id} className="border-slate-800">
-                        <TableCell className="text-xs font-mono text-slate-300">{new Date(log.createdAt || log.created_at).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' })}</TableCell>
+                        <TableCell className="text-xs font-mono text-slate-300">{formatDateTime(log.createdAt || log.created_at)}</TableCell>
                         <TableCell className="text-xs text-white">{person ? personName(person) : '—'}</TableCell>
                         <TableCell>
                           <Badge className={cn("text-[9px]", log.direction === 'in' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30')}>
@@ -511,10 +513,10 @@ export default function AccessControlPage() {
                   <CardTitle className="text-xs font-bold flex items-center gap-2"><CarFront className="h-4 w-4 text-slate-400" /> Detecciones de Placas</CardTitle>
                 </CardHeader>
                 <CardContent className="p-3 overflow-y-auto space-y-2">
-                  {(lprDetections as any[]).length === 0 ? (
+                  {(lprDetections as ApiLprDetection[]).length === 0 ? (
                     <EmptyState icon={<ScanLine />} message="Sin detecciones. Configure cámaras LPR para comenzar." compact />
                   ) : (
-                    (lprDetections as any[]).map((det: any) => {
+                    (lprDetections as ApiLprDetection[]).map((det) => {
                       const isAuth = det.status === 'authorized' || det.authorized;
                       const isUnknown = det.status === 'unknown' || (!det.authorized && !det.person_name);
                       const elapsed = det.detected_at ? `${Math.round((Date.now() - new Date(det.detected_at).getTime()) / 1000)}s` : '';
@@ -705,7 +707,7 @@ export default function AccessControlPage() {
               </div>
               <div className="space-y-1"><Label className="text-xs text-slate-400">Sede</Label>
                 <Select value={form.section_id} onValueChange={v => setForm(p => ({ ...p, section_id: v }))}><SelectTrigger className="bg-slate-900 border-slate-700"><SelectValue placeholder="—" /></SelectTrigger>
-                  <SelectContent>{(sections as any[]).map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>{sections.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>

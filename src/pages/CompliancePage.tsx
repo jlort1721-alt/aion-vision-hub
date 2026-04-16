@@ -151,9 +151,13 @@ export default function CompliancePage() {
   });
   const { data: statsResult } = useQuery({ queryKey: ['compliance-stats'], queryFn: () => complianceStatsApi.get() });
 
-  const tplList: any[] = (templates as any)?.data ?? [];
-  const retList: any[] = (policies as any)?.data ?? [];
-  const s: any = (statsResult as any)?.data ?? statsResult;
+  const templatesEnvelope = templates as Record<string, unknown> | undefined;
+  const policiesEnvelope = policies as Record<string, unknown> | undefined;
+  const statsResultEnvelope = statsResult as Record<string, unknown> | undefined;
+
+  const tplList: Record<string, unknown>[] = (templatesEnvelope?.data as Record<string, unknown>[] | undefined) ?? [];
+  const retList: Record<string, unknown>[] = (policiesEnvelope?.data as Record<string, unknown>[] | undefined) ?? [];
+  const s: Record<string, unknown> | undefined = (statsResultEnvelope?.data as Record<string, unknown> | undefined) ?? statsResultEnvelope;
 
   // ── Mutations (Templates) ──
   const createTplMut = useMutation({
@@ -234,7 +238,7 @@ export default function CompliancePage() {
 
   const toggleAuditComplete = useCallback((id: string) => {
     setAudits(prev => {
-      const u = prev.map(a => a.id === id ? { ...a, status: (a.status === 'completed' ? 'scheduled' : 'completed') as any } : a);
+      const u = prev.map(a => a.id === id ? { ...a, status: (a.status === 'completed' ? 'scheduled' : 'completed') as AuditSchedule['status'] } : a);
       saveAudits(u); return u;
     });
   }, []);

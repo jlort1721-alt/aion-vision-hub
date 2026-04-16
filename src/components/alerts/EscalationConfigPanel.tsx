@@ -97,11 +97,22 @@ interface PolicyFormData {
   maxRepeats: number;
 }
 
+interface EscalationLevel {
+  level?: number;
+  timeoutMinutes?: number;
+  notifyRoles?: string[];
+  notifyUsers?: string[];
+  notifyChannelIds?: string[];
+  channels?: string[];
+  messageOverride?: string;
+  __meta?: { repeat?: boolean; maxRepeats?: number };
+}
+
 interface EscalationPolicy {
   id: string;
   name: string;
   description: string | null;
-  levels: any[];
+  levels: EscalationLevel[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -170,14 +181,14 @@ function createEmptyFormData(): PolicyFormData {
 
 /** Convert backend policy levels to form steps */
 function policyToFormData(policy: EscalationPolicy): PolicyFormData {
-  const levels = (policy.levels ?? []) as any[];
+  const levels = policy.levels ?? [];
   const meta = levels.length > 0 && levels[levels.length - 1]?.__meta
     ? levels[levels.length - 1].__meta
     : null;
 
   const steps: EscalationStep[] = levels
-    .filter((l: any) => !l.__meta)
-    .map((l: any, i: number) => ({
+    .filter((l) => !l.__meta)
+    .map((l, i) => ({
       level: i + 1,
       timeoutMinutes: l.timeoutMinutes ?? 15,
       notifyRoles: l.notifyRoles ?? [],
@@ -211,7 +222,7 @@ function formDataToApiPayload(form: PolicyFormData) {
 
   // Store repeat settings as metadata in a special entry
   if (form.repeat) {
-    (levels as any[]).push({
+    (levels as EscalationLevel[]).push({
       __meta: { repeat: true, maxRepeats: form.maxRepeats },
     });
   }
@@ -468,7 +479,7 @@ export default function EscalationConfigPanel() {
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   function getStepCount(policy: EscalationPolicy): number {
-    return ((policy.levels ?? []) as any[]).filter((l: any) => !l.__meta).length;
+    return (policy.levels ?? []).filter((l) => !l.__meta).length;
   }
 
   // ═════════════════════════════════════════════════════════
@@ -1003,7 +1014,7 @@ function InlineTimeline({ steps }: { steps: EscalationStep[] }) {
 // ═══════════════════════════════════════════════════════════
 
 function EscalationTimelineCard({ policy }: { policy: EscalationPolicy }) {
-  const levels = ((policy.levels ?? []) as any[]).filter((l: any) => !l.__meta);
+  const levels = (policy.levels ?? []).filter((l) => !l.__meta);
 
   if (levels.length === 0) return null;
 

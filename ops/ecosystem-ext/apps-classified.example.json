@@ -1,0 +1,89 @@
+{
+  "$schema": "https://aionseg.co/schemas/pm2-classification-v1.json",
+  "_doc": "Llena este archivo con los nombres reales de tus 17 apps adicionales. Cada app va en UNA SOLA categoría. Después corre: ./generate-ecosystem-extra.sh apps-classified.json > ecosystem.extra.config.js",
+
+  "_already_managed_by_v1_skip_these": [
+    "aion-api",
+    "aion-frontend",
+    "aion-agent",
+    "aion-model-router",
+    "aion-vision-hub",
+    "aion-comms",
+    "aion-worker",
+    "aion-scheduler"
+  ],
+
+  "stateful_blue_green": {
+    "_when_to_use_here": "App tiene estado en memoria que se pierde con stop. Ejemplo: n8n con ejecuciones en curso, agente con streaming SSE activo, asterisk con llamadas SIP vivas, snapshot processors a mitad de escritura.",
+    "apps": [
+      {
+        "name": "REPLACE-WITH-REAL-NAME-1",
+        "cwd": "/opt/aion/<path>",
+        "script": "dist/index.js",
+        "base_port": 4000,
+        "exec_mode": "fork",
+        "instances": 1,
+        "max_memory_restart": "1G",
+        "kill_timeout": 30000,
+        "health_endpoint": "/health",
+        "env": {
+          "QUEUE_URL": "redis://127.0.0.1:6379",
+          "DRAIN_BEFORE_EXIT": "true"
+        },
+        "drain_strategy": "wait_for_inflight",
+        "_notes": "n8n example: stop accepting new workflows, finish in-flight, exit."
+      }
+    ]
+  },
+
+  "bridge_singleton": {
+    "_when_to_use_here": "App es bridge a sistema externo que rechazaría conexión duplicada (MQTT, webhook receivers únicos, gateways SIP). Singleton con graceful shutdown.",
+    "apps": [
+      {
+        "name": "REPLACE-WITH-REAL-NAME-2",
+        "cwd": "/opt/aion/<path>",
+        "script": "dist/bridge.js",
+        "port": 5000,
+        "exec_mode": "fork",
+        "instances": 1,
+        "max_memory_restart": "800M",
+        "kill_timeout": 15000,
+        "health_endpoint": "/health",
+        "restart_strategy": "stop_then_start",
+        "env": {
+          "EXTERNAL_HOST": "...",
+          "RECONNECT_BACKOFF_MS": "5000"
+        }
+      }
+    ]
+  },
+
+  "stateless_singleton": {
+    "_when_to_use_here": "Worker stateless (queue consumer, scheduler, indexer). Trabajos en vuelo se re-encolan automáticamente al recibir SIGTERM. Restart seguro y rápido.",
+    "apps": [
+      {
+        "name": "REPLACE-WITH-REAL-NAME-3",
+        "cwd": "/opt/aion/<path>",
+        "script": "dist/worker.js",
+        "exec_mode": "cluster",
+        "instances": 2,
+        "max_memory_restart": "600M",
+        "kill_timeout": 10000,
+        "env": {
+          "QUEUE_URL": "redis://127.0.0.1:6379",
+          "WORKER_CONCURRENCY": "5"
+        }
+      }
+    ]
+  },
+
+  "leave_alone": {
+    "_when_to_use_here": "Apps de terceros (n8n vendor, supabase-cli, etc.) que ya tienen su propia gestión y NO quieres tocar. Solo se monitorean.",
+    "apps": [
+      {
+        "name": "REPLACE-WITH-REAL-NAME-4",
+        "_notes": "Solo monitorear via pm2_exporter. No incluir en ecosystem.extra."
+      }
+    ]
+  }
+}

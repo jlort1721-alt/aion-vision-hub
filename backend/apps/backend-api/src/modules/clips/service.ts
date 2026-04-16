@@ -199,6 +199,8 @@ class ClipsService {
 
     logger.info({ clipId, size: buffer.length, durationSec }, 'Clip saved');
 
+    await this.applyWatermark(filePath);
+
     // Store metadata in DB
     await db.execute(sql`
       INSERT INTO clips (id, tenant_id, camera_id, device_id, filename, file_path, file_size, duration_sec, quality, start_time, end_time, created_by, created_at)
@@ -230,6 +232,26 @@ class ClipsService {
       startTime: input.startTime,
       endTime: input.endTime,
     };
+  }
+
+  private async applyWatermark(inputPath: string): Promise<boolean> {
+    try {
+      const { execFile } = await import('child_process');
+      const { promisify } = await import('util');
+      const execFileAsync = promisify(execFile);
+      const outputPath = inputPath.replace(/\.mp4$/, '_wm.mp4');
+      await execFileAsync('ffmpeg', [
+        '-i', inputPath,
+        '-vf', "drawtext=text='AION - %{localtime}':fontcolor=white@0.8:fontsize=16:x=10:y=10:shadowcolor=black@0.5:shadowx=1:shadowy=1",
+        '-codec:a', 'copy',
+        '-y', outputPath,
+      ], { timeout: 60000 });
+      const fsAsync = await import('fs/promises');
+      await fsAsync.rename(outputPath, inputPath);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**

@@ -1,0 +1,94 @@
+# ansible/inventory/prod.yml
+#
+# Inventory de sitios de Clave Seguridad CTA.
+# Cada sitio agrupa los DVR/NVR que tiene en su rack. Los hosts NO son
+# máquinas Linux — son equipos propietarios (Dahua/Hikvision) a los que
+# Ansible se conecta vía su interfaz HTTP/ISAPI usando un módulo custom
+# definido en roles/reverse_connect/.
+#
+# Plantilla — reemplaza los valores placeholder con los reales. Mantén las
+# credenciales en ansible-vault:
+#     ansible-vault edit inventory/secrets.yml
+
+all:
+  vars:
+    aion_vps_ip:     18.230.40.6
+    dahua_port:      7681
+    hikvision_sig:   7660
+    hikvision_stream: 7661
+
+  children:
+    # ---------- Wave 0 (canary) ----------
+    wave0:
+      hosts:
+        elpoblado03_xvr01:
+          vendor: dahua
+          family: xvr
+          local_ip: 10.0.1.20
+          admin_user: admin
+          admin_password: "{{ vault_elpoblado03_xvr01_password }}"
+          site_code: ELPOBLADO03
+          device_id: ELPOBLADO03-XVR01
+          channels: 8
+
+    # ---------- Wave 1 ----------
+    wave1:
+      hosts:
+        laureles01_nvr01:
+          vendor: hikvision
+          family: nvr
+          local_ip: 10.0.2.10
+          admin_user: admin
+          admin_password: "{{ vault_laureles01_nvr01_password }}"
+          isup_key:       "{{ vault_laureles01_nvr01_isup_key }}"
+          site_code: LAURELES01
+          device_id: LAURELES01-NVR01
+          channels: 16
+
+        envigado05_xvr01:
+          vendor: dahua
+          family: xvr
+          local_ip: 10.0.3.10
+          admin_user: admin
+          admin_password: "{{ vault_envigado05_xvr01_password }}"
+          site_code: ENVIGADO05
+          device_id: ENVIGADO05-XVR01
+          channels: 8
+
+        sabaneta02_xvr01:
+          vendor: dahua
+          family: xvr
+          local_ip: 10.0.4.10
+          admin_user: admin
+          admin_password: "{{ vault_sabaneta02_xvr01_password }}"
+          site_code: SABANETA02
+          device_id: SABANETA02-XVR01
+          channels: 16
+
+        belen01_nvr01:
+          vendor: hikvision
+          family: nvr
+          local_ip: 10.0.5.10
+          admin_user: admin
+          admin_password: "{{ vault_belen01_nvr01_password }}"
+          isup_key:       "{{ vault_belen01_nvr01_isup_key }}"
+          site_code: BELEN01
+          device_id: BELEN01-NVR01
+          channels: 16
+
+        itagui04_xvr01:
+          vendor: dahua
+          family: xvr
+          local_ip: 10.0.6.10
+          admin_user: admin
+          admin_password: "{{ vault_itagui04_xvr01_password }}"
+          site_code: ITAGUI04
+          device_id: ITAGUI04-XVR01
+          channels: 8
+
+    # ---------- Wave 2 & 3 ----------
+    # Rellena siguiendo el mismo patrón con los 16 sitios restantes.
+    wave2:
+      hosts: {}
+    wave3:
+      hosts: {}

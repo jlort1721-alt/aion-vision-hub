@@ -1,0 +1,98 @@
+{
+  "title": "AION — Vision Hub & Cameras",
+  "uid": "aion-vision",
+  "tags": ["aion", "vision-hub"],
+  "timezone": "America/Bogota",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-3h", "to": "now" },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Servicios sanos / total",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "aion_vision_hub_healthy_services", "refId": "A", "legendFormat": "Healthy" },
+        { "expr": "aion_vision_hub_total_services",   "refId": "B", "legendFormat": "Total" }
+      ]
+    },
+    {
+      "type": "gauge",
+      "title": "% sanos",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "(aion_vision_hub_healthy_services / aion_vision_hub_total_services) * 100", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0, "max": 100, "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "yellow", "value": 80 },
+              { "color": "green",  "value": 95 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Cámaras online",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "aion_camera_online_total", "refId": "A" }]
+    },
+    {
+      "type": "stat",
+      "title": "go2rtc streams",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "go2rtc_streams_count", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "yellow", "value": 200 },
+              { "color": "green",  "value": 228 }
+            ]
+          }
+        }
+      }
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Healthy services en el tiempo",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 7 },
+      "targets": [
+        { "expr": "aion_vision_hub_healthy_services", "refId": "A", "legendFormat": "Healthy" },
+        { "expr": "aion_vision_hub_total_services",   "refId": "B", "legendFormat": "Total" }
+      ]
+    },
+
+    {
+      "type": "timeseries",
+      "title": "Vision Hub — latencia probe",
+      "gridPos": { "x": 0, "y": 11, "w": 12, "h": 7 },
+      "targets": [
+        { "expr": "probe_duration_seconds{job=\"vision-hub-services\"}", "refId": "A", "legendFormat": "probe" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+
+    {
+      "type": "table",
+      "title": "URLs de vision (sección video)",
+      "gridPos": { "x": 12, "y": 11, "w": 12, "h": 7 },
+      "targets": [
+        {
+          "expr": "probe_success{group=\"video\"}",
+          "refId": "A",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    }
+  ]
+}

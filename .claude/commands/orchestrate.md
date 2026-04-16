@@ -148,6 +148,44 @@ Run simultaneously:
 Combine outputs into single report
 ```
 
+## Additional Workflow Types
+
+### module
+New module creation workflow:
+```
+module-scaffold -> db-migration -> tdd-guide -> api-docs-generator -> code-reviewer
+```
+
+### deploy
+Deployment pipeline workflow:
+```
+deploy-rollback (preflight) -> tdd-guide (verify) -> perf-profiler (smoke) -> db-migration (validate) -> deploy-rollback (deploy) -> monitor-observe (health)
+```
+
+### incident
+Incident response workflow:
+```
+incident-response (triage) -> monitor-observe (health) -> security-reviewer (audit) -> incident-response (postmortem)
+```
+
+### performance
+Performance optimization workflow:
+```
+perf-profiler (full) -> architect (review) -> planner (plan) -> tdd-guide (benchmark) -> perf-profiler (verify) -> code-reviewer
+```
+
+### migration
+Database migration workflow:
+```
+db-migration (generate) -> db-migration (validate) -> tdd-guide (test) -> db-migration (run)
+```
+
+### api-docs
+API documentation workflow:
+```
+api-docs-generator (generate) -> api-docs-generator (validate) -> doc-updater (update)
+```
+
 ## Arguments
 
 $ARGUMENTS:
@@ -155,6 +193,12 @@ $ARGUMENTS:
 - `bugfix <description>` - Bug fix workflow
 - `refactor <description>` - Refactoring workflow
 - `security <description>` - Security review workflow
+- `module <name>` - New module creation workflow
+- `deploy <environment>` - Deployment pipeline workflow
+- `incident <symptom>` - Incident response workflow
+- `performance <target>` - Performance optimization workflow
+- `migration <description>` - Database migration workflow
+- `api-docs` - API documentation generation workflow
 - `custom <agents> <description>` - Custom agent sequence
 
 ## Custom Workflow Example

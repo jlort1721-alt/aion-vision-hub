@@ -36,8 +36,8 @@ export default function DatabasePage() {
   const { t } = useI18n();
   const { data: rawSections = [] } = useSections();
   const { data: rawRecords = [], isLoading, isError, refetch } = useDatabaseRecords();
-  const sections = rawSections as any[];
-  const records = rawRecords as any[];
+  const sections = rawSections as Record<string, unknown>[];
+  const records = rawRecords as Record<string, unknown>[];
   const { create, update, remove } = useDatabaseRecordMutations();
 
   const [activeTab, setActiveTab] = useState('all');

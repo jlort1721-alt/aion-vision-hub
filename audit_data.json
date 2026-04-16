@@ -1,0 +1,786 @@
+{
+  "audit_timestamp": "2026-04-13T18:34:22Z",
+  "audit_version": "1.0.0",
+  "vps_ip": "18.230.40.6",
+  "vps_hostname": "ip-172-31-8-215",
+  "vps_uptime": "17 days, 9:20",
+  "summary": {
+    "total_expected": 17,
+    "registration_server": "Python stub (device-platform-server.py) — NOT Go reverse-gateway",
+    "reverse_schema_exists": false,
+    "go_binary_deployed": false,
+    "registrations_received": 16,
+    "registrations_online": 14,
+    "registrations_offline": 2,
+    "registrations_spurious": 3,
+    "hik_snap_processes": 11,
+    "dahua_go2rtc_streams": 116,
+    "dahua_stream_method": "IMOU P2P HLS (cloud relay, NOT Active Registration)",
+    "hik_stream_method": "hik_pull binary (outbound ISUP SDK, NOT reverse registration)",
+    "critical_findings": 6,
+    "high_findings": 4,
+    "medium_findings": 3
+  },
+  "infrastructure": {
+    "port_7660_hik_isup": {
+      "status": "listening",
+      "process": "python3 device-platform-server.py (PID 2199534)",
+      "note": "Python stub accepts connections but does NOT establish ISUP SDK sessions"
+    },
+    "port_7661_hik_stream_udp": {
+      "status": "NOT_LISTENING",
+      "note": "Hikvision ISUP media port never opened — Go reverse-gateway not deployed"
+    },
+    "port_7681_dahua_reg": {
+      "status": "listening",
+      "process": "python3 device-platform-server.py (PID 2199534)",
+      "note": "Python stub accepts connections but does NOT establish Dahua SDK sessions"
+    },
+    "port_1984_go2rtc": {
+      "status": "listening",
+      "process": "go2rtc (PID 3056259)"
+    },
+    "port_3001_backend_api": {
+      "status": "listening",
+      "process": "node aionseg-api (PID 2091916)",
+      "note": "Backend API on port 3001 (not 3000)"
+    },
+    "port_8554_rtsp": {
+      "status": "listening",
+      "process": "go2rtc"
+    },
+    "port_9580_orchestrator": {
+      "status": "listening",
+      "process": "node aion-vh-orchestrator"
+    },
+    "port_9560_bridge": {
+      "status": "listening",
+      "process": "node aion-vh-bridge"
+    },
+    "firewall": {
+      "7660_tcp": "ALLOW (rule 21)",
+      "7681_tcp": "ALLOW (rule 22)",
+      "7661_udp": "NOT in firewall rules",
+      "3000": "DENY",
+      "1984": "DENY (internal only)"
+    },
+    "reverse_gateway_go_binary": {
+      "deployed": false,
+      "binary_path": "/opt/aion/services/reverse-gateway/bin/gateway",
+      "config_path": "/etc/aion/reverse/gateway.toml",
+      "note": "Binary not compiled/deployed. Config not found. reverse schema not migrated."
+    },
+    "pm2_processes": {
+      "total": 22,
+      "key_services": [
+        {
+          "name": "aionseg-api",
+          "status": "online",
+          "uptime": "14h",
+          "restarts": 14,
+          "pid": 2091916,
+          "memory_mb": 200
+        },
+        {
+          "name": "aion-vh-orchestrator",
+          "status": "online",
+          "uptime": "82m",
+          "restarts": 0,
+          "pid": 2648894,
+          "memory_mb": 63
+        },
+        {
+          "name": "aion-vh-bridge",
+          "status": "online",
+          "uptime": "14h",
+          "restarts": 0,
+          "pid": 2126545,
+          "memory_mb": 63
+        },
+        {
+          "name": "platform-server",
+          "status": "online",
+          "uptime": "7d",
+          "restarts": 0,
+          "pid": 2199534,
+          "memory_mb": 20
+        },
+        {
+          "name": "hik-monitor",
+          "status": "online",
+          "uptime": "3d",
+          "restarts": 0,
+          "pid": 163002,
+          "memory_mb": 83
+        },
+        {
+          "name": "detection-worker",
+          "status": "online",
+          "uptime": "3d",
+          "restarts": 0,
+          "pid": 2389034,
+          "memory_mb": 101
+        },
+        {
+          "name": "isapi-alerts",
+          "status": "online",
+          "uptime": "3d",
+          "restarts": 0,
+          "pid": 2407046,
+          "memory_mb": 64
+        },
+        {
+          "name": "snap-dahua",
+          "status": "online",
+          "uptime": "10d",
+          "restarts": 2,
+          "pid": 3001622,
+          "memory_mb": 22
+        }
+      ],
+      "missing": ["aion-reverse-gateway", "dahua-monitor", "edge-gateway"]
+    }
+  },
+  "devices": [
+    {
+      "device_id": "AGDVR001",
+      "site": "Altagracia",
+      "vendor": "hikvision",
+      "type": "DVR",
+      "expected_channels": 32,
+      "wan_ip": "181.205.175.18",
+      "isup_ports": [8010, 8030],
+      "registration": {
+        "platform_server": true,
+        "platform_key": "hik-181.205.175.18",
+        "status": "online",
+        "last_registration": "2026-04-13T18:37:28Z"
+      },
+      "streaming": {
+        "method": "hik_pull outbound ISUP",
+        "snap_processes": [
+          "snap-ag-dvr (24ch port 8030)",
+          "snap-ag-dvr1 (1ch port 8010)"
+        ],
+        "go2rtc_streams": 0,
+        "functional": true
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "FUNCTIONAL_VIA_WORKAROUND",
+      "notes": "Snapshots working via hik_pull. No reverse-gateway session. Two ISUP ports (2 devices behind same WAN IP)."
+    },
+    {
+      "device_id": "ARDVR001",
+      "site": "Altos del Rosario",
+      "vendor": "hikvision",
+      "type": "DVR",
+      "expected_channels": 16,
+      "wan_ip": "190.159.37.188",
+      "isup_ports": [8010],
+      "registration": {
+        "platform_server": true,
+        "platform_key": "hik-190.159.37.188",
+        "status": "online",
+        "last_registration": "2026-04-13T18:37:36Z"
+      },
+      "streaming": {
+        "method": "hik_pull outbound ISUP",
+        "snap_processes": ["snap-ar-dvr (16ch port 8010)"],
+        "go2rtc_streams": 0,
+        "functional": true
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "FUNCTIONAL_VIA_WORKAROUND",
+      "notes": "NAT MikroTik WAN:8010. Snapshots working via hik_pull."
+    },
+    {
+      "device_id": "PQDVR001",
+      "site": "Pisquines",
+      "vendor": "hikvision",
+      "type": "DVR",
+      "expected_channels": 16,
+      "wan_ip": "181.205.202.122",
+      "isup_ports": [8020],
+      "registration": {
+        "platform_server": true,
+        "platform_key": "hik-181.205.202.122",
+        "status": "online",
+        "last_registration": "2026-04-13T18:37:36Z"
+      },
+      "streaming": {
+        "method": "hik_pull outbound ISUP",
+        "snap_processes": ["snap-pq-dvr (16ch port 8020)"],
+        "go2rtc_streams": 0,
+        "functional": true
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "FUNCTIONAL_VIA_WORKAROUND",
+      "notes": "Shares WAN IP with PQNVR001."
+    },
+    {
+      "device_id": "PQNVR001",
+      "site": "Pisquines",
+      "vendor": "hikvision",
+      "type": "NVR",
+      "expected_channels": 16,
+      "wan_ip": "181.205.202.122",
+      "isup_ports": [8010],
+      "registration": {
+        "platform_server": true,
+        "platform_key": "hik-181.205.202.122",
+        "status": "online",
+        "last_registration": "2026-04-13T18:37:36Z",
+        "note": "Shares registration entry with PQDVR001 (same WAN IP)"
+      },
+      "streaming": {
+        "method": "hik_pull outbound ISUP",
+        "snap_processes": ["snap-pq-nvr (16ch port 8010, start ch33)"],
+        "go2rtc_streams": 0,
+        "functional": true
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "FUNCTIONAL_VIA_WORKAROUND",
+      "notes": "Shares WAN IP with PQDVR001. Channels start at 33."
+    },
+    {
+      "device_id": "SSDVR001",
+      "site": "San Sebastian",
+      "vendor": "hikvision",
+      "type": "DVR",
+      "expected_channels": 16,
+      "wan_ip": "186.97.106.252",
+      "isup_ports": [8000],
+      "registration": {
+        "platform_server": true,
+        "platform_key": "hik-186.97.106.252",
+        "status": "online",
+        "last_registration": "2026-04-13T18:37:33Z"
+      },
+      "streaming": {
+        "method": "hik_pull outbound ISUP",
+        "snap_processes": ["snap-ss-dvr (16ch port 8000)"],
+        "go2rtc_streams": 0,
+        "functional": true
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "FUNCTIONAL_VIA_WORKAROUND",
+      "notes": "Standard ISUP port 8000."
+    },
+    {
+      "device_id": "PPNVR001",
+      "site": "Portal Plaza",
+      "vendor": "hikvision",
+      "type": "NVR",
+      "expected_channels": 16,
+      "wan_ip": "unknown",
+      "isup_ports": [],
+      "registration": {
+        "platform_server": false,
+        "platform_key": null,
+        "status": "not_registered",
+        "note": "Possible candidates: hik-181.143.16.170, hik-200.58.214.114, hik-181.205.249.130"
+      },
+      "streaming": {
+        "method": "none",
+        "snap_processes": [],
+        "go2rtc_streams": 0,
+        "functional": false
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "OFFLINE",
+      "notes": "Marked 'sin conectividad actual'. No snap process. May be one of the 3 unidentified Hikvision IPs."
+    },
+    {
+      "device_id": "SCDVR001",
+      "site": "Senderos de Calasanz",
+      "vendor": "hikvision",
+      "type": "DVR",
+      "expected_channels": 8,
+      "wan_ip": "38.9.217.12",
+      "isup_ports": [8030],
+      "registration": {
+        "platform_server": false,
+        "platform_key": null,
+        "status": "not_registered",
+        "note": "IP 38.9.217.12 not in platform-server registrations but hik_pull works"
+      },
+      "streaming": {
+        "method": "hik_pull outbound ISUP",
+        "snap_processes": ["snap-se-dvr1 (8ch port 8030)"],
+        "go2rtc_streams": 0,
+        "functional": true
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "FUNCTIONAL_VIA_WORKAROUND",
+      "notes": "DVR-208G-M1 model. hik_pull works but device does not register inbound. Possible ISUP limitation or device not configured for registration."
+    },
+    {
+      "device_id": "PEDVR001",
+      "site": "Portalegre",
+      "vendor": "hikvision",
+      "type": "DVR",
+      "expected_channels": 4,
+      "wan_ip": "unknown",
+      "isup_ports": [],
+      "registration": {
+        "platform_server": false,
+        "platform_key": null,
+        "status": "unknown",
+        "note": "Possible candidates: hik-181.143.16.170, hik-200.58.214.114, hik-181.205.249.130"
+      },
+      "streaming": {
+        "method": "none",
+        "snap_processes": [],
+        "go2rtc_streams": 0,
+        "functional": false
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "NOT_CONFIGURED",
+      "notes": "No snap process configured. WAN IP unknown. May be one of the 3 unidentified Hikvision registrations."
+    },
+    {
+      "device_id": "TBXVR001",
+      "site": "Terrabamba",
+      "vendor": "dahua",
+      "type": "XVR",
+      "expected_channels": 16,
+      "wan_ip": "unknown",
+      "serial_number": "BB01B89PAJ5DDCD",
+      "registration": {
+        "platform_server": true,
+        "platform_key": "identified_by_go2rtc_serial",
+        "status": "online"
+      },
+      "streaming": {
+        "method": "IMOU P2P HLS (cloud relay)",
+        "snap_processes": ["snap-dahua (shared)"],
+        "go2rtc_streams": 19,
+        "go2rtc_prefix": "da-terrabamba-ch",
+        "functional": true
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "FUNCTIONAL_VIA_WORKAROUND",
+      "notes": "Streaming via IMOU cloud P2P, NOT via Active Registration. 19 channels configured in go2rtc."
+    },
+    {
+      "device_id": "QSXVR001",
+      "site": "Quintas de Santa Maria",
+      "vendor": "dahua",
+      "type": "XVR",
+      "expected_channels": 8,
+      "wan_ip": "unknown",
+      "serial_number": "AH1020EPAZ39E67",
+      "registration": {
+        "platform_server": true,
+        "platform_key": "identified_by_go2rtc_serial",
+        "status": "online"
+      },
+      "streaming": {
+        "method": "IMOU P2P HLS (cloud relay)",
+        "snap_processes": ["snap-dahua (shared)"],
+        "go2rtc_streams": 8,
+        "go2rtc_prefix": "da-quintas-ch",
+        "functional": true
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "FUNCTIONAL_VIA_WORKAROUND",
+      "notes": "8 channels via IMOU P2P."
+    },
+    {
+      "device_id": "DNXVR001",
+      "site": "Danubios (Clave)",
+      "vendor": "dahua",
+      "type": "XVR",
+      "expected_channels": 8,
+      "wan_ip": "unknown",
+      "serial_number": "AJ00421PAZF2E60",
+      "registration": {
+        "platform_server": true,
+        "platform_key": "identified_by_go2rtc_serial",
+        "status": "online"
+      },
+      "streaming": {
+        "method": "IMOU P2P HLS (cloud relay)",
+        "snap_processes": ["snap-dahua (shared)"],
+        "go2rtc_streams": 9,
+        "go2rtc_prefix": "da-danubios-ch",
+        "functional": true,
+        "note": "Only 1 'da-danubios' entry — unclear if this covers both DNXVR001 and DNXVR002"
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "FUNCTIONAL_VIA_WORKAROUND",
+      "notes": "9 channels. May include both Danubios devices under one go2rtc prefix."
+    },
+    {
+      "device_id": "DNXVR002",
+      "site": "Danubios (Puesto)",
+      "vendor": "dahua",
+      "type": "XVR",
+      "expected_channels": 8,
+      "wan_ip": "unknown",
+      "serial_number": "AH0306CPAZ5EA1A",
+      "registration": {
+        "platform_server": true,
+        "platform_key": "identified_by_go2rtc_serial",
+        "status": "unknown"
+      },
+      "streaming": {
+        "method": "IMOU P2P HLS (cloud relay)",
+        "snap_processes": ["snap-dahua (shared)"],
+        "go2rtc_streams": 0,
+        "go2rtc_prefix": "da-danubios2 (NOT FOUND)",
+        "functional": false,
+        "note": "No separate go2rtc streams for DNXVR002. Possibly merged into da-danubios-ch* or not configured."
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "DEGRADED",
+      "notes": "Credentials: CLAVE/Clave.seg2023. No dedicated go2rtc streams. May need separate IMOU HLS URLs."
+    },
+    {
+      "device_id": "TZXVR001",
+      "site": "Terrazzino",
+      "vendor": "dahua",
+      "type": "XVR",
+      "expected_channels": 16,
+      "wan_ip": "unknown",
+      "serial_number": "AL02505PAJ638AA",
+      "registration": {
+        "platform_server": true,
+        "platform_key": "identified_by_go2rtc_serial",
+        "status": "online"
+      },
+      "streaming": {
+        "method": "IMOU P2P HLS (cloud relay)",
+        "snap_processes": ["snap-dahua (shared)"],
+        "go2rtc_streams": 18,
+        "go2rtc_prefix": "da-terrazzino-ch",
+        "functional": true
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "FUNCTIONAL_VIA_WORKAROUND",
+      "notes": "18 channels via IMOU P2P."
+    },
+    {
+      "device_id": "HSXVR001",
+      "site": "Hospital San Jeronimo",
+      "vendor": "dahua",
+      "type": "XVR",
+      "expected_channels": 16,
+      "wan_ip": "unknown",
+      "serial_number": "AE01C60PAZA4D94",
+      "registration": {
+        "platform_server": true,
+        "platform_key": "identified_by_go2rtc_serial",
+        "status": "online"
+      },
+      "streaming": {
+        "method": "IMOU P2P HLS (cloud relay)",
+        "snap_processes": ["snap-dahua (shared)"],
+        "go2rtc_streams": 16,
+        "go2rtc_prefix": "da-hospital-ch",
+        "functional": true
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "FUNCTIONAL_VIA_WORKAROUND",
+      "notes": "16 channels via IMOU P2P."
+    },
+    {
+      "device_id": "ABXVR001",
+      "site": "Alborada 9-10",
+      "vendor": "dahua",
+      "type": "XVR",
+      "expected_channels": 16,
+      "wan_ip": "unknown",
+      "serial_number": "AL02505PAJD40E7",
+      "registration": {
+        "platform_server": true,
+        "platform_key": "identified_by_go2rtc_serial",
+        "status": "online"
+      },
+      "streaming": {
+        "method": "IMOU P2P HLS (cloud relay)",
+        "snap_processes": ["snap-dahua (shared)"],
+        "go2rtc_streams": 14,
+        "go2rtc_prefix": "da-alborada-ch",
+        "functional": true
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "FUNCTIONAL_VIA_WORKAROUND",
+      "notes": "14 channels via IMOU P2P."
+    },
+    {
+      "device_id": "PBXVR001",
+      "site": "Patio Bonito",
+      "vendor": "dahua",
+      "type": "XVR",
+      "expected_channels": 16,
+      "wan_ip": "unknown",
+      "serial_number": "AL02505PAJDC6A4",
+      "registration": {
+        "platform_server": true,
+        "platform_key": "identified_by_go2rtc_serial",
+        "status": "online"
+      },
+      "streaming": {
+        "method": "IMOU P2P HLS (cloud relay)",
+        "snap_processes": ["snap-dahua (shared)"],
+        "go2rtc_streams": 12,
+        "go2rtc_prefix": "da-pbonito-ch",
+        "functional": true
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "FUNCTIONAL_VIA_WORKAROUND",
+      "notes": "12 channels via IMOU P2P."
+    },
+    {
+      "device_id": "LBXVR001",
+      "site": "Lubeck",
+      "vendor": "dahua",
+      "type": "XVR",
+      "expected_channels": 8,
+      "wan_ip": "unknown",
+      "serial_number": "unknown",
+      "registration": {
+        "platform_server": false,
+        "platform_key": null,
+        "status": "not_configured"
+      },
+      "streaming": {
+        "method": "none",
+        "snap_processes": [],
+        "go2rtc_streams": 0,
+        "go2rtc_prefix": "da-lubeck (NOT FOUND)",
+        "functional": false
+      },
+      "reverse_gateway": {
+        "registered": false,
+        "session": null,
+        "routes": null
+      },
+      "overall_status": "NOT_CONFIGURED",
+      "notes": "No go2rtc streams, no IMOU P2P configuration, no platform-server registration. Device may not have IMOU/P2P enabled or serial number not collected."
+    }
+  ],
+  "extra_devices_not_in_manifest": [
+    {
+      "identifier": "Torre Lucia (tl-dvr + tl-nvr)",
+      "wan_ip": "181.205.215.210",
+      "vendor": "hikvision",
+      "snap_processes": [
+        "snap-tl-dvr (16ch port 8010)",
+        "snap-tl-nvr (8ch port 8020)"
+      ],
+      "platform_registration": "hik-181.205.215.210",
+      "status": "online",
+      "note": "NOT in the 17-device manifest but fully functional"
+    },
+    {
+      "identifier": "Brescia (br-lpr)",
+      "wan_ip": "186.97.104.202",
+      "vendor": "hikvision+dahua",
+      "snap_processes": [
+        "snap-br-lpr1 (port 8030)",
+        "snap-br-lpr2 (port 8020)"
+      ],
+      "go2rtc_streams": "da-brescia-ch* (18 streams via IMOU P2P)",
+      "platform_registration": "dahua-186.97.104.202",
+      "status": "online",
+      "note": "NOT in the 17-device manifest. Has BOTH Hikvision (hik_pull) and Dahua (IMOU P2P)."
+    }
+  ],
+  "unidentified_registrations": [
+    {
+      "key": "hik-181.143.16.170",
+      "brand": "hikvision",
+      "status": "online",
+      "note": "No matching snap process. Could be PPNVR001 or PEDVR001."
+    },
+    {
+      "key": "hik-200.58.214.114",
+      "brand": "hikvision",
+      "status": "online",
+      "note": "No matching snap process. Could be PPNVR001 or PEDVR001."
+    },
+    {
+      "key": "hik-181.205.249.130",
+      "brand": "hikvision",
+      "status": "online",
+      "note": "No matching snap process. Could be PPNVR001 or PEDVR001."
+    },
+    {
+      "key": "dahua-3.143.162.210",
+      "brand": "dahua",
+      "status": "offline",
+      "note": "AWS IP — likely scanner/probe, not a real device."
+    },
+    {
+      "key": "dahua-3.134.216.108",
+      "brand": "dahua",
+      "status": "offline",
+      "note": "AWS IP — likely scanner/probe."
+    },
+    {
+      "key": "dahua-3.129.187.38",
+      "brand": "dahua",
+      "status": "offline",
+      "note": "AWS IP — likely scanner/probe."
+    }
+  ],
+  "findings": [
+    {
+      "severity": "CRITICAL",
+      "id": "F01",
+      "title": "Go reverse-gateway never deployed",
+      "description": "The Go binary at reverse-gateway/ was never compiled, deployed, or run on the VPS. The reverse PostgreSQL schema does not exist. All architecture designed around reverse.devices/sessions/streams/routes is inactive.",
+      "impact": "No ISUP SDK sessions, no Dahua SDK sessions, no reverse-channel streaming, no encrypted credential storage, no session management."
+    },
+    {
+      "severity": "CRITICAL",
+      "id": "F02",
+      "title": "Platform server is a Python stub",
+      "description": "device-platform-server.py accepts TCP connections on 7660/7681 but only logs IP+port. It does NOT authenticate, maintain sessions, or enable streaming. Registered data stored in a flat JSON file with no serial numbers.",
+      "impact": "Device 'registrations' are cosmetic — no actual ISUP/DHIP functionality."
+    },
+    {
+      "severity": "CRITICAL",
+      "id": "F03",
+      "title": "Streaming uses workarounds, not registration protocol",
+      "description": "Hikvision: hik_pull connects OUTBOUND to devices via NAT-forwarded ports. Dahua: IMOU cloud P2P HLS relay. Neither uses the designed ISUP reverse-channel or Dahua Active Registration.",
+      "impact": "Depends on NAT port-forwarding (Hikvision) and Dahua cloud service (IMOU) which may be unreliable or have cost."
+    },
+    {
+      "severity": "CRITICAL",
+      "id": "F04",
+      "title": "Credentials exposed in plaintext in process list and go2rtc config",
+      "description": "hik_pull processes expose admin/Clave.seg2023 and admin/seg12345 in process arguments visible via ps aux. go2rtc.yaml contains RTSP credentials. IMOU HLS tokens are in go2rtc config.",
+      "impact": "Any user on the VPS can read device credentials."
+    },
+    {
+      "severity": "CRITICAL",
+      "id": "F05",
+      "title": "Backend API has 14 restarts in 14 hours",
+      "description": "aionseg-api (PID 2091916) has restarted 14 times. Indicates instability — possible memory leak, unhandled exceptions, or OOM kills.",
+      "impact": "API downtime affects all clients and integrations."
+    },
+    {
+      "severity": "CRITICAL",
+      "id": "F06",
+      "title": "UDP port 7661 not in firewall rules",
+      "description": "Hikvision ISUP media transport (UDP 7661) is not allowed in UFW. Even if Go reverse-gateway were deployed, media streams would be blocked.",
+      "impact": "ISUP video streaming would fail."
+    },
+    {
+      "severity": "HIGH",
+      "id": "F07",
+      "title": "LBXVR001 (Lubeck) completely unconfigured",
+      "description": "No registration, no go2rtc streams, no IMOU P2P, no snap process. Device appears to have never been onboarded.",
+      "impact": "0 channels from Lubeck site."
+    },
+    {
+      "severity": "HIGH",
+      "id": "F08",
+      "title": "DNXVR002 (Danubios Puesto) has no dedicated streams",
+      "description": "Only 'da-danubios-ch*' exists covering 9 channels. DNXVR002 (different credentials) may not have its own IMOU P2P streams.",
+      "impact": "Missing camera coverage from Danubios Puesto."
+    },
+    {
+      "severity": "HIGH",
+      "id": "F09",
+      "title": "PEDVR001 (Portalegre) not configured for streaming",
+      "description": "No snap process, no go2rtc streams. WAN IP unknown. May be one of the 3 unidentified Hikvision registrations.",
+      "impact": "0 channels from Portalegre DVR."
+    },
+    {
+      "severity": "HIGH",
+      "id": "F10",
+      "title": "PPNVR001 (Portal Plaza) confirmed offline",
+      "description": "No registration, no snap process, no streams. Known connectivity issue.",
+      "impact": "0 channels from Portal Plaza."
+    },
+    {
+      "severity": "MEDIUM",
+      "id": "F11",
+      "title": "3 spurious Dahua registrations from AWS IPs",
+      "description": "IPs 3.143.162.210, 3.134.216.108, 3.129.187.38 are AWS IPs that registered as Dahua devices. Likely port scanners.",
+      "impact": "Security concern — open ports attract scanning."
+    },
+    {
+      "severity": "MEDIUM",
+      "id": "F12",
+      "title": "IMOU P2P HLS tokens may expire",
+      "description": "Dahua streams use time-stamped IMOU HLS URLs (e.g. 20260331T053832). These tokens have expiration. Current URLs date from March 31 — may stop working.",
+      "impact": "Dahua streams could break without token refresh mechanism."
+    },
+    {
+      "severity": "MEDIUM",
+      "id": "F13",
+      "title": "3 unidentified Hikvision registrations",
+      "description": "IPs 181.143.16.170, 200.58.214.114, 181.205.249.130 registered but have no snap processes. Cannot map to expected devices.",
+      "impact": "Possible coverage gaps or duplicate registrations."
+    }
+  ]
+}

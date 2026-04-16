@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { AlertTriangle, Bell, Eye, Clock } from 'lucide-react';
+import { formatTime } from '@/lib/date-utils';
 import { useNavigate } from 'react-router-dom';
 
 interface LiveViewEventsPanelProps {
@@ -41,7 +42,7 @@ export default function LiveViewEventsPanel({ onClose }: LiveViewEventsPanelProp
       if (Array.isArray(resp)) return resp;
       return resp?.items ?? resp?.data ?? [];
     },
-    refetchInterval: 10000,
+    refetchInterval: 30_000,
   });
   const navigate = useNavigate();
 
@@ -82,7 +83,7 @@ export default function LiveViewEventsPanel({ onClose }: LiveViewEventsPanelProp
                     <div className="flex items-center gap-1 mt-0.5">
                       <Clock className="h-2.5 w-2.5 text-muted-foreground/50" />
                       <span className="text-[8px] text-muted-foreground font-mono">
-                        {new Date(event.created_at).toLocaleTimeString()}
+                        {formatTime(event.created_at)}
                       </span>
                       <Badge
                         variant={event.severity === 'critical' ? 'destructive' : 'outline'}

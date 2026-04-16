@@ -6,6 +6,7 @@ import {
   updateIntegrationSchema,
 } from './schemas.js';
 import type { ApiResponse } from '@aion/shared-contracts';
+import { n8nWebhookClient } from '../../services/n8n-webhook-client.js';
 
 export async function registerIntegrationRoutes(app: FastifyInstance) {
   // ── GET / — List integrations for tenant ────────────────────
@@ -22,6 +23,12 @@ export async function registerIntegrationRoutes(app: FastifyInstance) {
       } satisfies ApiResponse;
     },
   );
+
+  // ── GET /n8n/status — n8n health check ──────────────────────
+  app.get('/n8n/status', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async () => {
+    const health = await n8nWebhookClient.checkHealth();
+    return { success: true, data: health };
+  });
 
   // ── GET /:id — Get single integration ───────────────────────
   app.get<{ Params: { id: string } }>(

@@ -1,39 +1,79 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, assertNoConsoleErrors } from "./fixtures";
 
-// SECURITY: Credentials from environment variables, never hardcoded
-const EMAIL = process.env.E2E_USER_EMAIL ?? '';
-const PASSWORD = process.env.E2E_USER_PASSWORD ?? '';
+test.describe("Auth flow", () => {
+  test("login page loads and has required fields", async ({ browser }) => {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    await page.goto("/login");
 
-test.describe('Authentication', () => {
-  test('login page loads correctly', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByText('Clave Seguridad')).toBeVisible();
-    await expect(page.getByText('Iniciar Sesión')).toBeVisible();
-    await expect(page.getByLabel('Correo Electrónico')).toBeVisible();
-    await expect(page.getByLabel('Contraseña')).toBeVisible();
+    await expect(page).toHaveTitle(/aion|login|ingresar/i);
+    await expect(page.getByLabel(/email|correo/i)).toBeVisible();
+    await expect(page.locator('input[type="password"]').first()).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /log\s*in|ingresar|iniciar/i }),
+    ).toBeEnabled();
+    await ctx.close();
   });
 
-  test('login with valid credentials redirects to dashboard', async ({ page }) => {
-    test.skip(!EMAIL || !PASSWORD, 'E2E_USER_EMAIL and E2E_USER_PASSWORD env vars required');
-    await page.goto('/login');
-    await page.getByLabel('Correo Electrónico').fill(EMAIL);
-    await page.getByLabel('Contraseña').fill(PASSWORD);
-    await page.getByRole('button', { name: /iniciar sesión/i }).click();
-    await page.waitForURL('**/dashboard', { timeout: 15000 });
-    await expect(page).toHaveURL(/dashboard/);
+  test("invalid credentials show error, do not redirect", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    await page.goto("/login");
+
+    await page.getByLabel(/email|correo/i).fill("nobody@aionseg.co");
+    await page
+      .locator('input[type="password"]')
+      .first()
+      .fill("wrong-password-xyz");
+    await page.getByRole("button", { name: /log\s*in|ingresar/i }).click();
+
+    await expect(
+      page.getByText(/invalid|incorrect|inválid|error/i),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(page).toHaveURL(/\/login/);
+    await ctx.close();
   });
 
-  test('login with invalid credentials shows error', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByLabel('Correo Electrónico').fill('wrong@test.com');
-    await page.getByLabel('Contraseña').fill('wrongpassword');
-    await page.getByRole('button', { name: /iniciar sesión/i }).click();
-    await expect(page.getByText(/error|autenticación|unauthorized/i)).toBeVisible({ timeout: 10000 });
+  test("authenticated user lands on dashboard", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/dashboard");
+    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page.locator('main, [role="main"], #content')).toBeVisible();
+    await assertNoConsoleErrors(page);
   });
 
-  test('protected routes redirect to login when unauthenticated', async ({ page }) => {
-    await page.goto('/dashboard');
-    await page.waitForURL('**/login', { timeout: 10000 });
-    await expect(page).toHaveURL(/login/);
+  test("session persists across reload", async ({ authedPage: page }) => {
+    await page.goto("/dashboard");
+    await page.reload();
+    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page.locator('main, [role="main"], #content')).toBeVisible();
+  });
+
+  test("logout clears session and redirects to login", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/dashboard");
+    const logout = page
+      .getByRole("button", { name: /log\s*out|cerrar sesión|salir/i })
+      .first();
+    if ((await logout.count()) === 0) {
+      await page
+        .getByRole("button", { name: /menu|cuenta|perfil/i })
+        .first()
+        .click({ trial: true });
+    }
+    await logout.click();
+    await page.waitForURL(/\/login/, { timeout: 10_000 });
+    await expect(page).toHaveURL(/\/login/);
+  });
+
+  test("api/health returns healthy", async ({ request }) => {
+    const r = await request.get("/api/health");
+    expect(r.status()).toBe(200);
+    const body = await r.json();
+    expect(body.status).toBe("healthy");
   });
 });

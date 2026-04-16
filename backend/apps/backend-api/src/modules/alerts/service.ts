@@ -116,6 +116,73 @@ export class AlertService {
     return rule;
   }
 
+  /**
+   * Seed default alert rules for a tenant if none exist.
+   * Returns the number of rules created (0 if rules already exist).
+   */
+  async seedDefaultRules(tenantId: string, userId: string): Promise<number> {
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(alertRules)
+      .where(eq(alertRules.tenantId, tenantId));
+
+    if ((countResult?.count ?? 0) > 0) return 0;
+
+    const defaults = [
+      {
+        name: 'Eventos Críticos',
+        description: 'Alerta automática para eventos de severidad crítica',
+        conditions: { severity: 'critical' },
+        actions: { createInstance: true },
+        severity: 'critical' as const,
+        cooldownMinutes: 5,
+      },
+      {
+        name: 'Eventos Alta Severidad',
+        description: 'Alerta automática para eventos de severidad alta',
+        conditions: { severity: 'high' },
+        actions: { createInstance: true },
+        severity: 'high' as const,
+        cooldownMinutes: 10,
+      },
+      {
+        name: 'Dispositivo Offline',
+        description: 'Alerta cuando un dispositivo cambia a estado offline',
+        conditions: { eventType: 'device_offline' },
+        actions: { createInstance: true },
+        severity: 'high' as const,
+        cooldownMinutes: 15,
+      },
+      {
+        name: 'Detección de Movimiento',
+        description: 'Alerta para eventos de detección de movimiento',
+        conditions: { eventType: 'motion_detection' },
+        actions: { createInstance: true },
+        severity: 'medium' as const,
+        cooldownMinutes: 5,
+      },
+    ];
+
+    const inserted = await db
+      .insert(alertRules)
+      .values(
+        defaults.map((d) => ({
+          tenantId,
+          name: d.name,
+          description: d.description,
+          conditions: d.conditions,
+          actions: d.actions,
+          severity: d.severity,
+          cooldownMinutes: d.cooldownMinutes,
+          isActive: true,
+          createdBy: userId,
+        })),
+      )
+      .returning({ id: alertRules.id });
+
+    return inserted.length;
+  }
+
   // ══════════════════════════════════════════════════════════
   // ALERT INSTANCES
   // ══════════════════════════════════════════════════════════
