@@ -1,11 +1,24 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-const categories = ['general', 'resident', 'vehicle', 'company', 'provider', 'procedure'] as const;
-const recordStatuses = ['active', 'archived'] as const;
+const categories = [
+  "general",
+  "resident",
+  "vehicle",
+  "company",
+  "provider",
+  "procedure",
+  "document",
+  "report",
+  "contract",
+  "section",
+  "manual",
+  "policy",
+] as const;
+const recordStatuses = ["active", "archived"] as const;
 
 export const createRecordSchema = z.object({
   sectionId: z.string().uuid().optional(),
-  category: z.enum(categories).default('general'),
+  category: z.enum(categories).default("general"),
   title: z.string().min(1).max(255),
   content: z.record(z.string(), z.unknown()).default({}),
   tags: z.array(z.string().max(64)).max(20).optional(),
