@@ -71,6 +71,8 @@ import {
   Camera,
   Image,
   Eye,
+  Map,
+  LayoutGrid,
 } from "lucide-react";
 import {
   SmartCameraCell,
