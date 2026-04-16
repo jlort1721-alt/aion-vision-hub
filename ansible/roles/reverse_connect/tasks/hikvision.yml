@@ -1,0 +1,67 @@
+# ansible/roles/reverse_connect/tasks/hikvision.yml
+#
+# Configura ISUP 5.0 en un DVR/NVR/IPC Hikvision vía ISAPI.
+# Endpoint clave:
+#   PUT /ISAPI/System/Network/EHome/ISUP5  (XML body)
+# Requiere autenticación Digest.
+
+- name: "Hikvision[{{ device_id }}] — plantilla XML ISUP 5.0"
+  ansible.builtin.set_fact:
+    isup_payload: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ISUP5 version="2.0" xmlns="http://www.hikvision.com/ver20/XMLSchema">
+        <enabled>true</enabled>
+        <addressingFormatType>ipaddress</addressingFormatType>
+        <ipAddress>{{ aion_vps_ip }}</ipAddress>
+        <portNo>{{ hikvision_sig }}</portNo>
+        <protocolVersion>V50</protocolVersion>
+        <companyID>AION</companyID>
+        <deviceID>{{ device_id }}</deviceID>
+        <isupKey>{{ isup_key }}</isupKey>
+      </ISUP5>
+
+- name: "Hikvision[{{ device_id }}] — aplicar configuración ISUP 5.0"
+  ansible.builtin.uri:
+    url: "http://{{ local_ip }}/ISAPI/System/Network/EHome/ISUP5"
+    method: PUT
+    body: "{{ isup_payload }}"
+    body_format: raw
+    headers:
+      Content-Type: application/xml
+    url_username: "{{ admin_user }}"
+    url_password: "{{ admin_password }}"
+    status_code: [200, 201]
+    timeout: 20
+  register: hik_apply
+  delegate_to: localhost
+  changed_when: hik_apply.status in [200, 201]
+
+- name: "Hikvision[{{ device_id }}] — verificar"
+  ansible.builtin.uri:
+    url: "http://{{ local_ip }}/ISAPI/System/Network/EHome/ISUP5"
+    method: GET
+    url_username: "{{ admin_user }}"
+    url_password: "{{ admin_password }}"
+    return_content: true
+    status_code: 200
+  register: hik_verify
+  delegate_to: localhost
+
+- name: "Hikvision[{{ device_id }}] — aserciones sobre la config leída"
+  ansible.builtin.assert:
+    that:
+      - aion_vps_ip in hik_verify.content
+      - device_id in hik_verify.content
+      - "'<enabled>true</enabled>' in hik_verify.content"
+    fail_msg: "ISUP 5.0 no quedó habilitado correctamente en {{ device_id }}"
+
+- name: "Hikvision[{{ device_id }}] — algunos firmwares requieren reinicio del servicio"
+  ansible.builtin.uri:
+    url: "http://{{ local_ip }}/ISAPI/System/Network/EHome/reboot"
+    method: PUT
+    url_username: "{{ admin_user }}"
+    url_password: "{{ admin_password }}"
+    status_code: [200, 204, 404]   # 404 si el endpoint no existe en este firmware
+    timeout: 10
+  delegate_to: localhost
+  ignore_errors: true

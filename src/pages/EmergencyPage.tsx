@@ -226,10 +226,15 @@ export default function EmergencyPage() {
   const { data: activationsData, isLoading: loadingActivations } = useQuery({ queryKey: ["emergency", "activations"], queryFn: () => emergencyActivationsApi.list(), refetchInterval: 10000 });
   const { data: statsData } = useQuery({ queryKey: ["emergency", "stats"], queryFn: () => emergencyActivationsApi.stats(), refetchInterval: 15000 });
 
-  const protocols: any[] = (protocolsData as any)?.data ?? (Array.isArray(protocolsData) ? protocolsData : []);
-  const contacts: any[] = (contactsData as any)?.data ?? (Array.isArray(contactsData) ? contactsData : []);
-  const activations: any[] = (activationsData as any)?.data ?? (activationsData as any)?.items ?? (Array.isArray(activationsData) ? activationsData : []);
-  const stats: any = (statsData as any)?.data ?? statsData;
+  const protocolsEnvelope = protocolsData as Record<string, unknown> | unknown[] | undefined;
+  const contactsEnvelope = contactsData as Record<string, unknown> | unknown[] | undefined;
+  const activationsEnvelope = activationsData as Record<string, unknown> | unknown[] | undefined;
+  const statsEnvelope = statsData as Record<string, unknown> | undefined;
+
+  const protocols: Record<string, unknown>[] = (protocolsEnvelope && !Array.isArray(protocolsEnvelope) ? protocolsEnvelope.data as Record<string, unknown>[] : undefined) ?? (Array.isArray(protocolsData) ? protocolsData as Record<string, unknown>[] : []);
+  const contacts: Record<string, unknown>[] = (contactsEnvelope && !Array.isArray(contactsEnvelope) ? contactsEnvelope.data as Record<string, unknown>[] : undefined) ?? (Array.isArray(contactsData) ? contactsData as Record<string, unknown>[] : []);
+  const activations: Record<string, unknown>[] = (activationsEnvelope && !Array.isArray(activationsEnvelope) ? (activationsEnvelope.data ?? activationsEnvelope.items) as Record<string, unknown>[] : undefined) ?? (Array.isArray(activationsData) ? activationsData as Record<string, unknown>[] : []);
+  const stats: Record<string, unknown> | undefined = (statsEnvelope?.data as Record<string, unknown> | undefined) ?? statsEnvelope;
 
   // ── Mutations ──
   const resolveMut = useMutation({ mutationFn: (id: string) => emergencyActivationsApi.resolve(id), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["emergency"] }); toast.success("Emergencia resuelta"); } });

@@ -203,11 +203,14 @@ export default function ShiftsPage() {
   });
 
   // ── Parsed data (cast to any[] to avoid narrow Record<string,unknown> types) ──
-  const shiftsRaw = (shiftsData as any)?.data ?? shiftsData ?? [];
-  const shiftsList: any[] = Array.isArray(shiftsRaw) ? shiftsRaw : [];
-  const assignmentsRaw = (assignmentsData as any)?.data ?? (assignmentsData as any)?.items ?? assignmentsData ?? [];
-  const assignmentsList: any[] = Array.isArray(assignmentsRaw) ? assignmentsRaw : [];
-  const rawStats: any = (statsData as any)?.data ?? statsData;
+  const shiftsEnvelope = shiftsData as Record<string, unknown> | unknown[] | undefined;
+  const shiftsRaw = (!Array.isArray(shiftsEnvelope) && shiftsEnvelope ? shiftsEnvelope.data : shiftsEnvelope) ?? [];
+  const shiftsList: Record<string, unknown>[] = Array.isArray(shiftsRaw) ? shiftsRaw as Record<string, unknown>[] : [];
+  const assignmentsEnvelope = assignmentsData as Record<string, unknown> | unknown[] | undefined;
+  const assignmentsRaw = (!Array.isArray(assignmentsEnvelope) && assignmentsEnvelope ? (assignmentsEnvelope.data ?? assignmentsEnvelope.items) : assignmentsEnvelope) ?? [];
+  const assignmentsList: Record<string, unknown>[] = Array.isArray(assignmentsRaw) ? assignmentsRaw as Record<string, unknown>[] : [];
+  const statsEnvelope = statsData as Record<string, unknown> | undefined;
+  const rawStats: Record<string, unknown> | undefined = (statsEnvelope?.data as Record<string, unknown> | undefined) ?? statsEnvelope;
 
   // Fix: handle nested stats format { total, byStatus: { scheduled, checked_in, ... } }
   const stats = useMemo(() => ({

@@ -23,11 +23,13 @@ const logger = createLogger({ name: 'automation-engine' });
 // ---------------------------------------------------------------------------
 
 export interface AutomationEvent {
+  id: string;
   tenantId: string;
   siteId: string;
   deviceId: string;
   eventType: string;
   severity: string;
+  description?: string | null;
   metadata: Record<string, unknown>;
 }
 
@@ -266,16 +268,29 @@ async function executeAction(
         const title = (action.config?.title as string) ?? `[Auto] ${event.eventType} on device ${event.deviceId}`;
         const priority = (action.config?.priority as string) ?? mapSeverityToPriority(event.severity);
 
+        const deviceName = (event.metadata as Record<string, unknown>)?.deviceName ?? event.deviceId;
+        const siteName = (event.metadata as Record<string, unknown>)?.siteName ?? event.siteId;
+        const eventDescription = event.description ?? event.eventType?.replace(/_/g, ' ') ?? '';
+        const formattedDescription = [
+          `Incidente creado automáticamente por el motor de automatización.`,
+          `Dispositivo: ${deviceName}`,
+          `Sitio: ${siteName}`,
+          `Evento: ${event.eventType?.replace(/_/g, ' ')}`,
+          `Severidad: ${event.severity}`,
+          eventDescription ? `Descripción: ${eventDescription}` : '',
+        ].filter(Boolean).join('\n');
+
         const [incident] = await db
           .insert(incidents)
           .values({
             tenantId: event.tenantId,
             siteId: event.siteId,
             title,
-            description: `Incident auto-created by automation engine.\nEvent: ${event.eventType}\nSeverity: ${event.severity}\nDevice: ${event.deviceId}\nMetadata: ${JSON.stringify(event.metadata)}`,
+            description: formattedDescription,
             status: 'open',
             priority,
             createdBy: SYSTEM_USER_ID,
+            eventIds: [event.id],
           })
           .returning({ id: incidents.id });
 
@@ -909,6 +924,7 @@ export async function processScheduledRules(db: Database): Promise<void> {
 
       // Build a synthetic event for scheduled rules
       const syntheticEvent: AutomationEvent = {
+        id: crypto.randomUUID(),
         tenantId: rule.tenantId,
         siteId: '',
         deviceId: '',

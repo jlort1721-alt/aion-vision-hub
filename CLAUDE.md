@@ -144,7 +144,9 @@ Skills are located in `.claude/skills/` and provide specialized capabilities:
 
 ## Subagents
 
-Located in `.claude/agents/`:
+Located in `.claude/agents/` (18 agents):
+
+### Core Development (10)
 - `architect.md` — System architecture decisions
 - `build-error-resolver.md` — Build error diagnosis and fix
 - `code-reviewer.md` — Code review execution
@@ -153,24 +155,69 @@ Located in `.claude/agents/`:
 - `planner.md` — Implementation planning
 - `refactor-cleaner.md` — Code cleanup and refactoring
 - `security-reviewer.md` — Security vulnerability scanning
+- `superpowers-code-reviewer.md` — Senior code review for project steps
 - `tdd-guide.md` — TDD workflow guidance
+
+### Operations & Infrastructure (8)
+- `api-docs-generator.md` — OpenAPI 3.1 spec generation from routes + Zod schemas
+- `db-migration.md` — Drizzle ORM migration lifecycle (generate, validate, run, rollback)
+- `deploy-rollback.md` — Deployment pipeline + rollback procedures
+- `incident-response.md` — Incident triage, runbooks, and post-mortem reports
+- `integration-tester.md` — Cross-module integration test generation
+- `module-scaffold.md` — Full-stack module scaffolding (routes + service + schemas + test + frontend)
+- `monitor-observe.md` — System health monitoring and observability
+- `perf-profiler.md` — Performance profiling (queries, bundle, streams, workers)
 
 ## Commands
 
-Located in `.claude/commands/`:
+Located in `.claude/commands/` (25 commands):
+
+### Core Development (15)
 - `/build-fix` — Diagnose and fix build errors
 - `/checkpoint` — Save progress checkpoint
 - `/code-review` — Run code review
 - `/e2e` — Run end-to-end tests
 - `/eval` — Evaluate code quality
 - `/learn` — Learn from codebase patterns
-- `/orchestrate` — Multi-agent orchestration
+- `/orchestrate` — Multi-agent orchestration (11 workflow types)
 - `/plan` — Create implementation plan
 - `/refactor-clean` — Clean up code
+- `/scaffold` — Generate full-stack module from template
+- `/setup-pm` — Configure package manager
 - `/tdd` — Start TDD workflow
 - `/test-coverage` — Check test coverage
 - `/update-docs` — Update documentation
 - `/verify` — Verify changes
+
+### Operations & Infrastructure (10)
+- `/api-docs` — Generate/validate OpenAPI documentation
+- `/deploy` — Deploy to staging/production with rollback support
+- `/dep-update` — Audit and update dependencies
+- `/health` — Check system health (services, errors, metrics, streams)
+- `/incident` — Incident triage, investigation, and post-mortem
+- `/integration-test` — Generate/run cross-module integration tests
+- `/migrate` — Database migration lifecycle (generate, validate, run, rollback)
+- `/module-status` — Module coverage matrix (78 modules)
+- `/perf` — Performance profiling and analysis
+- `/update-codemaps` — Update architecture documentation
+
+## Hooks System
+
+Configured in `.claude/settings.json` with 9 executable scripts in `.claude/hooks/`:
+
+### PreToolUse (4 scripts)
+- `validate-bash.sh` — Branch protection, tmux reminder, import validation
+- `check-secrets.sh` — Blocks hardcoded API keys, private keys, passwords
+- `migration-safety.sh` — Blocks destructive SQL (DROP TABLE, TRUNCATE)
+
+### PostToolUse (4 scripts)
+- `prettier.sh` — Auto-format .ts/.tsx/.js/.json
+- `console-log-warn.sh` — Warns about console.log statements
+- `module-completeness.sh` — Checks module has service + schemas + test
+- `schema-validation.sh` — Verifies DB schema exported in index.ts
+
+### Stop (1 script)
+- `session-audit.sh` — Uncommitted changes, TODOs, secrets, console.log audit
 
 ## Workflow Integration
 

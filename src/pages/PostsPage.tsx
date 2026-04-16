@@ -295,19 +295,19 @@ export default function PostsPage() {
   }
 
   function getGuardName(userId: string) {
-    const p = profiles.find((pr: any) => pr.id === userId);
-    return p ? (p as any).full_name || (p as any).email : (userId || '').slice(0, 8);
+    const p = profiles.find((pr) => pr.id === userId);
+    return p ? String(p.full_name || p.email) : (userId || '').slice(0, 8);
   }
 
   function getSiteName(siteId: string | null) {
     if (!siteId) return 'Sin sitio';
-    const s = sites.find((s: any) => s.id === siteId);
-    return s ? (s as any).name : (siteId || '').slice(0, 8);
+    const s = sites.find((s) => s.id === siteId);
+    return s ? String(s.name) : (siteId || '').slice(0, 8);
   }
 
   function getDeviceName(deviceId: string) {
-    const d = devices.find((d: any) => d.id === deviceId);
-    return d ? (d as any).name : (deviceId || '').slice(0, 8);
+    const d = devices.find((d) => d.id === deviceId);
+    return d ? String(d.name) : (deviceId || '').slice(0, 8);
   }
 
   function getPostDevices(post: Post) {

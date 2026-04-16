@@ -160,9 +160,13 @@ export default function VisitorsPage() {
   const { data: passesData, isLoading: loadingPasses } = useQuery({ queryKey: ["visitors", "passes"], queryFn: () => visitorPassesApi.list() });
   const { data: statsData } = useQuery({ queryKey: ["visitors", "stats"], queryFn: () => visitorStatsApi.get(), refetchInterval: 30000 });
 
-  const allVisitors: any[] = (visitorsData as any)?.data ?? (Array.isArray(visitorsData) ? visitorsData : []);
-  const allPasses: any[] = (passesData as any)?.data ?? (passesData as any)?.items ?? (Array.isArray(passesData) ? passesData : []);
-  const stats: any = (statsData as any)?.data ?? statsData;
+  const visitorsEnvelope = visitorsData as Record<string, unknown> | unknown[] | undefined;
+  const passesEnvelope = passesData as Record<string, unknown> | unknown[] | undefined;
+  const statsEnvelope = statsData as Record<string, unknown> | undefined;
+
+  const allVisitors: Record<string, unknown>[] = (!Array.isArray(visitorsEnvelope) && visitorsEnvelope ? visitorsEnvelope.data as Record<string, unknown>[] : undefined) ?? (Array.isArray(visitorsData) ? visitorsData as Record<string, unknown>[] : []);
+  const allPasses: Record<string, unknown>[] = (!Array.isArray(passesEnvelope) && passesEnvelope ? (passesEnvelope.data ?? passesEnvelope.items) as Record<string, unknown>[] : undefined) ?? (Array.isArray(passesData) ? passesData as Record<string, unknown>[] : []);
+  const stats: Record<string, unknown> | undefined = (statsEnvelope?.data as Record<string, unknown> | undefined) ?? statsEnvelope;
 
   const filteredVisitors = useMemo(() => {
     if (!searchQuery) return allVisitors;

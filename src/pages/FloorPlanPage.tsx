@@ -10,6 +10,12 @@ import { Map, Camera, DoorOpen, Siren, Radio, Loader2 } from 'lucide-react';
 import { PageShell } from '@/components/shared/PageShell';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import type { ApiDevice, ApiSite, FloorPlanPosition } from '@/types/api-entities';
+
+/** Extended Leaflet Map with custom AION property */
+interface AionLeafletMap extends L.Map {
+  _aionImageLayer?: L.ImageOverlay;
+}
 
 // ── Device type config ──────────────────────────────────────
 const DEVICE_STYLES: Record<string, { color: string; label: string; icon: string }> = {
@@ -117,7 +123,7 @@ function generateFloorPlanSVG(siteName: string, deviceCount: number, address?: s
 }
 
 // ── Default device positions on the grid ────────────────────
-function generateDefaultPositions(devices: any[]): { deviceId: string; x: number; y: number }[] {
+function generateDefaultPositions(devices: ApiDevice[]): FloorPlanPosition[] {
   // Predefined positions spread across the floor plan
   const slots = [
     // Top row rooms
@@ -151,8 +157,8 @@ function FloorPlanMap({
   siteName,
   siteAddress,
 }: {
-  devices: any[];
-  positions: { deviceId: string; x: number; y: number }[];
+  devices: ApiDevice[];
+  positions: FloorPlanPosition[];
   onDeviceAction: (deviceId: string, action: string) => void;
   onPositionChange?: (deviceId: string, x: number, y: number) => void;
   siteName?: string;
@@ -179,7 +185,7 @@ function FloorPlanMap({
 
     const imageUrl = generateFloorPlanSVG('', 0);
     const imageLayer = L.imageOverlay(imageUrl, bounds).addTo(map);
-    (map as any)._aionImageLayer = imageLayer;
+    (map as AionLeafletMap)._aionImageLayer = imageLayer;
     map.fitBounds(bounds);
 
     mapRef.current = map;
@@ -197,12 +203,12 @@ function FloorPlanMap({
     const map = mapRef.current;
     if (!map) return;
     const bounds: L.LatLngBoundsExpression = [[0, 0], [800, 1200]];
-    const oldLayer = (map as any)._aionImageLayer;
+    const oldLayer = (map as AionLeafletMap)._aionImageLayer;
     if (oldLayer) map.removeLayer(oldLayer);
     const newUrl = generateFloorPlanSVG(siteName || '', devices.length, siteAddress);
     const newLayer = L.imageOverlay(newUrl, bounds).addTo(map);
     newLayer.bringToBack();
-    (map as any)._aionImageLayer = newLayer;
+    (map as AionLeafletMap)._aionImageLayer = newLayer;
   }, [siteName, siteAddress, devices.length]);
 
   // Update markers when devices/positions change
@@ -272,7 +278,7 @@ function FloorPlanMap({
             <span style="font-size:11px;color:${statusColor};font-weight:500;">${statusText}</span>
           </div>
           <div style="font-size:11px;color:#9ca3af;margin-bottom:2px;">${device.brand || ''} ${device.model || ''}</div>
-          <div style="font-size:11px;color:#6b7280;">${device.ip_address || (device as any).remote_address || ''}</div>
+          <div style="font-size:11px;color:#6b7280;">${device.ip_address || device.remote_address || ''}</div>
           ${actionButton}
         </div>
       `;
@@ -288,11 +294,12 @@ function FloorPlanMap({
 
   // Register global action handler
   useEffect(() => {
-    (window as any).__floorPlanAction__ = (deviceId: string, action: string) => {
+    const win = window as Window & { __floorPlanAction__?: (deviceId: string, action: string) => void };
+    win.__floorPlanAction__ = (deviceId: string, action: string) => {
       onDeviceAction(deviceId, action);
     };
     return () => {
-      delete (window as any).__floorPlanAction__;
+      delete win.__floorPlanAction__;
     };
   }, [onDeviceAction]);
 
@@ -305,21 +312,21 @@ export default function FloorPlanPage() {
   const { data: sites = [], isLoading: sitesLoading } = useSites();
   const { data: allDevices = [] } = useDevices();
   const [selectedSiteId, setSelectedSiteId] = useState<string>('');
-  const [positions, setPositions] = useState<{ deviceId: string; x: number; y: number }[]>([]);
+  const [positions, setPositions] = useState<FloorPlanPosition[]>([]);
   const [loadingPlan, setLoadingPlan] = useState(false);
 
-  const selectedSite = useMemo(() => sites.find((s: any) => s.id === selectedSiteId), [sites, selectedSiteId]);
+  const selectedSite = useMemo(() => sites.find((s) => s.id === selectedSiteId), [sites, selectedSiteId]);
 
   // Auto-select first site
   useEffect(() => {
     if (sites.length > 0 && !selectedSiteId) {
-      setSelectedSiteId((sites[0] as any).id);
+      setSelectedSiteId(String(sites[0].id));
     }
   }, [sites, selectedSiteId]);
 
   // Devices for selected site
   const siteDevices = useMemo(
-    () => allDevices.filter((d: any) => d.site_id === selectedSiteId),
+    () => allDevices.filter((d) => d.site_id === selectedSiteId),
     [allDevices, selectedSiteId]
   );
 
@@ -334,28 +341,42 @@ export default function FloorPlanPage() {
     setLoadingPlan(true);
 
     (async () => {
-      // Try localStorage first (operator-saved positions)
+      // Try localStorage cache first for instant display
       try {
         const saved = localStorage.getItem(`aion-fp-${selectedSiteId}`);
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
             if (!cancelled) { setPositions(parsed); setLoadingPlan(false); }
-            return;
           }
         }
       } catch { /* ignore */ }
 
+      // Fetch from backend (floor-plans positions API)
       try {
-        const data = await apiClient.get<any>(`/sites/${selectedSiteId}/floor-plan`);
-        if (!cancelled && data?.positions && Array.isArray(data.positions) && data.positions.length > 0) {
-          setPositions(data.positions);
+        const data = await apiClient.get<FloorPlanPosition[]>(`/floor-plans/${selectedSiteId}/positions`);
+        if (!cancelled && Array.isArray(data) && data.length > 0) {
+          const mapped = data.map((p: any) => ({
+            deviceId: p.deviceId,
+            x: Number(p.x),
+            y: Number(p.y),
+          }));
+          setPositions(mapped);
+          try { localStorage.setItem(`aion-fp-${selectedSiteId}`, JSON.stringify(mapped)); } catch { /* */ }
         } else if (!cancelled) {
-          setPositions(generateDefaultPositions(siteDevices));
+          // Fallback to default positions if no saved positions
+          const cachedPositions = localStorage.getItem(`aion-fp-${selectedSiteId}`);
+          if (!cachedPositions) {
+            setPositions(generateDefaultPositions(siteDevices));
+          }
         }
       } catch {
         if (!cancelled) {
-          setPositions(generateDefaultPositions(siteDevices));
+          // API not available — use defaults if no localStorage cache
+          const cachedPositions = localStorage.getItem(`aion-fp-${selectedSiteId}`);
+          if (!cachedPositions) {
+            setPositions(generateDefaultPositions(siteDevices));
+          }
         }
       } finally {
         if (!cancelled) setLoadingPlan(false);
@@ -367,7 +388,7 @@ export default function FloorPlanPage() {
 
   // Device action handler
   const handleDeviceAction = useCallback((deviceId: string, action: string) => {
-    const device = allDevices.find((d: any) => d.id === deviceId) as any;
+    const device = allDevices.find((d) => d.id === deviceId);
     if (!device) return;
 
     switch (action) {
@@ -393,20 +414,20 @@ export default function FloorPlanPage() {
 
   // Stats for selected site
   const stats = useMemo(() => {
-    const cameras = siteDevices.filter((d: any) => {
-      const type = d.type?.toLowerCase() || '';
+    const cameras = siteDevices.filter((d) => {
+      const type = String(d.type ?? '').toLowerCase();
       return type.includes('camera') || type.includes('nvr') || type.includes('dvr');
     }).length;
-    const doors = siteDevices.filter((d: any) => {
-      const type = d.type?.toLowerCase() || '';
+    const doors = siteDevices.filter((d) => {
+      const type = String(d.type ?? '').toLowerCase();
       return type.includes('door') || type.includes('access') || type.includes('lock');
     }).length;
-    const sirens = siteDevices.filter((d: any) => {
-      const type = d.type?.toLowerCase() || '';
+    const sirens = siteDevices.filter((d) => {
+      const type = String(d.type ?? '').toLowerCase();
       return type.includes('siren') || type.includes('alarm') || type.includes('horn');
     }).length;
     const sensors = siteDevices.length - cameras - doors - sirens;
-    const online = siteDevices.filter((d: any) => d.status === 'online' || d.status === 'active').length;
+    const online = siteDevices.filter((d) => d.status === 'online' || d.status === 'active').length;
     return { cameras, doors, sirens, sensors, online, total: siteDevices.length };
   }, [siteDevices]);
 
@@ -439,9 +460,9 @@ export default function FloorPlanPage() {
                 <SelectValue placeholder={t('floorPlan.chooseSite') || 'Select a site...'} />
               </SelectTrigger>
               <SelectContent>
-                {sites.map((site: any) => (
-                  <SelectItem key={site.id} value={site.id}>
-                    {site.name}
+                {sites.map((site) => (
+                  <SelectItem key={String(site.id)} value={String(site.id)}>
+                    {String(site.name)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -500,12 +521,16 @@ export default function FloorPlanPage() {
                 setPositions(prev => {
                   const next = prev.map(p => p.deviceId === deviceId ? { ...p, x, y } : p);
                   try { localStorage.setItem(`aion-fp-${selectedSiteId}`, JSON.stringify(next)); } catch { /* */ }
+                  // Persist to backend (non-blocking)
+                  apiClient.put(`/floor-plans/${selectedSiteId}/positions`, {
+                    positions: [{ deviceId, x, y }],
+                  }).catch(() => { /* localStorage is the fallback */ });
                   return next;
                 });
                 toast.success('Posición guardada');
               }}
-              siteName={(selectedSite as any)?.name}
-              siteAddress={(selectedSite as any)?.address}
+              siteName={selectedSite?.name as string | undefined}
+              siteAddress={selectedSite?.address as string | undefined}
             />
           )}
 

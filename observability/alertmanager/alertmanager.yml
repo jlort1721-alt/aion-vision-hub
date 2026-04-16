@@ -1,0 +1,101 @@
+# /opt/aion/observability/alertmanager/alertmanager.yml
+# Routes alerts based on severity. Critical -> WhatsApp + Slack + Email.
+# Lower severities -> Slack channel only.
+
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.sendgrid.net:587'
+  smtp_from: 'alerts@aionseg.co'
+  smtp_auth_username: 'apikey'
+  smtp_auth_password: '${SENDGRID_API_KEY}'
+
+# Templates for nicer formatting
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# ---- Routing tree ----------------------------------------------------------
+route:
+  receiver: 'default-slack'
+  group_by: ['alertname', 'group', 'severity']
+  group_wait:      30s
+  group_interval:  5m
+  repeat_interval: 4h
+
+  routes:
+    # Critical -> all channels including WhatsApp ON-CALL number
+    - matchers: ['severity="critical"']
+      receiver: oncall-all-channels
+      group_wait: 10s
+      repeat_interval: 30m
+      continue: true
+
+    # High -> Slack + email (no WhatsApp at 3am unless critical)
+    - matchers: ['severity="high"']
+      receiver: slack-and-email
+      repeat_interval: 2h
+      continue: true
+
+    # Vision-hub specific channel
+    - matchers: ['alertname=~"VisionHub.*"']
+      receiver: slack-vision
+
+    # AI cost alerts -> only billing channel
+    - matchers: ['alertname=~"Ai.*"']
+      receiver: slack-billing
+
+# ---- Inhibition: critical silences high+warning of same component ----------
+inhibit_rules:
+  - source_matchers: ['severity="critical"']
+    target_matchers: ['severity=~"high|warning"']
+    equal: ['alertname', 'group']
+
+# ---- Receivers -------------------------------------------------------------
+receivers:
+  - name: default-slack
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#aion-alerts'
+        send_resolved: true
+        title: '{{ template "aion.title" . }}'
+        text:  '{{ template "aion.body" . }}'
+
+  - name: slack-vision
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#aion-vision-hub'
+        send_resolved: true
+
+  - name: slack-billing
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#aion-billing'
+        send_resolved: false
+
+  - name: slack-and-email
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#aion-alerts'
+        send_resolved: true
+    email_configs:
+      - to: 'oncall@aionseg.co'
+        send_resolved: true
+
+  - name: oncall-all-channels
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#aion-incidents'
+        send_resolved: true
+        title: '🚨 [CRITICAL] {{ .CommonAnnotations.summary }}'
+    email_configs:
+      - to: 'oncall@aionseg.co,bella@aionseg.co'
+        send_resolved: true
+        headers:
+          Subject: '[AION CRITICAL] {{ .CommonAnnotations.summary }}'
+    webhook_configs:
+      # Internal AION endpoint that pushes a WhatsApp Business message via Twilio
+      - url: 'http://aion-comms:3300/api/alerts/whatsapp-oncall'
+        send_resolved: true
+        http_config:
+          authorization:
+            type: Bearer
+            credentials: '${ALERTMANAGER_BEARER}'

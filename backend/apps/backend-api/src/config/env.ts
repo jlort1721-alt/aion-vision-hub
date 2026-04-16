@@ -1,13 +1,15 @@
-import { z } from 'zod';
-import 'dotenv/config';
+import { z } from "zod";
+import "dotenv/config";
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === "production";
 
 export const envSchema = z.object({
   // Server
   PORT: z.coerce.number().default(3000),
-  HOST: z.string().default('0.0.0.0'),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  HOST: z.string().default("0.0.0.0"),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
 
   // Database
   DATABASE_URL: z.string().url(),
@@ -17,14 +19,17 @@ export const envSchema = z.object({
 
   // JWT
   JWT_SECRET: z.string().min(32),
-  JWT_ISSUER: z.string().default('aion-vision-hub'),
-  JWT_EXPIRATION: z.string().default('24h'),
+  JWT_ISSUER: z.string().default("aion-vision-hub"),
+  JWT_EXPIRATION: z.string().default("24h"),
 
   // CORS
-  CORS_ORIGINS: z.string().default('http://localhost:5173').refine(
-    (val) => !val.split(',').some((o) => o.trim() === '*'),
-    { message: 'CORS_ORIGINS must not contain wildcard (*). Specify explicit origins.' },
-  ),
+  CORS_ORIGINS: z
+    .string()
+    .default("http://localhost:5173")
+    .refine((val) => !val.split(",").some((o) => o.trim() === "*"), {
+      message:
+        "CORS_ORIGINS must not contain wildcard (*). Specify explicit origins.",
+    }),
 
   // Rate limiting
   RATE_LIMIT_MAX: z.coerce.number().default(100),
@@ -37,11 +42,16 @@ export const envSchema = z.object({
   // ElevenLabs TTS
   ELEVENLABS_API_KEY: z.string().optional(),
   ELEVENLABS_DEFAULT_VOICE_ID: z.string().optional(),
-  ELEVENLABS_MODEL_ID: z.string().default('eleven_multilingual_v2'),
+  ELEVENLABS_MODEL_ID: z.string().default("eleven_multilingual_v2"),
 
   // Encryption key for credential storage — REQUIRED in production
   CREDENTIAL_ENCRYPTION_KEY: isProduction
-    ? z.string().min(32, 'CREDENTIAL_ENCRYPTION_KEY is required in production (min 32 chars)')
+    ? z
+        .string()
+        .min(
+          32,
+          "CREDENTIAL_ENCRYPTION_KEY is required in production (min 32 chars)",
+        )
     : z.string().min(32).optional(),
 
   // Email provider (pick one: resend, sendgrid, or smtp)
@@ -60,7 +70,7 @@ export const envSchema = z.object({
   WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().optional(),
   WHATSAPP_VERIFY_TOKEN: z.string().optional(),
   WHATSAPP_APP_SECRET: z.string().min(32).optional(),
-  WHATSAPP_API_VERSION: z.string().default('v21.0'),
+  WHATSAPP_API_VERSION: z.string().default("v21.0"),
 
   // Twilio WhatsApp (alternative to Meta Cloud API)
   TWILIO_ACCOUNT_SID: z.string().optional(),
@@ -72,7 +82,7 @@ export const envSchema = z.object({
   // SIP / VoIP / Intercom
   SIP_HOST: z.string().optional(),
   SIP_PORT: z.coerce.number().default(5060),
-  SIP_TRANSPORT: z.enum(['udp', 'tcp', 'tls', 'wss']).default('udp'),
+  SIP_TRANSPORT: z.enum(["udp", "tcp", "tls", "wss"]).default("udp"),
   SIP_DOMAIN: z.string().optional(),
   SIP_ARI_URL: z.string().optional(),
   SIP_ARI_USERNAME: z.string().optional(),
@@ -84,7 +94,7 @@ export const envSchema = z.object({
   // eWeLink / Sonoff (backend proxy — credentials MUST NOT be in frontend)
   EWELINK_APP_ID: z.string().optional(),
   EWELINK_APP_SECRET: z.string().optional(),
-  EWELINK_REGION: z.enum(['us', 'eu', 'as', 'cn']).default('us'),
+  EWELINK_REGION: z.enum(["us", "eu", "as", "cn"]).default("us"),
 
   // eWeLink stored accounts for auto-login (up to 2 accounts for 22 sites)
   EWELINK_EMAIL_1: z.string().email().optional(),
@@ -95,22 +105,22 @@ export const envSchema = z.object({
   // Push notifications (VAPID)
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
-  VAPID_SUBJECT: z.string().default('mailto:admin@aionvisionhub.com'),
+  VAPID_SUBJECT: z.string().default("mailto:admin@aionvisionhub.com"),
 
   // IMOU / Dahua Cloud API (P2P cloud relay for XVR devices)
-  IMOU_APP_ID: z.string().default(''),
-  IMOU_APP_SECRET: z.string().default(''),
+  IMOU_APP_ID: z.string().default(""),
+  IMOU_APP_SECRET: z.string().default(""),
 
   // go2rtc stream gateway
-  GO2RTC_URL: z.string().default('http://localhost:1984'),
+  GO2RTC_URL: z.string().default("http://localhost:1984"),
 
   // HikConnect Cloud
   HIKCONNECT_AK: z.string().optional(),
   HIKCONNECT_SK: z.string().optional(),
-  HIKCONNECT_URL: z.string().default('https://open.hikvision.com'),
+  HIKCONNECT_URL: z.string().default("https://open.hikvision.com"),
 
   // Face Recognition service
-  FACE_RECOGNITION_URL: z.string().default('http://localhost:5050'),
+  FACE_RECOGNITION_URL: z.string().default("http://localhost:5050"),
 
   // VLLM / local AI
   VLLM_API_URL: z.string().optional(),
@@ -121,16 +131,20 @@ export const envSchema = z.object({
 
   // SIP provisioning
   SIP_DEFAULT_PASSWORD: z.string().optional(),
-  SIP_SERVER_ADDR: z.string().default('0.0.0.0'),
+  SIP_SERVER_ADDR: z.string().default("0.0.0.0"),
 
   // eWeLink MCP endpoint
   EWELINK_MCP_URL: z.string().optional(),
 
   // Nginx health check
-  NGINX_HEALTH_URL: z.string().default('http://localhost:80'),
+  NGINX_HEALTH_URL: z.string().default("http://localhost:80"),
 
   // CLAVE bridge
-  CLAVE_API_URL: z.string().default('http://localhost:8002/api/v1'),
+  CLAVE_API_URL: z.string().default("http://localhost:8002/api/v1"),
+
+  // Hikvision HCNetSDK Bridge (Python microservice)
+  HIK_BRIDGE_URL: z.string().default("http://localhost:8100"),
+  HIK_BRIDGE_API_KEY: z.string().optional(),
 
   // Telegram alerts
   TELEGRAM_BOT_TOKEN: z.string().optional(),
@@ -140,8 +154,8 @@ export const envSchema = z.object({
   SENTRY_DSN: z.string().optional(),
 
   // Twilio phone (voice) & TwiML
-  TWILIO_PHONE_NUMBER: z.string().optional(),       // Colombian landline (Voice only)
-  TWILIO_PHONE_NUMBER_US: z.string().optional(),    // US number (Voice + SMS)
+  TWILIO_PHONE_NUMBER: z.string().optional(), // Colombian landline (Voice only)
+  TWILIO_PHONE_NUMBER_US: z.string().optional(), // US number (Voice + SMS)
   TWILIO_TWIML_APP_SID: z.string().optional(),
   TWILIO_WEBHOOK_BASE: z.string().url().optional(),
 
@@ -149,15 +163,26 @@ export const envSchema = z.object({
   WEBHOOK_SECRET: z.string().optional(),
 
   // Logging
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  LOG_LEVEL: z
+    .enum(["fatal", "error", "warn", "info", "debug", "trace"])
+    .default("info"),
 
   // Monitoring / Observability
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
   PROMETHEUS_ENABLED: z
-    .enum(['true', 'false'])
-    .default('true')
-    .transform((v) => v === 'true'),
+    .enum(["true", "false"])
+    .default("true")
+    .transform((v) => v === "true"),
   GRAFANA_ADMIN_PASSWORD: z.string().optional(),
+
+  // MQTT
+  MQTT_BROKER_URL: z.string().url().optional(),
+  MQTT_USERNAME: z.string().optional(),
+  MQTT_PASSWORD: z.string().optional(),
+
+  // n8n
+  N8N_WEBHOOK_URL: z.string().url().optional(),
+  N8N_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export const config = envSchema.parse(process.env);

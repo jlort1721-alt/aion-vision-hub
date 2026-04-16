@@ -64,6 +64,7 @@ interface DocumentRow {
   uploaded_by_name: string;
   created_at: string;
   file_data?: string | null;
+  content?: { file_data?: string | null };
 }
 
 // ── Helpers ─────────────────────────────────────────────────
@@ -130,7 +131,7 @@ const DocumentsPage = () => {
   // Drag state
   const [dragOver, setDragOver] = useState(false);
 
-  const tenantId = (profile as any)?.tenant_id || user?.id || 'default';
+  const tenantId = (profile as Record<string, unknown> | null)?.tenant_id as string || user?.id || 'default';
 
   // ── Query: list documents ─────────────────────────────────
   const { data: documents = [], isLoading, isError, error, refetch } = useQuery({
@@ -244,7 +245,7 @@ const DocumentsPage = () => {
 
   async function handleDownload(doc: DocumentRow) {
     try {
-      const fileData = doc.file_data || (doc as any).content?.file_data;
+      const fileData = doc.file_data || doc.content?.file_data;
       if (fileData) {
         const a = document.createElement('a');
         a.href = fileData;
@@ -269,7 +270,7 @@ const DocumentsPage = () => {
   async function handlePreview(doc: DocumentRow) {
     setPreviewDoc(doc);
     try {
-      const fileData = doc.file_data || (doc as any).content?.file_data;
+      const fileData = doc.file_data || doc.content?.file_data;
       if (fileData) {
         setPreviewUrl(fileData);
         return;

@@ -1,0 +1,181 @@
+# /opt/aion/observability/docker-compose.yml
+# Bring up the full observability stack:
+#   docker compose -f /opt/aion/observability/docker-compose.yml up -d
+#
+# Requires .env file at /opt/aion/observability/.env with:
+#   QA_BOT_BEARER, SLACK_WEBHOOK_URL, SENDGRID_API_KEY, ALERTMANAGER_BEARER,
+#   PG_GRAFANA_PASS, GRAFANA_ADMIN_PASS, AION_DB_URL, VISION_HUB_TOKEN
+
+name: aion-observability
+
+networks:
+  obs:
+    driver: bridge
+  aion-host:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1500
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus
+    restart: unless-stopped
+    user: "65534:65534"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/aion-alerts.yml:/etc/prometheus/rules/aion-alerts.yml:ro
+      - ./prometheus/targets-public.yml:/etc/prometheus/targets/public.yml:ro
+      - ./prometheus/targets-authed.yml:/etc/prometheus/targets/authed.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.enable-lifecycle'
+      - '--web.external-url=https://metrics.aionseg.co'
+    ports:
+      - '127.0.0.1:9090:9090'
+    networks: [obs]
+    depends_on: [blackbox, alertmanager]
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    restart: unless-stopped
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./alertmanager/aion.tmpl:/etc/alertmanager/templates/aion.tmpl:ro
+      - alertmanager_data:/alertmanager
+    environment:
+      SLACK_WEBHOOK_URL:    ${SLACK_WEBHOOK_URL}
+      SENDGRID_API_KEY:     ${SENDGRID_API_KEY}
+      ALERTMANAGER_BEARER:  ${ALERTMANAGER_BEARER}
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=https://alerts.aionseg.co'
+    ports:
+      - '127.0.0.1:9093:9093'
+    networks: [obs]
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: blackbox
+    restart: unless-stopped
+    volumes:
+      - ./blackbox/blackbox.yml:/config/blackbox.yml.tmpl:ro
+    environment:
+      QA_BOT_BEARER: ${QA_BOT_BEARER}
+    # Render template with envsubst, then exec
+    entrypoint: |
+      sh -c 'apk add --no-cache gettext > /dev/null 2>&1 || true;
+             envsubst < /config/blackbox.yml.tmpl > /config/blackbox.yml;
+             exec /bin/blackbox_exporter --config.file=/config/blackbox.yml'
+    ports:
+      - '127.0.0.1:9115:9115'
+    networks: [obs]
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: node-exporter
+    restart: unless-stopped
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - '127.0.0.1:9100:9100'
+    networks: [obs]
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: postgres-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: ${AION_DB_URL_RO}
+    ports:
+      - '127.0.0.1:9187:9187'
+    networks: [obs, aion-host]
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.3.0
+    container_name: nginx-exporter
+    restart: unless-stopped
+    command:
+      - '--nginx.scrape-uri=http://host.docker.internal/stub_status'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    ports:
+      - '127.0.0.1:9113:9113'
+    networks: [obs]
+
+  pm2-exporter:
+    image: node:20-alpine
+    container_name: pm2-exporter
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./exporters/pm2_exporter.js:/app/pm2_exporter.js:ro
+      - /home/aion/.pm2:/root/.pm2
+    command: sh -c "npm install --silent pm2 && node /app/pm2_exporter.js"
+    environment:
+      PORT: 9209
+    ports:
+      - '127.0.0.1:9209:9209'
+    networks: [obs]
+
+  aion-exporter:
+    image: node:20-alpine
+    container_name: aion-exporter
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./exporters/aion_custom_exporter.js:/app/aion_custom_exporter.js:ro
+    command: sh -c "npm install --silent pg && node /app/aion_custom_exporter.js"
+    environment:
+      PORT: 9210
+      DATABASE_URL:      ${AION_DB_URL_RO}
+      VISION_HUB_URL:    http://host.docker.internal:3030/api/vision-hub/health
+      VISION_HUB_TOKEN:  ${VISION_HUB_TOKEN}
+      COMMS_QUEUE_URL:   http://host.docker.internal:3300/api/queue/whatsapp/stats
+      POLL_INTERVAL_MS:  '30000'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    ports:
+      - '127.0.0.1:9210:9210'
+    networks: [obs, aion-host]
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: grafana
+    restart: unless-stopped
+    user: "472:472"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER:     admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASS}
+      GF_SERVER_ROOT_URL:         https://metrics.aionseg.co/
+      GF_SERVER_DOMAIN:           metrics.aionseg.co
+      GF_AUTH_ANONYMOUS_ENABLED:  'false'
+      GF_INSTALL_PLUGINS:         grafana-piechart-panel
+      PG_GRAFANA_PASS:            ${PG_GRAFANA_PASS}
+    ports:
+      - '127.0.0.1:3009:3000'
+    networks: [obs, aion-host]
+    depends_on: [prometheus]
+
+volumes:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:

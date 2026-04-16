@@ -1,0 +1,17 @@
+{{ define "aion.title" }}
+[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}
+{{ end }}
+
+{{ define "aion.body" }}
+{{ range .Alerts -}}
+*Severity:* {{ .Labels.severity }}
+*Summary:*  {{ .Annotations.summary }}
+{{ if .Annotations.description }}*Description:* {{ .Annotations.description }}{{ end }}
+{{ if .Annotations.runbook }}*Runbook:* {{ .Annotations.runbook }}{{ end }}
+*Started:* {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}
+*Labels:*
+{{ range .Labels.SortedPairs }}  - {{ .Name }}: `{{ .Value }}`
+{{ end }}
+---
+{{ end }}
+{{ end }}

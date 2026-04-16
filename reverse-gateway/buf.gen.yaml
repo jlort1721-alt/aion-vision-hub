@@ -1,0 +1,37 @@
+# buf.gen.yaml
+#
+# Two targets:
+#   1. Go server stubs, dropped into ./proto-gen/go/ so the gateway can import
+#      `rgpb "github.com/claveseg/aion/reverse-gateway/proto-gen/go"`.
+#   2. TypeScript client stubs for the Fastify process, dropped into
+#      ./proto-gen/ts/ and re-exported from the api plugin.
+#
+# Run:
+#   make proto    (which calls `buf generate`)
+#
+# Required plugins (install once):
+#   go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+#   go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+#   npm  install --save-dev @bufbuild/protoc-gen-es @connectrpc/protoc-gen-connect-es
+
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: proto-gen/go
+    opt:
+      - paths=source_relative
+  - remote: buf.build/grpc/go
+    out: proto-gen/go
+    opt:
+      - paths=source_relative
+      - require_unimplemented_servers=false
+  - remote: buf.build/bufbuild/es
+    out: proto-gen/ts
+    opt:
+      - target=ts
+  - remote: buf.build/connectrpc/es
+    out: proto-gen/ts
+    opt:
+      - target=ts
+inputs:
+  - directory: proto

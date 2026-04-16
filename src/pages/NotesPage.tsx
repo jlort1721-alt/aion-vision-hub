@@ -83,8 +83,9 @@ export default function NotesPage() {
     enabled: !!profile,
   });
 
-  const notes: any[] = (result as any)?.data ?? (result as any)?.items ?? (Array.isArray(result) ? result : []);
-  const totalCount: number = Number((result as any)?.meta?.total ?? notes.length);
+  const resultEnvelope = result as Record<string, unknown> | unknown[] | undefined;
+  const notes: Record<string, unknown>[] = (!Array.isArray(resultEnvelope) && resultEnvelope ? ((resultEnvelope.data ?? resultEnvelope.items) as Record<string, unknown>[] | undefined) : undefined) ?? (Array.isArray(result) ? result as Record<string, unknown>[] : []);
+  const totalCount: number = Number((!Array.isArray(resultEnvelope) && resultEnvelope?.meta ? (resultEnvelope.meta as Record<string, unknown>).total : undefined) ?? notes.length);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   // ── Stats ──

@@ -325,6 +325,21 @@ export class AnalyticsService {
       },
     };
   }
+  async getOperatorActivity(tenantId: string, shiftStart: string, shiftEnd: string) {
+    const result = await db.execute(sql`
+      SELECT user_id, user_email,
+             count(*)::int as action_count,
+             count(DISTINCT entity_type)::int as entity_types_touched,
+             min(created_at) as first_action,
+             max(created_at) as last_action
+      FROM audit_logs
+      WHERE tenant_id = ${tenantId}
+        AND created_at BETWEEN ${shiftStart} AND ${shiftEnd}
+      GROUP BY user_id, user_email
+      ORDER BY action_count DESC
+    `);
+    return [...result];
+  }
 }
 
 export const analyticsService = new AnalyticsService();

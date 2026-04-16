@@ -55,11 +55,11 @@ export default function AnalyticsPage() {
     queryFn: () => analyticsDevicesApi.status(),
   });
 
-  const dashboard = dashboardData?.data as any;
-  const trends: any[] = trendsData?.data ?? [];
-  const topTypes: any[] = topTypesData?.data ?? [];
-  const incidents = incidentData?.data as any;
-  const devices: any[] = devicesData?.data ?? [];
+  const dashboard = dashboardData?.data as { events24h?: number; activeIncidents?: number; devicesOnline?: number; slaCompliance?: number; patrolCompliance?: number; alertCount?: number; [k: string]: unknown } | undefined;
+  const trends = (trendsData?.data ?? []) as { date?: string; count?: number; [k: string]: unknown }[];
+  const topTypes = (topTypesData?.data ?? []) as { type?: string; count?: number; [k: string]: unknown }[];
+  const incidents = incidentData?.data as { total?: number; open?: number; avgResolutionTime?: number; [k: string]: unknown } | undefined;
+  const devices = (devicesData?.data ?? []) as { name?: string; status?: string; type?: string; [k: string]: unknown }[];
 
   if (isError) return <ErrorState error={error as Error} onRetry={refetch} />;
 

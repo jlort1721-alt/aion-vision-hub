@@ -1,0 +1,13 @@
+# ops/sdks/SHA256SUMS
+#
+# Pin the exact versions you downloaded from the vendor portals.
+# Replace the placeholder hashes below by running:
+#
+#   sha256sum sdks/incoming/*.tar.gz >> ops/sdks/SHA256SUMS
+#
+# After first pin, NEVER change a line silently — a hash change means the
+# vendor shipped a new build. Bump the gateway minor version and re-test.
+
+0000000000000000000000000000000000000000000000000000000000000000  General_NetSDK_Linux64.tar.gz
+0000000000000000000000000000000000000000000000000000000000000000  HCNetSDK_Linux64.tar.gz
+0000000000000000000000000000000000000000000000000000000000000000  EHomeSDK_Linux64.tar.gz

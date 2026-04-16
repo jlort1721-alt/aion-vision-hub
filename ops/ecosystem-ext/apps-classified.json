@@ -1,0 +1,179 @@
+{
+  "_already_managed_by_v1_skip_these": ["aionseg-api"],
+
+  "stateful_blue_green": {
+    "apps": [
+      {
+        "name": "n8n-automations",
+        "cwd": "/var/www/aionseg",
+        "script": "/usr/bin/n8n",
+        "base_port": 5678,
+        "exec_mode": "fork",
+        "instances": 1,
+        "max_memory_restart": "1G",
+        "kill_timeout": 30000,
+        "health_endpoint": "/healthz",
+        "env": {
+          "N8N_PORT": "5678",
+          "GENERIC_TIMEZONE": "America/Bogota"
+        },
+        "drain_strategy": "wait_for_inflight",
+        "_notes": "Workflows activos en memoria, 325MB. Necesita drain antes de stop."
+      }
+    ]
+  },
+
+  "bridge_singleton": {
+    "apps": [
+      {
+        "name": "native-device-bridge",
+        "cwd": "/var/www/aionseg/backend/apps/backend-api",
+        "script": "dist/workers/native-device-bridge.js",
+        "port": 3400,
+        "exec_mode": "fork",
+        "instances": 1,
+        "max_memory_restart": "800M",
+        "kill_timeout": 15000,
+        "health_endpoint": "/health",
+        "env": {},
+        "_notes": "Bridge a dispositivos nativos, 105MB. Conexiones persistentes."
+      },
+      {
+        "name": "aion-vh-bridge",
+        "cwd": "/opt/aion/vision-hub/bridge",
+        "script": "/usr/bin/bash",
+        "port": 3500,
+        "exec_mode": "fork",
+        "instances": 1,
+        "max_memory_restart": "800M",
+        "kill_timeout": 15000,
+        "health_endpoint": "/health",
+        "env": {},
+        "_notes": "Vision Hub bridge, 60MB. Conexion a camaras."
+      },
+      {
+        "name": "aion-vh-orchestrator",
+        "cwd": "/opt/aion/vision-hub/orchestrator",
+        "script": "/usr/bin/bash",
+        "port": 3501,
+        "exec_mode": "fork",
+        "instances": 1,
+        "max_memory_restart": "800M",
+        "kill_timeout": 15000,
+        "health_endpoint": "/health",
+        "env": {},
+        "_notes": "Vision Hub orchestrator, 60MB."
+      },
+      {
+        "name": "hik-heartbeat-bridge",
+        "cwd": "/home/ubuntu",
+        "script": "/usr/local/bin/hik-heartbeat-bridge.sh",
+        "port": 3600,
+        "exec_mode": "fork",
+        "instances": 1,
+        "max_memory_restart": "200M",
+        "kill_timeout": 10000,
+        "health_endpoint": "/health",
+        "env": {},
+        "_notes": "Heartbeat Hikvision, 3MB. Bridge ligero."
+      },
+      {
+        "name": "isapi-alerts",
+        "cwd": "/home/ubuntu",
+        "script": "/var/www/aionseg/backend/apps/backend-api/dist/workers/isapi-listener-worker.js",
+        "port": 3700,
+        "exec_mode": "fork",
+        "instances": 1,
+        "max_memory_restart": "600M",
+        "kill_timeout": 15000,
+        "health_endpoint": "/health",
+        "env": {},
+        "_notes": "ISAPI event listener, 64MB. Bridge a DVR alerts."
+      },
+      {
+        "name": "platform-server",
+        "cwd": "/home/ubuntu",
+        "script": "/usr/local/bin/device-platform-server.py",
+        "port": 3800,
+        "exec_mode": "fork",
+        "instances": 1,
+        "max_memory_restart": "400M",
+        "kill_timeout": 10000,
+        "health_endpoint": "/health",
+        "env": {},
+        "_notes": "Device platform server (Python), 20MB."
+      }
+    ]
+  },
+
+  "stateless_singleton": {
+    "apps": [
+      {
+        "name": "detection-worker",
+        "cwd": "/var/www/aionseg/backend/apps/backend-api",
+        "script": "dist/workers/detection-worker.js",
+        "exec_mode": "fork",
+        "instances": 1,
+        "max_memory_restart": "600M",
+        "kill_timeout": 10000,
+        "env": {},
+        "_notes": "Worker de detecciones, 89MB. Jobs re-enqueue en SIGTERM."
+      },
+      {
+        "name": "hik-monitor",
+        "cwd": "/var/www/aionseg/backend/apps/backend-api",
+        "script": "dist/workers/hikvision-stream-monitor.js",
+        "exec_mode": "fork",
+        "instances": 1,
+        "max_memory_restart": "600M",
+        "kill_timeout": 10000,
+        "env": {},
+        "_notes": "Monitor de streams Hikvision, 90MB."
+      },
+      {
+        "name": "face-recognition",
+        "cwd": "/var/www/aionseg",
+        "script": "face_service.py",
+        "exec_mode": "fork",
+        "instances": 1,
+        "max_memory_restart": "400M",
+        "kill_timeout": 10000,
+        "env": {},
+        "_notes": "Servicio facial (Python), 19MB."
+      },
+      {
+        "name": "snap-dahua",
+        "cwd": "/home/ubuntu",
+        "script": "/usr/local/bin/dahua_snap_api.py",
+        "exec_mode": "fork",
+        "instances": 1,
+        "max_memory_restart": "200M",
+        "kill_timeout": 10000,
+        "env": {},
+        "_notes": "Snapshots Dahua (Python), 22MB."
+      }
+    ]
+  },
+
+  "leave_alone": {
+    "apps": [
+      { "name": "pm2-logrotate", "_notes": "PM2 module, auto-managed" },
+      { "name": "snap-ss-dvr", "_notes": "Bash script snapshot, 3MB" },
+      { "name": "snap-ag-dvr1", "_notes": "Bash script snapshot, 3MB" },
+      { "name": "snap-ag-dvr", "_notes": "Bash script snapshot, 3MB" },
+      { "name": "snap-pq-nvr", "_notes": "Bash script snapshot, 3MB" },
+      { "name": "snap-pq-dvr", "_notes": "Bash script snapshot, 3MB" },
+      { "name": "snap-tl-dvr", "_notes": "Bash script snapshot, 3MB" },
+      { "name": "snap-tl-nvr", "_notes": "Bash script snapshot, 3MB" },
+      { "name": "snap-br-lpr1", "_notes": "Bash script LPR snapshot, 3MB" },
+      { "name": "snap-br-lpr2", "_notes": "Bash script LPR snapshot, 3MB" },
+      { "name": "snap-se-dvr1", "_notes": "Bash script snapshot, 3MB" },
+      { "name": "snap-ar-dvr", "_notes": "Bash script snapshot, 3MB" },
+      { "name": "snap-rtsp", "_notes": "Bash script RTSP snapshot, 3MB" },
+      {
+        "name": "aionseg-api",
+        "_notes": "API principal, ya gestionado directamente"
+      }
+    ]
+  }
+}

@@ -323,7 +323,7 @@ class ApiClient {
     const routeMap: Record<string, string> = {
       'whatsapp-api': '/whatsapp',
       'email-api': '/email',
-      'health-api': '/health',
+      'health-api': '/health/detailed',
       'events-api': '/events',
       'incidents-api': '/incidents',
       'integrations-api': '/integrations',

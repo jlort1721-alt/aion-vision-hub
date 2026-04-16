@@ -72,7 +72,7 @@ export class EvidenceService {
    *
    * In a production environment this would:
    * 1. Call the device adapter to take a snapshot (ONVIF / RTSP frame grab)
-   * 2. Upload the resulting image to Supabase Storage
+   * 2. Upload the resulting image to local/S3 storage
    * 3. Create an evidence record with the resulting URLs
    *
    * For now, we create the evidence record with a placeholder that the

@@ -1,0 +1,127 @@
+# /opt/aion/observability/prometheus/prometheus.yml
+# Scrapes node, pm2, postgres, blackbox (HTTP probes for 70 URLs), nginx, vision-hub.
+
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: aion-prod
+    environment: production
+
+# ---- Alerting ---------------------------------------------------------------
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+# ---- Scrape configs ---------------------------------------------------------
+scrape_configs:
+
+  # Self
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node exporter (CPU/RAM/disk/network of the VPS)
+  - job_name: node
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # PostgreSQL exporter
+  - job_name: postgres
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  # Nginx log/status exporter
+  - job_name: nginx
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+
+  # PM2 metrics (custom exporter — see exporters/pm2_exporter.js)
+  - job_name: pm2
+    static_configs:
+      - targets: ['pm2-exporter:9209']
+
+  # AION app metrics (each app exposes /metrics on its own port)
+  - job_name: aion-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['127.0.0.1:3000', '127.0.0.1:3001']
+        labels: { service: api }
+
+  - job_name: aion-frontend
+    metrics_path: /api/metrics
+    static_configs:
+      - targets: ['127.0.0.1:3100', '127.0.0.1:3101']
+        labels: { service: frontend }
+
+  - job_name: aion-agent
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['127.0.0.1:3200', '127.0.0.1:3201']
+        labels: { service: agent }
+
+  - job_name: aion-model-router
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['127.0.0.1:8787', '127.0.0.1:8788']
+        labels: { service: model-router }
+
+  - job_name: aion-vision-hub
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['127.0.0.1:3030', '127.0.0.1:3031']
+        labels: { service: vision-hub }
+
+  - job_name: aion-comms
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['127.0.0.1:3300', '127.0.0.1:3301']
+        labels: { service: comms }
+
+  # Blackbox HTTP probes — the 70 URLs
+  - job_name: blackbox-public
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    file_sd_configs:
+      - files: ['/etc/prometheus/targets/public.yml']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  - job_name: blackbox-authed
+    metrics_path: /probe
+    params:
+      module: [http_2xx_with_auth]
+    file_sd_configs:
+      - files: ['/etc/prometheus/targets/authed.yml']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  # Vision Hub /api/vision-hub/health JSON probe (custom)
+  - job_name: vision-hub-services
+    metrics_path: /probe
+    params:
+      module: [vision_hub_health]
+    static_configs:
+      - targets: ['https://aionseg.co/api/vision-hub/health']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115

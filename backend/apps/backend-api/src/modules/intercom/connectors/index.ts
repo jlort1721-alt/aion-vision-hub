@@ -7,6 +7,7 @@
 
 import type { IntercomConnector, IntercomBrand } from '../types.js';
 import { FanvilConnector } from './fanvil-connector.js';
+import { GrandstreamConnector } from './grandstream-connector.js';
 import { GenericSipConnector, HikvisionIntercomConnector, DahuaIntercomConnector } from './generic-sip-connector.js';
 
 const connectorInstances = new Map<IntercomBrand, IntercomConnector>();
@@ -23,6 +24,9 @@ export function getConnector(brand: IntercomBrand | string): IntercomConnector {
   switch (key) {
     case 'fanvil':
       connector = new FanvilConnector();
+      break;
+    case 'grandstream':
+      connector = new GrandstreamConnector();
       break;
     case 'hikvision':
       connector = new HikvisionIntercomConnector();
@@ -44,6 +48,7 @@ export function getConnector(brand: IntercomBrand | string): IntercomConnector {
 export function listConnectors(): Array<{ brand: IntercomBrand; displayName: string }> {
   return [
     { brand: 'fanvil', displayName: 'Fanvil SIP Intercom' },
+    { brand: 'grandstream', displayName: 'Grandstream SIP Intercom' },
     { brand: 'hikvision', displayName: 'Hikvision IP Intercom' },
     { brand: 'dahua', displayName: 'Dahua IP Intercom' },
     { brand: 'akuvox', displayName: 'Akuvox SIP Intercom' },
@@ -52,4 +57,5 @@ export function listConnectors(): Array<{ brand: IntercomBrand; displayName: str
 }
 
 export { FanvilConnector } from './fanvil-connector.js';
+export { GrandstreamConnector } from './grandstream-connector.js';
 export { GenericSipConnector, HikvisionIntercomConnector, DahuaIntercomConnector } from './generic-sip-connector.js';

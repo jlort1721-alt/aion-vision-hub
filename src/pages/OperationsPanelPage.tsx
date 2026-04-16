@@ -47,9 +47,15 @@ import {
 
 // ── Types ────────────────────────────────────────────────────
 
-interface ApiResponse<T = any> {
+import type {
+  ApiDomoticDevice, ApiAccessPerson, ApiAccessVehicle,
+  ApiIntercomDevice, ApiDatabaseRecord, ApiEwelinkStatus,
+  ApiAiChatResponse, ApiWhatsAppTemplate,
+} from '@/types/api-entities';
+
+interface ApiResponse<T = Record<string, unknown>> {
   data: T[] | T;
-  meta?: any;
+  meta?: Record<string, unknown>;
 }
 
 // ── Main Page ────────────────────────────────────────────────
@@ -245,13 +251,15 @@ function LightsControlCard() {
 
   const lightDevices = useMemo(() =>
     domoticDevices.filter(
-      (d: any) =>
-        d.type === 'light' ||
+      (d) => {
+        const name = String(d.name ?? '').toLowerCase();
+        return d.type === 'light' ||
         d.type === 'relay' ||
-        d.name?.toLowerCase().includes('luz') ||
-        d.name?.toLowerCase().includes('light') ||
-        d.name?.toLowerCase().includes('lamp') ||
-        d.name?.toLowerCase().includes('iluminacion')
+        name.includes('luz') ||
+        name.includes('light') ||
+        name.includes('lamp') ||
+        name.includes('iluminacion');
+      }
     ), [domoticDevices]);
 
   const toggleMutation = useMutation({
@@ -288,15 +296,15 @@ function LightsControlCard() {
         ) : lightDevices.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">No light devices configured</p>
         ) : (
-          lightDevices.map((device: any) => (
+          lightDevices.map((device) => (
             <div key={device.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
               <div className="flex items-center gap-2 min-w-0">
-                <Lightbulb className={`h-4 w-4 shrink-0 ${device.state === 'on' ? 'text-warning' : 'text-muted-foreground'}`} />
-                <span className="text-sm truncate">{device.name}</span>
+                <Lightbulb className={`h-4 w-4 shrink-0 ${String(device.state) === 'on' ? 'text-warning' : 'text-muted-foreground'}`} />
+                <span className="text-sm truncate">{String(device.name)}</span>
               </div>
               <Switch
-                checked={device.state === 'on'}
-                onCheckedChange={() => toggleMutation.mutate({ id: device.id, currentState: device.state || 'off' })}
+                checked={String(device.state) === 'on'}
+                onCheckedChange={() => toggleMutation.mutate({ id: String(device.id), currentState: String(device.state ?? 'off') })}
                 disabled={toggleMutation.isPending}
               />
             </div>
@@ -316,12 +324,14 @@ function SirenControlCard() {
 
   const sirenDevices = useMemo(() =>
     domoticDevices.filter(
-      (d: any) =>
-        d.type === 'siren' ||
+      (d) => {
+        const name = String(d.name ?? '').toLowerCase();
+        return d.type === 'siren' ||
         d.type === 'alarm' ||
-        d.name?.toLowerCase().includes('sirena') ||
-        d.name?.toLowerCase().includes('siren') ||
-        d.name?.toLowerCase().includes('alarm')
+        name.includes('sirena') ||
+        name.includes('siren') ||
+        name.includes('alarm');
+      }
     ), [domoticDevices]);
 
   const activateMutation = useMutation({
@@ -333,7 +343,7 @@ function SirenControlCard() {
     },
     onSuccess: () => {
       toast.success('Siren activated', {
-        description: `Duration: ${duration}s - ${sirenDevices.find((d: any) => d.id === selectedDevice)?.name}`,
+        description: `Duration: ${duration}s - ${sirenDevices.find((d) => d.id === selectedDevice)?.name}`,
       });
       setConfirmOpen(false);
     },
@@ -366,8 +376,8 @@ function SirenControlCard() {
                     {sirenDevices.length === 0 ? (
                       <SelectItem value="_none" disabled>No siren devices configured</SelectItem>
                     ) : (
-                      sirenDevices.map((d: any) => (
-                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      sirenDevices.map((d) => (
+                        <SelectItem key={String(d.id)} value={String(d.id)}>{String(d.name)}</SelectItem>
                       ))
                     )}
                   </SelectContent>
@@ -414,7 +424,7 @@ function SirenControlCard() {
             </DialogTitle>
             <DialogDescription>
               This will activate the siren on{' '}
-              <strong>{sirenDevices.find((d: any) => d.id === selectedDevice)?.name || 'the selected device'}</strong>{' '}
+              <strong>{sirenDevices.find((d) => d.id === selectedDevice)?.name || 'the selected device'}</strong>{' '}
               for <strong>{duration} seconds</strong>. This action is logged and audited.
             </DialogDescription>
           </DialogHeader>
@@ -561,16 +571,16 @@ function EwelinkStatusCard() {
   const { data: ewelinkData, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['ewelink-status'],
     queryFn: async () => {
-      const response = await apiClient.get<{ data: any }>('/ewelink');
+      const response = await apiClient.get<ApiEwelinkStatus>('/ewelink');
       return response;
     },
     enabled: isAuthenticated,
     refetchInterval: 60000,
   });
 
-  const status = (ewelinkData as any)?.data?.status || (ewelinkData as any)?.status || 'unknown';
+  const status = ewelinkData?.data?.status || ewelinkData?.status || 'unknown';
   const isConnected = status === 'connected' || status === 'online' || status === 'ok';
-  const deviceCount = (ewelinkData as any)?.data?.devices?.length || (ewelinkData as any)?.devices?.length || 0;
+  const deviceCount = ewelinkData?.data?.devices?.length || ewelinkData?.devices?.length || 0;
 
   return (
     <Card>
@@ -626,13 +636,19 @@ function ResidentLookupCard() {
   const results = useMemo(() => {
     if (!searchTerm.trim()) return [];
     const term = searchTerm.toLowerCase();
-    return (people as any[]).filter(
-      (p) =>
-        p.full_name?.toLowerCase().includes(term) ||
-        p.unit?.toLowerCase().includes(term) ||
-        p.phone?.includes(term) ||
-        p.email?.toLowerCase().includes(term) ||
-        p.document_id?.includes(term)
+    return people.filter(
+      (p) => {
+        const fullName = String(p.full_name ?? '').toLowerCase();
+        const unit = String(p.unit ?? '').toLowerCase();
+        const phone = String(p.phone ?? '');
+        const email = String(p.email ?? '').toLowerCase();
+        const docId = String(p.document_id ?? '');
+        return fullName.includes(term) ||
+        unit.includes(term) ||
+        phone.includes(term) ||
+        email.includes(term) ||
+        docId.includes(term);
+      }
     ).slice(0, 8);
   }, [people, searchTerm]);
 
@@ -660,18 +676,18 @@ function ResidentLookupCard() {
           </div>
         ) : results.length > 0 ? (
           <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-thin">
-            {results.map((person: any) => (
-              <div key={person.id} className="p-2.5 rounded-md border border-border hover:bg-muted/50 transition-colors">
+            {results.map((person) => (
+              <div key={String(person.id)} className="p-2.5 rounded-md border border-border hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{person.full_name}</span>
-                  <Badge variant="secondary" className="text-[10px]">{person.type || 'resident'}</Badge>
+                  <span className="text-sm font-medium">{String(person.full_name ?? '')}</span>
+                  <Badge variant="secondary" className="text-[10px]">{String(person.type ?? 'resident')}</Badge>
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                  {person.unit && <span>Unit: {person.unit}</span>}
-                  {person.phone && <span>{person.phone}</span>}
+                  {person.unit && <span>Unit: {String(person.unit)}</span>}
+                  {person.phone && <span>{String(person.phone)}</span>}
                 </div>
                 {person.email && (
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{person.email}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{String(person.email)}</p>
                 )}
               </div>
             ))}
@@ -694,15 +710,17 @@ function VehicleLookupCard() {
   const results = useMemo(() => {
     if (!searchTerm.trim()) return [];
     const term = searchTerm.toLowerCase();
-    return (vehicles as any[]).filter(
-      (v) =>
-        v.plate?.toLowerCase().includes(term) ||
-        v.brand?.toLowerCase().includes(term) ||
-        v.model?.toLowerCase().includes(term) ||
-        v.color?.toLowerCase().includes(term)
+    return vehicles.filter(
+      (v) => {
+        const plate = String(v.plate ?? '').toLowerCase();
+        const brand = String(v.brand ?? '').toLowerCase();
+        const model = String(v.model ?? '').toLowerCase();
+        const color = String(v.color ?? '').toLowerCase();
+        return plate.includes(term) || brand.includes(term) || model.includes(term) || color.includes(term);
+      }
     ).slice(0, 8).map((v) => ({
       ...v,
-      owner: (people as any[]).find((p) => p.id === v.person_id),
+      owner: people.find((p) => p.id === v.person_id) as Record<string, unknown> | undefined,
     }));
   }, [vehicles, people, searchTerm]);
 
@@ -730,7 +748,7 @@ function VehicleLookupCard() {
           </div>
         ) : results.length > 0 ? (
           <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-thin">
-            {results.map((vehicle: any) => (
+            {results.map((vehicle) => (
               <div key={vehicle.id} className="p-2.5 rounded-md border border-border hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold font-mono tracking-wider">{vehicle.plate}</span>
@@ -771,7 +789,7 @@ function DatabaseSearchCard() {
     queryKey: ['ops-db-search', searchTerm],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse>('/database-records', { search: searchTerm });
-      return (Array.isArray(response.data) ? response.data : []) as any[];
+      return (Array.isArray(response.data) ? response.data : []) as Record<string, unknown>[];
     },
     enabled: isAuthenticated && searchTerm.trim().length >= 2,
   });
@@ -803,15 +821,15 @@ function DatabaseSearchCard() {
           </div>
         ) : results.length > 0 ? (
           <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-thin">
-            {results.slice(0, 10).map((record: any) => (
-              <div key={record.id} className="p-2.5 rounded-md border border-border hover:bg-muted/50 transition-colors">
+            {results.slice(0, 10).map((record) => (
+              <div key={String(record.id)} className="p-2.5 rounded-md border border-border hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium truncate">{record.title || record.name || 'Untitled'}</span>
-                  <Badge variant="outline" className="text-[10px] shrink-0 ml-2">{record.category || 'record'}</Badge>
+                  <span className="text-sm font-medium truncate">{String(record.title ?? record.name ?? 'Untitled')}</span>
+                  <Badge variant="outline" className="text-[10px] shrink-0 ml-2">{String(record.category ?? 'record')}</Badge>
                 </div>
-                {record.tags && record.tags.length > 0 && (
+                {Array.isArray(record.tags) && record.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {(record.tags || []).slice(0, 3).map((tag: string) => (
+                    {(record.tags as string[]).slice(0, 3).map((tag: string) => (
                       <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{tag}</span>
                     ))}
                   </div>
@@ -940,11 +958,11 @@ function WelcomeMessageCard() {
                   <SelectValue placeholder="Select intercom device..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {(intercomDevices as any[]).length === 0 ? (
+                  {intercomDevices.length === 0 ? (
                     <SelectItem value="_none" disabled>No intercom devices</SelectItem>
                   ) : (
-                    (intercomDevices as any[]).map((d: any) => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    intercomDevices.map((d) => (
+                      <SelectItem key={String(d.id)} value={String(d.id)}>{String(d.name)}</SelectItem>
                     ))
                   )}
                 </SelectContent>
@@ -976,15 +994,15 @@ function WhatsAppQuickSendCard() {
 
   const { data: templatesData, isLoading: loadingTemplates } = useQuery({
     queryKey: ['whatsapp-templates-ops'],
-    queryFn: () => apiClient.edgeFunction<any>('whatsapp-api', { action: 'templates' }, { method: 'GET' }),
+    queryFn: () => apiClient.edgeFunction<{ data?: ApiWhatsAppTemplate[]; templates?: ApiWhatsAppTemplate[] }>('whatsapp-api', { action: 'templates' }, { method: 'GET' }),
     enabled: isAuthenticated,
   });
 
-  const templates = (templatesData as any)?.data || (templatesData as any)?.templates || [];
+  const templates = templatesData?.data || templatesData?.templates || [];
 
   const sendMutation = useMutation({
     mutationFn: async () => {
-      const payload: any = {
+      const payload: Record<string, string> = {
         to: recipient.trim(),
         type: selectedTemplate ? 'template' : 'text',
       };
@@ -994,7 +1012,7 @@ function WhatsAppQuickSendCard() {
       } else {
         payload.body = customMessage;
       }
-      return apiClient.edgeFunction<any>('whatsapp-api', { action: 'send' }, { method: 'POST', body: JSON.stringify(payload) });
+      return apiClient.edgeFunction<Record<string, unknown>>('whatsapp-api', { action: 'send' }, { method: 'POST', body: JSON.stringify(payload) });
     },
     onSuccess: () => {
       toast.success('WhatsApp message sent', { description: `To: ${recipient}` });
@@ -1030,9 +1048,9 @@ function WhatsAppQuickSendCard() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="_custom">Custom message</SelectItem>
-              {Array.isArray(templates) && templates.map((t: any) => (
-                <SelectItem key={t.name || t.id} value={t.name || t.id}>
-                  {t.name || t.id}
+              {Array.isArray(templates) && templates.map((t) => (
+                <SelectItem key={t.name || t.id} value={t.name || String(t.id)}>
+                  {t.name || String(t.id)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1072,18 +1090,18 @@ function AskAionCard() {
 
   const askMutation = useMutation({
     mutationFn: async () => {
-      const result = await apiClient.post<{ data: { response?: string; message?: string; answer?: string } }>('/ai/chat', {
+      const result = await apiClient.post<ApiAiChatResponse>('/ai/chat', {
         message: question,
         context: 'operations_panel',
       });
       return result;
     },
     onSuccess: (result) => {
-      const answer = (result as any)?.data?.response
-        || (result as any)?.data?.message
-        || (result as any)?.data?.answer
-        || (result as any)?.response
-        || (result as any)?.message
+      const answer = result?.data?.response
+        || result?.data?.message
+        || result?.data?.answer
+        || result?.response
+        || result?.message
         || 'No response received.';
       setResponse(answer);
     },

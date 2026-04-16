@@ -1,0 +1,84 @@
+# ansible/playbooks/reverse-connect.yml
+#
+# Configura el Registro Automático (Dahua) o ISUP 5.0 (Hikvision) en todos
+# los equipos del inventario y los deja apuntando al VPS AION.
+#
+# Uso:
+#   # Canary (1 sitio)
+#   ansible-playbook -i inventory/prod.yml playbooks/reverse-connect.yml --limit wave0
+#
+#   # Wave 1 (5 sitios)
+#   ansible-playbook -i inventory/prod.yml playbooks/reverse-connect.yml --limit wave1
+#
+#   # Todo
+#   ansible-playbook -i inventory/prod.yml playbooks/reverse-connect.yml
+#
+# Requiere:
+#   - ansible-core >= 2.15
+#   - vault password file en ~/.ansible_vault_password
+#   - acceso de red a la IP local de cada DVR/NVR (VPN o corriendo desde
+#     una máquina dentro del sitio)
+
+- name: Provisionar reverse-connect en toda la flota
+  hosts: all
+  gather_facts: false
+  serial: 5          # máximo 5 equipos en paralelo para no saturar central
+  vars_files:
+    - ../inventory/secrets.yml
+
+  pre_tasks:
+    - name: Validar que los campos obligatorios existen
+      ansible.builtin.assert:
+        that:
+          - vendor in ['dahua', 'hikvision']
+          - site_code is defined and site_code | length > 0
+          - device_id is defined and device_id | length > 0
+          - admin_user is defined
+          - admin_password is defined
+          - (vendor == 'dahua') or (isup_key is defined)
+        fail_msg: "Faltan campos en el inventario para {{ inventory_hostname }}"
+
+    - name: Verificar conectividad con el equipo
+      ansible.builtin.wait_for:
+        host: "{{ local_ip }}"
+        port: 80
+        timeout: 15
+      delegate_to: localhost
+
+  tasks:
+    - name: Dahua — configurar Registro Automático
+      ansible.builtin.include_role:
+        name: reverse_connect
+        tasks_from: dahua.yml
+      when: vendor == 'dahua'
+
+    - name: Hikvision — habilitar ISUP 5.0
+      ansible.builtin.include_role:
+        name: reverse_connect
+        tasks_from: hikvision.yml
+      when: vendor == 'hikvision'
+
+  post_tasks:
+    - name: Esperar a que el equipo se registre en AION (máx 60s)
+      ansible.builtin.uri:
+        url: "https://aionseg.co/api/v1/reverse/devices?vendor={{ vendor }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ aion_api_token }}"
+        return_content: true
+        validate_certs: true
+      delegate_to: localhost
+      register: aion_devices
+      until: >
+        aion_devices.json.items is defined and
+        (aion_devices.json.items | selectattr('device_id','equalto', device_id) | list | length > 0)
+      retries: 12
+      delay: 5
+
+    - name: Reportar estado
+      ansible.builtin.debug:
+        msg: >-
+          ✔ {{ device_id }} registrado en AION ·
+          estado inicial: {{ (aion_devices.json.items
+                              | selectattr('device_id','equalto', device_id)
+                              | first).status }}

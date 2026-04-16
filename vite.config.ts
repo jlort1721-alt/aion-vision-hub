@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+// rollup-plugin-visualizer loaded conditionally via ANALYZE=true
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -198,6 +199,7 @@ export default defineConfig(({ mode }) => ({
         enabled: false,
       },
     }),
+    // Run: npm install -D rollup-plugin-visualizer && ANALYZE=true npm run build
   ].filter(Boolean),
   resolve: {
     alias: {

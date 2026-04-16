@@ -1,62 +1,94 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import ErrorState from '@/components/ui/ErrorState';
-import { useI18n } from '@/contexts/I18nContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import ErrorState from "@/components/ui/ErrorState";
+import { useI18n } from "@/contexts/I18nContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from '@/components/ui/dialog';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
-  GraduationCap, Plus, Award, AlertTriangle, Users, Search,
-  MoreHorizontal, Pencil, Trash2, CheckCircle, TrendingUp, Clock,
-} from 'lucide-react';
-import { toast } from 'sonner';
+  GraduationCap,
+  Plus,
+  Award,
+  AlertTriangle,
+  Users,
+  Search,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  CheckCircle,
+  TrendingUp,
+  Clock,
+} from "lucide-react";
+import { toast } from "sonner";
 import {
-  trainingProgramsApi, certificationsApi, trainingStatsApi,
-} from '@/services/training-api';
+  trainingProgramsApi,
+  certificationsApi,
+  trainingStatsApi,
+} from "@/services/training-api";
 
 const certStatusColor: Record<string, string> = {
-  enrolled: 'secondary',
-  in_progress: 'default',
-  completed: 'default',
-  failed: 'destructive',
-  expired: 'outline',
+  enrolled: "secondary",
+  in_progress: "default",
+  completed: "default",
+  failed: "destructive",
+  expired: "outline",
 };
 
 const categoryLabels: Record<string, string> = {
-  safety: 'Safety',
-  technology: 'Technology',
-  compliance: 'Compliance',
-  first_aid: 'First Aid',
-  emergency: 'Emergency',
-  firearms: 'Firearms',
-  customer_service: 'Customer Service',
-  security: 'Security',
-  leadership: 'Leadership',
-  other: 'Other',
+  safety: "Seguridad Física",
+  technology: "Tecnología",
+  compliance: "Cumplimiento",
+  first_aid: "Primeros Auxilios",
+  emergency: "Emergencias",
+  firearms: "Armas de Fuego",
+  customer_service: "Servicio al Cliente",
+  security: "Seguridad",
+  leadership: "Liderazgo",
+  platform: "Plataforma",
+  technical: "Técnico",
+  other: "Otros",
 };
 
 const defaultProgramForm = {
-  name: '',
-  description: '',
-  category: 'security' as string,
+  name: "",
+  description: "",
+  category: "security" as string,
   durationHours: 8,
   isRequired: false,
   validityMonths: 12,
@@ -65,14 +97,14 @@ const defaultProgramForm = {
 };
 
 const defaultEnrollForm = {
-  programId: '',
-  userId: '',
-  userName: '',
+  programId: "",
+  userId: "",
+  userName: "",
 };
 
 const defaultCompleteForm = {
   score: 0,
-  notes: '',
+  notes: "",
 };
 
 export default function TrainingPage() {
@@ -80,10 +112,10 @@ export default function TrainingPage() {
   const qc = useQueryClient();
 
   // UI state
-  const [tab, setTab] = useState('programs');
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [certStatusFilter, setCertStatusFilter] = useState('all');
+  const [tab, setTab] = useState("programs");
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [certStatusFilter, setCertStatusFilter] = useState("all");
 
   // Dialogs
   const [showProgramDialog, setShowProgramDialog] = useState(false);
@@ -99,87 +131,111 @@ export default function TrainingPage() {
   const [completeForm, setCompleteForm] = useState({ ...defaultCompleteForm });
 
   // Queries
-  const { data: programs, isLoading: loadingPrograms, isError, error, refetch } = useQuery({
-    queryKey: ['training-programs', categoryFilter],
-    queryFn: () => trainingProgramsApi.list({
-      ...(categoryFilter !== 'all' && { category: categoryFilter }),
-    }),
+  const {
+    data: programs,
+    isLoading: loadingPrograms,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["training-programs", categoryFilter],
+    queryFn: () =>
+      trainingProgramsApi.list({
+        ...(categoryFilter !== "all" && { category: categoryFilter }),
+      }),
   });
 
   const { data: certs, isLoading: loadingCerts } = useQuery({
-    queryKey: ['certifications', certStatusFilter],
-    queryFn: () => certificationsApi.list({
-      ...(certStatusFilter !== 'all' && { status: certStatusFilter }),
-    }),
+    queryKey: ["certifications", certStatusFilter],
+    queryFn: () =>
+      certificationsApi.list({
+        ...(certStatusFilter !== "all" && { status: certStatusFilter }),
+      }),
   });
 
   const { data: expiring } = useQuery({
-    queryKey: ['expiring-certs'],
+    queryKey: ["expiring-certs"],
     queryFn: () => certificationsApi.getExpiring(30),
   });
 
   const { data: stats } = useQuery({
-    queryKey: ['training-stats'],
+    queryKey: ["training-stats"],
     queryFn: () => trainingStatsApi.get(),
   });
 
   // Mutations
   const createProgram = useMutation({
-    mutationFn: (data: Record<string, unknown>) => trainingProgramsApi.create(data),
+    mutationFn: (data: Record<string, unknown>) =>
+      trainingProgramsApi.create(data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['training-programs'] });
-      qc.invalidateQueries({ queryKey: ['training-stats'] });
+      qc.invalidateQueries({ queryKey: ["training-programs"] });
+      qc.invalidateQueries({ queryKey: ["training-stats"] });
       closeProgramDialog();
-      toast.success('Programa creado exitosamente');
+      toast.success("Programa creado exitosamente");
     },
-    onError: (err: Error) => toast.error(`Error al crear programa: ${err.message}`),
+    onError: (err: Error) =>
+      toast.error(`Error al crear programa: ${err.message}`),
   });
 
   const updateProgram = useMutation({
     mutationFn: ({ id, ...data }: any) => trainingProgramsApi.update(id, data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['training-programs'] });
-      qc.invalidateQueries({ queryKey: ['training-stats'] });
+      qc.invalidateQueries({ queryKey: ["training-programs"] });
+      qc.invalidateQueries({ queryKey: ["training-stats"] });
       closeProgramDialog();
-      toast.success('Programa actualizado');
+      toast.success("Programa actualizado");
     },
-    onError: (err: Error) => toast.error(`Error al actualizar programa: ${err.message}`),
+    onError: (err: Error) =>
+      toast.error(`Error al actualizar programa: ${err.message}`),
   });
 
   const deleteProgram = useMutation({
     mutationFn: (id: string) => trainingProgramsApi.delete(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['training-programs'] });
-      qc.invalidateQueries({ queryKey: ['training-stats'] });
+      qc.invalidateQueries({ queryKey: ["training-programs"] });
+      qc.invalidateQueries({ queryKey: ["training-stats"] });
       setDeleteTarget(null);
-      toast.success('Programa eliminado');
+      toast.success("Programa eliminado");
     },
-    onError: (err: Error) => toast.error(`Error al eliminar programa: ${err.message}`),
+    onError: (err: Error) =>
+      toast.error(`Error al eliminar programa: ${err.message}`),
   });
 
   const enrollUser = useMutation({
-    mutationFn: (data: { programId: string; userId: string; userName: string }) =>
-      certificationsApi.enroll(data),
+    mutationFn: (data: {
+      programId: string;
+      userId: string;
+      userName: string;
+    }) => certificationsApi.enroll(data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['certifications'] });
-      qc.invalidateQueries({ queryKey: ['training-stats'] });
+      qc.invalidateQueries({ queryKey: ["certifications"] });
+      qc.invalidateQueries({ queryKey: ["training-stats"] });
       closeEnrollDialog();
-      toast.success('Usuario inscrito exitosamente');
+      toast.success("Usuario inscrito exitosamente");
     },
-    onError: (err: Error) => toast.error(`Error al inscribir usuario: ${err.message}`),
+    onError: (err: Error) =>
+      toast.error(`Error al inscribir usuario: ${err.message}`),
   });
 
   const completeCert = useMutation({
-    mutationFn: ({ id, score, notes }: { id: string; score: number; notes?: string }) =>
-      certificationsApi.complete(id, { score, notes }),
+    mutationFn: ({
+      id,
+      score,
+      notes,
+    }: {
+      id: string;
+      score: number;
+      notes?: string;
+    }) => certificationsApi.complete(id, { score, notes }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['certifications'] });
-      qc.invalidateQueries({ queryKey: ['training-stats'] });
-      qc.invalidateQueries({ queryKey: ['expiring-certs'] });
+      qc.invalidateQueries({ queryKey: ["certifications"] });
+      qc.invalidateQueries({ queryKey: ["training-stats"] });
+      qc.invalidateQueries({ queryKey: ["expiring-certs"] });
       closeCompleteDialog();
-      toast.success('Certificación completada');
+      toast.success("Certificación completada");
     },
-    onError: (err: Error) => toast.error(`Error al completar certificación: ${err.message}`),
+    onError: (err: Error) =>
+      toast.error(`Error al completar certificación: ${err.message}`),
   });
 
   // Dialog helpers
@@ -192,9 +248,9 @@ export default function TrainingPage() {
   const openEditProgram = (p: any) => {
     setEditingProgram(p);
     setProgForm({
-      name: p.name || '',
-      description: p.description || '',
-      category: p.category || 'security',
+      name: p.name || "",
+      description: p.description || "",
+      category: p.category || "security",
       durationHours: p.durationHours || 8,
       isRequired: p.isRequired ?? false,
       validityMonths: p.validityMonths || 12,
@@ -222,7 +278,7 @@ export default function TrainingPage() {
 
   const openCompleteDialog = (cert: any) => {
     setCompletingCert(cert);
-    setCompleteForm({ score: 0, notes: '' });
+    setCompleteForm({ score: 0, notes: "" });
     setShowCompleteDialog(true);
   };
 
@@ -289,47 +345,63 @@ export default function TrainingPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <GraduationCap className="h-4 w-4" />Programs
+              <GraduationCap className="h-4 w-4" />
+              Programs
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{s?.totalPrograms ?? 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Programas de capacitación</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Programas de capacitación
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Award className="h-4 w-4" />Certifications
+              <Award className="h-4 w-4" />
+              Certifications
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{s?.totalCertifications ?? 0}</div>
+            <div className="text-2xl font-bold">
+              {s?.totalCertifications ?? 0}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">Total emitidas</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />Tasa de Cumplimiento
+              <TrendingUp className="h-4 w-4" />
+              Tasa de Cumplimiento
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${(s?.complianceRate ?? 0) >= 80 ? 'text-success' : (s?.complianceRate ?? 0) >= 50 ? 'text-warning' : 'text-destructive'}`}>
+            <div
+              className={`text-2xl font-bold ${(s?.complianceRate ?? 0) >= 80 ? "text-success" : (s?.complianceRate ?? 0) >= 50 ? "text-warning" : "text-destructive"}`}
+            >
               {s?.complianceRate ?? 0}%
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Tasa de completitud</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Tasa de completitud
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-warning" />Por Vencer (30d)
+              <AlertTriangle className="h-4 w-4 text-warning" />
+              Por Vencer (30d)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">{expiringCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Necesitan renovación</p>
+            <div className="text-2xl font-bold text-warning">
+              {expiringCount}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Necesitan renovación
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -346,25 +418,28 @@ export default function TrainingPage() {
           <CardContent>
             <div className="space-y-2">
               {(expiring?.data || []).slice(0, 5).map((c: any) => (
-                <div key={c.id} className="flex items-center justify-between text-sm">
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between text-sm"
+                >
                   <div>
                     <span className="font-medium">{c.userName}</span>
                     {c.programName && (
-                      <span className="text-muted-foreground ml-2">- {c.programName}</span>
+                      <span className="text-muted-foreground ml-2">
+                        - {c.programName}
+                      </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="h-3 w-3 text-warning" />
                     <span className="text-xs text-muted-foreground">
-                      Vence: {new Date(c.expiresAt).toLocaleDateString('es-CO')}
+                      Vence: {new Date(c.expiresAt).toLocaleDateString("es-CO")}
                     </span>
                   </div>
                 </div>
               ))}
               {expiringCount > 5 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  ... y más
-                </p>
+                <p className="text-xs text-muted-foreground mt-1">... y más</p>
               )}
             </div>
           </CardContent>
@@ -376,21 +451,25 @@ export default function TrainingPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <TabsList>
             <TabsTrigger value="programs">
-              <GraduationCap className="h-4 w-4 mr-1" />Programs
+              <GraduationCap className="h-4 w-4 mr-1" />
+              Programs
             </TabsTrigger>
             <TabsTrigger value="certifications">
-              <Award className="h-4 w-4 mr-1" />Certifications
+              <Award className="h-4 w-4 mr-1" />
+              Certifications
             </TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
-            {tab === 'programs' && (
+            {tab === "programs" && (
               <Button size="sm" onClick={openCreateProgram}>
-                <Plus className="h-4 w-4 mr-1" />Nuevo Programa
+                <Plus className="h-4 w-4 mr-1" />
+                Nuevo Programa
               </Button>
             )}
-            {tab === 'certifications' && (
+            {tab === "certifications" && (
               <Button size="sm" onClick={openEnrollDialog}>
-                <Users className="h-4 w-4 mr-1" />Inscribir Usuario
+                <Users className="h-4 w-4 mr-1" />
+                Inscribir Usuario
               </Button>
             )}
           </div>
@@ -401,13 +480,17 @@ export default function TrainingPage() {
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder={tab === 'programs' ? 'Buscar programas...' : 'Buscar certificaciones...'}
+              placeholder={
+                tab === "programs"
+                  ? "Buscar programas..."
+                  : "Buscar certificaciones..."
+              }
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 h-9"
             />
           </div>
-          {tab === 'programs' && (
+          {tab === "programs" && (
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-40 h-9">
                 <SelectValue placeholder="Category" />
@@ -420,12 +503,17 @@ export default function TrainingPage() {
                 <SelectItem value="first_aid">Primeros Auxilios</SelectItem>
                 <SelectItem value="emergency">Emergencia</SelectItem>
                 <SelectItem value="firearms">Armas de Fuego</SelectItem>
-                <SelectItem value="customer_service">Atención al Cliente</SelectItem>
+                <SelectItem value="customer_service">
+                  Atención al Cliente
+                </SelectItem>
               </SelectContent>
             </Select>
           )}
-          {tab === 'certifications' && (
-            <Select value={certStatusFilter} onValueChange={setCertStatusFilter}>
+          {tab === "certifications" && (
+            <Select
+              value={certStatusFilter}
+              onValueChange={setCertStatusFilter}
+            >
               <SelectTrigger className="w-40 h-9">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -456,12 +544,18 @@ export default function TrainingPage() {
                   <GraduationCap className="h-12 w-12 mb-3 opacity-20" />
                   <p className="text-sm font-medium">
                     {(programs?.data || []).length === 0
-                      ? 'Sin programas de capacitación'
-                      : 'Sin programas que coincidan con los filtros'}
+                      ? "Sin programas de capacitación"
+                      : "Sin programas que coincidan con los filtros"}
                   </p>
                   {(programs?.data || []).length === 0 && (
-                    <Button variant="outline" size="sm" className="mt-3" onClick={openCreateProgram}>
-                      <Plus className="mr-1 h-3 w-3" />Crear primer programa
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={openCreateProgram}
+                    >
+                      <Plus className="mr-1 h-3 w-3" />
+                      Crear primer programa
                     </Button>
                   )}
                 </div>
@@ -481,7 +575,10 @@ export default function TrainingPage() {
                   </thead>
                   <tbody>
                     {filteredPrograms.map((p: any) => (
-                      <tr key={p.id} className="border-b hover:bg-muted/30 transition-colors">
+                      <tr
+                        key={p.id}
+                        className="border-b hover:bg-muted/30 transition-colors"
+                      >
                         <td className="p-3">
                           <div className="font-medium">{p.name}</div>
                           {p.description && (
@@ -496,7 +593,10 @@ export default function TrainingPage() {
                           </Badge>
                         </td>
                         <td className="p-3 text-xs">
-                          <span className="font-mono font-bold">{p.durationHours}</span>h
+                          <span className="font-mono font-bold">
+                            {p.durationHours}
+                          </span>
+                          h
                         </td>
                         <td className="p-3 text-xs">
                           <span className="font-mono">{p.passingScore}%</span>
@@ -505,40 +605,54 @@ export default function TrainingPage() {
                           {p.validityMonths} meses
                         </td>
                         <td className="p-3">
-                          <Badge variant={p.isRequired ? 'destructive' : 'secondary'}>
-                            {p.isRequired ? 'Required' : 'Optional'}
+                          <Badge
+                            variant={p.isRequired ? "destructive" : "secondary"}
+                          >
+                            {p.isRequired ? "Required" : "Optional"}
                           </Badge>
                         </td>
                         <td className="p-3">
-                          <Badge variant={p.isActive ? 'default' : 'secondary'}>
-                            {p.isActive ? 'Active' : 'Inactive'}
+                          <Badge variant={p.isActive ? "default" : "secondary"}>
+                            {p.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </td>
                         <td className="p-3">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                              >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEditProgram(p)}>
-                                <Pencil className="mr-2 h-3 w-3" />Edit
+                              <DropdownMenuItem
+                                onClick={() => openEditProgram(p)}
+                              >
+                                <Pencil className="mr-2 h-3 w-3" />
+                                Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => {
-                                  setEnrollForm({ ...defaultEnrollForm, programId: p.id });
+                                  setEnrollForm({
+                                    ...defaultEnrollForm,
+                                    programId: p.id,
+                                  });
                                   setShowEnrollDialog(true);
                                 }}
                               >
-                                <Users className="mr-2 h-3 w-3" />Inscribir Usuario
+                                <Users className="mr-2 h-3 w-3" />
+                                Inscribir Usuario
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 className="text-destructive"
                                 onClick={() => setDeleteTarget(p)}
                               >
-                                <Trash2 className="mr-2 h-3 w-3" />Delete
+                                <Trash2 className="mr-2 h-3 w-3" />
+                                Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -570,12 +684,18 @@ export default function TrainingPage() {
                   <Award className="h-12 w-12 mb-3 opacity-20" />
                   <p className="text-sm font-medium">
                     {(certs?.data || []).length === 0
-                      ? 'Sin certificaciones aún'
-                      : 'Sin certificaciones que coincidan con los filtros'}
+                      ? "Sin certificaciones aún"
+                      : "Sin certificaciones que coincidan con los filtros"}
                   </p>
                   {(certs?.data || []).length === 0 && (
-                    <Button variant="outline" size="sm" className="mt-3" onClick={openEnrollDialog}>
-                      <Plus className="mr-1 h-3 w-3" />Inscribir primer usuario
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={openEnrollDialog}
+                    >
+                      <Plus className="mr-1 h-3 w-3" />
+                      Inscribir primer usuario
                     </Button>
                   )}
                 </div>
@@ -597,71 +717,104 @@ export default function TrainingPage() {
                     {filteredCerts.map((c: any) => {
                       const isExpiringSoon =
                         c.expiresAt &&
-                        new Date(c.expiresAt) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) &&
+                        new Date(c.expiresAt) <=
+                          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) &&
                         new Date(c.expiresAt) > new Date();
                       const isExpired =
                         c.expiresAt && new Date(c.expiresAt) <= new Date();
 
                       return (
-                        <tr key={c.id} className="border-b hover:bg-muted/30 transition-colors">
+                        <tr
+                          key={c.id}
+                          className="border-b hover:bg-muted/30 transition-colors"
+                        >
                           <td className="p-3 font-medium">{c.userName}</td>
-                          <td className="p-3 text-xs">{c.programName || '-'}</td>
+                          <td className="p-3 text-xs">
+                            {c.programName || "-"}
+                          </td>
                           <td className="p-3">
-                            <Badge variant={certStatusColor[c.status] as any} className="capitalize">
-                              {c.status?.replace('_', ' ')}
+                            <Badge
+                              variant={
+                                certStatusColor[c.status] as
+                                  | "default"
+                                  | "secondary"
+                                  | "destructive"
+                                  | "outline"
+                              }
+                              className="capitalize"
+                            >
+                              {c.status?.replace("_", " ")}
                             </Badge>
                           </td>
                           <td className="p-3 text-xs">
                             {c.score != null ? (
-                              <span className={`font-mono font-bold ${c.score >= (c.passingScore || 70) ? 'text-success' : 'text-destructive'}`}>
+                              <span
+                                className={`font-mono font-bold ${c.score >= (c.passingScore || 70) ? "text-success" : "text-destructive"}`}
+                              >
                                 {c.score}%
                               </span>
                             ) : (
-                              '-'
+                              "-"
                             )}
                           </td>
                           <td className="p-3 text-xs">
                             {c.enrolledAt
-                              ? new Date(c.enrolledAt).toLocaleDateString('es-CO')
+                              ? new Date(c.enrolledAt).toLocaleDateString(
+                                  "es-CO",
+                                )
                               : c.createdAt
-                              ? new Date(c.createdAt).toLocaleDateString('es-CO')
-                              : '-'}
+                                ? new Date(c.createdAt).toLocaleDateString(
+                                    "es-CO",
+                                  )
+                                : "-"}
                           </td>
                           <td className="p-3 text-xs">
                             {c.completedAt
-                              ? new Date(c.completedAt).toLocaleDateString('es-CO')
-                              : '-'}
+                              ? new Date(c.completedAt).toLocaleDateString(
+                                  "es-CO",
+                                )
+                              : "-"}
                           </td>
                           <td className="p-3 text-xs">
                             {c.expiresAt ? (
                               <span
                                 className={
                                   isExpired
-                                    ? 'text-destructive font-bold'
+                                    ? "text-destructive font-bold"
                                     : isExpiringSoon
-                                    ? 'text-warning font-medium'
-                                    : ''
+                                      ? "text-warning font-medium"
+                                      : ""
                                 }
                               >
-                                {new Date(c.expiresAt).toLocaleDateString('es-CO')}
-                                {isExpired && ' (Vencido)'}
-                                {isExpiringSoon && !isExpired && ' (Pronto)'}
+                                {new Date(c.expiresAt).toLocaleDateString(
+                                  "es-CO",
+                                )}
+                                {isExpired && " (Vencido)"}
+                                {isExpiringSoon && !isExpired && " (Pronto)"}
                               </span>
                             ) : (
-                              '-'
+                              "-"
                             )}
                           </td>
                           <td className="p-3">
-                            {(c.status === 'enrolled' || c.status === 'in_progress') && (
+                            {(c.status === "enrolled" ||
+                              c.status === "in_progress") && (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                  >
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => openCompleteDialog(c)}>
-                                    <CheckCircle className="mr-2 h-3 w-3" />Complete
+                                  <DropdownMenuItem
+                                    onClick={() => openCompleteDialog(c)}
+                                  >
+                                    <CheckCircle className="mr-2 h-3 w-3" />
+                                    Complete
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -682,11 +835,19 @@ export default function TrainingPage() {
       </Tabs>
 
       {/* Program Create/Edit Dialog */}
-      <Dialog open={showProgramDialog} onOpenChange={(o) => { if (!o) closeProgramDialog(); else setShowProgramDialog(true); }}>
+      <Dialog
+        open={showProgramDialog}
+        onOpenChange={(o) => {
+          if (!o) closeProgramDialog();
+          else setShowProgramDialog(true);
+        }}
+      >
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingProgram ? 'Editar Programa' : 'Nuevo Programa de Capacitación'}
+              {editingProgram
+                ? "Editar Programa"
+                : "Nuevo Programa de Capacitación"}
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
@@ -694,7 +855,9 @@ export default function TrainingPage() {
               <Label>Nombre del Programa *</Label>
               <Input
                 value={progForm.name}
-                onChange={(e) => setProgForm({ ...progForm, name: e.target.value })}
+                onChange={(e) =>
+                  setProgForm({ ...progForm, name: e.target.value })
+                }
                 placeholder="Nombre del programa"
               />
             </div>
@@ -704,7 +867,9 @@ export default function TrainingPage() {
               <textarea
                 className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={progForm.description}
-                onChange={(e) => setProgForm({ ...progForm, description: e.target.value })}
+                onChange={(e) =>
+                  setProgForm({ ...progForm, description: e.target.value })
+                }
                 placeholder="Descripción del programa..."
               />
             </div>
@@ -715,7 +880,9 @@ export default function TrainingPage() {
                 value={progForm.category}
                 onValueChange={(v) => setProgForm({ ...progForm, category: v })}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="safety">Seguridad</SelectItem>
                   <SelectItem value="technology">Tecnología</SelectItem>
@@ -723,7 +890,9 @@ export default function TrainingPage() {
                   <SelectItem value="first_aid">Primeros Auxilios</SelectItem>
                   <SelectItem value="emergency">Emergencia</SelectItem>
                   <SelectItem value="firearms">Armas de Fuego</SelectItem>
-                  <SelectItem value="customer_service">Atención al Cliente</SelectItem>
+                  <SelectItem value="customer_service">
+                    Atención al Cliente
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -735,7 +904,12 @@ export default function TrainingPage() {
                   type="number"
                   min={1}
                   value={progForm.durationHours}
-                  onChange={(e) => setProgForm({ ...progForm, durationHours: parseInt(e.target.value) || 8 })}
+                  onChange={(e) =>
+                    setProgForm({
+                      ...progForm,
+                      durationHours: parseInt(e.target.value) || 8,
+                    })
+                  }
                 />
               </div>
               <div className="space-y-1">
@@ -745,7 +919,12 @@ export default function TrainingPage() {
                   min={0}
                   max={100}
                   value={progForm.passingScore}
-                  onChange={(e) => setProgForm({ ...progForm, passingScore: parseInt(e.target.value) || 70 })}
+                  onChange={(e) =>
+                    setProgForm({
+                      ...progForm,
+                      passingScore: parseInt(e.target.value) || 70,
+                    })
+                  }
                 />
               </div>
               <div className="space-y-1">
@@ -754,7 +933,12 @@ export default function TrainingPage() {
                   type="number"
                   min={0}
                   value={progForm.validityMonths}
-                  onChange={(e) => setProgForm({ ...progForm, validityMonths: parseInt(e.target.value) || 12 })}
+                  onChange={(e) =>
+                    setProgForm({
+                      ...progForm,
+                      validityMonths: parseInt(e.target.value) || 12,
+                    })
+                  }
                 />
               </div>
             </div>
@@ -763,7 +947,9 @@ export default function TrainingPage() {
               <div className="flex items-center gap-2">
                 <Switch
                   checked={progForm.isRequired}
-                  onCheckedChange={(v) => setProgForm({ ...progForm, isRequired: v })}
+                  onCheckedChange={(v) =>
+                    setProgForm({ ...progForm, isRequired: v })
+                  }
                 />
                 <Label>Capacitación Obligatoria</Label>
               </div>
@@ -771,7 +957,9 @@ export default function TrainingPage() {
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={progForm.isActive}
-                    onCheckedChange={(v) => setProgForm({ ...progForm, isActive: v })}
+                    onCheckedChange={(v) =>
+                      setProgForm({ ...progForm, isActive: v })
+                    }
                   />
                   <Label>Activo</Label>
                 </div>
@@ -779,7 +967,9 @@ export default function TrainingPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeProgramDialog}>Cancelar</Button>
+            <Button variant="outline" onClick={closeProgramDialog}>
+              Cancelar
+            </Button>
             <Button
               onClick={handleProgramSubmit}
               disabled={
@@ -789,17 +979,23 @@ export default function TrainingPage() {
               }
             >
               {createProgram.isPending || updateProgram.isPending
-                ? 'Guardando...'
+                ? "Guardando..."
                 : editingProgram
-                ? 'Actualizar Programa'
-                : 'Crear Programa'}
+                  ? "Actualizar Programa"
+                  : "Crear Programa"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Inscribir Usuario Dialog */}
-      <Dialog open={showEnrollDialog} onOpenChange={(o) => { if (!o) closeEnrollDialog(); else setShowEnrollDialog(true); }}>
+      <Dialog
+        open={showEnrollDialog}
+        onOpenChange={(o) => {
+          if (!o) closeEnrollDialog();
+          else setShowEnrollDialog(true);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Inscribir Usuario in Training Program</DialogTitle>
@@ -809,14 +1005,18 @@ export default function TrainingPage() {
               <Label>Seleccionar Programa *</Label>
               <Select
                 value={enrollForm.programId}
-                onValueChange={(v) => setEnrollForm({ ...enrollForm, programId: v })}
+                onValueChange={(v) =>
+                  setEnrollForm({ ...enrollForm, programId: v })
+                }
               >
-                <SelectTrigger><SelectValue placeholder="Seleccionar programa..." /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar programa..." />
+                </SelectTrigger>
                 <SelectContent>
                   {(programs?.data || []).map((p: any) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
-                      {p.isRequired && ' (Obligatorio)'}
+                      {p.isRequired && " (Obligatorio)"}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -826,7 +1026,9 @@ export default function TrainingPage() {
               <Label>ID de Usuario *</Label>
               <Input
                 value={enrollForm.userId}
-                onChange={(e) => setEnrollForm({ ...enrollForm, userId: e.target.value })}
+                onChange={(e) =>
+                  setEnrollForm({ ...enrollForm, userId: e.target.value })
+                }
                 placeholder="UUID del usuario"
               />
             </div>
@@ -834,13 +1036,17 @@ export default function TrainingPage() {
               <Label>Nombre del Usuario *</Label>
               <Input
                 value={enrollForm.userName}
-                onChange={(e) => setEnrollForm({ ...enrollForm, userName: e.target.value })}
+                onChange={(e) =>
+                  setEnrollForm({ ...enrollForm, userName: e.target.value })
+                }
                 placeholder="Nombre completo"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeEnrollDialog}>Cancelar</Button>
+            <Button variant="outline" onClick={closeEnrollDialog}>
+              Cancelar
+            </Button>
             <Button
               onClick={() =>
                 enrollUser.mutate({
@@ -856,14 +1062,20 @@ export default function TrainingPage() {
                 enrollUser.isPending
               }
             >
-              {enrollUser.isPending ? 'Inscribiendo...' : 'Inscribir Usuario'}
+              {enrollUser.isPending ? "Inscribiendo..." : "Inscribir Usuario"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Completar Certificación Dialog */}
-      <Dialog open={showCompleteDialog} onOpenChange={(o) => { if (!o) closeCompleteDialog(); else setShowCompleteDialog(true); }}>
+      <Dialog
+        open={showCompleteDialog}
+        onOpenChange={(o) => {
+          if (!o) closeCompleteDialog();
+          else setShowCompleteDialog(true);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Completar Certificación</DialogTitle>
@@ -886,7 +1098,12 @@ export default function TrainingPage() {
                 min={0}
                 max={100}
                 value={completeForm.score}
-                onChange={(e) => setCompleteForm({ ...completeForm, score: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setCompleteForm({
+                    ...completeForm,
+                    score: parseInt(e.target.value) || 0,
+                  })
+                }
                 placeholder="Ingrese puntaje"
               />
               {completingCert?.passingScore && (
@@ -900,13 +1117,17 @@ export default function TrainingPage() {
               <textarea
                 className="min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={completeForm.notes}
-                onChange={(e) => setCompleteForm({ ...completeForm, notes: e.target.value })}
+                onChange={(e) =>
+                  setCompleteForm({ ...completeForm, notes: e.target.value })
+                }
                 placeholder="Notas de evaluación..."
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeCompleteDialog}>Cancelar</Button>
+            <Button variant="outline" onClick={closeCompleteDialog}>
+              Cancelar
+            </Button>
             <Button
               onClick={() =>
                 completeCert.mutate({
@@ -917,20 +1138,28 @@ export default function TrainingPage() {
               }
               disabled={completeCert.isPending}
             >
-              {completeCert.isPending ? 'Completando...' : 'Completar Certificación'}
+              {completeCert.isPending
+                ? "Completando..."
+                : "Completar Certificación"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Program Confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar Programa</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Está seguro de eliminar el programa "{deleteTarget?.name}"?
-              Esto no eliminará certificaciones existentes pero no se podrán hacer nuevas inscripciones.
+              ¿Está seguro de eliminar el programa "{deleteTarget?.name}"? Esto
+              no eliminará certificaciones existentes pero no se podrán hacer
+              nuevas inscripciones.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

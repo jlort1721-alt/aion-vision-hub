@@ -135,14 +135,12 @@ export function AIONFloatingAssistant() {
 
   // ── Voice Recognition ────────────────────────────────────────
   const startVoiceInput = () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const win = window as any;
+    const win = window as Window & { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition };
     if (!win.webkitSpeechRecognition && !win.SpeechRecognition) {
       toast.error('Voice input not supported in this browser');
       return;
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SpeechRecognitionCtor = (win.SpeechRecognition || win.webkitSpeechRecognition) as any;
+    const SpeechRecognitionCtor = (win.SpeechRecognition || win.webkitSpeechRecognition)!;
     const recognition = new SpeechRecognitionCtor();
     recognition.lang = 'es-CO'; // Spanish Colombia
     recognition.interimResults = false;
@@ -254,7 +252,7 @@ export function AIONFloatingAssistant() {
         pageContext: { page: pagePath },
       });
       // Backend returns { success, data: { content, ... } } — extract content
-      const data = (resp as any)?.data ?? resp;
+      const data = (resp as { data?: { content?: string; response?: string } })?.data ?? resp;
       const response: string = (typeof data === 'string' ? data : data?.content ?? data?.response ?? 'Sin respuesta');
       const allMessages = [...updatedMessages, { role: 'assistant' as const, content: response }];
       setMessages(allMessages);

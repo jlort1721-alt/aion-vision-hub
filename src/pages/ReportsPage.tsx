@@ -21,6 +21,7 @@ import {
 import { PageShell } from '@/components/shared/PageShell';
 import ErrorState from '@/components/ui/ErrorState';
 import EmptyState from '@/components/shared/EmptyState';
+import { useI18n } from '@/contexts/I18nContext';
 
 // ══════════════════════════════════════════════════════════════
 // Constants
@@ -88,6 +89,7 @@ const defaultFilters: ReportFilters = {
 // ══════════════════════════════════════════════════════════════
 
 export default function ReportsPage() {
+  const { t } = useI18n();
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<ReportFilters>(defaultFilters);
@@ -95,7 +97,7 @@ export default function ReportsPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: rawSites = [] } = useSites();
-  const sites = rawSites as any[];
+  const sites = rawSites as Record<string, unknown>[];
 
   // ── List Query ──
   const queryFilters: Record<string, string | number | boolean | undefined> = {
@@ -110,8 +112,9 @@ export default function ReportsPage() {
     enabled: isAuthenticated,
   });
 
-  const reports: any[] = (result as any)?.data ?? (Array.isArray(result) ? result : []);
-  const totalCount: number = Number((result as any)?.meta?.total ?? reports.length);
+  const resultEnvelope = result as Record<string, unknown> | unknown[] | undefined;
+  const reports: Record<string, unknown>[] = (!Array.isArray(resultEnvelope) && resultEnvelope ? resultEnvelope.data as Record<string, unknown>[] : undefined) ?? (Array.isArray(result) ? result as Record<string, unknown>[] : []);
+  const totalCount: number = Number((!Array.isArray(resultEnvelope) && resultEnvelope?.meta ? (resultEnvelope.meta as Record<string, unknown>).total : undefined) ?? reports.length);
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   // ── Stats ──
@@ -124,17 +127,17 @@ export default function ReportsPage() {
     mutationFn: (params: { type: string; site_id?: string; date_from: string; date_to: string; format: string }) =>
       reportsApi.generate(params),
     onSuccess: () => {
-      toast.success('Reporte generado exitosamente');
+      toast.success(t('reports.report_generated'));
       queryClient.invalidateQueries({ queryKey: ['reports'] });
     },
-    onError: (err: Error) => toast.error(err.message || 'Error generando reporte'),
+    onError: (err: Error) => toast.error(err.message || t('reports.error_generating')),
   });
 
   // ── Delete ──
   const deleteMutation = useMutation({
     mutationFn: (id: string) => reportsApi.delete(id),
-    onSuccess: () => { toast.success('Reporte eliminado'); queryClient.invalidateQueries({ queryKey: ['reports'] }); setDeleteTarget(null); },
-    onError: (err: Error) => toast.error(err.message || 'Error eliminando reporte'),
+    onSuccess: () => { toast.success(t('reports.report_deleted')); queryClient.invalidateQueries({ queryKey: ['reports'] }); setDeleteTarget(null); },
+    onError: (err: Error) => toast.error(err.message || t('reports.error_deleting')),
   });
 
   // ── Handlers ──
@@ -143,8 +146,8 @@ export default function ReportsPage() {
   }, []);
 
   const handleGenerate = () => {
-    if (!filters.date_from || !filters.date_to) { toast.error('Selecciona un rango de fechas'); return; }
-    if (filters.type === 'all') { toast.error('Selecciona un tipo de reporte'); return; }
+    if (!filters.date_from || !filters.date_to) { toast.error(t('reports.select_date_range')); return; }
+    if (filters.type === 'all') { toast.error(t('reports.select_report_type')); return; }
     setGenerating(true);
     generateMutation.mutate(
       { type: filters.type, site_id: filters.site_id !== 'all' ? filters.site_id : undefined, date_from: filters.date_from, date_to: filters.date_to, format: filters.format },
@@ -161,9 +164,9 @@ export default function ReportsPage() {
       a.download = report.name || `reporte-${report.type || 'data'}.${report.format || 'pdf'}`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Descarga iniciada');
+      toast.success(t('reports.download_started'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error descargando');
+      toast.error(err instanceof Error ? err.message : t('reports.error_downloading'));
     }
   };
 
@@ -171,17 +174,17 @@ export default function ReportsPage() {
 
   return (
     <PageShell
-      title="Reportes"
-      description="Genera y descarga reportes del sistema"
+      title={t('reports.page_title')}
+      description={t('reports.page_subtitle')}
       icon={<FileBarChart className="h-5 w-5" />}
     >
       <div className="p-5 space-y-5">
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <StatCard icon={<FileBarChart className="h-5 w-5 text-blue-400" />} label="Total Reportes" value={isLoading ? '—' : String(totalCount)} color="text-blue-400" />
-        <StatCard icon={<CheckCircle2 className="h-5 w-5 text-emerald-400" />} label="Generados Hoy" value={isLoading ? '—' : String(generatedToday)} color="text-emerald-400" />
-        <StatCard icon={<Clock className="h-5 w-5 text-amber-400" />} label="Pendientes" value={isLoading ? '—' : String(pendingCount)} color="text-amber-400" />
+        <StatCard icon={<FileBarChart className="h-5 w-5 text-blue-400" />} label={t('reports.total_reports')} value={isLoading ? '—' : String(totalCount)} color="text-blue-400" />
+        <StatCard icon={<CheckCircle2 className="h-5 w-5 text-emerald-400" />} label={t('reports.generated_today')} value={isLoading ? '—' : String(generatedToday)} color="text-emerald-400" />
+        <StatCard icon={<Clock className="h-5 w-5 text-amber-400" />} label={t('reports.pending')} value={isLoading ? '—' : String(pendingCount)} color="text-amber-400" />
       </div>
 
       {/* Filter Bar */}
@@ -189,7 +192,7 @@ export default function ReportsPage() {
         <CardContent className="p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
-              <label className="text-xs text-slate-400 flex items-center gap-1"><Filter className="h-3 w-3" /> Tipo</label>
+              <label className="text-xs text-slate-400 flex items-center gap-1"><Filter className="h-3 w-3" /> {t('reports.filter_type')}</label>
               <Select value={filters.type} onValueChange={v => updateFilters({ type: v })}>
                 <SelectTrigger className="w-[160px] h-8 text-xs bg-slate-900/50 border-slate-700"><SelectValue /></SelectTrigger>
                 <SelectContent>{REPORT_TYPES.map(rt => <SelectItem key={rt.value} value={rt.value}>{rt.label}</SelectItem>)}</SelectContent>
@@ -197,28 +200,28 @@ export default function ReportsPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-slate-400 flex items-center gap-1"><Calendar className="h-3 w-3" /> Desde</label>
+              <label className="text-xs text-slate-400 flex items-center gap-1"><Calendar className="h-3 w-3" /> {t('reports.filter_from')}</label>
               <Input type="date" className="w-[140px] h-8 text-xs bg-slate-900/50 border-slate-700" value={filters.date_from} onChange={e => updateFilters({ date_from: e.target.value })} />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-slate-400 flex items-center gap-1"><Calendar className="h-3 w-3" /> Hasta</label>
+              <label className="text-xs text-slate-400 flex items-center gap-1"><Calendar className="h-3 w-3" /> {t('reports.filter_to')}</label>
               <Input type="date" className="w-[140px] h-8 text-xs bg-slate-900/50 border-slate-700" value={filters.date_to} onChange={e => updateFilters({ date_to: e.target.value })} />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-slate-400 flex items-center gap-1"><Building2 className="h-3 w-3" /> Sede</label>
+              <label className="text-xs text-slate-400 flex items-center gap-1"><Building2 className="h-3 w-3" /> {t('reports.filter_site')}</label>
               <Select value={filters.site_id} onValueChange={v => updateFilters({ site_id: v })}>
                 <SelectTrigger className="w-[170px] h-8 text-xs bg-slate-900/50 border-slate-700"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las sedes</SelectItem>
+                  <SelectItem value="all">{t('reports.all_sites')}</SelectItem>
                   {sites.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name?.split('—')[0]?.trim() || s.id}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-slate-400">Formato</label>
+              <label className="text-xs text-slate-400">{t('reports.filter_format')}</label>
               <Select value={filters.format} onValueChange={v => updateFilters({ format: v })}>
                 <SelectTrigger className="w-[90px] h-8 text-xs bg-slate-900/50 border-slate-700"><SelectValue /></SelectTrigger>
                 <SelectContent>{FORMAT_OPTIONS.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
@@ -226,10 +229,10 @@ export default function ReportsPage() {
             </div>
 
             <div className="flex items-center gap-2 ml-auto">
-              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setFilters(defaultFilters)}>Limpiar</Button>
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setFilters(defaultFilters)}>{t('reports.clear_filters')}</Button>
               <Button size="sm" className="h-8 text-xs gap-1.5" onClick={handleGenerate} disabled={generating}>
                 {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
-                Generar Reporte
+                {t('reports.generate')}
               </Button>
             </div>
           </div>
@@ -239,7 +242,7 @@ export default function ReportsPage() {
       {/* Reports Table */}
       <Card className="bg-slate-800/30 border-slate-700/40">
         <CardHeader className="pb-2 px-4 pt-4">
-          <CardTitle className="text-sm flex items-center gap-1.5"><FileBarChart className="h-4 w-4 text-blue-400" /> Reportes Generados</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-1.5"><FileBarChart className="h-4 w-4 text-blue-400" /> {t('reports.generated_reports')}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
@@ -247,8 +250,8 @@ export default function ReportsPage() {
           ) : reports.length === 0 ? (
             <EmptyState
               icon={FileText}
-              title="No hay reportes disponibles"
-              description="Genera un reporte usando los filtros de arriba para comenzar."
+              title={t('reports.no_reports')}
+              description={t('reports.no_reports_desc')}
             />
           ) : (
             <>
@@ -256,12 +259,12 @@ export default function ReportsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-slate-700/50">
-                      <TableHead className="text-xs">Nombre</TableHead>
-                      <TableHead className="text-xs">Tipo</TableHead>
-                      <TableHead className="text-xs hidden md:table-cell">Formato</TableHead>
-                      <TableHead className="text-xs hidden lg:table-cell">Creado</TableHead>
-                      <TableHead className="text-xs">Estado</TableHead>
-                      <TableHead className="text-xs text-right">Acciones</TableHead>
+                      <TableHead className="text-xs">{t('reports.col_name')}</TableHead>
+                      <TableHead className="text-xs">{t('reports.col_type')}</TableHead>
+                      <TableHead className="text-xs hidden md:table-cell">{t('reports.col_format')}</TableHead>
+                      <TableHead className="text-xs hidden lg:table-cell">{t('reports.col_created')}</TableHead>
+                      <TableHead className="text-xs">{t('reports.col_status')}</TableHead>
+                      <TableHead className="text-xs text-right">{t('reports.col_actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -297,10 +300,10 @@ export default function ReportsPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Button variant="ghost" size="icon" className="h-7 w-7" disabled={!isDownloadable} onClick={() => handleDownload(report)} title="Descargar">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" disabled={!isDownloadable} onClick={() => handleDownload(report)} title={t('reports.download')} aria-label={t('reports.download')}>
                                 <Download className="h-3.5 w-3.5" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => setDeleteTarget({ id: report.id, name: report.name || report.type })} title="Eliminar">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => setDeleteTarget({ id: report.id, name: report.name || report.type })} title={t('common.delete')} aria-label={t('common.delete')}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
@@ -317,7 +320,7 @@ export default function ReportsPage() {
                 <div className="px-4 py-2 border-t border-slate-700/50 flex items-center justify-between text-sm">
                   <span className="text-xs text-slate-500">{totalCount} reportes &bull; Página {filters.page} de {totalPages}</span>
                   <div className="flex items-center gap-1">
-                    <Button variant="outline" size="icon" className="h-7 w-7" disabled={filters.page <= 1} onClick={() => setFilters(p => ({ ...p, page: p.page - 1 }))}>
+                    <Button variant="outline" size="icon" className="h-7 w-7" disabled={filters.page <= 1} onClick={() => setFilters(p => ({ ...p, page: p.page - 1 }))} aria-label="Página anterior">
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -333,7 +336,7 @@ export default function ReportsPage() {
                         </Button>
                       );
                     })}
-                    <Button variant="outline" size="icon" className="h-7 w-7" disabled={filters.page >= totalPages} onClick={() => setFilters(p => ({ ...p, page: p.page + 1 }))}>
+                    <Button variant="outline" size="icon" className="h-7 w-7" disabled={filters.page >= totalPages} onClick={() => setFilters(p => ({ ...p, page: p.page + 1 }))} aria-label="Página siguiente">
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   </div>
@@ -348,16 +351,16 @@ export default function ReportsPage() {
       <Dialog open={!!deleteTarget} onOpenChange={o => !o && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Eliminar Reporte</DialogTitle>
+            <DialogTitle>{t('reports.delete_report')}</DialogTitle>
             <DialogDescription>
               ¿Eliminar <span className="font-medium text-white">{deleteTarget?.name}</span>? Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>{t('common.cancel')}</Button>
             <Button variant="destructive" onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)} disabled={deleteMutation.isPending} className="gap-1">
               {deleteMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-              Eliminar
+              {t('common.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

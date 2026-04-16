@@ -116,11 +116,11 @@ export default function NetworkPage() {
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="gap-1 border-slate-700 text-slate-400">
             <Activity className="h-3 w-3" />
-            {(devices as any[]).length} dispositivos
+            {devices.length} dispositivos
           </Badge>
           <Badge variant="outline" className="gap-1 border-slate-700 text-slate-400">
             <Globe className="h-3 w-3" />
-            {(sites as any[]).length} sedes
+            {sites.length} sedes
           </Badge>
         </div>
       }

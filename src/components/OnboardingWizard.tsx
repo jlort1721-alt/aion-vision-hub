@@ -73,9 +73,7 @@ export default function OnboardingWizard() {
 
   const handleClose = () => {
     setOpen(false);
-    if (dontShowAgain || step === STEPS.length - 1) {
-      localStorage.setItem(STORAGE_KEY, 'true');
-    }
+    localStorage.setItem(STORAGE_KEY, 'true');
   };
 
   const handleSkip = () => {

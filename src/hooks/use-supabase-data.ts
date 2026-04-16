@@ -7,14 +7,20 @@
 // tenant isolation, audit logging, rate limiting, and RBAC.
 // ═══════════════════════════════════════════════════════════
 
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/contexts/AuthContext";
+import type {
+  ApiDevice,
+  ApiSite,
+  ApiEvent,
+  ApiIncident,
+} from "@/types/api-entities";
 
 /** Extract array from API response (handles both { items: [] } and [] formats) */
 function extractArray(response: unknown): Record<string, unknown>[] {
   if (Array.isArray(response)) return response as Record<string, unknown>[];
-  if (response && typeof response === 'object') {
+  if (response && typeof response === "object") {
     const r = response as Record<string, unknown>;
     if (Array.isArray(r.items)) return r.items as Record<string, unknown>[];
     if (Array.isArray(r.data)) return r.data as Record<string, unknown>[];
@@ -24,9 +30,10 @@ function extractArray(response: unknown): Record<string, unknown>[] {
 
 /** Extract meta from API envelope response */
 function extractMeta(response: unknown): Record<string, unknown> | undefined {
-  if (response && typeof response === 'object' && !Array.isArray(response)) {
+  if (response && typeof response === "object" && !Array.isArray(response)) {
     const r = response as Record<string, unknown>;
-    if (r.meta && typeof r.meta === 'object') return r.meta as Record<string, unknown>;
+    if (r.meta && typeof r.meta === "object")
+      return r.meta as Record<string, unknown>;
   }
   return undefined;
 }
@@ -36,21 +43,25 @@ function extractMeta(response: unknown): Record<string, unknown> | undefined {
 export function useDevices(refetchInterval?: number) {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['devices'],
+    queryKey: ["devices"],
     queryFn: async () => {
-      const response = await apiClient.get<unknown>('/devices', { limit: '500' });
+      const response = await apiClient.get<unknown>("/devices", {
+        limit: "500",
+      });
       // After apiClient unwraps envelope, response is either [...] or { items: [...], meta: {...} }
       const items = extractArray(response);
       return items.map((d) => {
         const sites = d.sites as Record<string, unknown> | undefined;
-        const siteWanIp = (d.site_wan_ip ?? sites?.wan_ip ?? null) as string | null;
+        const siteWanIp = (d.site_wan_ip ?? sites?.wan_ip ?? null) as
+          | string
+          | null;
         const siteName = (d.site_name ?? sites?.name ?? null) as string | null;
         return {
           ...d,
           site_wan_ip: siteWanIp,
           site_name: siteName,
           remote_address: siteWanIp && d.port ? `${siteWanIp}:${d.port}` : null,
-        };
+        } as ApiDevice;
       });
     },
     enabled: isAuthenticated,
@@ -63,10 +74,10 @@ export function useDevices(refetchInterval?: number) {
 export function useSites(refetchInterval?: number) {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['sites'],
+    queryKey: ["sites"],
     queryFn: async () => {
-      const response = await apiClient.get<unknown>('/sites');
-      return extractArray(response);
+      const response = await apiClient.get<unknown>("/sites");
+      return extractArray(response) as ApiSite[];
     },
     enabled: isAuthenticated,
     refetchInterval,
@@ -93,27 +104,31 @@ export function useEvents(filters?: EventFilters) {
   const pageSize = filters?.pageSize ?? 25;
 
   return useQuery({
-    queryKey: ['events', filters],
+    queryKey: ["events", filters],
     queryFn: async () => {
       const params: Record<string, string | number> = {
         page,
         limit: pageSize,
       };
       if (filters?.search) params.search = filters.search;
-      if (filters?.severity && filters.severity !== 'all') params.severity = filters.severity;
-      if (filters?.status && filters.status !== 'all') params.status = filters.status;
-      if (filters?.device_id && filters.device_id !== 'all') params.deviceId = filters.device_id;
-      if (filters?.site_id && filters.site_id !== 'all') params.siteId = filters.site_id;
+      if (filters?.severity && filters.severity !== "all")
+        params.severity = filters.severity;
+      if (filters?.status && filters.status !== "all")
+        params.status = filters.status;
+      if (filters?.device_id && filters.device_id !== "all")
+        params.deviceId = filters.device_id;
+      if (filters?.site_id && filters.site_id !== "all")
+        params.siteId = filters.site_id;
       if (filters?.date_from) params.from = filters.date_from;
       if (filters?.date_to) params.to = filters.date_to;
 
-      const response = await apiClient.get<unknown>('/events', params);
+      const response = await apiClient.get<unknown>("/events", params);
       // After unwrap: either [...] or { items: [...], meta: {...} }
       const items = extractArray(response);
       const meta = extractMeta(response);
       const total = (meta?.total as number | undefined) ?? items.length;
       return {
-        data: items,
+        data: items as ApiEvent[],
         count: total,
       };
     },
@@ -125,10 +140,12 @@ export function useEvents(filters?: EventFilters) {
 export function useEventsLegacy(refetchInterval?: number) {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['events-legacy'],
+    queryKey: ["events-legacy"],
     queryFn: async () => {
-      const response = await apiClient.get<unknown>('/events', { limit: '100' });
-      return extractArray(response);
+      const response = await apiClient.get<unknown>("/events", {
+        limit: "100",
+      });
+      return extractArray(response) as ApiEvent[];
     },
     enabled: isAuthenticated,
     refetchInterval,
@@ -140,10 +157,12 @@ export function useEventsLegacy(refetchInterval?: number) {
 export function useIncidents() {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['incidents'],
+    queryKey: ["incidents"],
     queryFn: async () => {
-      const response = await apiClient.get<unknown>('/incidents', { limit: '100' });
-      return extractArray(response);
+      const response = await apiClient.get<unknown>("/incidents", {
+        limit: "100",
+      });
+      return extractArray(response) as ApiIncident[];
     },
     enabled: isAuthenticated,
   });
@@ -154,9 +173,9 @@ export function useIncidents() {
 export function useIntegrations() {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['integrations'],
+    queryKey: ["integrations"],
     queryFn: async () => {
-      const response = await apiClient.get<unknown>('/integrations');
+      const response = await apiClient.get<unknown>("/integrations");
       return extractArray(response);
     },
     enabled: isAuthenticated,
@@ -166,9 +185,9 @@ export function useIntegrations() {
 export function useMcpConnectors() {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['mcp_connectors'],
+    queryKey: ["mcp_connectors"],
     queryFn: async () => {
-      const response = await apiClient.get<unknown>('/mcp/connectors');
+      const response = await apiClient.get<unknown>("/mcp/connectors");
       return extractArray(response);
     },
     enabled: isAuthenticated,
@@ -180,9 +199,11 @@ export function useMcpConnectors() {
 export function useAuditLogs() {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['audit_logs'],
+    queryKey: ["audit_logs"],
     queryFn: async () => {
-      const response = await apiClient.get<unknown>('/audit/logs', { limit: '500' });
+      const response = await apiClient.get<unknown>("/audit/logs", {
+        limit: "500",
+      });
       return extractArray(response);
     },
     enabled: isAuthenticated,
@@ -194,9 +215,11 @@ export function useAuditLogs() {
 export function useAiSessions() {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['ai_sessions'],
+    queryKey: ["ai_sessions"],
     queryFn: async () => {
-      const response = await apiClient.get<unknown>('/ai/sessions', { limit: '100' });
+      const response = await apiClient.get<unknown>("/ai/sessions", {
+        limit: "100",
+      });
       return extractArray(response);
     },
     enabled: isAuthenticated,
@@ -208,8 +231,13 @@ export function useAiSessions() {
 export function useOperationsDashboard(refetchInterval?: number) {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['operations-dashboard'],
-    queryFn: () => apiClient.edgeFunction<Record<string, unknown>>('operations-api', { action: 'dashboard' }, { method: 'GET' }),
+    queryKey: ["operations-dashboard"],
+    queryFn: () =>
+      apiClient.edgeFunction<Record<string, unknown>>(
+        "operations-api",
+        { action: "dashboard" },
+        { method: "GET" },
+      ),
     enabled: isAuthenticated,
     refetchInterval,
   });
@@ -218,8 +246,13 @@ export function useOperationsDashboard(refetchInterval?: number) {
 export function useCloudAccountMapping() {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['cloud-account-mapping'],
-    queryFn: () => apiClient.edgeFunction<Record<string, unknown>>('cloud-accounts-api', { action: 'mapping' }, { method: 'GET' }),
+    queryKey: ["cloud-account-mapping"],
+    queryFn: () =>
+      apiClient.edgeFunction<Record<string, unknown>>(
+        "cloud-accounts-api",
+        { action: "mapping" },
+        { method: "GET" },
+      ),
     enabled: isAuthenticated,
   });
 }
@@ -227,8 +260,13 @@ export function useCloudAccountMapping() {
 export function useRiskScore() {
   const { isAuthenticated } = useAuth();
   return useQuery({
-    queryKey: ['risk-score'],
-    queryFn: () => apiClient.edgeFunction<Record<string, unknown>>('analytics-api', { action: 'risk-score' }, { method: 'GET' }),
+    queryKey: ["risk-score"],
+    queryFn: () =>
+      apiClient.edgeFunction<Record<string, unknown>>(
+        "analytics-api",
+        { action: "risk-score" },
+        { method: "GET" },
+      ),
     enabled: isAuthenticated,
   });
 }

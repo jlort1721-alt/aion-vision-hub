@@ -26,6 +26,7 @@ import {
 import { cn } from '@/lib/utils';
 import { PageShell } from '@/components/shared/PageShell';
 import ErrorState from '@/components/ui/ErrorState';
+import type { ApiSite, ApiDevice } from '@/types/api-entities';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster';
@@ -33,7 +34,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 // Fix default marker icons for leaflet in bundled apps
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
@@ -124,11 +125,11 @@ function SitesMap({ sites, devices, selectedSite, onSelectSite }: {
 
     if (clusterRef.current) map.removeLayer(clusterRef.current);
 
-    const clusterGroup = (L as any).markerClusterGroup({
+    const clusterGroup = (L as unknown as Record<string, (...args: unknown[]) => L.LayerGroup>).markerClusterGroup({
       maxClusterRadius: 40,
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,
-      iconCreateFunction: (cluster: any) => {
+      iconCreateFunction: (cluster: { getChildCount: () => number }) => {
         const count = cluster.getChildCount();
         return L.divIcon({
           className: '',
@@ -207,8 +208,8 @@ const defaultForm: SiteForm = {
 export default function SitesPage() {
   const { data: rawSites = [], isLoading, isError, error, refetch } = useSites(30000);
   const { data: rawDevices = [] } = useDevices();
-  const sites = rawSites as any[];
-  const devices = rawDevices as any[];
+  const sites = rawSites as ApiSite[];
+  const devices = rawDevices as ApiDevice[];
   const { hasAnyRole } = useAuth();
   const queryClient = useQueryClient();
   const canManage = hasAnyRole(['super_admin', 'tenant_admin']);
@@ -381,7 +382,7 @@ export default function SitesPage() {
               className="pl-8 h-8 bg-slate-900/50 border-slate-700 text-sm"
             />
           </div>
-          <Select value={sortBy} onValueChange={v => setSortBy(v as any)}>
+          <Select value={sortBy} onValueChange={v => setSortBy(v as 'name' | 'devices' | 'status')}>
             <SelectTrigger className="w-[130px] h-8 text-xs bg-slate-900/50 border-slate-700">
               <ArrowUpDown className="h-3 w-3 mr-1" /><SelectValue />
             </SelectTrigger>
@@ -754,7 +755,7 @@ function DetailPanel({ site, devices, canManage, onEdit, onDelete, onClose }: {
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-white truncate">{d.name}</p>
                       <p className="text-[10px] text-slate-500 truncate">
-                        {d.brand && `${d.brand} `}{d.model && `${d.model} · `}{(d as any).remote_address || d.ip_address || ''}
+                        {d.brand && `${d.brand} `}{d.model && `${d.model} · `}{d.remote_address || d.ip_address || ''}
                       </p>
                     </div>
                   </div>

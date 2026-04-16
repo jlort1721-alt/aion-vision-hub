@@ -103,6 +103,27 @@ export async function registerIntercomRoutes(app: FastifyInstance) {
     return reply.send({ success: true, data });
   });
 
+  /** Download call recording audio file */
+  app.get<{ Params: { id: string } }>('/sessions/:id/recording', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
+    const session = await orchestrationService.getSession(request.params.id, request.tenantId);
+    if (!session?.recordingUrl) {
+      return reply.code(404).send({ success: false, error: 'Grabación no disponible' });
+    }
+    try {
+      const fs = await import('fs');
+      if (!fs.existsSync(session.recordingUrl)) {
+        return reply.code(404).send({ success: false, error: 'Archivo no encontrado' });
+      }
+      const stat = fs.statSync(session.recordingUrl);
+      reply.header('Content-Type', 'audio/wav');
+      reply.header('Content-Length', stat.size);
+      reply.header('Content-Disposition', `attachment; filename="call-${request.params.id}.wav"`);
+      return reply.send(fs.createReadStream(session.recordingUrl));
+    } catch {
+      return reply.code(500).send({ success: false, error: 'Error al leer grabación' });
+    }
+  });
+
   /** Initiate outbound call via SIP */
   app.post<{ Body: InitiateCallInput }>(
     '/sessions/initiate',

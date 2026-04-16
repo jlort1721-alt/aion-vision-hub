@@ -1,0 +1,81 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/apps/backend-api/src/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/apps/backend-api/src/**'
+
+jobs:
+  integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: aion_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: backend
+
+      - name: Build packages
+        run: pnpm build
+        working-directory: backend
+
+      - name: Run integration tests
+        run: pnpm --filter @aion/backend-api test -- --grep "Integration:"
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/aion_test
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+          JWT_SECRET: test-secret-for-ci
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: backend/apps/backend-api/coverage/
+          retention-days: 7

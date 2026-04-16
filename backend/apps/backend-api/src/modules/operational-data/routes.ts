@@ -71,6 +71,21 @@ export async function registerOperationalDataRoutes(app: FastifyInstance) {
   //  RESIDENTS
   // ═══════════════════════════════════════════════════════════════════════════
 
+  app.get('/residents/grouped', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (request) => {
+    const data = await operationalDataService.residentsGroupedByModule(request.tenantId);
+    return { success: true, data };
+  });
+
+  app.post('/residents/bulk-import', { preHandler: [requireRole('tenant_admin', 'super_admin')] }, async (request, reply) => {
+    const body = request.body as { records: Array<Record<string, unknown>> };
+    if (!Array.isArray(body?.records)) {
+      return reply.code(400).send({ success: false, error: 'records array required' });
+    }
+    const result = await operationalDataService.residentsBulkImport(request.tenantId, body.records);
+    await request.audit('residents.bulk-import', 'residents', null as unknown as string, { imported: result.imported, skipped: result.skipped });
+    return { success: true, data: result };
+  });
+
   app.get<{ Querystring: PaginationQuery }>(
     '/residents',
     { preHandler: [readRoles] },
