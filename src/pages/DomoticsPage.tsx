@@ -507,7 +507,7 @@ export default function DomoticsPage() {
     );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden">
+    <>
       <PageShell
         title={t("domotics.title")}
         description={t("domotics.subtitle")}
@@ -551,7 +551,7 @@ export default function DomoticsPage() {
           </div>
         }
       >
-        <div className="p-4 flex gap-4 h-full overflow-hidden">
+        <div className="p-4 flex gap-4 min-h-full bg-background">
           <div className="flex-1 flex flex-col min-w-0">
             <DomoticsHeader
               devicesCount={headerDevicesCount}

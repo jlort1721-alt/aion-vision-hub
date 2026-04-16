@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { requireRole } from '../../plugins/auth.js';
 import { domoticService } from './service.js';
 import { ewelinkMCP } from '../../services/ewelink-mcp.js';
+import { ewelinkProxyService } from '../ewelink/service.js';
 import { db } from '../../db/client.js';
 import { sql } from 'drizzle-orm';
 import {
@@ -16,13 +17,21 @@ export async function registerDomoticRoutes(app: FastifyInstance) {
     return reply.send({ success: true, data: { configured: ewelinkMCP.isConfigured() } });
   });
 
-  app.get('/ewelink/devices', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (_request, reply) => {
-    if (!ewelinkMCP.isConfigured()) return reply.send({ success: true, data: [], message: 'eWeLink MCP not configured' });
+  app.get('/ewelink/devices', { preHandler: [requireRole('operator', 'tenant_admin', 'super_admin')] }, async (request, reply) => {
+    // Try MCP first, then fall back to direct proxy API
+    if (ewelinkMCP.isConfigured()) {
+      try {
+        const devices = await ewelinkMCP.getDevices();
+        if (devices.length > 0) return reply.send({ success: true, data: devices });
+      } catch { /* fall through to proxy */ }
+    }
+
+    // Fallback: use eWeLink proxy service (direct CoolKit API with auto-login)
     try {
-      const devices = await ewelinkMCP.getDevices();
+      const devices = await ewelinkProxyService.listDevices(request.tenantId);
       return reply.send({ success: true, data: devices });
     } catch (err) {
-      return reply.send({ success: false, error: (err as Error).message });
+      return reply.send({ success: true, data: [], message: (err as Error).message });
     }
   });
 
@@ -30,8 +39,17 @@ export async function registerDomoticRoutes(app: FastifyInstance) {
     const { deviceId } = request.params as { deviceId: string };
     const { on } = request.body as { on: boolean };
     try {
-      await ewelinkMCP.toggleDevice(deviceId, on);
-      await request.audit('domotics.ewelink.toggle', 'ewelink', deviceId, { on });
+      // Try MCP first
+      if (ewelinkMCP.isConfigured()) {
+        try {
+          await ewelinkMCP.toggleDevice(deviceId, on);
+          await request.audit('domotics.ewelink.toggle', 'ewelink', deviceId, { on, via: 'mcp' });
+          return reply.send({ success: true });
+        } catch { /* fall through to proxy */ }
+      }
+      // Fallback: proxy service
+      await ewelinkProxyService.controlDevice(request.tenantId, deviceId, on ? 'on' : 'off');
+      await request.audit('domotics.ewelink.toggle', 'ewelink', deviceId, { on, via: 'proxy' });
       return reply.send({ success: true });
     } catch (err) {
       return reply.send({ success: false, error: (err as Error).message });
@@ -42,8 +60,18 @@ export async function registerDomoticRoutes(app: FastifyInstance) {
     const { deviceId } = request.params as { deviceId: string };
     const { action } = request.body as { action: string };
     try {
-      await ewelinkMCP.controlDevice(deviceId, action);
-      await request.audit('domotics.ewelink.control', 'ewelink', deviceId, { action });
+      // Try MCP first
+      if (ewelinkMCP.isConfigured()) {
+        try {
+          await ewelinkMCP.controlDevice(deviceId, action);
+          await request.audit('domotics.ewelink.control', 'ewelink', deviceId, { action, via: 'mcp' });
+          return reply.send({ success: true });
+        } catch { /* fall through */ }
+      }
+      // Fallback: proxy service
+      const state = action === 'turn on' || action === 'on' ? 'on' : 'off';
+      await ewelinkProxyService.controlDevice(request.tenantId, deviceId, state);
+      await request.audit('domotics.ewelink.control', 'ewelink', deviceId, { action, via: 'proxy' });
       return reply.send({ success: true });
     } catch (err) {
       return reply.send({ success: false, error: (err as Error).message });

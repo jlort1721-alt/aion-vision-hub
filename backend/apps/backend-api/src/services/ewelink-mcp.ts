@@ -7,7 +7,10 @@ import { fetchWithTimeout } from '../lib/http-client.js';
 
 const logger = createLogger({ name: 'ewelink-mcp' });
 
-const EWELINK_MCP_URL = process.env.EWELINK_MCP_URL || '';
+// Read env var lazily (not at import time) to ensure dotenv has loaded
+function getEwelinkMcpUrl(): string {
+  return process.env.EWELINK_MCP_URL || '';
+}
 
 interface EwelinkDevice {
   deviceid: string;
@@ -22,11 +25,12 @@ export class EwelinkMCPClient {
   private sessionId: string | null = null;
 
   isConfigured(): boolean {
-    return !!EWELINK_MCP_URL;
+    return !!getEwelinkMcpUrl();
   }
 
   private async mcpRequest(method: string, params?: Record<string, unknown>, id?: number): Promise<Record<string, unknown>> {
-    if (!EWELINK_MCP_URL) throw new Error('EWELINK_MCP_URL not configured');
+    const url = getEwelinkMcpUrl();
+    if (!url) throw new Error('EWELINK_MCP_URL not configured');
 
     const body: Record<string, unknown> = { jsonrpc: '2.0', method };
     if (id) body.id = id;
@@ -38,7 +42,7 @@ export class EwelinkMCPClient {
     };
     if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
 
-    const resp = await fetchWithTimeout(EWELINK_MCP_URL, { timeout: 5000,
+    const resp = await fetchWithTimeout(url, { timeout: 5000,
       method: 'POST',
       headers,
       body: JSON.stringify(body),
