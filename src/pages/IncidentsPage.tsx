@@ -78,18 +78,18 @@ const priorityColors: Record<string, string> = {
   medium: "text-info",
   low: "text-muted-foreground",
 };
-const priorityLabels: Record<string, string> = {
-  critical: "Crítica",
-  high: "Alta",
-  medium: "Media",
-  low: "Baja",
+const priorityLabelKeys: Record<string, string> = {
+  critical: "incidents.priority_critical",
+  high: "incidents.priority_high",
+  medium: "incidents.priority_medium",
+  low: "incidents.priority_low",
 };
-const statusLabels: Record<string, string> = {
-  open: "Abierto",
-  investigating: "Investigando",
-  in_progress: "En progreso",
-  resolved: "Resuelto",
-  closed: "Cerrado",
+const statusLabelKeys: Record<string, string> = {
+  open: "incidents.status_open",
+  investigating: "incidents.status_investigating",
+  in_progress: "incidents.status_in_progress",
+  resolved: "incidents.status_resolved",
+  closed: "incidents.status_closed",
 };
 const statusBadgeVariant = (s: string) =>
   s === "open"
@@ -270,7 +270,7 @@ export default function IncidentsPage() {
     <>
       <PageShell
         title={t("incidents.title") || "Incidentes"}
-        description="Seguimiento y resolución de incidentes de seguridad"
+        description={t("incidents.subtitle")}
         icon={<AlertTriangle className="h-5 w-5" />}
         actions={
           <>
@@ -278,26 +278,26 @@ export default function IncidentsPage() {
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
                 <Button size="sm">
-                  <Plus className="mr-1 h-3 w-3" /> Nuevo
+                  <Plus className="mr-1 h-3 w-3" /> {t("common.new")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Crear Incidente</DialogTitle>
+                  <DialogTitle>{t("incidents.create_incident")}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                   <div className="space-y-2">
-                    <Label>Título</Label>
+                    <Label>{t("incidents.title_label")}</Label>
                     <Input
                       value={newIncident.title}
                       onChange={(e) =>
                         setNewIncident((p) => ({ ...p, title: e.target.value }))
                       }
-                      placeholder="Título del incidente"
+                      placeholder={t("incidents.title_placeholder")}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Descripción</Label>
+                    <Label>{t("incidents.description_label")}</Label>
                     <Textarea
                       value={newIncident.description}
                       onChange={(e) =>
@@ -306,12 +306,12 @@ export default function IncidentsPage() {
                           description: e.target.value,
                         }))
                       }
-                      placeholder="Descripción detallada"
+                      placeholder={t("incidents.description_placeholder")}
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Prioridad</Label>
+                      <Label>{t("incidents.priority")}</Label>
                       <Select
                         value={newIncident.priority}
                         onValueChange={(v) =>
@@ -322,15 +322,23 @@ export default function IncidentsPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="critical">Crítica</SelectItem>
-                          <SelectItem value="high">Alta</SelectItem>
-                          <SelectItem value="medium">Media</SelectItem>
-                          <SelectItem value="low">Baja</SelectItem>
+                          <SelectItem value="critical">
+                            {t("incidents.priority_critical")}
+                          </SelectItem>
+                          <SelectItem value="high">
+                            {t("incidents.priority_high")}
+                          </SelectItem>
+                          <SelectItem value="medium">
+                            {t("incidents.priority_medium")}
+                          </SelectItem>
+                          <SelectItem value="low">
+                            {t("incidents.priority_low")}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Sitio</Label>
+                      <Label>{t("incidents.site")}</Label>
                       <Select
                         value={newIncident.site_id}
                         onValueChange={(v) =>
@@ -338,7 +346,9 @@ export default function IncidentsPage() {
                         }
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar sitio" />
+                          <SelectValue
+                            placeholder={t("incidents.select_site")}
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {sites.map((s: any) => (
@@ -360,7 +370,7 @@ export default function IncidentsPage() {
                     ) : (
                       <Plus className="mr-1 h-4 w-4" />
                     )}
-                    Crear Incidente
+                    {t("incidents.create_incident")}
                   </Button>
                 </div>
               </DialogContent>
@@ -379,13 +389,13 @@ export default function IncidentsPage() {
             {/* Stats bar */}
             <div className="px-3 py-2 border-b flex items-center gap-2 text-xs">
               <Badge variant="destructive" className="text-[10px]">
-                {openCount} abiertos
+                {openCount} {t("incidents.status_open_count")}
               </Badge>
               <Badge variant="outline" className="text-[10px]">
-                {investigatingCount} en curso
+                {investigatingCount} {t("incidents.status_in_progress_count")}
               </Badge>
               <Badge variant="secondary" className="text-[10px]">
-                {resolvedCount} resueltos
+                {resolvedCount} {t("incidents.status_resolved_count")}
               </Badge>
             </div>
 
@@ -394,7 +404,7 @@ export default function IncidentsPage() {
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar incidentes..."
+                  placeholder={t("incidents.search")}
                   className="pl-7 h-7 text-xs"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -411,7 +421,9 @@ export default function IncidentsPage() {
                       className="h-6 text-[10px] px-2"
                       onClick={() => setStatusFilter(s)}
                     >
-                      {s === "all" ? "Todos" : statusLabels[s] || s}
+                      {s === "all"
+                        ? t("common.all")
+                        : t(statusLabelKeys[s]) || s}
                     </Button>
                   ),
                 )}
@@ -429,9 +441,9 @@ export default function IncidentsPage() {
               ) : filtered.length === 0 ? (
                 <SharedEmptyState
                   icon={AlertCircle}
-                  title="No hay incidentes registrados"
-                  description="Los incidentes apareceran aqui cuando se creen."
-                  actionLabel="Crear incidente"
+                  title={t("incidents.no_incidents")}
+                  description={t("incidents.no_incidents_desc")}
+                  actionLabel={t("incidents.create_incident")}
                   onAction={() => setCreateOpen(true)}
                 />
               ) : (
@@ -461,10 +473,10 @@ export default function IncidentsPage() {
                             variant={statusBadgeVariant(inc.status)}
                             className="text-[9px]"
                           >
-                            {statusLabels[inc.status] || inc.status}
+                            {t(statusLabelKeys[inc.status]) || inc.status}
                           </Badge>
                           <Badge variant="outline" className="text-[9px]">
-                            {priorityLabels[inc.priority] || inc.priority}
+                            {t(priorityLabelKeys[inc.priority]) || inc.priority}
                           </Badge>
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-1">
@@ -485,13 +497,14 @@ export default function IncidentsPage() {
                 onClick={() => setSelected(null)}
                 className="md:hidden text-xs text-muted-foreground mb-2 flex items-center gap-1 hover:text-foreground"
               >
-                &larr; Volver
+                &larr; {t("common.back")}
               </button>
               <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <Badge variant={statusBadgeVariant(selectedInc.status)}>
-                      {statusLabels[selectedInc.status] || selectedInc.status}
+                      {t(statusLabelKeys[selectedInc.status]) ||
+                        selectedInc.status}
                     </Badge>
                     <Badge
                       className={cn(
@@ -501,7 +514,7 @@ export default function IncidentsPage() {
                           : "",
                       )}
                     >
-                      {priorityLabels[selectedInc.priority] ||
+                      {t(priorityLabelKeys[selectedInc.priority]) ||
                         selectedInc.priority}
                     </Badge>
                   </div>
@@ -522,7 +535,7 @@ export default function IncidentsPage() {
                     ) : (
                       <Bot className="mr-1 h-3 w-3" />
                     )}{" "}
-                    Resumen IA
+                    {t("incidents.ai_summary")}
                   </Button>
                   {selectedInc.status !== "closed" &&
                     selectedInc.status !== "resolved" && (
@@ -538,7 +551,7 @@ export default function IncidentsPage() {
                           ) : (
                             <CheckCircle2 className="mr-1 h-3 w-3" />
                           )}{" "}
-                          Resolver
+                          {t("incidents.resolve")}
                         </Button>
                         <Button
                           variant="destructive"
@@ -551,7 +564,7 @@ export default function IncidentsPage() {
                           ) : (
                             <XCircle className="mr-1 h-3 w-3" />
                           )}{" "}
-                          Cerrar
+                          {t("incidents.close")}
                         </Button>
                       </>
                     )}
@@ -562,7 +575,7 @@ export default function IncidentsPage() {
                 <Card className="border-primary/30 bg-primary/5">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-1">
-                      <Bot className="h-3 w-3" /> Resumen IA
+                      <Bot className="h-3 w-3" /> {t("incidents.ai_summary")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -574,26 +587,33 @@ export default function IncidentsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Card>
                   <CardContent className="p-3 space-y-1 text-sm">
-                    <p className="text-xs text-muted-foreground">Asignado a</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("incidents.assigned_to")}
+                    </p>
                     <p className="font-medium flex items-center gap-1">
                       <User className="h-3 w-3" />{" "}
-                      {selectedInc.assigned_to ? "Operador" : "Sin asignar"}
+                      {selectedInc.assigned_to
+                        ? t("incidents.operator")
+                        : t("incidents.unassigned")}
                     </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-3 space-y-1 text-sm">
                     <p className="text-xs text-muted-foreground">
-                      Eventos relacionados
+                      {t("incidents.related_events")}
                     </p>
                     <p className="font-medium">
-                      {selectedInc.event_ids?.length || 0} eventos
+                      {selectedInc.event_ids?.length || 0}{" "}
+                      {t("incidents.events_count")}
                     </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-3 space-y-1 text-sm">
-                    <p className="text-xs text-muted-foreground">Creado</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("incidents.created")}
+                    </p>
                     <p className="font-medium flex items-center gap-1">
                       <Clock className="h-3 w-3" />{" "}
                       {formatDateTime(selectedInc.created_at)}
@@ -608,13 +628,14 @@ export default function IncidentsPage() {
                     value="activity"
                     className="flex items-center gap-1"
                   >
-                    <MessageSquare className="h-3 w-3" /> Actividad
+                    <MessageSquare className="h-3 w-3" />{" "}
+                    {t("incidents.activity_tab")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="evidence"
                     className="flex items-center gap-1"
                   >
-                    <Shield className="h-3 w-3" /> Evidencia
+                    <Shield className="h-3 w-3" /> {t("incidents.evidence_tab")}
                   </TabsTrigger>
                 </TabsList>
 
@@ -651,7 +672,7 @@ export default function IncidentsPage() {
                       {selectedInc.status !== "closed" && (
                         <>
                           <Textarea
-                            placeholder="Agregar comentario..."
+                            placeholder={t("incidents.add_comment")}
                             className="text-sm min-h-[60px]"
                             value={comment}
                             onChange={(e) => setComment(e.target.value)}
@@ -669,7 +690,7 @@ export default function IncidentsPage() {
                               ) : (
                                 <MessageSquare className="mr-1 h-3 w-3" />
                               )}{" "}
-                              Comentar
+                              {t("incidents.comment")}
                             </Button>
                           </div>
                         </>
@@ -688,7 +709,7 @@ export default function IncidentsPage() {
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <p>Seleccione un incidente para ver los detalles</p>
+              <p>{t("incidents.select_incident")}</p>
             </div>
           )}
         </div>
@@ -700,12 +721,11 @@ export default function IncidentsPage() {
           <div className="bg-card border rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
             <h3 className="text-lg font-semibold mb-2">
               {pendingStatus === "resolved"
-                ? "Resolver Incidente"
-                : "Cerrar Incidente"}
+                ? t("incidents.resolve_incident")
+                : t("incidents.close_incident")}
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Ingrese la razón o descripción de la resolución. Este campo es
-              obligatorio.
+              {t("incidents.resolution_required")}
             </p>
             <textarea
               className="w-full border rounded-md p-3 text-sm min-h-[100px] bg-background resize-none focus:ring-2 focus:ring-primary focus:outline-none"

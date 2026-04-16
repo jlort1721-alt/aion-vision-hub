@@ -28,3 +28,11 @@
 2026-04-16T05:05:00Z | F9 | Deploy prod: tag pre-deploy-fase9-20260416-000057, backup 7.1M, SCP workers+services+routes+migrations, tsc build VPS, pm2 restart, health OK uptime 45s, 26 PM2 online, 0 errors | OK |
 2026-04-16T05:10:00Z | F10 | REPORTE_REMEDIACION_AION.md generado (11 secciones) | OK |
 2026-04-16T05:20:00Z | F11 | Cierre: memoria actualizada (project_remediation CERRADA + feedback_remediation_lessons + MEMORY.md), retrospectiva escrita | OK |
+2026-04-16T05:40:00Z | DEPLOY | Frontend build Vite (261 assets, PWA) + SCP a VPS + nginx reload | OK |
+2026-04-16T05:45:00Z | DEPLOY | Backend tsc rebuild en VPS + pm2 restart aionseg-api | OK |
+2026-04-16T05:48:00Z | DEPLOY | Workers dvr-time-sync + asterisk-call-logger registrados en PM2 con CWD correcto | OK |
+2026-04-16T05:48:33Z | DEPLOY | AMI login successful — call logger escuchando eventos | OK |
+2026-04-16T05:49:00Z | DEPLOY | DVR sync primera ronda: fetch failed en 10 DVRs (topologia red — LANs privadas, no bug) | ESPERADO |
+2026-04-16T05:52:00Z | VERIFY | Frontend hash index-CD6TEmkw.js confirmado en aionseg.co, 0 supabase refs | OK |
+2026-04-16T05:52:00Z | VERIFY | API health uptime 393s, 28 PM2 online, 0 errores, migraciones 030-032 en DB | OK |
+2026-04-16T06:00:00Z | I18N | Agentes procesando 14 paginas i18n + 37 tests handlers en paralelo | EN CURSO |
