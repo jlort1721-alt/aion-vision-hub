@@ -16,3 +16,4 @@
 2026-04-16T03:13:00Z | F0.3 | Backup 20260416-031258 (178M: pg 6.2M + www 172M) | OK |
 2026-04-16T03:14:00Z | F0.4 | Feature flags: 8 FX flags + NOTIFY_WS_BRIDGE en src/lib/feature-flags.ts | OK |
 2026-04-16T03:18:55Z | F1 | Migration 032 deprecate_duplicates applied: 3 tables renamed to _deprecated_20260416 | OK |
+2026-04-16T03:25:00Z | F2 | FX-033 export clip: mutation rewired POST /clips/export (was /streams/playback) | OK |
