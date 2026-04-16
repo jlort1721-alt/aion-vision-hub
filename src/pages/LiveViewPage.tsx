@@ -99,6 +99,12 @@ const SceneComposer = lazy(() =>
   })),
 );
 const TourEngine = lazy(() => import("@/components/liveview/TourEngine"));
+const LiveViewEventsPanel = lazy(
+  () => import("@/components/liveview/LiveViewEventsPanel"),
+);
+const LiveViewOpsPanel = lazy(
+  () => import("@/components/liveview/LiveViewOpsPanel"),
+);
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -1364,6 +1370,22 @@ export default function LiveViewPage() {
                   </TooltipTrigger>
                   <TooltipContent>Control de Cámara</TooltipContent>
                 </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger value="lv-events" className="h-7 px-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Eventos en Vivo</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger value="lv-ops" className="h-7 px-1.5">
+                      <Zap className="h-3.5 w-3.5" />
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Operaciones</TooltipContent>
+                </Tooltip>
               </TabsList>
 
               <ScrollArea className="flex-1">
@@ -1430,6 +1452,38 @@ export default function LiveViewPage() {
                       </Suspense>
                     </TabsContent>
                   )}
+
+                  <TabsContent value="lv-events" className="mt-0">
+                    <Suspense
+                      fallback={
+                        <div className="p-4 text-xs text-muted-foreground">
+                          Cargando eventos...
+                        </div>
+                      }
+                    >
+                      <LiveViewEventsPanel
+                        onClose={() => {
+                          /* panel stays open */
+                        }}
+                      />
+                    </Suspense>
+                  </TabsContent>
+
+                  <TabsContent value="lv-ops" className="mt-0">
+                    <Suspense
+                      fallback={
+                        <div className="p-4 text-xs text-muted-foreground">
+                          Cargando operaciones...
+                        </div>
+                      }
+                    >
+                      <LiveViewOpsPanel
+                        onClose={() => {
+                          /* panel stays open */
+                        }}
+                      />
+                    </Suspense>
+                  </TabsContent>
                 </div>
               </ScrollArea>
             </Tabs>
