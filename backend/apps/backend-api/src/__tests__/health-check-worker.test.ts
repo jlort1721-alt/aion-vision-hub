@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ── Hoisted mocks ─────────────────────────────────────────────────
 
@@ -13,47 +13,55 @@ const { mockDispatch, mockLogger } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@aion/common-utils', async () => {
-  const actual = await vi.importActual('@aion/common-utils');
+vi.mock("@aion/common-utils", async () => {
+  const actual = await vi.importActual("@aion/common-utils");
   return {
     ...actual,
     createLogger: vi.fn(() => mockLogger),
   };
 });
 
-vi.mock('../db/schema/index.js', () => ({
-  sites: { id: 'id', name: 'name', wanIp: 'wan_ip' },
+vi.mock("../db/schema/index.js", () => ({
+  sites: { id: "id", name: "name", wanIp: "wan_ip" },
   devices: {
-    id: 'id', name: 'name', port: 'port', type: 'type',
-    status: 'status', tenantId: 'tenant_id', siteId: 'site_id',
+    id: "id",
+    name: "name",
+    port: "port",
+    type: "type",
+    status: "status",
+    tenantId: "tenant_id",
+    siteId: "site_id",
   },
 }));
 
-vi.mock('drizzle-orm', () => ({
-  eq: vi.fn((a: unknown, b: unknown) => ({ op: 'eq', a, b })),
-  and: vi.fn((...args: unknown[]) => ({ op: 'and', args })),
-  isNotNull: vi.fn((a: unknown) => ({ op: 'isNotNull', a })),
+vi.mock("drizzle-orm", () => ({
+  eq: vi.fn((a: unknown, b: unknown) => ({ op: "eq", a, b })),
+  and: vi.fn((...args: unknown[]) => ({ op: "and", args })),
+  isNotNull: vi.fn((a: unknown) => ({ op: "isNotNull", a })),
 }));
 
-vi.mock('../workers/notification-dispatcher.js', () => ({
+vi.mock("../workers/notification-dispatcher.js", () => ({
   dispatchDeviceStateChange: (...args: unknown[]) => mockDispatch(...args),
 }));
 
 // Mock net module — we control TCP ping results via mockSocketBehavior
 const mockSocketBehavior = { reachable: true, latency: 12 };
-vi.mock('net', () => {
-  const EventEmitter = require('events');
+vi.mock("net", () => {
+  const EventEmitter = require("events");
   return {
-    Socket: vi.fn().mockImplementation(() => {
+    Socket: vi.fn().mockImplementation(function () {
       const socket = new EventEmitter();
       socket.setTimeout = vi.fn();
       socket.destroy = vi.fn();
       socket.connect = vi.fn().mockImplementation(() => {
-        if (mockSocketBehavior.reachable) {
-          process.nextTick(() => socket.emit('connect'));
-        } else {
-          process.nextTick(() => socket.emit('error', new Error('ECONNREFUSED')));
-        }
+        // Use queueMicrotask instead of process.nextTick for better compatibility with fake timers
+        queueMicrotask(() => {
+          if (mockSocketBehavior.reachable) {
+            socket.emit("connect");
+          } else {
+            socket.emit("error", new Error("ECONNREFUSED"));
+          }
+        });
       });
       return socket;
     }),
@@ -64,7 +72,7 @@ import {
   startHealthCheckWorker,
   stopHealthCheckWorker,
   healthCheckCache,
-} from '../workers/health-check-worker.js';
+} from "../workers/health-check-worker.js";
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -83,12 +91,17 @@ function buildDb(siteRows: unknown[], deviceRows: unknown[]) {
   const setFn = vi.fn().mockReturnValue({ where: updateWhereFn });
   const updateFn = vi.fn().mockReturnValue({ set: setFn });
 
-  return { select: selectFn, update: updateFn, _setFn: setFn, _updateWhereFn: updateWhereFn };
+  return {
+    select: selectFn,
+    update: updateFn,
+    _setFn: setFn,
+    _updateWhereFn: updateWhereFn,
+  };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────
 
-describe('Health Check Worker', () => {
+describe("Health Check Worker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
@@ -104,27 +117,27 @@ describe('Health Check Worker', () => {
 
   // ── startHealthCheckWorker / stopHealthCheckWorker ─────────
 
-  describe('startHealthCheckWorker', () => {
-    it('returns a cleanup function', () => {
+  describe("startHealthCheckWorker", () => {
+    it("returns a cleanup function", () => {
       const db = buildDb([], []);
       const cleanup = startHealthCheckWorker(db as any, 60_000);
-      expect(typeof cleanup).toBe('function');
+      expect(typeof cleanup).toBe("function");
       cleanup();
     });
 
-    it('prevents double-start (warns and returns cleanup)', () => {
+    it("prevents double-start (warns and returns cleanup)", () => {
       const db = buildDb([], []);
 
       startHealthCheckWorker(db as any, 60_000);
       const cleanup2 = startHealthCheckWorker(db as any, 60_000);
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('already running'),
+        expect.stringContaining("already running"),
       );
-      expect(typeof cleanup2).toBe('function');
+      expect(typeof cleanup2).toBe("function");
     });
 
-    it('runs an immediate check on start', async () => {
+    it("runs an immediate check on start", async () => {
       const db = buildDb([], []);
       startHealthCheckWorker(db as any, 300_000);
 
@@ -134,7 +147,7 @@ describe('Health Check Worker', () => {
       expect(db.select).toHaveBeenCalled();
     });
 
-    it('runs checks on each interval tick', async () => {
+    it("runs checks on each interval tick", async () => {
       const db = buildDb([], []);
       startHealthCheckWorker(db as any, 1000);
 
@@ -146,8 +159,8 @@ describe('Health Check Worker', () => {
     });
   });
 
-  describe('stopHealthCheckWorker', () => {
-    it('stops the timer so no further ticks fire', async () => {
+  describe("stopHealthCheckWorker", () => {
+    it("stops the timer so no further ticks fire", async () => {
       const db = buildDb([], []);
       startHealthCheckWorker(db as any, 1000);
 
@@ -159,16 +172,16 @@ describe('Health Check Worker', () => {
       expect(db.select).not.toHaveBeenCalled();
     });
 
-    it('is safe to call when not running', () => {
+    it("is safe to call when not running", () => {
       expect(() => stopHealthCheckWorker()).not.toThrow();
     });
   });
 
   // ── Health check sweep logic ──────────────────────────────
 
-  describe('health check sweep', () => {
-    it('skips sites with no wanIp', async () => {
-      const db = buildDb([{ id: 's1', name: 'Site 1', wanIp: null }], []);
+  describe("health check sweep", () => {
+    it("skips sites with no wanIp", async () => {
+      const db = buildDb([{ id: "s1", name: "Site 1", wanIp: null }], []);
       startHealthCheckWorker(db as any, 60_000);
       await vi.advanceTimersByTimeAsync(0);
 
@@ -176,12 +189,33 @@ describe('Health Check Worker', () => {
       expect(db.select).toHaveBeenCalledTimes(1);
     });
 
-    it('skips non-checkable device types (network_wan, domotic, etc.)', async () => {
-      const site = { id: 's1', name: 'HQ', wanIp: '1.2.3.4' };
+    it("skips non-checkable device types (network_wan, domotic, etc.)", async () => {
+      const site = { id: "s1", name: "HQ", wanIp: "1.2.3.4" };
       const devs = [
-        { id: 'd1', name: 'WAN', port: 80, type: 'network_wan', status: 'online', tenantId: 't1' },
-        { id: 'd2', name: 'LAN', port: 80, type: 'network_lan', status: 'online', tenantId: 't1' },
-        { id: 'd3', name: 'Ewe', port: 80, type: 'cloud_account_ewelink', status: 'online', tenantId: 't1' },
+        {
+          id: "d1",
+          name: "WAN",
+          port: 80,
+          type: "network_wan",
+          status: "online",
+          tenantId: "t1",
+        },
+        {
+          id: "d2",
+          name: "LAN",
+          port: 80,
+          type: "network_lan",
+          status: "online",
+          tenantId: "t1",
+        },
+        {
+          id: "d3",
+          name: "Ewe",
+          port: 80,
+          type: "cloud_account_ewelink",
+          status: "online",
+          tenantId: "t1",
+        },
       ];
       const db = buildDb([site], devs);
       startHealthCheckWorker(db as any, 60_000);
@@ -191,40 +225,61 @@ describe('Health Check Worker', () => {
       expect(healthCheckCache.size).toBe(0);
     });
 
-    it('caches results for reachable devices', async () => {
+    it("caches results for reachable devices", async () => {
       mockSocketBehavior.reachable = true;
-      const site = { id: 's1', name: 'HQ', wanIp: '10.0.0.1' };
+      const site = { id: "s1", name: "HQ", wanIp: "10.0.0.1" };
       const devs = [
-        { id: 'd1', name: 'Cam 1', port: 554, type: 'camera', status: 'online', tenantId: 't1' },
+        {
+          id: "d1",
+          name: "Cam 1",
+          port: 554,
+          type: "camera",
+          status: "online",
+          tenantId: "t1",
+        },
       ];
       const db = buildDb([site], devs);
       startHealthCheckWorker(db as any, 60_000);
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(healthCheckCache.has('d1')).toBe(true);
-      expect(healthCheckCache.get('d1')!.reachable).toBe(true);
+      expect(healthCheckCache.has("d1")).toBe(true);
+      expect(healthCheckCache.get("d1")!.reachable).toBe(true);
     });
 
-    it('caches results for unreachable devices', async () => {
+    it("caches results for unreachable devices", async () => {
       mockSocketBehavior.reachable = false;
-      const site = { id: 's1', name: 'HQ', wanIp: '10.0.0.1' };
+      const site = { id: "s1", name: "HQ", wanIp: "10.0.0.1" };
       const devs = [
-        { id: 'd1', name: 'Cam 1', port: 554, type: 'camera', status: 'online', tenantId: 't1' },
+        {
+          id: "d1",
+          name: "Cam 1",
+          port: 554,
+          type: "camera",
+          status: "online",
+          tenantId: "t1",
+        },
       ];
       const db = buildDb([site], devs);
       startHealthCheckWorker(db as any, 60_000);
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(healthCheckCache.has('d1')).toBe(true);
-      expect(healthCheckCache.get('d1')!.reachable).toBe(false);
-      expect(healthCheckCache.get('d1')!.latencyMs).toBeNull();
+      expect(healthCheckCache.has("d1")).toBe(true);
+      expect(healthCheckCache.get("d1")!.reachable).toBe(false);
+      expect(healthCheckCache.get("d1")!.latencyMs).toBeNull();
     });
 
-    it('updates DB when device status changes (online -> offline)', async () => {
+    it("updates DB when device status changes (online -> offline)", async () => {
       mockSocketBehavior.reachable = false;
-      const site = { id: 's1', name: 'HQ', wanIp: '10.0.0.1' };
+      const site = { id: "s1", name: "HQ", wanIp: "10.0.0.1" };
       const devs = [
-        { id: 'd1', name: 'Cam 1', port: 554, type: 'camera', status: 'online', tenantId: 't1' },
+        {
+          id: "d1",
+          name: "Cam 1",
+          port: 554,
+          type: "camera",
+          status: "online",
+          tenantId: "t1",
+        },
       ];
       const db = buildDb([site], devs);
       startHealthCheckWorker(db as any, 60_000);
@@ -232,15 +287,22 @@ describe('Health Check Worker', () => {
 
       expect(db.update).toHaveBeenCalled();
       expect(db._setFn).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'offline' }),
+        expect.objectContaining({ status: "offline" }),
       );
     });
 
-    it('dispatches notification on state change', async () => {
+    it("dispatches notification on state change", async () => {
       mockSocketBehavior.reachable = false;
-      const site = { id: 's1', name: 'HQ', wanIp: '10.0.0.1' };
+      const site = { id: "s1", name: "HQ", wanIp: "10.0.0.1" };
       const devs = [
-        { id: 'd1', name: 'Cam 1', port: 554, type: 'camera', status: 'online', tenantId: 't1' },
+        {
+          id: "d1",
+          name: "Cam 1",
+          port: 554,
+          type: "camera",
+          status: "online",
+          tenantId: "t1",
+        },
       ];
       const db = buildDb([site], devs);
       startHealthCheckWorker(db as any, 60_000);
@@ -249,33 +311,50 @@ describe('Health Check Worker', () => {
       expect(mockDispatch).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
-          deviceId: 'd1',
-          previousStatus: 'online',
-          newStatus: 'offline',
+          deviceId: "d1",
+          previousStatus: "online",
+          newStatus: "offline",
         }),
       );
     });
 
-    it('updates lastSeen when device comes online from offline', async () => {
+    it("updates lastSeen when device comes online from offline", async () => {
       mockSocketBehavior.reachable = true;
-      const site = { id: 's1', name: 'HQ', wanIp: '10.0.0.1' };
+      const site = { id: "s1", name: "HQ", wanIp: "10.0.0.1" };
       const devs = [
-        { id: 'd1', name: 'Cam 1', port: 554, type: 'camera', status: 'offline', tenantId: 't1' },
+        {
+          id: "d1",
+          name: "Cam 1",
+          port: 554,
+          type: "camera",
+          status: "offline",
+          tenantId: "t1",
+        },
       ];
       const db = buildDb([site], devs);
       startHealthCheckWorker(db as any, 60_000);
       await vi.advanceTimersByTimeAsync(0);
 
       expect(db._setFn).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'online', lastSeen: expect.any(Date) }),
+        expect.objectContaining({
+          status: "online",
+          lastSeen: expect.any(Date),
+        }),
       );
     });
 
-    it('updates lastSeen when device is still online (no status change)', async () => {
+    it("updates lastSeen when device is still online (no status change)", async () => {
       mockSocketBehavior.reachable = true;
-      const site = { id: 's1', name: 'HQ', wanIp: '10.0.0.1' };
+      const site = { id: "s1", name: "HQ", wanIp: "10.0.0.1" };
       const devs = [
-        { id: 'd1', name: 'Cam 1', port: 554, type: 'camera', status: 'online', tenantId: 't1' },
+        {
+          id: "d1",
+          name: "Cam 1",
+          port: 554,
+          type: "camera",
+          status: "online",
+          tenantId: "t1",
+        },
       ];
       const db = buildDb([site], devs);
       startHealthCheckWorker(db as any, 60_000);
@@ -288,13 +367,20 @@ describe('Health Check Worker', () => {
       );
     });
 
-    it('continues sweep when notification dispatch fails', async () => {
+    it("continues sweep when notification dispatch fails", async () => {
       mockSocketBehavior.reachable = false;
-      mockDispatch.mockRejectedValueOnce(new Error('dispatch boom'));
+      mockDispatch.mockRejectedValueOnce(new Error("dispatch boom"));
 
-      const site = { id: 's1', name: 'HQ', wanIp: '10.0.0.1' };
+      const site = { id: "s1", name: "HQ", wanIp: "10.0.0.1" };
       const devs = [
-        { id: 'd1', name: 'Cam 1', port: 554, type: 'camera', status: 'online', tenantId: 't1' },
+        {
+          id: "d1",
+          name: "Cam 1",
+          port: 554,
+          type: "camera",
+          status: "online",
+          tenantId: "t1",
+        },
       ];
       const db = buildDb([site], devs);
       startHealthCheckWorker(db as any, 60_000);
@@ -302,15 +388,22 @@ describe('Health Check Worker', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({ err: expect.any(Error) }),
-        expect.stringContaining('Notification dispatch failed'),
+        expect.stringContaining("Notification dispatch failed"),
       );
     });
 
-    it('handles per-device errors without stopping the sweep', async () => {
-      const site = { id: 's1', name: 'HQ', wanIp: '10.0.0.1' };
+    it("handles per-device errors without stopping the sweep", async () => {
+      const site = { id: "s1", name: "HQ", wanIp: "10.0.0.1" };
       // Device with no port should cause an error path
       const devs = [
-        { id: 'd1', name: 'Cam 1', port: null, type: 'camera', status: 'online', tenantId: 't1' },
+        {
+          id: "d1",
+          name: "Cam 1",
+          port: null,
+          type: "camera",
+          status: "online",
+          tenantId: "t1",
+        },
       ];
       const db = buildDb([site], devs);
       startHealthCheckWorker(db as any, 60_000);
