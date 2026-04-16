@@ -77,6 +77,9 @@ export {
   reverseP2pWorkers,
   reverseHealthChecks,
 } from "./reverse.js";
+export { cameraLinks } from "./camera-links.js";
+export { userScenes } from "./user-scenes.js";
+export { liveRecordings } from "./live-recordings.js";
 
 import {
   pgTable,

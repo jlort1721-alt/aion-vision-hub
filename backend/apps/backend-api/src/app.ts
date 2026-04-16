@@ -109,6 +109,9 @@ import { registerFloorPlanRoutes } from "./modules/floor-plans/routes.js";
 import { registerClipRoutes } from "./modules/clips/routes.js";
 import { registerPlaybackRoutes } from "./modules/playback/routes.js";
 import { registerOperatorAssignmentRoutes } from "./modules/operator-assignments/routes.js";
+import { registerCameraLinksRoutes } from "./modules/camera-links/routes.js";
+import { registerUserScenesRoutes } from "./modules/user-scenes/routes.js";
+import { registerLiveRecordingsRoutes } from "./modules/live-recordings/routes.js";
 import websocketPlugin from "./plugins/websocket.js";
 import { cameraEvents } from "./services/camera-events.js";
 import { imouEventPoller } from "./services/imou-event-poller.js";
@@ -420,6 +423,13 @@ export async function buildApp() {
   });
   await app.register(registerSceneRoutes, { prefix: "/scenes" });
   await app.register(registerPagingRoutes, { prefix: "/paging" });
+
+  // Live View Pro — camera links, user scenes, live recordings
+  await app.register(registerCameraLinksRoutes, { prefix: "/camera-links" });
+  await app.register(registerUserScenesRoutes, { prefix: "/user-scenes" });
+  await app.register(registerLiveRecordingsRoutes, {
+    prefix: "/live-recordings",
+  });
 
   // Twilio — WhatsApp, SMS, Voice calls (Colombian PSTN via Twilio)
   await app.register(registerTwilioRoutes, { prefix: "/twilio" });
