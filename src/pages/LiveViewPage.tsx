@@ -71,7 +71,7 @@ import {
   Camera,
   Image,
   Eye,
-  Map,
+  Map as MapIcon,
   LayoutGrid,
 } from "lucide-react";
 import {
@@ -88,8 +88,16 @@ import { LiveViewToolbar } from "@/components/liveview/LiveViewToolbar";
 import { FF } from "@/lib/feature-flags";
 import { lazy, Suspense } from "react";
 
-const FloorPlanView = lazy(() => import("@/components/liveview/FloorPlanView"));
-const SceneComposer = lazy(() => import("@/components/liveview/SceneComposer"));
+const FloorPlanView = lazy(() =>
+  import("@/components/liveview/FloorPlanView").then((m) => ({
+    default: m.FloorPlanView,
+  })),
+);
+const SceneComposer = lazy(() =>
+  import("@/components/liveview/SceneComposer").then((m) => ({
+    default: m.SceneComposer,
+  })),
+);
 const TourEngine = lazy(() => import("@/components/liveview/TourEngine"));
 
 // ── Types ────────────────────────────────────────────────────
@@ -1400,9 +1408,7 @@ export default function LiveViewPage() {
                       >
                         <FloorPlanView
                           siteId={selectedSite}
-                          cameras={allCameras}
                           onCameraSelect={(id: string) => setFocusedCamera(id)}
-                          selectedCameraId={focusedCamera}
                         />
                       </Suspense>
                     </TabsContent>
