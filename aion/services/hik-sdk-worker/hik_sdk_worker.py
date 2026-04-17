@@ -1,29 +1,26 @@
 #!/usr/bin/env python3
 """
-Hikvision HCNetSDK worker — login + health report + door open command.
+Hikvision HCNetSDK worker — login + health report.
 
-Uses ctypes wrapping of libhcnetsdk.so for the 6 DVRs whose HTTP/ISAPI is not
-exposed publicly. Maintains a persistent SDK session per device, reports status
-to PostgreSQL (devices.last_seen) every 60s, and exposes a door-open API via
-MQTT aion/commands/hiksdk/door/{door_id}.
+Usa ctypes wrapping de libhcnetsdk.so para los 28 devices Hikvision. Prueba
+múltiples passwords por device (Clave.seg2023, seg12345, Seg12345) y reporta
+status a devices.status + last_seen cada 600s.
 """
 from __future__ import annotations
 
 import asyncio
 import ctypes
-import ctypes.util
 import json
 import logging
 import os
-import signal
 import sys
 import time
-from ctypes import byref, c_byte, c_char_p, c_int, c_uint, c_ulong, create_string_buffer, Structure
+from ctypes import (
+    Structure, POINTER, byref, c_byte, c_int, c_uint, c_void_p, c_ulong,
+)
 from dataclasses import dataclass
-from typing import Optional
 
 import asyncpg
-import paho.mqtt.client as mqtt
 from pythonjsonlogger import jsonlogger
 
 
@@ -37,10 +34,12 @@ LOG = logging.getLogger("hik-sdk-worker")
 
 def setup_logging() -> None:
     h = logging.StreamHandler(sys.stdout)
-    h.setFormatter(jsonlogger.JsonFormatter(
-        "%(asctime)s %(name)s %(levelname)s %(message)s",
-        rename_fields={"asctime": "ts", "levelname": "level"},
-    ))
+    h.setFormatter(
+        jsonlogger.JsonFormatter(
+            "%(asctime)s %(name)s %(levelname)s %(message)s",
+            rename_fields={"asctime": "ts", "levelname": "level"},
+        )
+    )
     root = logging.getLogger()
     root.handlers = [h]
     root.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
@@ -54,8 +53,8 @@ class NET_DVR_USER_LOGIN_INFO(Structure):
         ("wPort", ctypes.c_ushort),
         ("sUserName", c_byte * 64),
         ("sPassword", c_byte * 64),
-        ("fLoginResultCallBack", c_void_p := ctypes.c_void_p),
-        ("pUser", ctypes.c_void_p),
+        ("fLoginResultCallBack", c_void_p),
+        ("pUser", c_void_p),
         ("bUseAsynLogin", c_byte),
         ("byProxyType", c_byte),
         ("byUseUTCTime", c_byte),
@@ -95,27 +94,25 @@ class NET_DVR_DEVICEINFO_V40(Structure):
 @dataclass
 class Config:
     pg_dsn: str
-    mqtt_host: str
-    mqtt_port: int
-    mqtt_user: str
-    mqtt_password: str
     hik_user: str
-    hik_pass_default: str
-    hik_pass_alt: str
+    passwords: list[str]
     poll_interval: int
 
     @classmethod
     def load(cls) -> "Config":
+        pws = [
+            os.environ.get("HIK_PASS_DEFAULT", "Clave.seg2023"),
+            os.environ.get("HIK_PASS_ALT", "seg12345"),
+            os.environ.get("HIK_PASS_ALT2", "Seg12345"),
+        ]
+        # Dedup preservando orden
+        seen = set()
+        pws = [p for p in pws if not (p in seen or seen.add(p))]
         return cls(
             pg_dsn=os.environ["PG_DSN"],
-            mqtt_host=os.environ.get("MQTT_HOST", "host.docker.internal"),
-            mqtt_port=int(os.environ.get("MQTT_PORT", "1883")),
-            mqtt_user=os.environ["MQTT_USER"],
-            mqtt_password=os.environ["MQTT_PASSWORD"],
             hik_user=os.environ.get("HIK_USER", "admin"),
-            hik_pass_default=os.environ["HIK_PASS_DEFAULT"],
-            hik_pass_alt=os.environ.get("HIK_PASS_ALT", os.environ["HIK_PASS_DEFAULT"]),
-            poll_interval=int(os.environ.get("POLL_INTERVAL", "60")),
+            passwords=pws,
+            poll_interval=int(os.environ.get("POLL_INTERVAL", "600")),
         )
 
 
@@ -124,66 +121,63 @@ def _fill_bytes(src: str, size: int) -> bytes:
     return b + b"\x00" * (size - len(b))
 
 
-class HikSession:
-    def __init__(self, sdk, ip: str, port: int, user: str, password: str):
-        self.sdk = sdk
-        self.ip = ip
-        self.port = port
-        self.user = user
-        self.password = password
-        self.user_id: int = -1
-
-    def login(self) -> tuple[bool, int]:
+def login_try_passwords(
+    sdk, ip: str, port: int, user: str, passwords: list[str]
+) -> tuple[int, str, int]:
+    """Return (user_handle, winning_password, last_err). user_handle=-1 on total fail."""
+    last_err = 0
+    for pw in passwords:
         info = NET_DVR_USER_LOGIN_INFO()
         ctypes.memset(byref(info), 0, ctypes.sizeof(info))
-        ctypes.memmove(info.sDeviceAddress, _fill_bytes(self.ip, 129), 129)
-        ctypes.memmove(info.sUserName, _fill_bytes(self.user, 64), 64)
-        ctypes.memmove(info.sPassword, _fill_bytes(self.password, 64), 64)
-        info.wPort = self.port
-        info.bUseAsynLogin = 0
+        ctypes.memmove(info.sDeviceAddress, _fill_bytes(ip, 129), 129)
+        ctypes.memmove(info.sUserName, _fill_bytes(user, 64), 64)
+        ctypes.memmove(info.sPassword, _fill_bytes(pw, 64), 64)
+        info.wPort = port
 
-        device_info = NET_DVR_DEVICEINFO_V40()
-        ctypes.memset(byref(device_info), 0, ctypes.sizeof(device_info))
+        dev_info = NET_DVR_DEVICEINFO_V40()
+        ctypes.memset(byref(dev_info), 0, ctypes.sizeof(dev_info))
 
-        self.sdk.NET_DVR_Login_V40.argtypes = [
-            ctypes.POINTER(NET_DVR_USER_LOGIN_INFO),
-            ctypes.POINTER(NET_DVR_DEVICEINFO_V40),
-        ]
-        self.sdk.NET_DVR_Login_V40.restype = c_int
-
-        self.user_id = self.sdk.NET_DVR_Login_V40(byref(info), byref(device_info))
-        if self.user_id < 0:
-            err = self.sdk.NET_DVR_GetLastError()
-            return False, err
-        return True, 0
-
-    def logout(self) -> None:
-        if self.user_id >= 0:
-            self.sdk.NET_DVR_Logout(self.user_id)
-            self.user_id = -1
+        handle = sdk.NET_DVR_Login_V40(byref(info), byref(dev_info))
+        if handle >= 0:
+            return handle, pw, 0
+        last_err = sdk.NET_DVR_GetLastError()
+        # Si NET_FAIL_CONNECT (7) o NET_TIMEOUT (153), no retry con otro password
+        if last_err in (7, 153, 10):
+            break
+        time.sleep(0.3)
+    return -1, "", last_err
 
 
 async def poll_device(
-    sdk, db_pool: asyncpg.Pool, device_id: str, ip: str, port: int, user: str, password: str
+    sdk, db_pool: asyncpg.Pool,
+    device_id: str, name: str, ip: str, port: int, cfg: Config,
 ) -> None:
-    sess = HikSession(sdk, ip, port, user, password)
-    ok, err = await asyncio.get_running_loop().run_in_executor(None, sess.login)
-    now = time.time()
+    loop = asyncio.get_running_loop()
+    handle, winning_pw, last_err = await loop.run_in_executor(
+        None, login_try_passwords, sdk, ip, port, cfg.hik_user, cfg.passwords,
+    )
+
     async with db_pool.acquire() as conn:
         await conn.execute(
             """
             UPDATE devices
             SET status = $1, last_seen = NOW(), updated_at = NOW()
-            WHERE id = $2
+            WHERE id = $2::uuid
             """,
-            "online" if ok else "offline",
+            "online" if handle >= 0 else "offline",
             device_id,
         )
-    if ok:
-        LOG.info("device_online", extra={"device_id": device_id, "ip": ip})
-        sess.logout()
+
+    if handle >= 0:
+        LOG.info("device_online", extra={"device_id": device_id, "ip": ip, "name": name, "pw_ok": winning_pw})
+        sdk.NET_DVR_Logout(handle)
     else:
-        LOG.warning("device_login_failed", extra={"device_id": device_id, "ip": ip, "err": err})
+        err_name = {1: "PW_ERROR", 7: "NET_FAIL", 10: "SEND_ERR", 42: "MAX_USER", 153: "NET_TIMEOUT"}.get(
+            last_err, f"err={last_err}"
+        )
+        LOG.warning("device_login_failed", extra={
+            "device_id": device_id, "ip": ip, "name": name, "last_err": last_err, "err_name": err_name,
+        })
 
 
 async def main() -> None:
@@ -193,16 +187,19 @@ async def main() -> None:
     sdk = ctypes.CDLL(f"{HIK_LIB_DIR}/libhcnetsdk.so", mode=ctypes.RTLD_GLOBAL)
     sdk.NET_DVR_Init.restype = ctypes.c_bool
     sdk.NET_DVR_Logout.argtypes = [c_int]
+    sdk.NET_DVR_Login_V40.argtypes = [POINTER(NET_DVR_USER_LOGIN_INFO), POINTER(NET_DVR_DEVICEINFO_V40)]
+    sdk.NET_DVR_Login_V40.restype = c_int
     sdk.NET_DVR_GetLastError.restype = c_uint
+    sdk.NET_DVR_SetConnectTime.argtypes = [c_uint, c_uint]
+    sdk.NET_DVR_SetReconnect.argtypes = [c_uint, ctypes.c_bool]
     sdk.NET_DVR_Cleanup.restype = None
 
     if not sdk.NET_DVR_Init():
         LOG.error("sdk_init_failed")
         sys.exit(1)
-    LOG.info("sdk_initialized", extra={"version": hex(sdk.NET_DVR_GetSDKVersion())})
-
-    sdk.NET_DVR_SetConnectTime(3000, 1)
+    sdk.NET_DVR_SetConnectTime(5000, 1)
     sdk.NET_DVR_SetReconnect(10000, True)
+    LOG.info("sdk_initialized", extra={"passwords_count": len(cfg.passwords)})
 
     db_pool = await asyncpg.create_pool(cfg.pg_dsn, min_size=1, max_size=5)
 
@@ -213,19 +210,22 @@ async def main() -> None:
                     """
                     SELECT id, name, ip_address, port
                     FROM devices
-                    WHERE brand = 'hikvision'
-                      AND ip_address IS NOT NULL
-                      AND deleted_at IS NULL
+                    WHERE brand = 'hikvision' AND ip_address IS NOT NULL
+                    ORDER BY name
                     """
                 )
 
-            tasks = []
+            # Rate limit: sequential, not parallel, avoid DVR lockout
             for d in devices:
-                pw = cfg.hik_pass_alt if (d["name"] or "").endswith("DVR") else cfg.hik_pass_default
-                tasks.append(
-                    poll_device(sdk, db_pool, str(d["id"]), d["ip_address"], d["port"], cfg.hik_user, pw)
-                )
-            await asyncio.gather(*tasks, return_exceptions=True)
+                try:
+                    await poll_device(
+                        sdk, db_pool, str(d["id"]), d["name"] or "",
+                        d["ip_address"], d["port"], cfg,
+                    )
+                except Exception as exc:
+                    LOG.error("poll_error", extra={"device_id": str(d["id"]), "err": str(exc)})
+                await asyncio.sleep(0.5)  # Spacing between device logins
+
             LOG.info("poll_cycle_complete", extra={"total": len(devices)})
             await asyncio.sleep(cfg.poll_interval)
     finally:
