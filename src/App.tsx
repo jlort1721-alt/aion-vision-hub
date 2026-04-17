@@ -46,6 +46,7 @@ const AdminPage = lazy(() => import("@/pages/AdminPage"));
 const DomoticsPage = lazy(() => import("@/pages/DomoticsPage"));
 const AccessControlPage = lazy(() => import("@/pages/AccessControlPage"));
 const AccessDoorsPage = lazy(() => import("@/pages/AccessDoorsPage"));
+const LiveStreamsPage = lazy(() => import("@/pages/LiveStreamsPage"));
 const RebootsPage = lazy(() => import("@/pages/RebootsPage"));
 const IntercomPage = lazy(() => import("@/pages/IntercomPage"));
 const DatabasePage = lazy(() => import("@/pages/DatabasePage"));
@@ -304,6 +305,7 @@ function AppRoutes() {
                   </ModuleGuard>
                 }
               />
+              <Route path="live-streams" element={<LiveStreamsPage />} />
               <Route
                 path="reboots"
                 element={
