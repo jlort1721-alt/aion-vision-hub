@@ -24,6 +24,7 @@ import { PageShell } from "@/components/shared/PageShell";
 import { LiveVideoPlayer } from "@/components/streams/LiveVideoPlayer";
 import { apiClient } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/date-utils";
+import { useLiveEvents } from "@/hooks/use-live-events";
 
 interface StreamEntry {
   channel: number;

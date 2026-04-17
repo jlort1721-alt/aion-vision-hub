@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLiveEvents } from "@/hooks/use-live-events";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -85,6 +86,23 @@ export default function AccessDoorsPage() {
     loadDoors();
   }, [loadDoors]);
 
+  // Subscribe to live door events → refresh list on each door_opened / door_forced / tamper
+  const { connected: wsConnected, events: wsEvents } = useLiveEvents({
+    channels: ["events", "access_door_events", "isapi_events"],
+    onEvent: (evt) => {
+      const p = evt.payload as {
+        table?: string;
+        row?: { event_type?: string };
+      };
+      if (
+        p?.table === "access_door_events" ||
+        p?.row?.event_type?.includes("door")
+      ) {
+        loadDoors();
+      }
+    },
+  });
+
   const openDoor = useCallback(
     async (door: Door) => {
       if (!reason || reason.length < 3) {
@@ -127,7 +145,7 @@ export default function AccessDoorsPage() {
   return (
     <PageShell
       title="Control de Acceso — Puertas"
-      description="Gestión física de puertas Hikvision vía ISAPI remoto"
+      description={`Gestión física de puertas Hikvision vía ISAPI remoto ${wsConnected ? "• WS conectado" : "• WS desconectado"} ${wsEvents.length > 0 ? `• ${wsEvents.length} eventos live` : ""}`}
       actions={
         <Button
           onClick={loadDoors}
