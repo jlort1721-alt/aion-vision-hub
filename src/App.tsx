@@ -45,6 +45,7 @@ const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
 const DomoticsPage = lazy(() => import("@/pages/DomoticsPage"));
 const AccessControlPage = lazy(() => import("@/pages/AccessControlPage"));
+const AccessDoorsPage = lazy(() => import("@/pages/AccessDoorsPage"));
 const RebootsPage = lazy(() => import("@/pages/RebootsPage"));
 const IntercomPage = lazy(() => import("@/pages/IntercomPage"));
 const DatabasePage = lazy(() => import("@/pages/DatabasePage"));
@@ -292,6 +293,14 @@ function AppRoutes() {
                 element={
                   <ModuleGuard module="access_control">
                     <AccessControlPage />
+                  </ModuleGuard>
+                }
+              />
+              <Route
+                path="access-doors"
+                element={
+                  <ModuleGuard module="access_control">
+                    <AccessDoorsPage />
                   </ModuleGuard>
                 }
               />
