@@ -1,0 +1,18 @@
+services:
+  access-orchestrator:
+    build:
+      context: ../../services/access-orchestrator
+    image: aion-access-orchestrator:0.1.0
+    container_name: aion-access-orchestrator
+    restart: unless-stopped
+    env_file:
+      - ./access-orchestrator.env
+    networks:
+      - obs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  obs:
+    external: true
+    name: aion-observability_obs

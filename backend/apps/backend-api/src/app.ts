@@ -45,6 +45,7 @@ import { registerDomoticRoutes } from "./modules/domotics/routes.js";
 import { registerAccessControlRoutes } from "./modules/access-control/routes.js";
 import { registerAccessDoorsRoutes } from "./modules/access-doors/routes.js";
 import { registerRecordingsRoutes } from "./modules/recordings/routes.js";
+import { registerIsapiIngestRoutes } from "./modules/isapi-ingest/routes.js";
 import { registerIntercomRoutes } from "./modules/intercom/routes.js";
 import { registerRebootRoutes } from "./modules/reboots/routes.js";
 import { registerDatabaseRecordRoutes } from "./modules/database-records/routes.js";
@@ -297,6 +298,7 @@ export async function buildApp() {
   });
   await app.register(registerAccessDoorsRoutes, { prefix: "/access" });
   await app.register(registerRecordingsRoutes, { prefix: "/recordings" });
+  await app.register(registerIsapiIngestRoutes, { prefix: "/isapi" });
   await app.register(registerIntercomRoutes, { prefix: "/intercom" });
   await app.register(registerRebootRoutes, { prefix: "/reboots" });
   await app.register(registerDatabaseRecordRoutes, {
