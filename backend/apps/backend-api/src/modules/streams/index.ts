@@ -53,14 +53,44 @@ function resolveStreamKey(
 ): string[] {
   const name = deviceName.toLowerCase();
   const candidates: string[] = [];
-  if (brand === "dahua")
+
+  if (brand === "dahua") {
     candidates.push(`dh-${name.replace(/\s+/g, "-")}-ch${channel}`);
-  candidates.push(`da-${name.replace(/\s+/g, "-")}-ch${channel}`);
-  if (brand === "hikvision")
+    candidates.push(`da-${name.replace(/\s+/g, "-")}-ch${channel}`);
+    // Imou Cloud sometimes uses double-z terrazzino vs terrazino in inventory
+    candidates.push(
+      `da-${name.replace(/\s+/g, "-").replace(/z/g, "zz")}-ch${channel}`,
+    );
+    candidates.push(
+      `da-${name.replace(/\s+/g, "-").replace(/zz/g, "z")}-ch${channel}`,
+    );
+  }
+
+  if (brand === "hikvision") {
+    // Nuevos streams exec: hk-<slug>-ch<n>
+    const slug = name
+      .replace(/^(nvr|dvr|ac|lpr|cam)\s+/i, "")
+      .replace(/\s+/g, "-");
+    const typePrefix = /^(nvr|dvr|ac|lpr|cam)/i.exec(name)?.[1]?.toLowerCase();
+    if (typePrefix === "nvr" || typePrefix === "dvr") {
+      candidates.push(`hk-${slug}-${typePrefix}-ch${channel}`);
+      candidates.push(`hk-${slug}-ch${channel}`);
+    } else if (typePrefix === "lpr") {
+      candidates.push(`hk-lpr-${slug}-ch${channel}`);
+    } else if (typePrefix === "cam") {
+      candidates.push(`hk-cam-${slug}-ch${channel}`);
+    } else {
+      candidates.push(`hk-${slug}-ch${channel}`);
+    }
+    // Fallback name original
     candidates.push(`hk-${name.replace(/\s+/g, "-")}-ch${channel}`);
+  }
+
+  // Legacy aion_XXXDVR001 format
   const compact = deviceName.replace(/\s+/g, "").toUpperCase();
   candidates.push(`aion_${compact}${channel.toString().padStart(3, "0")}`);
-  return candidates;
+
+  return [...new Set(candidates)];
 }
 
 function buildPlaybackUrl(
