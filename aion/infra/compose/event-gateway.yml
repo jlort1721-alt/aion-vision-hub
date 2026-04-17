@@ -1,0 +1,19 @@
+services:
+  event-gateway:
+    build:
+      context: ../../services/event-gateway
+    image: aion-event-gateway:0.1.0
+    container_name: aion-event-gateway
+    restart: unless-stopped
+    env_file:
+      - ./event-gateway.env
+    ports:
+      - "127.0.0.1:8700:8700"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - aion-internal
+
+networks:
+  aion-internal:
+    external: true

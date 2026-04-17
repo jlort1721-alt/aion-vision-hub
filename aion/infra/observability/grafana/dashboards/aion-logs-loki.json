@@ -1,0 +1,166 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "description": "AION Logs via Loki — errores por servicio, top PM2, búsqueda por correlation_id",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Error rate by job (last 5m)",
+      "type": "timeseries",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (job) (rate({job=~\".+\"} |~ \"(?i)error|fatal|exception\" [5m]))",
+          "legendFormat": "{{job}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 20
+          },
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Top 10 PM2 services by log volume (last 15m)",
+      "type": "bargauge",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, sum by (filename) (count_over_time({job=\"pm2\"} [15m])))",
+          "legendFormat": "{{filename}}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true
+      }
+    },
+    {
+      "id": 3,
+      "title": "Mosquitto new connections (last 1h)",
+      "type": "stat",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({job=\"mosquitto\"} |~ \"New client connected\" [1h]))",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Mosquitto auth failures (last 1h)",
+      "type": "stat",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(count_over_time({job=\"mosquitto\"} |~ \"not authorised\" [1h]))",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "red", "value": 50 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Nginx 5xx by status (last 30m)",
+      "type": "timeseries",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (rate({job=\"nginx\", filename=\"/var/log/nginx/access.log\"} | pattern `<_> <_> <_> [<_>] \"<_>\" <status> <_>` [5m]))",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Live logs — aionseg-api (all instances)",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 21 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{job=\"pm2\", filename=~\"/home/ubuntu/.pm2/logs/aionseg-api.*\"}"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 7,
+      "title": "Correlation ID search",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 33 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{job=~\".+\"} |= \"${correlation_id}\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["aion", "logs", "loki"],
+  "templating": {
+    "list": [
+      {
+        "name": "correlation_id",
+        "type": "textbox",
+        "label": "correlation_id",
+        "current": { "value": "", "text": "" }
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "AION — Logs (Loki)",
+  "uid": "aion-logs-loki",
+  "version": 1
+}

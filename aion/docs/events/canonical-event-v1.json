@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aionseg.co/schemas/canonical-event-v1.json",
+  "title": "AION Canonical Event v1.0.0",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_version",
+    "source_type",
+    "source_id",
+    "timestamp",
+    "severity",
+    "category"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4 único por evento"
+    },
+    "event_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "frigate",
+        "leosac",
+        "asterisk",
+        "manual",
+        "iot",
+        "lpr",
+        "hikvision",
+        "dahua",
+        "imou",
+        "aion_db"
+      ]
+    },
+    "source_id": {
+      "type": "string",
+      "description": "Identificador del origen (ej: camera-01, door-03, ext-2001)"
+    },
+    "site_id": {
+      "type": ["string", "null"]
+    },
+    "tenant_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 con TZ"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "low", "medium", "high", "critical"]
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "motion",
+        "person",
+        "vehicle",
+        "face",
+        "plate",
+        "door_forced",
+        "door_opened",
+        "intercom_call",
+        "tamper",
+        "offline",
+        "online",
+        "loitering",
+        "line_cross",
+        "incident",
+        "alert",
+        "system"
+      ]
+    },
+    "payload": {
+      "type": "object",
+      "description": "Datos específicos por category"
+    },
+    "snapshot_url": {
+      "type": ["string", "null"],
+      "description": "URL firmada temporal del snapshot"
+    },
+    "clip_url": {
+      "type": ["string", "null"],
+      "description": "URL firmada temporal del clip"
+    },
+    "correlation_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "operator_action": {
+      "type": ["object", "null"]
+    }
+  },
+  "additionalProperties": false
+}
