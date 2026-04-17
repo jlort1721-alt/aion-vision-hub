@@ -33,7 +33,7 @@ LOG = logging.getLogger("dahua-sdk-worker")
 
 # Dahua constants (from NetSDK docs)
 EM_LOGIN_SPEC_CAP_TCP = 0
-EM_LOGIN_SPEC_CAP_P2P = 17   # P2P login type
+EM_LOGIN_SPEC_CAP_P2P = 19   # P2P login type (web private login) — AUTH_TWICE would be 17
 
 
 def setup_logging() -> None:
@@ -56,7 +56,10 @@ class NET_IN_LOGIN_WITH_HIGHLEVEL_SECURITY(Structure):
         ("szUserName", c_char * 64),
         ("szPassword", c_char * 64),
         ("emSpecCap", c_int),
+        ("byReserved", c_byte * 4),
         ("pCapParam", c_void_p),
+        ("emTLSCap", c_int),
+        ("szLocalIP", c_char * 64),
     ]
 
 
@@ -88,6 +91,7 @@ class NET_OUT_LOGIN_WITH_HIGHLEVEL_SECURITY(Structure):
         ("dwSize", c_uint),
         ("stuDeviceInfo", NET_DEVICEINFO_Ex),
         ("nError", c_int),
+        ("byReserved", c_byte * 132),
     ]
 
 
@@ -198,7 +202,6 @@ async def main() -> None:
         LOG.error("sdk_init_failed")
         sys.exit(1)
     LOG.info("dahua_sdk_initialized", extra={"version": hex(sdk.CLIENT_GetSDKVersion())})
-    sdk.CLIENT_SetNetworkParam  # just to ensure symbol is present
 
     db_pool = await asyncpg.create_pool(cfg.pg_dsn, min_size=1, max_size=3)
 
