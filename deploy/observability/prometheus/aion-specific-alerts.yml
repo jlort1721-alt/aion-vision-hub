@@ -1,0 +1,86 @@
+# AION-specific alerts — to append under the existing groups in
+# /opt/aion/observability/prometheus/aion-alerts.yml.
+#
+# Covers gaps identified in 2026-04-19 audit:
+#   - DVR lockout detection (Hik worker)
+#   - OpenClaw gateway health
+#   - OpenClaw iteration stall (stops advancing)
+#   - Imou HLS URLs about to expire
+#   - Snapshots not generated (empty JPG dir)
+
+groups:
+  - name: aion-specific
+    interval: 60s
+    rules:
+
+      # ──────────────────────────────────────────────────────────────
+      - alert: DVRLockoutDetected
+        expr: |
+          increase(aion_hik_login_errors_total{error="NET_DVR_USER_LOCKED"}[10m]) >= 3
+        for: 5m
+        labels:
+          severity: critical
+          group: vision
+        annotations:
+          summary: "DVR Hikvision en lockout ({{ $labels.device }})"
+          description: >
+            El worker Hikvision ha recibido ≥3 respuestas NET_DVR_USER_LOCKED en 10 min
+            para {{ $labels.device }}. Aplica cooldown ≥2 h antes de reintentar login.
+            Runbook: docs/runbooks/dvr-lockout-recovery.md
+
+      # ──────────────────────────────────────────────────────────────
+      - alert: OpenClawGatewayDown
+        expr: probe_success{job="blackbox-openclaw"} == 0
+        for: 3m
+        labels:
+          severity: high
+          group: openclaw
+        annotations:
+          summary: "OpenClaw gateway no responde health"
+          description: >
+            http://127.0.0.1:18789/health no devuelve 200 hace ≥3 min.
+            Check: systemctl status openclaw; journalctl -u openclaw --since "5 min ago".
+
+      - alert: OpenClawIterationsStalled
+        # Iteration counter advances every ~30 min. If flat for 90 min, loop is dead.
+        expr: |
+          (time() - openclaw_iteration_last_completed_at) > 5400
+        for: 10m
+        labels:
+          severity: high
+          group: openclaw
+        annotations:
+          summary: "OpenClaw loop dejó de avanzar"
+          description: >
+            Último reporte hace {{ with printf "%.0f" (sub time openclaw_iteration_last_completed_at) }}{{ . }}{{ end }} s.
+            El cron aion-continuous-improvement.sh puede estar bloqueado.
+
+      # ──────────────────────────────────────────────────────────────
+      - alert: ImouHlsUrlsExpiringSoon
+        # Devices whose signed HLS URL expires in <30 min.
+        expr: |
+          min by (device, serial) (aion_device_hls_expires_at - time()) < 1800
+        for: 2m
+        labels:
+          severity: high
+          group: vision
+        annotations:
+          summary: "Imou HLS URL próxima a expirar ({{ $labels.device }})"
+          description: >
+            La URL firmada de {{ $labels.serial }} expira en <30 min. Ejecutar:
+            bash .claude/skills/imou-refresh/scripts/refresh.sh --reload-go2rtc
+
+      # ──────────────────────────────────────────────────────────────
+      - alert: SnapshotDirectoryEmpty
+        # Directory watcher exporter emits this gauge every minute.
+        expr: |
+          aion_snapshots_file_count{path="/var/www/aionseg/frontend/snapshots"} == 0
+        for: 10m
+        labels:
+          severity: high
+          group: vision
+        annotations:
+          summary: "Snapshots JPG dir vacío"
+          description: >
+            /var/www/aionseg/frontend/snapshots no tiene archivos hace ≥10 min.
+            Todos los snap-* workers están stopped/errored o sin acceso a DVRs.
