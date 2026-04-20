@@ -463,8 +463,8 @@ export default function SitesPage() {
                       {/* Expand indicator */}
                       {isSelected && (
                         <div className="mt-2 pt-2 border-t border-slate-700/50 flex items-center justify-center">
-                          <ChevronRight className="h-3.5 w-3.5 text-[#D4A017] animate-pulse" />
-                          <span className="text-[10px] text-[#D4A017] ml-1">Ver detalle</span>
+                          <ChevronRight className="h-3.5 w-3.5 text-gold animate-pulse" />
+                          <span className="text-[10px] text-gold ml-1">Ver detalle</span>
                         </div>
                       )}
                     </CardContent>
@@ -698,7 +698,7 @@ function DetailPanel({ site, devices, canManage, onEdit, onDelete, onClose }: {
           {hasCoords && (
             <InfoRow label="Coordenadas" value={
               <span className="flex items-center gap-1 font-mono text-xs">
-                <Navigation className="h-3 w-3 text-[#D4A017]" /> {lat.toFixed(4)}, {lng.toFixed(4)}
+                <Navigation className="h-3 w-3 text-gold" /> {lat.toFixed(4)}, {lng.toFixed(4)}
               </span>
             } />
           )}

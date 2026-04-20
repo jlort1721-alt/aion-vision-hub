@@ -510,13 +510,13 @@ export default function WallPage() {
 
       {/* ── Toolbar ─────────────────────────────────── */}
       {!kioskMode && (
-        <div className="flex items-center justify-between h-12 px-3 border-b border-white/5 shrink-0 bg-[#030810]/95 backdrop-blur-sm z-30">
+        <div className="flex items-center justify-between h-12 px-3 border-b border-white/5 shrink-0 bg-navy-900/95 backdrop-blur-sm z-30">
           {/* Left: Brand */}
           <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-[#D4A017]" />
+            <Shield className="w-5 h-5 text-gold" />
             <span className="text-sm font-bold text-white tracking-wider">
               AION{" "}
-              <span className="text-[#D4A017]">{t("wall.monitoring")}</span>
+              <span className="text-gold">{t("wall.monitoring")}</span>
             </span>
             <span className="text-[10px] text-zinc-500 font-mono ml-2">
               P{screen}
@@ -535,7 +535,7 @@ export default function WallPage() {
                 }}
                 className={`px-2 py-1 rounded text-[11px] font-mono transition-colors ${
                   gridSize === size && !focusedCameraId
-                    ? "bg-[#D4A017] text-black font-bold"
+                    ? "bg-gold text-black font-bold"
                     : "text-zinc-400 hover:text-white hover:bg-white/10"
                 }`}
                 title={`${size}x${size} grid`}
@@ -560,7 +560,7 @@ export default function WallPage() {
               onClick={() => setIsPaused((p) => !p)}
               className={`p-1 rounded transition-colors ${
                 isPaused
-                  ? "text-[#D4A017] bg-[#D4A017]/10"
+                  ? "text-gold bg-gold/10"
                   : "text-zinc-400 hover:text-white hover:bg-white/10"
               }`}
               title={isPaused ? "Resume (Space)" : "Pause (Space)"}
@@ -622,14 +622,14 @@ export default function WallPage() {
             <div className="relative">
               <button
                 onClick={() => setLayoutMenuOpen((o) => !o)}
-                className={`p-1 rounded transition-colors ${layoutMenuOpen ? "text-[#D4A017] bg-[#D4A017]/10" : "text-zinc-400 hover:text-white hover:bg-white/10"}`}
+                className={`p-1 rounded transition-colors ${layoutMenuOpen ? "text-gold bg-gold/10" : "text-zinc-400 hover:text-white hover:bg-white/10"}`}
                 title="Layouts guardados"
                 aria-label="Gestionar layouts"
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
               {layoutMenuOpen && (
-                <div className="absolute right-0 top-full mt-1 w-64 bg-[#0a1628] border border-white/10 rounded-lg shadow-2xl z-50 p-2">
+                <div className="absolute right-0 top-full mt-1 w-64 bg-navy-800 border border-white/10 rounded-lg shadow-2xl z-50 p-2">
                   <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2 px-1">
                     Layouts Guardados
                   </div>
@@ -674,7 +674,7 @@ export default function WallPage() {
                       />
                       <button
                         onClick={() => saveLayoutMutation.mutate()}
-                        className="px-2 py-1 text-[10px] bg-[#D4A017] text-black rounded font-bold hover:bg-[#D4A017]/80"
+                        className="px-2 py-1 text-[10px] bg-gold text-black rounded font-bold hover:bg-gold/80"
                         disabled={saveLayoutMutation.isPending}
                       >
                         <Save className="w-3 h-3" />
@@ -702,7 +702,7 @@ export default function WallPage() {
               onClick={() => setSoundEnabled((s) => !s)}
               className={`p-1 rounded transition-colors ${
                 soundEnabled
-                  ? "text-[#D4A017] bg-[#D4A017]/10"
+                  ? "text-gold bg-gold/10"
                   : "text-zinc-400 hover:text-white hover:bg-white/10"
               }`}
               title="Toggle sound alerts"
@@ -800,7 +800,7 @@ export default function WallPage() {
 
         {/* Event Sidebar */}
         {sidebarOpen && (
-          <div className="w-[280px] border-l border-white/5 flex flex-col bg-[#040b14] shrink-0">
+          <div className="w-[280px] border-l border-white/5 flex flex-col bg-navy-900 shrink-0">
             <div className="flex items-center justify-between px-3 h-9 border-b border-white/5">
               <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
                 {t("wall.events")}

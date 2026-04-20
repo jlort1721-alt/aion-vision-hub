@@ -311,7 +311,7 @@ function SmartCameraCellInner({
   if (!camera) {
     const emptyClass =
       variant === "wall"
-        ? "relative flex items-center justify-center bg-[#060d18] border border-white/5 rounded"
+        ? "relative flex items-center justify-center bg-navy-800 border border-white/5 rounded"
         : "relative flex items-center justify-center bg-muted/30 border-dashed";
     return (
       <div ref={containerRef} className={emptyClass}>
