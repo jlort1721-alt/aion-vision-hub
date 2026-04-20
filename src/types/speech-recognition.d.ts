@@ -45,6 +45,7 @@ interface SpeechRecognition extends EventTarget {
   stop(): void;
 }
 
+// eslint-disable-next-line no-var -- TS ambient declarations for global browser APIs require `var`
 declare var SpeechRecognition: {
   prototype: SpeechRecognition;
   new (): SpeechRecognition;

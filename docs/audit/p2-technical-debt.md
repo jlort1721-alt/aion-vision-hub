@@ -108,7 +108,101 @@ Store baseline in a committed file `.typecheck-baseline` updated by CI on succes
 
 ---
 
-## 2. Other P2 items (referenced from other runbooks)
+---
+
+## 2. Lint baseline pre-P1 (3349)
+
+### 2.1 Status
+
+`pnpm lint` reports **3,349 errors + 245 warnings across the `src/` tree**.
+Verified: count was **3,351 on `main`** (pre-B2/B3). C+A autofix reduced by 2
+via targeted eslint-disable comments in:
+
+- `src/types/speech-recognition.d.ts:48` — global browser API types require
+  `declare var`; added `// eslint-disable-next-line no-var` with justification.
+- `tailwind.config.ts:82` — `require("tailwindcss-animate")` is the canonical
+  tailwind plugin loader pattern in a Node context; added
+  `// eslint-disable-next-line @typescript-eslint/no-require-imports` with justification.
+
+**New baseline: 3349.** Same non-regression strategy as the typecheck gate:
+`.lint-baseline` contains `3349`; B3.1 lint gate fails only if current count
+exceeds baseline.
+
+### 2.2 Top rules by occurrence
+
+| Rule | Count | Category |
+|---|---|---|
+| `@typescript-eslint/no-empty-object-type` | **2106** | `{}` used as type (should be `Record<string, never>` or explicit interface) |
+| `@typescript-eslint/no-explicit-any` | **1208** | `any` type used (should be narrowed) |
+| `@typescript-eslint/no-unused-vars` | 211 | Unused variables/imports |
+| `react-hooks/exhaustive-deps` | 21 | Missing deps in `useEffect`/`useMemo` |
+| `react-refresh/only-export-components` | 13 | Mixed exports breaking fast refresh |
+| `no-empty` | 10 | Empty block |
+| `@typescript-eslint/ban-ts-comment` | 5 | `@ts-ignore` misuse |
+| `no-useless-escape` | 5 | Unnecessary escape chars in regex/strings |
+| `no-case-declarations` | 4 | `const`/`let` inside `case` without `{}` |
+| `react-hooks/rules-of-hooks` | 3 | Hook called conditionally |
+
+### 2.3 Proposed P2 tickets
+
+**P2-TD-005 — Eliminate `{}` type usages (no-empty-object-type)**
+- Scope: 2106 occurrences, mostly in React component `Props = {}` patterns.
+- Effort: 4-6 h via codemod (sed/jscodeshift): `Props = {}` → `Props = Record<string, never>` or empty `{ [key: string]: never }`.
+- Mechanical; low-risk once the pattern is agreed.
+
+**P2-TD-006 — Eliminate `any` usages (no-explicit-any)**
+- Scope: 1208 occurrences. Not mechanical — each one needs the correct type inferred from context.
+- Effort: 3 focused sprints (1 week each), splitting by directory:
+  - Sprint 1: `src/hooks/` + `src/services/`
+  - Sprint 2: `src/components/`
+  - Sprint 3: `src/pages/`
+- Highest security/correctness value: backend-facing hooks/services.
+
+**P2-TD-007 — React hooks deps + rules**
+- Scope: `react-hooks/exhaustive-deps` (21) + `react-hooks/rules-of-hooks` (3) + `react-refresh/only-export-components` (13).
+- Effort: ~3 h.
+- Risk: exhaustive-deps fixes can introduce infinite loops if the dep cycles; review carefully.
+
+**P2-TD-008 — Unused vars sweep**
+- Scope: 211 occurrences.
+- Effort: 1-2 h via `eslint --fix` for truly unused; manual review for intentional `_`-prefixed unused.
+- Low-risk, fastest to reduce the count.
+
+**P2-TD-009 — Miscellaneous (24 total across `ban-ts-comment`, `no-useless-escape`, `no-case-declarations`, `no-empty`)**
+- Scope: 24 occurrences.
+- Effort: 1 h. Mostly pedantic fixes.
+
+### 2.4 Decreasing baseline plan
+
+Target trajectory (indicative):
+
+| Milestone | Target | Tickets |
+|---|---|---|
+| Sprint 1 (next 2 wk) | < 3000 | TD-008 + TD-009 + half of TD-005 (codemod) |
+| Sprint 2 | < 2000 | Rest of TD-005 + TD-007 |
+| Sprint 3 | < 1000 | TD-006 sprint 1 (hooks+services) |
+| Sprint 4 | < 500 | TD-006 sprint 2+3 (components+pages) |
+| Ideal | 0 | Remove `.lint-baseline`, switch gate to strict |
+
+Each PR that reduces the count must also update `.lint-baseline` to the new value (CI enforces).
+
+### 2.5 Gate mechanism
+
+```bash
+pnpm lint 2>&1 > /tmp/lint.log || true
+# Extract the single number from "✖ N problems (M errors, K warnings)"
+LINT_ERRORS=$(grep -oE "[0-9]+ errors?" /tmp/lint.log | head -1 | awk '{print $1}')
+LINT_BASELINE=$(cat .lint-baseline)
+if [ "$LINT_ERRORS" -gt "$LINT_BASELINE" ]; then
+  echo "LINT REGRESSION: $LINT_ERRORS > $LINT_BASELINE"
+  exit 1
+fi
+echo "lint baseline preserved: $LINT_ERRORS / $LINT_BASELINE"
+```
+
+---
+
+## 3. Other P2 items (referenced from other runbooks)
 
 | Ticket candidate | Source | Status |
 |---|---|---|
