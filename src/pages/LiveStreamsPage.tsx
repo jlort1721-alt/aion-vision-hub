@@ -1,4 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import Fuse from "fuse.js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -63,15 +71,21 @@ interface SelectedChannel {
 }
 
 const STORAGE_KEY = "aion-live-streams-selection";
+const LAYOUT_KEY = "aion.liveview.layout";
 
 export default function LiveStreamsPage() {
+  const navigate = useNavigate();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [devices, setDevices] = useState<DeviceStreams[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [brandFilter, setBrandFilter] = useState<string>("all");
   const [siteFilter, setSiteFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [gridSize, setGridSize] = useState<GridSize>("4");
+  const [fullscreenStream, setFullscreenStream] = useState<SelectedChannel | null>(null);
+  const [gridSize, setGridSize] = useState<GridSize>(() => {
+    return (localStorage.getItem(LAYOUT_KEY) as GridSize) || "4";
+  });
   const [selectedStreams, setSelectedStreams] = useState<SelectedChannel[]>(
     () => {
       try {
@@ -82,10 +96,30 @@ export default function LiveStreamsPage() {
     },
   );
 
-  // Persist selection
+  // Persist selection and layout
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedStreams));
   }, [selectedStreams]);
+
+  useEffect(() => {
+    localStorage.setItem(LAYOUT_KEY, gridSize);
+  }, [gridSize]);
+
+  // Shortcut 'g' to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key.toLowerCase() === "g" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const { connected: wsConnected, events: wsEvents } = useLiveEvents({
     channels: ["events", "motion_events", "isapi_events"],
@@ -119,20 +153,23 @@ export default function LiveStreamsPage() {
   }, [devices]);
 
   const filteredDevices = useMemo(() => {
-    return devices.filter((d) => {
+    let filtered = devices.filter((d) => {
       if (brandFilter !== "all" && d.brand !== brandFilter) return false;
       if (siteFilter !== "all" && d.site_name !== siteFilter) return false;
       if (statusFilter === "online" && d.status !== "online") return false;
       if (statusFilter === "with-streams" && d.active_channels === 0)
         return false;
-      if (
-        search &&
-        !d.device_name.toLowerCase().includes(search.toLowerCase()) &&
-        !(d.site_name?.toLowerCase() ?? "").includes(search.toLowerCase())
-      )
-        return false;
       return true;
     });
+
+    if (search) {
+      const fuse = new Fuse(filtered, {
+        keys: ["device_name", "site_name"],
+        threshold: 0.3,
+      });
+      filtered = fuse.search(search).map((res) => res.item);
+    }
+    return filtered;
   }, [devices, search, brandFilter, siteFilter, statusFilter]);
 
   const toggleSelect = (d: DeviceStreams, ch: number) => {
@@ -326,15 +363,33 @@ export default function LiveStreamsPage() {
               ) : (
                 <div className={cn("grid gap-2 live-view-landscape-full", gridCols)}>
                   {selectedStreams.map((s) => (
-                    <LiveVideoPlayer
+                    <div
                       key={`${s.deviceId}_${s.channel}`}
-                      deviceId={s.deviceId}
-                      deviceName={s.deviceName}
-                      channel={s.channel}
-                      height={wallHeight}
-                      defaultQuality="sub"
-                      compact={gridSize === "16" || gridSize === "25"}
-                    />
+                      className="relative group overflow-hidden rounded-md border bg-black aspect-video flex flex-col justify-center"
+                      onDoubleClick={() => navigate(`/live-view/${s.deviceId}-${s.channel}`)}
+                    >
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="h-7 w-7 rounded-full bg-black/60 text-white hover:bg-black/90"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFullscreenStream(s);
+                          }}
+                        >
+                          <Maximize2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <LiveVideoPlayer
+                        deviceId={s.deviceId}
+                        deviceName={s.deviceName}
+                        channel={s.channel}
+                        height={wallHeight}
+                        defaultQuality="sub"
+                        compact={gridSize === "16" || gridSize === "25"}
+                      />
+                    </div>
                   ))}
                 </div>
               )}
@@ -350,7 +405,8 @@ export default function LiveStreamsPage() {
                 <div className="flex-1 min-w-[200px] relative">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar por nombre o sitio…"
+                    ref={searchInputRef}
+                    placeholder="Buscar (presiona 'g' para enfocar)..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-8"
@@ -631,6 +687,32 @@ export default function LiveStreamsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Fullscreen Modal */}
+      <Dialog open={!!fullscreenStream} onOpenChange={(open) => !open && setFullscreenStream(null)}>
+        <DialogContent className="max-w-[95vw] w-full h-[90vh] p-0 overflow-hidden bg-black border-0 flex flex-col sm:rounded-xl">
+          <DialogHeader className="absolute top-0 left-0 right-0 z-10 p-3 bg-gradient-to-b from-black/80 to-transparent flex flex-row items-center justify-between pointer-events-none">
+            <DialogTitle className="text-white m-0 text-sm font-medium drop-shadow-md">
+              {fullscreenStream?.deviceName} - Ch{fullscreenStream?.channel}
+            </DialogTitle>
+          </DialogHeader>
+          <div 
+            className="flex-1 w-full h-full flex flex-col justify-center bg-black"
+            onDoubleClick={() => fullscreenStream && navigate(`/live-view/${fullscreenStream.deviceId}-${fullscreenStream.channel}`)}
+          >
+            {fullscreenStream && (
+              <LiveVideoPlayer
+                deviceId={fullscreenStream.deviceId}
+                deviceName={fullscreenStream.deviceName}
+                channel={fullscreenStream.channel}
+                height="100%"
+                defaultQuality="main"
+                compact={false}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }
