@@ -202,7 +202,82 @@ echo "lint baseline preserved: $LINT_ERRORS / $LINT_BASELINE"
 
 ---
 
-## 3. Other P2 items (referenced from other runbooks)
+## 3. Gitleaks findings pendientes de resolver (P1 debt — aceptado por operador)
+
+Decisión del operador 2026-04-20: continuar hacia F0 (audit + eWeLink) aceptando
+estos 4 leaks documentados en lugar de bloquear. Deben resolverse antes de que
+el repo sea público o compartido con terceros.
+
+### 3.1 Leaks reales committed (4 archivos)
+
+| # | File:Line | Kind | Status | Remediation ticket |
+|---|---|---|---|---|
+| A | `deploy/openclaw/openclaw.env:8` | `OPENCLAW_GATEWAY_TOKEN=3897843589…db5870e` (64 hex) | ACTIVE en VPS | **P2-SEC-001:** rotar (`openssl rand -hex 32`), actualizar vault + `/home/openclaw/.openclaw/.env` + `openclaw.json.auth.token`, `git rm deploy/openclaw/openclaw.env`, añadir pattern a .gitignore |
+| B | `GUIA-ACCIONES-EXTERNAS-AION.md:432` | `admin:seg12345` — Hikvision DVR fallback password (22 devices) | ACTIVE | **P2-SEC-002:** editar doc → `admin:<PASSWORD>` placeholder; decisión operativa sobre rotar password en 22 DVRs |
+| C | `.auth/qa-storage-state.json:9` | Supabase JWT session (committed por Gemini dc9b3ba) | Probably expired (JWT TTL ~1h) | **P2-SEC-003:** `git rm .auth/qa-storage-state.json`; añadir `.auth/` a .gitignore (ya estaba en B1.2 commit; verificar efectividad) |
+| D | `GUIA-ACCIONES-EXTERNAS-AION.md:253` | `EWELINK_APP_SECRET=uccENe…nev` | **Rotado por operador 2026-04-20**; el viejo valor queda en repo | **P2-SEC-004:** editar doc → `<APP_SECRET>` placeholder; operador ya rotó el valor real en dev.ewelink.cc (confirmado) |
+
+### 3.2 Git history cleanup
+
+Los 4 valores permanecen en commits históricos del branch `remediation/2026-04-aion-full-audit`
+(particularmente los commits dc9b3ba y anteriores que introdujeron los archivos).
+Purgar el histórico requiere `git filter-repo` o BFG + force-push coordinado a
+los 3 remotes — trabajo de 30-60 min, justificable solo si el repo llegara a ser
+público o compartido. Mientras los 3 remotes permanezcan privados (jlort1721-alt
+scope), el riesgo de exposición es operacional, no público.
+
+### 3.3 False positives identificados — candidatos a `.gitleaksignore`
+
+Total 15 findings en archivos trackeados que son fixtures/documentación:
+
+```
+audit_data.json  lines 271,383,411,439,468,497,525,553,581,669,681
+  → device IDs como "hik-186.97.106.252", "dahua-3.134.216.108",
+    "identified_by_go2rtc_serial" — no credenciales, meta-markers del audit
+backend/apps/backend-api/src/__tests__/credential-encryption.test.ts:5
+  → "d7f1279f…" = AES-256 key fixture para unit test del cryptoservice
+scripts/smoke-tests.sh:150
+  → "dGhlIHNhbXBsZSBub25jZQ==" = base64 "the sample nonce" — fixture
+reverse-gateway/test/sim/hikvision_nvr/main.go:28
+  → "simkey123456" — fixture simulador
+docs/TwilioSetupGuide.md lines 169,175,181,187,193,199
+  → literal "YOUR_JWT" placeholder en curl examples
+GUIA-ACCIONES-EXTERNAS-AION.md:107
+  → "7123456789:AAHxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" — placeholder
+    obvio (xs + prefix telegram fake)
+```
+
+**P2-SEC-005:** crear `.gitleaksignore` con fingerprints de estos 15 para que
+el gate en futuras PRs no los flaguee como regresión.
+
+### 3.4 Tests baseline commit pendiente
+
+El archivo `.vitest-baseline` (contenido: `failed=32 passed=307`) fue creado
+pero quedó untracked en la sesión de gates no-cerrada. Falta:
+- `git add .vitest-baseline` + commit + push
+
+**P2-QA-001:** commitear baseline file + documentar el gate mechanism en
+p2-technical-debt §4 para consistencia con typecheck + lint.
+
+### 3.5 B3 closure pendiente
+
+Items no ejecutados de B3 (deploy + PR + tag) que quedan abiertos al pivotar
+a F0-F4:
+
+- B3.2: deploy blue-green del bundle post-fix (lodash override + tsconfig)
+  a producción. Bundle actual en prod = 2026-04-17.
+- B3.3: unskip 19 Playwright specs + run contra prod.
+- B3.4: smoke manual + screenshots.
+- B3.5: PR `remediation/2026-04-aion-full-audit` → `main`, merge, sync,
+  tag `v2026.04.20-p1-forensic-closure`.
+- B3.6: closure report final.
+
+**P2-REL-001:** ejecutar B3.2-B3.6 tras completar F1-F3. Evaluar si
+consolidar en un solo PR grande (B2+B3+F1+F2+F3) o dividir por fase.
+
+---
+
+## 4. Other P2 items (referenced from other runbooks)
 
 | Ticket candidate | Source | Status |
 |---|---|---|
