@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Mock psql for tests. Reads the -c "QUERY" argument and returns canned TSV
+# rows based on query content. Supports filtering by brand/site.
+#
+# The dry_run.py script invokes:
+#   psql <url> -At -F \t -c "<query>"
+# We detect the -c query string, inspect the WHERE clause, and emit rows.
+
+QUERY=""
+args=("$@")
+for i in "${!args[@]}"; do
+  if [[ "${args[$i]}" == "-c" ]]; then
+    QUERY="${args[$((i+1))]}"
+    break
+  fi
+done
+
+# Fixture rows format (one per line, tab-separated):
+# name \t brand \t site_slug \t target \t last_seen \t firmware
+row_hik_ss() {
+  printf 'ss-dvr-main\thikvision\tportal-plaza\t10.0.0.5:8000\t2026-04-20T04:00:00Z\tV4.50.00\n'
+  printf 'ss-dvr-aux\thikvision\tportal-plaza\t10.0.0.6:8000\t2026-04-20T03:45:00Z\tV4.50.00\n'
+}
+row_hik_tl() {
+  printf 'tl-dvr\thikvision\tterrabamba\t10.0.1.5:8000\t-\tV4.49.00\n'
+  printf 'tl-nvr\thikvision\tterrabamba\t10.0.1.6:8000\t2026-04-15T10:00:00Z\tV4.48.00\n'
+}
+row_dahua() {
+  printf 'danubios-nvr\tdahua\tdanubios\tAJ00421PAZF2E60\t2026-04-20T02:00:00Z\tV2.814\n'
+  printf 'quintas-ipc\tdahua\tquintas\tAH1020EPAZ39E67\t2026-04-19T23:55:00Z\tV2.811\n'
+  printf 'terrazino-ipc\tdahua\tterrazino\tAL02505PAJ638AA\t2026-04-20T00:30:00Z\tV2.818\n'
+}
+
+# 3-column (id, name, serial) rows for imou-refresh queries
+row_imou_dahua() {
+  printf 'uuid-dan-001\tdanubios-nvr\tAJ00421PAZF2E60\n'
+  printf 'uuid-qui-001\tquintas-ipc\tAH1020EPAZ39E67\n'
+  printf 'uuid-ter-001\tterrazino-ipc\tAL02505PAJ638AA\n'
+}
+
+# Default: emit all rows
+case "$QUERY" in
+  *"SELECT id, name, serial"*)
+    # imou-refresh fetches just 3 columns filtered by brand='dahua' + is_active
+    row_imou_dahua
+    ;;
+  *"LOWER(d.brand) = 'hikvision'"*)
+    row_hik_ss
+    row_hik_tl
+    ;;
+  *"LOWER(d.brand) = 'dahua'"*)
+    row_dahua
+    ;;
+  *"s.slug = 'portal-plaza'"*)
+    row_hik_ss
+    ;;
+  *"devices"*)
+    row_hik_ss
+    row_hik_tl
+    row_dahua
+    ;;
+  *)
+    # UPDATE statements (imou-refresh) — silently succeed
+    :
+    ;;
+esac
+
+exit 0

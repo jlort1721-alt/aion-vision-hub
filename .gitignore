@@ -75,3 +75,9 @@ frontend/test-results/
 frontend/playwright-report/
 frontend/e2e/.auth/
 .auth/
+
+# Coverage
+.coverage
+.coverage.*
+.claude/skills/.coverage*
+

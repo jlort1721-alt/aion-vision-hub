@@ -50,7 +50,7 @@ def build_where(brand: str | None, site: str | None, device: str | None) -> str:
 
 
 def stale_flag(last_seen: str) -> str:
-    if not last_seen or last_seen == "":
+    if not last_seen or last_seen in ("", "-", "NULL", "null"):
         return "NEVER"
     try:
         ts = datetime.fromisoformat(last_seen.replace("Z", "+00:00"))
