@@ -32,8 +32,10 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertCircle,
+  Settings,
 } from "lucide-react";
 import { PageShell } from "@/components/shared/PageShell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/date-utils";
 import { toast } from "sonner";
@@ -179,7 +181,42 @@ export default function AccessDoorsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {doors.map((d) => (
+              {loading && doors.length === 0 ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-40" /></TableCell>
+                  </TableRow>
+                ))
+              ) : doors.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-48 text-center">
+                    <div className="flex flex-col items-center justify-center text-muted-foreground">
+                      <DoorClosed className="h-12 w-12 mb-4 opacity-30" />
+                      <h3 className="text-lg font-semibold text-foreground mb-1">Sin puertas registradas</h3>
+                      <p className="text-sm mb-4 max-w-sm">No hay puertas configuradas en el sistema para control de acceso.</p>
+                      <Button variant="outline" onClick={loadDoors}>Reintentar conexión</Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : doors.map((d) => {
+                const now = new Date();
+                const lastEventDate = d.lastEventAt ? new Date(d.lastEventAt) : null;
+                const hoursSinceLastEvent = lastEventDate ? (now.getTime() - lastEventDate.getTime()) / (1000 * 60 * 60) : Infinity;
+                
+                let statusBadge;
+                if (!d.deviceIp) {
+                  statusBadge = <Badge variant="destructive" className="bg-red-500 text-white">Sin comunicación</Badge>;
+                } else if (hoursSinceLastEvent > 24) {
+                  statusBadge = <Badge variant="outline" className="text-amber-500 border-amber-500/50 bg-amber-500/5">Inactiva ({'>'}24h)</Badge>;
+                } else {
+                  statusBadge = <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 bg-emerald-500/5">Activa (últ: {lastEventDate?.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</Badge>;
+                }
+
+                return (
                 <TableRow key={d.id}>
                   <TableCell className="font-medium">
                     {d.siteName ?? "—"}
@@ -193,7 +230,7 @@ export default function AccessDoorsPage() {
                     {d.deviceIp ? `${d.deviceIp}:${d.devicePort}` : "—"}
                   </TableCell>
                   <TableCell className="text-xs">
-                    {d.lastEventAt ? formatDateTime(d.lastEventAt) : "—"}
+                    {statusBadge}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
@@ -201,6 +238,7 @@ export default function AccessDoorsPage() {
                         size="sm"
                         onClick={() => setSelected(d)}
                         disabled={!d.deviceIp}
+                        title="Abrir ahora"
                       >
                         <DoorOpen className="h-4 w-4 mr-1" /> Abrir
                       </Button>
@@ -208,13 +246,22 @@ export default function AccessDoorsPage() {
                         size="sm"
                         variant="outline"
                         onClick={() => loadHistory(d)}
+                        title="Ver eventos"
                       >
-                        <History className="h-4 w-4 mr-1" /> Historial
+                        <History className="h-4 w-4 mr-1" /> Eventos
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled
+                        title="Configurar"
+                      >
+                        <Settings className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
             </TableBody>
           </Table>
         </CardContent>

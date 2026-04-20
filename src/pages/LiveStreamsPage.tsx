@@ -33,6 +33,7 @@ import { apiClient } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/date-utils";
 import { useLiveEvents } from "@/hooks/use-live-events";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface StreamEntry {
   channel: number;
@@ -392,8 +393,38 @@ export default function LiveStreamsPage() {
             </CardHeader>
             <CardContent className="p-0">
               <ScrollArea className="h-[70vh] p-3">
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {filteredDevices.map((d) => {
+                {loading && devices.length === 0 ? (
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <Card key={i} className="opacity-70">
+                        <CardHeader className="pb-2">
+                          <Skeleton className="h-4 w-3/4 mb-2" />
+                          <Skeleton className="h-3 w-1/2" />
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex gap-1 mb-2">
+                            <Skeleton className="h-6 w-12" />
+                            <Skeleton className="h-6 w-12" />
+                          </div>
+                          <Skeleton className="h-3 w-1/3" />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : filteredDevices.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-16 flex flex-col items-center justify-center">
+                    <Search className="h-12 w-12 mx-auto mb-4 opacity-30 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">No se encontraron dispositivos</h3>
+                    <p className="text-sm mb-4 max-w-sm">No hay resultados que coincidan con los filtros aplicados. Intenta cambiar la marca, el sitio o el estado.</p>
+                    <Button variant="outline" onClick={() => {
+                      setSearch(""); setBrandFilter("all"); setSiteFilter("all"); setStatusFilter("all");
+                    }}>
+                      Limpiar filtros
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {filteredDevices.map((d) => {
                     const online = d.status === "online";
                     const hasStreams = d.active_channels > 0;
                     return (
@@ -409,14 +440,18 @@ export default function LiveStreamsPage() {
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1 mb-1">
-                                <Circle
-                                  className={cn(
-                                    "h-2 w-2",
-                                    online
-                                      ? "fill-emerald-500 text-emerald-500"
-                                      : "fill-gray-400 text-gray-400",
-                                  )}
-                                />
+                                  <Circle
+                                    className={cn(
+                                      "h-2 w-2",
+                                      d.status === "online"
+                                        ? "fill-emerald-500 text-emerald-500"
+                                        : d.status === "imou_expired"
+                                        ? "fill-amber-500 text-amber-500"
+                                        : d.status === "dvr_lockout"
+                                        ? "fill-red-500 text-red-500"
+                                        : "fill-gray-400 text-gray-400",
+                                    )}
+                                  />
                                 <CardTitle className="text-sm truncate">
                                   {d.device_name}
                                 </CardTitle>
@@ -435,7 +470,26 @@ export default function LiveStreamsPage() {
                               {d.brand}
                             </Badge>
                           </div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+                          
+                          {d.status === "imou_expired" && (
+                            <div className="mt-2 bg-amber-500/10 border border-amber-500/30 rounded p-2">
+                              <Badge variant="outline" className="text-amber-500 border-amber-500/50 bg-amber-500/5 mb-1 text-[10px]">
+                                URL caducada - esperando refresh
+                              </Badge>
+                              <p className="text-[10px] text-muted-foreground">último snapshot: {d.last_seen ? new Date(d.last_seen).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</p>
+                            </div>
+                          )}
+
+                          {d.status === "dvr_lockout" && (
+                            <div className="mt-2 bg-red-500/10 border border-red-500/30 rounded p-2">
+                              <Badge variant="outline" className="text-red-500 border-red-500/50 bg-red-500/5 mb-1 text-[10px]">
+                                DVR en cooldown
+                              </Badge>
+                              <p className="text-[10px] text-muted-foreground">ETA: {new Date(Date.now() + 2 * 60 * 60 * 1000).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })} UTC (aprox)</p>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
                             <span>
                               {d.active_channels}/{d.total_channels} canales
                             </span>
@@ -488,11 +542,6 @@ export default function LiveStreamsPage() {
                       </Card>
                     );
                   })}
-                </div>
-                {filteredDevices.length === 0 && (
-                  <div className="text-center text-muted-foreground py-12">
-                    <Search className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                    Sin resultados con los filtros aplicados
                   </div>
                 )}
               </ScrollArea>

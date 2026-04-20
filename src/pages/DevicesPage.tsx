@@ -273,103 +273,89 @@ export default function DevicesPage() {
                   <EmptyState
                     icon={<Monitor className="h-12 w-12" />}
                     title={t("devices.no_devices") || "No hay dispositivos"}
-                    description="Agrega tu primer dispositivo para comenzar"
+                    description="Agrega tu primer dispositivo para comenzar o cambia los filtros."
                     action={{
                       label: t("devices.add_first") || "Agregar dispositivo",
                       onClick: openAdd,
                     }}
                   />
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-8"></TableHead>
-                        <TableHead>{t("common.name")}</TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          {t("devices.brand")} / {t("devices.model")}
-                        </TableHead>
-                        <TableHead className="hidden lg:table-cell">
-                          IP Pública
-                        </TableHead>
-                        <TableHead className="hidden xl:table-cell">
-                          IP LAN
-                        </TableHead>
-                        <TableHead className="hidden sm:table-cell">
-                          {t("events.site")}
-                        </TableHead>
-                        <TableHead className="hidden md:table-cell">
-                          {t("common.type")}
-                        </TableHead>
-                        <TableHead>{t("common.status")}</TableHead>
-                        <TableHead className="w-10"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filtered.map((device) => {
-                        const site = sites.find((s) => s.id === device.site_id);
-                        return (
-                          <TableRow
-                            key={device.id}
-                            className={cn(
-                              "cursor-pointer",
-                              selectedDevice === device.id && "bg-muted/50",
-                            )}
-                            onClick={() => setSelectedDevice(device.id)}
-                          >
-                            <TableCell>
-                              {device.status === "online" ||
-                              device.status === "active" ? (
-                                <Wifi className="h-3.5 w-3.5 text-success" />
-                              ) : device.status === "offline" ? (
-                                <WifiOff className="h-3.5 w-3.5 text-destructive" />
-                              ) : device.status === "pending_configuration" ? (
-                                <AlertCircle className="h-3.5 w-3.5 text-warning" />
-                              ) : (
-                                <AlertCircle className="h-3.5 w-3.5 text-warning" />
-                              )}
-                            </TableCell>
-                            <TableCell className="font-medium text-sm">
-                              {device.name}
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              <div className="text-xs">
-                                <span className="capitalize">
-                                  {device.brand}
-                                </span>
-                                <span className="text-muted-foreground ml-1">
-                                  {device.model}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 p-4">
+                    {filtered.map((device) => {
+                      const site = sites.find((s) => s.id === device.site_id);
+                      return (
+                        <Card
+                          key={device.id}
+                          className={cn(
+                            "cursor-pointer transition-colors hover:bg-muted/50",
+                            selectedDevice === device.id && "border-primary"
+                          )}
+                          onClick={() => setSelectedDevice(device.id)}
+                        >
+                          <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
+                            <div className="flex flex-col">
+                              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                                {device.status === "online" || device.status === "active" ? (
+                                  <Wifi className="h-4 w-4 text-emerald-500" />
+                                ) : device.status === "offline" ? (
+                                  <WifiOff className="h-4 w-4 text-red-500" />
+                                ) : (
+                                  <AlertCircle className="h-4 w-4 text-amber-500" />
+                                )}
+                                {device.name}
+                              </CardTitle>
+                              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                                <span className="capitalize font-medium text-foreground">{device.brand}</span>
+                                <span>{device.model || "Unknown Model"}</span>
+                              </div>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 -mt-2 -mr-2" onClick={(e) => e.stopPropagation()}>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setSelectedDevice(device.id)}>
+                                  <Eye className="mr-2 h-4 w-4" /> {t("devices.view_details")}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openEdit(device)}>
+                                  <Pencil className="mr-2 h-4 w-4" /> {t("common.edit")}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive" onClick={() => setDeleteDevice(device)}>
+                                  <Trash2 className="mr-2 h-4 w-4" /> {t("common.delete")}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                              <div className="flex flex-col">
+                                <span className="text-muted-foreground mb-1">Firmware</span>
+                                <span className="font-mono truncate">{device.firmware_version || "—"}</span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-muted-foreground mb-1">SDK Status</span>
+                                <span>
+                                  <Badge variant="outline" className="text-[10px] bg-background">
+                                    {device.status === "online" ? "Connected" : "Disconnected"}
+                                  </Badge>
                                 </span>
                               </div>
-                            </TableCell>
-                            <TableCell className="hidden lg:table-cell font-mono text-xs">
-                              {device.remote_address ? (
-                                <span className="text-success">
-                                  {device.remote_address}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="hidden xl:table-cell font-mono text-xs text-muted-foreground">
-                              {device.ip_address || "—"}
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell text-xs">
-                              {device.site_name ||
-                                site?.name?.split("—")[0]?.trim()}
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] capitalize"
-                              >
-                                {device.type}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="text-muted-foreground mb-1">Canales</span>
+                                <span>{device.channels || 0}</span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-muted-foreground mb-1">Última Com.</span>
+                                <span>{device.last_seen ? new Date(device.last_seen).toLocaleString() : "—"}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between mt-4">
                               <Badge
                                 variant={
-                                  device.status === "online" ||
-                                  device.status === "active"
+                                  device.status === "online" || device.status === "active"
                                     ? "default"
                                     : device.status === "offline"
                                       ? "destructive"
@@ -377,83 +363,26 @@ export default function DevicesPage() {
                                 }
                                 className="text-[10px] capitalize"
                               >
-                                {device.status === "pending_configuration"
-                                  ? "pendiente"
-                                  : device.status}
+                                {device.status === "pending_configuration" ? "pendiente" : device.status}
                               </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7"
-                                    onClick={(e) => e.stopPropagation()}
-                                    aria-label="Acciones del dispositivo"
-                                  >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => setSelectedDevice(device.id)}
-                                  >
-                                    <Eye className="mr-2 h-3 w-3" />{" "}
-                                    {t("devices.view_details")}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => openEdit(device)}
-                                  >
-                                    <Pencil className="mr-2 h-3 w-3" />{" "}
-                                    {t("common.edit")}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      apiClient
-                                        .post(
-                                          `/device-control/test-connection`,
-                                          { deviceId: device.id },
-                                        )
-                                        .then((d: any) => {
-                                          if (
-                                            d?.reachable ||
-                                            d?.data?.reachable
-                                          )
-                                            toast.success(
-                                              `Conectado — Latencia: ${d?.latencyMs || d?.data?.latencyMs || "?"}ms`,
-                                            );
-                                          else
-                                            toast.error(
-                                              `No alcanzable: ${d?.error || d?.data?.error || "Sin respuesta"}`,
-                                            );
-                                        })
-                                        .catch(() =>
-                                          toast.error(
-                                            "Error al probar conexión",
-                                          ),
-                                        );
-                                    }}
-                                  >
-                                    <RefreshCw className="mr-2 h-3 w-3" />{" "}
-                                    {t("devices.test_connection")}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => setDeleteDevice(device)}
-                                  >
-                                    <Trash2 className="mr-2 h-3 w-3" />{" "}
-                                    {t("common.delete")}
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="h-7 text-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // In a real scenario, this should use react-router to navigate
+                                  window.location.href = `/live-view?device=${device.id}&channel=1`;
+                                }}
+                              >
+                                <PlayCircle className="mr-1 h-3 w-3" /> LiveView
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
               <div className="px-4 py-2 border-t text-xs text-muted-foreground">
