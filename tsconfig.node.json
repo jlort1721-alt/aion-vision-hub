@@ -16,7 +16,13 @@
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    /* Restrict @types to what vite.config actually needs. Prevents tsc
+     * from auto-loading duplicated type dirs like
+     * "react-virtualized-auto-sizer 2" / "react-window 2" that iCloud
+     * Drive / Dropbox sync creates on macOS dev machines. (TS2688) */
+    "types": ["node", "vite/client"]
   },
   "include": ["vite.config.ts"]
 }
