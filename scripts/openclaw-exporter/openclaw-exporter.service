@@ -1,0 +1,46 @@
+[Unit]
+Description=OpenClaw Prometheus Exporter (reads /home/openclaw/devops/reports)
+After=network.target
+Documentation=file:/var/www/aionseg/scripts/openclaw-exporter/README.md
+
+[Service]
+Type=simple
+User=openclaw
+Group=openclaw
+
+# Non-interactive Python stdlib + prometheus_client.
+ExecStart=/usr/bin/python3 /opt/aion/openclaw-exporter/exporter.py
+
+Environment=OPENCLAW_REPORTS_DIR=/home/openclaw/devops/reports
+Environment=OPENCLAW_EXPORTER_PORT=9109
+Environment=OPENCLAW_SCRAPE_INTERVAL=30
+Environment=PYTHONUNBUFFERED=1
+
+Restart=on-failure
+RestartSec=15
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadOnlyPaths=/home/openclaw/devops/reports
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
+
+# Resource limits
+MemoryMax=128M
+CPUQuota=25%
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openclaw-exporter
+
+[Install]
+WantedBy=multi-user.target

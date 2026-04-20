@@ -52,8 +52,9 @@ groups:
         annotations:
           summary: "OpenClaw loop dejó de avanzar"
           description: >
-            Último reporte hace {{ with printf "%.0f" (sub time openclaw_iteration_last_completed_at) }}{{ . }}{{ end }} s.
-            El cron aion-continuous-improvement.sh puede estar bloqueado.
+            El último reporte tiene timestamp {{ $value | humanize }}s atrás;
+            el cron aion-continuous-improvement.sh puede estar bloqueado.
+            Runbook: docs/runbooks/openclaw-exporter-setup.md.
 
       # ──────────────────────────────────────────────────────────────
       - alert: ImouHlsUrlsExpiringSoon
