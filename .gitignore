@@ -67,3 +67,11 @@ deploy/go2rtc-*.yaml
 **/twilio.service\ 2.ts
 package\ 2.json
 pnpm-lock\ 2.yaml
+
+# Playwright artifacts (never commit)
+test-results/
+playwright-report/
+frontend/test-results/
+frontend/playwright-report/
+frontend/e2e/.auth/
+.auth/
