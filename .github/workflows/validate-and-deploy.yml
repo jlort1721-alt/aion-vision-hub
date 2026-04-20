@@ -10,10 +10,10 @@ on:
         type: boolean
         default: false
       force_color:
-        description: "Force blue/green target"
+        description: "Force blue/green target (auto = default)"
         type: choice
-        options: ["", "blue", "green"]
-        default: ""
+        options: ["auto", "blue", "green"]
+        default: "auto"
 
 concurrency:
   group: aion-production
@@ -39,7 +39,8 @@ jobs:
         with: { fetch-depth: 2 }
 
       - uses: pnpm/action-setup@v4
-        with: { version: ${{ env.PNPM_VERSION }} }
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v4
         with:
@@ -78,7 +79,8 @@ jobs:
         with: { fetch-depth: 0 }   # full history for gitleaks
 
       - uses: pnpm/action-setup@v4
-        with: { version: ${{ env.PNPM_VERSION }} }
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v4
         with:
@@ -106,7 +108,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with: { version: ${{ env.PNPM_VERSION }} }
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v4
         with:
@@ -175,7 +178,7 @@ jobs:
               --env production \
               --run-id ${RUN_ID} \
               ${{ inputs.skip_build && '--skip-build' || '' }} \
-              ${{ inputs.force_color && format('--force-color {0}', inputs.force_color) || '' }}
+              ${{ inputs.force_color && inputs.force_color != 'auto' && format('--force-color {0}', inputs.force_color) || '' }}
           '"
 
       - name: Post-deploy public smoke
@@ -218,9 +221,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with: { version: ${{ env.PNPM_VERSION }} }
+        with:
+          version: ${{ env.PNPM_VERSION }}
       - uses: actions/setup-node@v4
-        with: { node-version: ${{ env.NODE_VERSION }}, cache: pnpm }
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm playwright install --with-deps chromium
