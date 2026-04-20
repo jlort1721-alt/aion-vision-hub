@@ -1,0 +1,102 @@
+name: Sync main remotes
+
+# Mirror origin/main to aion-platform + aionseg-platform after a merge
+# into main. Runs automatically but can be dispatched manually.
+#
+# Requires three secrets:
+#   AION_SSH_KEY     — SSH deploy key that can push to aion-platform
+#   AIONSEG_SSH_KEY  — SSH deploy key that can push to aionseg-platform
+#   SYNC_GIT_USER    — identity used for the sync commit author
+#                      (optional; defaults to "aion-sync-bot")
+#
+# Runbook: docs/runbooks/multi-remote-sync.md
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (show what would push without pushing)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: sync-main-remotes
+  cancel-in-progress: false  # never cancel a sync mid-flight
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DRY_RUN: ${{ inputs.dry_run || false }}
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "${{ secrets.SYNC_GIT_USER || 'aion-sync-bot' }}"
+          git config user.email "sync@aionseg.co"
+
+      - name: Load SSH keys
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.AION_SSH_KEY }}
+            ${{ secrets.AIONSEG_SSH_KEY }}
+
+      - name: Trust GitHub SSH host
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+
+      - name: Add aion remote
+        run: |
+          git remote add aion git@github.com:jlort1721-alt/aion-platform.git
+          git fetch aion main || true
+
+      - name: Add aionseg remote
+        run: |
+          git remote add aionseg git@github.com:jlort1721-alt/aionseg-platform.git
+          git fetch aionseg main || true
+
+      - name: Show pre-sync divergence
+        run: |
+          echo "origin main: $(git rev-parse origin/main)"
+          for r in aion aionseg; do
+            if git rev-parse --verify "$r/main" >/dev/null 2>&1; then
+              behind=$(git rev-list --count HEAD ^$r/main)
+              ahead=$(git rev-list --count $r/main ^HEAD || echo 0)
+              echo "$r main: $(git rev-parse $r/main) (main is ahead=$behind, behind=$ahead)"
+            else
+              echo "$r main: REMOTE UNAVAILABLE"
+            fi
+          done
+
+      - name: Push main to aion
+        if: env.DRY_RUN != 'true'
+        run: git push aion main:main
+
+      - name: Push main to aionseg
+        if: env.DRY_RUN != 'true'
+        run: git push aionseg main:main
+
+      - name: Post-sync verification
+        run: |
+          for r in aion aionseg; do
+            actual=$(git ls-remote $r main | cut -f1)
+            expected=$(git rev-parse origin/main)
+            if [ "$actual" = "$expected" ]; then
+              echo "✓ $r main synced to $actual"
+            else
+              echo "✗ $r main = $actual (expected $expected)"
+              exit 1
+            fi
+          done

@@ -10,13 +10,17 @@
 
 ---
 
-## 1. Por qué no está aplicado aún
+## 1. Estado actual
 
-El hook de policy deniega modificar `.claude/settings.local.json` (es config de agente). El parche queda documentado aquí; tú lo aplicas en una edición manual.
+El archivo `.claude/settings.local.json` es configuración por-operador (gitignored globalmente en `~/.config/git/ignore`), por lo que vive **solo en la máquina del operador** y no viaja al repo.
 
-## 2. Parche a aplicar
+La versión local en `/Users/ADMIN/...` ya tiene los MCPs registrados con paths **portables** (usa `${CLAUDE_PROJECT_DIR}` en lugar de absolutos).
 
-Editar `/Users/ADMIN/Documents/open-view-hub-main/.claude/settings.local.json` y añadir la llave `mcpServers` al top-level del JSON (al mismo nivel que `permissions`):
+Este runbook documenta el patch para operadores en otras máquinas.
+
+## 2. Parche a aplicar (portable — paths relativos al workspace)
+
+Añade la llave `mcpServers` al top-level del JSON de `.claude/settings.local.json` (al mismo nivel que `permissions`):
 
 ```json
 {
@@ -24,14 +28,14 @@ Editar `/Users/ADMIN/Documents/open-view-hub-main/.claude/settings.local.json` y
   "mcpServers": {
     "go2rtc": {
       "command": "node",
-      "args": [".claude/mcps/go2rtc-mcp/dist/index.js"],
+      "args": ["${CLAUDE_PROJECT_DIR}/.claude/mcps/go2rtc-mcp/dist/index.js"],
       "env": {
         "GO2RTC_API_URL": "http://127.0.0.1:1984"
       }
     },
     "pm2": {
       "command": "node",
-      "args": [".claude/mcps/pm2-mcp/dist/index.js"],
+      "args": ["${CLAUDE_PROJECT_DIR}/.claude/mcps/pm2-mcp/dist/index.js"],
       "env": {
         "PM2_MCP_SSH_HOST": "aion-vps"
       }
@@ -39,6 +43,8 @@ Editar `/Users/ADMIN/Documents/open-view-hub-main/.claude/settings.local.json` y
   }
 }
 ```
+
+`${CLAUDE_PROJECT_DIR}` es expandido por Claude Code al path absoluto del workspace. Funciona en cualquier máquina/usuario sin hardcodear `/Users/ADMIN/...`.
 
 El `GO2RTC_API_URL` asume que corres Claude Code desde el VPS o que tienes un túnel SSH local mapeando `127.0.0.1:1984` al go2rtc del VPS (p. ej. `ssh -L 1984:127.0.0.1:1984 aion-vps -N`).
 
