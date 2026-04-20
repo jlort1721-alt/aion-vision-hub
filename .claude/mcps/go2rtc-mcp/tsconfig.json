@@ -10,9 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "declaration": false,
-    "sourceMap": false,
-    "types": ["node"],
-    "typeRoots": ["./node_modules/@types"]
+    "sourceMap": false
   },
   "include": ["src/**/*"]
 }

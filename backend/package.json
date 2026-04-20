@@ -23,8 +23,5 @@
     "docker:build": "docker compose build",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
-  },
-  "devDependencies": {
-    "@types/ws": "^8.18.1"
   }
 }
