@@ -183,3 +183,39 @@ html.theme-transitioning *::after {
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
+
+/* ── PWA & Mobile Responsiveness ── */
+html, body {
+  /* Prevent bounce effect in PWA and disable tap highlight */
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Scroll snap utilities */
+.snap-y-container {
+  scroll-snap-type: y mandatory;
+  overflow-y: auto;
+  height: 100vh;
+}
+.snap-section {
+  scroll-snap-align: start;
+}
+
+/* Landscape mode for LiveView (mobile) without letterboxing */
+@media (max-width: 850px) and (orientation: landscape) {
+  .live-view-landscape-full {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    background: black;
+    padding: 0 !important;
+    margin: 0 !important;
+    /* Ensure no header/footer takes space */
+  }
+  .live-view-landscape-full > * {
+    height: 100% !important;
+  }
+}

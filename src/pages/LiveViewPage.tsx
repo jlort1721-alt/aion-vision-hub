@@ -1245,7 +1245,7 @@ export default function LiveViewPage() {
           </div>
 
           {/* Video grid */}
-          <div className="flex-1 p-1.5 bg-background">
+          <div className="flex-1 p-1.5 bg-background live-view-landscape-full">
             {isLoading ? (
               <div
                 className="grid gap-1 h-full"

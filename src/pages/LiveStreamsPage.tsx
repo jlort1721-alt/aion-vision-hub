@@ -324,7 +324,7 @@ export default function LiveStreamsPage() {
                   </div>
                 </div>
               ) : (
-                <div className={cn("grid gap-2", gridCols)}>
+                <div className={cn("grid gap-2 live-view-landscape-full", gridCols)}>
                   {selectedStreams.map((s) => (
                     <LiveVideoPlayer
                       key={`${s.deviceId}_${s.channel}`}
