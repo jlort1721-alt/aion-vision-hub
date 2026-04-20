@@ -1,15 +1,15 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-const eventSeverities = ['critical', 'high', 'medium', 'low', 'info'] as const;
-const eventStatuses = ['new', 'acknowledged', 'resolved', 'dismissed'] as const;
+const eventSeverities = ["critical", "high", "medium", "low", "info"] as const;
+const eventStatuses = ["new", "acknowledged", "resolved", "dismissed"] as const;
 
 // ── Create Event ────────────────────────────────────────────
 export const createEventSchema = z.object({
-  deviceId: z.string().uuid('deviceId must be a valid UUID'),
-  siteId: z.string().uuid('siteId must be a valid UUID'),
-  type: z.string().min(1, 'Event type is required').max(64),
-  severity: z.enum(eventSeverities).default('info'),
-  title: z.string().min(1, 'Title is required').max(255),
+  deviceId: z.string().uuid("deviceId must be a valid UUID"),
+  siteId: z.string().uuid("siteId must be a valid UUID"),
+  type: z.string().min(1, "Event type is required").max(64),
+  severity: z.enum(eventSeverities).default("info"),
+  title: z.string().min(1, "Title is required").max(255),
   description: z.string().max(4096).optional(),
   channel: z.coerce.number().int().min(0).optional(),
   snapshotUrl: z.string().url().max(1024).optional(),
@@ -20,7 +20,7 @@ export type CreateEventInput = z.infer<typeof createEventSchema>;
 
 // ── Assign Event ────────────────────────────────────────────
 export const assignEventSchema = z.object({
-  assignedTo: z.string().uuid('assignedTo must be a valid UUID'),
+  assignedTo: z.string().uuid("assignedTo must be a valid UUID"),
 });
 
 export type AssignEventInput = z.infer<typeof assignEventSchema>;
@@ -34,7 +34,18 @@ export type UpdateEventStatusInput = z.infer<typeof updateEventStatusSchema>;
 
 // ── Event Filters ───────────────────────────────────────────
 export const eventFiltersSchema = z.object({
-  severity: z.enum(eventSeverities).optional(),
+  severity: z
+    .string()
+    .optional()
+    .transform((v) => {
+      if (!v) return undefined;
+      const parts = v.split(",").map((s) => s.trim());
+      return parts.every((p) =>
+        (eventSeverities as readonly string[]).includes(p),
+      )
+        ? parts
+        : undefined;
+    }),
   status: z.enum(eventStatuses).optional(),
   deviceId: z.string().uuid().optional(),
   siteId: z.string().uuid().optional(),
@@ -44,8 +55,8 @@ export const eventFiltersSchema = z.object({
   // Pagination
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(25),
-  sortBy: z.enum(['createdAt', 'severity', 'status']).default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  sortBy: z.enum(["createdAt", "severity", "status"]).default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
 
 export type EventFilters = z.infer<typeof eventFiltersSchema>;

@@ -1,14 +1,14 @@
-import { eq, and, sql, desc, asc, gte, lte } from 'drizzle-orm';
-import { db } from '../../db/client.js';
-import { events, devices, sites } from '../../db/schema/index.js';
-import { NotFoundError } from '@aion/shared-contracts';
-import { broadcast } from '../../plugins/websocket.js';
+import { eq, and, sql, desc, asc, gte, lte, inArray } from "drizzle-orm";
+import { db } from "../../db/client.js";
+import { events, devices, sites } from "../../db/schema/index.js";
+import { NotFoundError } from "@aion/shared-contracts";
+import { broadcast } from "../../plugins/websocket.js";
 import type {
   CreateEventInput,
   AssignEventInput,
   UpdateEventStatusInput,
   EventFilters,
-} from './schemas.js';
+} from "./schemas.js";
 
 export class EventService {
   /**
@@ -18,7 +18,12 @@ export class EventService {
     const conditions = [eq(events.tenantId, tenantId)];
 
     if (filters.severity) {
-      conditions.push(eq(events.severity, filters.severity));
+      const sev = filters.severity;
+      if (Array.isArray(sev) && sev.length > 0) {
+        conditions.push(inArray(events.severity, sev));
+      } else if (typeof sev === "string") {
+        conditions.push(eq(events.severity, sev));
+      }
     }
     if (filters.status) {
       conditions.push(eq(events.status, filters.status));
@@ -58,7 +63,7 @@ export class EventService {
       status: events.status,
     }[filters.sortBy];
 
-    const orderFn = filters.sortOrder === 'asc' ? asc : desc;
+    const orderFn = filters.sortOrder === "asc" ? asc : desc;
 
     const rows = await db
       .select({
@@ -121,12 +126,12 @@ export class EventService {
         channel: data.channel ?? null,
         snapshotUrl: data.snapshotUrl ?? null,
         metadata: data.metadata ?? {},
-        status: 'new',
+        status: "new",
       })
       .returning();
 
     // Broadcast to websocket clients
-    broadcast(tenantId, 'events', { type: 'event.new', event });
+    broadcast(tenantId, "events", { type: "event.new", event });
 
     return event;
   }
@@ -144,9 +149,9 @@ export class EventService {
       .where(and(eq(events.id, id), eq(events.tenantId, tenantId)))
       .returning();
 
-    if (!event) throw new NotFoundError('Event', id);
+    if (!event) throw new NotFoundError("Event", id);
 
-    broadcast(tenantId, 'events', { type: 'event.updated', event });
+    broadcast(tenantId, "events", { type: "event.updated", event });
 
     return event;
   }
@@ -154,11 +159,15 @@ export class EventService {
   /**
    * Update the status of an event (acknowledge, resolve, dismiss).
    */
-  async updateStatus(id: string, data: UpdateEventStatusInput, tenantId: string) {
+  async updateStatus(
+    id: string,
+    data: UpdateEventStatusInput,
+    tenantId: string,
+  ) {
     const now = new Date();
     const timestampFields: Record<string, Date> = {};
 
-    if (data.status === 'resolved') {
+    if (data.status === "resolved") {
       timestampFields.resolvedAt = now;
     }
 
@@ -172,9 +181,9 @@ export class EventService {
       .where(and(eq(events.id, id), eq(events.tenantId, tenantId)))
       .returning();
 
-    if (!event) throw new NotFoundError('Event', id);
+    if (!event) throw new NotFoundError("Event", id);
 
-    broadcast(tenantId, 'events', { type: 'event.updated', event });
+    broadcast(tenantId, "events", { type: "event.updated", event });
 
     return event;
   }
@@ -188,7 +197,9 @@ export class EventService {
     if (from) {
       conditions.push(gte(events.createdAt, new Date(from)));
     } else {
-      conditions.push(gte(events.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)));
+      conditions.push(
+        gte(events.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
+      );
     }
     if (to) {
       conditions.push(lte(events.createdAt, new Date(to)));

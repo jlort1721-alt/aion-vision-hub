@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => ({
           "Centro de Monitoreo, Control de Acceso y Videovigilancia con IA",
         start_url: "/",
         scope: "/",
-        display: "standalone",
+        display: "fullscreen",
         orientation: "any",
         background_color: "#0a0f1e",
         theme_color: "#3b82f6",

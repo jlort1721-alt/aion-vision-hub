@@ -71,6 +71,8 @@ import {
   Camera,
   Image,
   Eye,
+  Map as MapIcon,
+  LayoutGrid,
 } from "lucide-react";
 import {
   SmartCameraCell,
@@ -84,6 +86,25 @@ import { CameraGrid } from "@/components/liveview/CameraGrid";
 import { CameraContextPanel } from "@/components/liveview/CameraContextPanel";
 import { LiveViewToolbar } from "@/components/liveview/LiveViewToolbar";
 import { FF } from "@/lib/feature-flags";
+import { lazy, Suspense } from "react";
+
+const FloorPlanView = lazy(() =>
+  import("@/components/liveview/FloorPlanView").then((m) => ({
+    default: m.FloorPlanView,
+  })),
+);
+const SceneComposer = lazy(() =>
+  import("@/components/liveview/SceneComposer").then((m) => ({
+    default: m.SceneComposer,
+  })),
+);
+const TourEngine = lazy(() => import("@/components/liveview/TourEngine"));
+const LiveViewEventsPanel = lazy(
+  () => import("@/components/liveview/LiveViewEventsPanel"),
+);
+const LiveViewOpsPanel = lazy(
+  () => import("@/components/liveview/LiveViewOpsPanel"),
+);
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -1224,7 +1245,7 @@ export default function LiveViewPage() {
           </div>
 
           {/* Video grid */}
-          <div className="flex-1 p-1.5 bg-background">
+          <div className="flex-1 p-1.5 bg-background live-view-landscape-full">
             {isLoading ? (
               <div
                 className="grid gap-1 h-full"
@@ -1349,6 +1370,22 @@ export default function LiveViewPage() {
                   </TooltipTrigger>
                   <TooltipContent>Control de Cámara</TooltipContent>
                 </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger value="lv-events" className="h-7 px-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Eventos en Vivo</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <TabsTrigger value="lv-ops" className="h-7 px-1.5">
+                      <Zap className="h-3.5 w-3.5" />
+                    </TabsTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Operaciones</TooltipContent>
+                </Tooltip>
               </TabsList>
 
               <ScrollArea className="flex-1">
@@ -1380,6 +1417,72 @@ export default function LiveViewPage() {
                         allCameras.find((c) => c.id === focusedCamera)?.name
                       }
                     />
+                  </TabsContent>
+
+                  {FF.LIVE_VIEW_FLOOR_PLAN && (
+                    <TabsContent value="floorplan" className="mt-0">
+                      <Suspense
+                        fallback={
+                          <div className="p-4 text-xs text-muted-foreground">
+                            Cargando mapa...
+                          </div>
+                        }
+                      >
+                        <FloorPlanView
+                          siteId={selectedSite}
+                          onCameraSelect={(id: string) => setFocusedCamera(id)}
+                        />
+                      </Suspense>
+                    </TabsContent>
+                  )}
+                  {FF.LIVE_VIEW_SCENE_COMPOSER && (
+                    <TabsContent value="scenes" className="mt-0">
+                      <Suspense
+                        fallback={
+                          <div className="p-4 text-xs text-muted-foreground">
+                            Cargando escenas...
+                          </div>
+                        }
+                      >
+                        <SceneComposer
+                          onSceneLoad={() => {
+                            /* TODO: apply scene layout */
+                          }}
+                        />
+                      </Suspense>
+                    </TabsContent>
+                  )}
+
+                  <TabsContent value="lv-events" className="mt-0">
+                    <Suspense
+                      fallback={
+                        <div className="p-4 text-xs text-muted-foreground">
+                          Cargando eventos...
+                        </div>
+                      }
+                    >
+                      <LiveViewEventsPanel
+                        onClose={() => {
+                          /* panel stays open */
+                        }}
+                      />
+                    </Suspense>
+                  </TabsContent>
+
+                  <TabsContent value="lv-ops" className="mt-0">
+                    <Suspense
+                      fallback={
+                        <div className="p-4 text-xs text-muted-foreground">
+                          Cargando operaciones...
+                        </div>
+                      }
+                    >
+                      <LiveViewOpsPanel
+                        onClose={() => {
+                          /* panel stays open */
+                        }}
+                      />
+                    </Suspense>
                   </TabsContent>
                 </div>
               </ScrollArea>

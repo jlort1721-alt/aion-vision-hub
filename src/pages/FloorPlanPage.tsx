@@ -450,13 +450,13 @@ export default function FloorPlanPage() {
     >
       <div className="flex flex-col h-full">
         {/* ── Header bar ─────────────────────────────────── */}
-        <div className="flex flex-wrap items-center gap-4 px-4 py-3 border-b bg-[#0a0e1a]/50 backdrop-blur-sm">
+        <div className="flex flex-wrap items-center gap-4 px-4 py-3 border-b bg-navy-800/50 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <label className="text-sm text-muted-foreground whitespace-nowrap">
               {t('floorPlan.selectSite') || 'Site'}:
             </label>
             <Select value={selectedSiteId} onValueChange={setSelectedSiteId}>
-              <SelectTrigger className="w-[240px] bg-[#111827] border-[#1e293b]">
+              <SelectTrigger className="w-[240px] bg-navy-800 border-white/10">
                 <SelectValue placeholder={t('floorPlan.chooseSite') || 'Select a site...'} />
               </SelectTrigger>
               <SelectContent>
@@ -496,7 +496,7 @@ export default function FloorPlanPage() {
         </div>
 
         {/* ── Map area ───────────────────────────────────── */}
-        <div className="flex-1 relative bg-[#0a0e1a]">
+        <div className="flex-1 relative bg-navy-800">
           {!selectedSiteId ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
               <Map className="h-16 w-16 opacity-30" />
@@ -536,7 +536,7 @@ export default function FloorPlanPage() {
 
           {/* ── Legend ──────────────────────────────────── */}
           {selectedSiteId && siteDevices.length > 0 && (
-            <div className="absolute bottom-4 left-4 z-[1000] bg-[#111827]/90 backdrop-blur-sm border border-[#1e293b] rounded-lg px-3 py-2 space-y-1">
+            <div className="absolute bottom-4 left-4 z-[1000] bg-navy-800/90 backdrop-blur-sm border border-white/10 rounded-lg px-3 py-2 space-y-1">
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 {t('floorPlan.legend') || 'Legend'}
               </p>

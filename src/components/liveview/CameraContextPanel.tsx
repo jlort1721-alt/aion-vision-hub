@@ -1,9 +1,15 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCameraLinks } from "@/services/camera-links-api";
 import { apiClient } from "@/lib/api-client";
 import { DoorOpen, Phone, Lightbulb, Bell, Users, Camera } from "lucide-react";
+
+const IntercomPushToTalk = lazy(() =>
+  import("@/components/liveview/IntercomPushToTalk").then((m) => ({
+    default: m.IntercomPushToTalk,
+  })),
+);
 
 interface CameraContextPanelProps {
   cameraId: string | null;
@@ -110,6 +116,14 @@ function CameraContextPanelInner({
               grouped.intercom.map((link) => (
                 <IntercomCard key={link.id} link={link} />
               ))
+            )}
+            {grouped.intercom.length > 0 && (
+              <Suspense fallback={null}>
+                <IntercomPushToTalk
+                  deviceId={grouped.intercom[0].linkedDeviceId}
+                  deviceName={grouped.intercom[0].linkedDeviceName}
+                />
+              </Suspense>
             )}
           </TabsContent>
 

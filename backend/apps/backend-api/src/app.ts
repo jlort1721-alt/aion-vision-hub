@@ -43,6 +43,10 @@ import { registerReportRoutes } from "./modules/reports/routes.js";
 import { registerAuditRoutes } from "./modules/audit/routes.js";
 import { registerDomoticRoutes } from "./modules/domotics/routes.js";
 import { registerAccessControlRoutes } from "./modules/access-control/routes.js";
+import { registerAccessDoorsRoutes } from "./modules/access-doors/routes.js";
+import { registerRecordingsRoutes } from "./modules/recordings/routes.js";
+import { registerIsapiIngestRoutes } from "./modules/isapi-ingest/routes.js";
+import { registerStreamsRoutes } from "./modules/streams/index.js";
 import { registerIntercomRoutes } from "./modules/intercom/routes.js";
 import { registerRebootRoutes } from "./modules/reboots/routes.js";
 import { registerDatabaseRecordRoutes } from "./modules/database-records/routes.js";
@@ -293,6 +297,10 @@ export async function buildApp() {
   await app.register(registerAccessControlRoutes, {
     prefix: "/access-control",
   });
+  await app.register(registerAccessDoorsRoutes, { prefix: "/access" });
+  await app.register(registerRecordingsRoutes, { prefix: "/recordings" });
+  await app.register(registerIsapiIngestRoutes, { prefix: "/isapi" });
+  await app.register(registerStreamsRoutes, { prefix: "/streams" });
   await app.register(registerIntercomRoutes, { prefix: "/intercom" });
   await app.register(registerRebootRoutes, { prefix: "/reboots" });
   await app.register(registerDatabaseRecordRoutes, {

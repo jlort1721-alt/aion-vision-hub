@@ -1,0 +1,103 @@
+groups:
+  - name: aion.new-services
+    interval: 30s
+    rules:
+      - alert: LokiDown
+        expr: up{job="loki"} == 0
+        for: 3m
+        labels:
+          severity: high
+          group: observability
+        annotations:
+          summary: "Loki is down (instance {{ $labels.instance }})"
+          description: "Loki ha estado down más de 3 minutos. Sin logs centralizados."
+
+      - alert: LokiIngestionErrors
+        expr: rate(loki_request_duration_seconds_count{status_code=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: medium
+          group: observability
+        annotations:
+          summary: "Loki ingestion errors elevated"
+
+      - alert: PromtailDown
+        expr: up{job="promtail"} == 0
+        for: 5m
+        labels:
+          severity: medium
+          group: observability
+        annotations:
+          summary: "Promtail is down - log collection stopped"
+
+      - alert: MinioDown
+        expr: up{job="minio"} == 0
+        for: 3m
+        labels:
+          severity: high
+          group: storage
+        annotations:
+          summary: "MinIO object storage is down"
+
+      - alert: MinioDiskUsageHigh
+        expr: (minio_cluster_usage_bytes / minio_cluster_capacity_raw_bytes) > 0.85
+        for: 15m
+        labels:
+          severity: medium
+          group: storage
+        annotations:
+          summary: "MinIO usage > 85%"
+
+      - alert: EventGatewayDown
+        expr: up{job="event-gateway"} == 0
+        for: 3m
+        labels:
+          severity: high
+          group: bus
+        annotations:
+          summary: "event-gateway down — MQTT canonical bus interrupted"
+
+      - alert: EventGatewayPublishFailures
+        expr: rate(aion_event_gateway_failed_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: medium
+          group: bus
+        annotations:
+          summary: "event-gateway failing to publish to MQTT"
+
+      - alert: MosquittoAuthFailuresSpike
+        expr: rate(mosquitto_connect_failures_total[5m]) > 0.5
+        for: 10m
+        labels:
+          severity: medium
+          group: security
+        annotations:
+          summary: "Mosquitto auth failures spiking — possible brute-force"
+
+      - alert: DataDiskFull
+        expr: (node_filesystem_avail_bytes{mountpoint="/data"} / node_filesystem_size_bytes{mountpoint="/data"}) < 0.15
+        for: 10m
+        labels:
+          severity: high
+          group: storage
+        annotations:
+          summary: "/data disk < 15% free"
+
+      - alert: HikvisionWorkerSilent
+        expr: (time() - aion_hik_last_cycle_timestamp_seconds) > 120
+        for: 5m
+        labels:
+          severity: high
+          group: devices
+        annotations:
+          summary: "hik-monitor no ha completado ciclo en >2 min"
+
+      - alert: DahuaP2PDown
+        expr: up{job="imou-live-server"} == 0
+        for: 3m
+        labels:
+          severity: high
+          group: devices
+        annotations:
+          summary: "Dahua P2P proxy (imou-live-server) down"

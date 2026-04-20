@@ -1,0 +1,367 @@
+import { useState, useEffect, useCallback } from "react";
+import { useLiveEvents } from "@/hooks/use-live-events";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DoorOpen,
+  DoorClosed,
+  History,
+  Shield,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+  Settings,
+} from "lucide-react";
+import { PageShell } from "@/components/shared/PageShell";
+import { Skeleton } from "@/components/ui/skeleton";
+import { apiClient } from "@/lib/api-client";
+import { formatDateTime } from "@/lib/date-utils";
+import { toast } from "sonner";
+
+interface Door {
+  id: string;
+  siteId: string | null;
+  siteName: string | null;
+  deviceId: string | null;
+  deviceName: string | null;
+  deviceIp: string | null;
+  devicePort: number | null;
+  hasIntercom: boolean;
+  hasIvms: boolean;
+  hasHikconnect: boolean;
+  lastEventAt: string | null;
+}
+
+interface DoorEvent {
+  id: string;
+  eventType: string;
+  occurredAt: string;
+  metadata: Record<string, unknown>;
+}
+
+export default function AccessDoorsPage() {
+  const [doors, setDoors] = useState<Door[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<Door | null>(null);
+  const [reason, setReason] = useState("");
+  const [duration, setDuration] = useState(5);
+  const [history, setHistory] = useState<DoorEvent[]>([]);
+  const [historyOpen, setHistoryOpen] = useState<Door | null>(null);
+
+  const loadDoors = useCallback(async () => {
+    setLoading(true);
+    try {
+      const resp = await apiClient.get<{ success: boolean; data: Door[] }>(
+        "/api/access/doors",
+      );
+      setDoors(resp.data ?? []);
+    } catch (err) {
+      toast.error(`Failed to load doors: ${(err as Error).message}`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDoors();
+  }, [loadDoors]);
+
+  // Subscribe to live door events → refresh list on each door_opened / door_forced / tamper
+  const { connected: wsConnected, events: wsEvents } = useLiveEvents({
+    channels: ["events", "access_door_events", "isapi_events"],
+    onEvent: (evt) => {
+      const p = evt.payload as {
+        table?: string;
+        row?: { event_type?: string };
+      };
+      if (
+        p?.table === "access_door_events" ||
+        p?.row?.event_type?.includes("door")
+      ) {
+        loadDoors();
+      }
+    },
+  });
+
+  const openDoor = useCallback(
+    async (door: Door) => {
+      if (!reason || reason.length < 3) {
+        toast.error("Motivo es obligatorio (min 3 caracteres)");
+        return;
+      }
+      try {
+        const resp = await apiClient.post<{
+          success: boolean;
+          data: { mode: string; message: string; commandId: string };
+        }>("/api/access/doors/open", {
+          door_id: door.id,
+          reason,
+          duration_seconds: duration,
+        });
+        toast.success(
+          `Comando enviado (${resp.data.mode}) — ${resp.data.commandId}`,
+        );
+        setSelected(null);
+        setReason("");
+      } catch (err) {
+        toast.error(`Failed: ${(err as Error).message}`);
+      }
+    },
+    [reason, duration],
+  );
+
+  const loadHistory = useCallback(async (door: Door) => {
+    try {
+      const resp = await apiClient.get<{ success: boolean; data: DoorEvent[] }>(
+        `/api/access/doors/${door.id}/history?limit=50`,
+      );
+      setHistory(resp.data ?? []);
+      setHistoryOpen(door);
+    } catch (err) {
+      toast.error(`Failed to load history: ${(err as Error).message}`);
+    }
+  }, []);
+
+  return (
+    <PageShell
+      title="Control de Acceso — Puertas"
+      description={`Gestión física de puertas Hikvision vía ISAPI remoto ${wsConnected ? "• WS conectado" : "• WS desconectado"} ${wsEvents.length > 0 ? `• ${wsEvents.length} eventos live` : ""}`}
+      actions={
+        <Button
+          onClick={loadDoors}
+          disabled={loading}
+          size="sm"
+          variant="outline"
+        >
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+          />
+          Recargar
+        </Button>
+      }
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            {doors.length} puertas registradas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Sitio</TableHead>
+                <TableHead>Dispositivo</TableHead>
+                <TableHead>IP</TableHead>
+                <TableHead>Último evento</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && doors.length === 0 ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-40" /></TableCell>
+                  </TableRow>
+                ))
+              ) : doors.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-48 text-center">
+                    <div className="flex flex-col items-center justify-center text-muted-foreground">
+                      <DoorClosed className="h-12 w-12 mb-4 opacity-30" />
+                      <h3 className="text-lg font-semibold text-foreground mb-1">Sin puertas registradas</h3>
+                      <p className="text-sm mb-4 max-w-sm">No hay puertas configuradas en el sistema para control de acceso.</p>
+                      <Button variant="outline" onClick={loadDoors}>Reintentar conexión</Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : doors.map((d) => {
+                const now = new Date();
+                const lastEventDate = d.lastEventAt ? new Date(d.lastEventAt) : null;
+                const hoursSinceLastEvent = lastEventDate ? (now.getTime() - lastEventDate.getTime()) / (1000 * 60 * 60) : Infinity;
+                
+                let statusBadge;
+                if (!d.deviceIp) {
+                  statusBadge = <Badge variant="destructive" className="bg-red-500 text-white">Sin comunicación</Badge>;
+                } else if (hoursSinceLastEvent > 24) {
+                  statusBadge = <Badge variant="outline" className="text-amber-500 border-amber-500/50 bg-amber-500/5">Inactiva ({'>'}24h)</Badge>;
+                } else {
+                  statusBadge = <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 bg-emerald-500/5">Activa (últ: {lastEventDate?.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</Badge>;
+                }
+
+                return (
+                <TableRow key={d.id}>
+                  <TableCell className="font-medium">
+                    {d.siteName ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    {d.deviceName ?? (
+                      <Badge variant="outline">Sin device</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {d.deviceIp ? `${d.deviceIp}:${d.devicePort}` : "—"}
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {statusBadge}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => setSelected(d)}
+                        disabled={!d.deviceIp}
+                        title="Abrir ahora"
+                      >
+                        <DoorOpen className="h-4 w-4 mr-1" /> Abrir
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => loadHistory(d)}
+                        title="Ver eventos"
+                      >
+                        <History className="h-4 w-4 mr-1" /> Eventos
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled
+                        title="Configurar"
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )})}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <AlertDialog
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelected(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Abrir {selected?.deviceName}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se enviará un comando ISAPI al controlador en {selected?.deviceIp}
+              :{selected?.devicePort}. Esta acción queda auditada con tu
+              usuario.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Motivo (obligatorio)</Label>
+              <Textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={2}
+              />
+            </div>
+            <div>
+              <Label>Duración (segundos)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={60}
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value))}
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => selected && openDoor(selected)}>
+              <DoorOpen className="h-4 w-4 mr-2" /> Confirmar apertura
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!historyOpen}
+        onOpenChange={(o) => !o && setHistoryOpen(null)}
+      >
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Historial — {historyOpen?.deviceName}
+            </AlertDialogTitle>
+          </AlertDialogHeader>
+          <div className="max-h-96 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>Detalle</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {history.map((h) => (
+                  <TableRow key={h.id}>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          h.eventType === "door_opened" ? "default" : "outline"
+                        }
+                      >
+                        {h.eventType === "door_opened" && (
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        )}
+                        {h.eventType === "door_open_failed" && (
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                        )}
+                        {h.eventType}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {formatDateTime(h.occurredAt)}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {JSON.stringify(h.metadata).slice(0, 80)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cerrar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </PageShell>
+  );
+}

@@ -94,6 +94,7 @@ import NotificationPanel from "@/components/NotificationPanel";
 const AutoReminders = lazy(() => import("@/components/AutoReminders"));
 const ShiftChecklist = lazy(() => import("@/components/ShiftChecklist"));
 const LogbookEntry = lazy(() => import("@/components/LogbookEntry"));
+import { SkipToMain } from "@/components/shared/SkipToMain";
 
 // ── Navigation with categories ─────────────────────────────
 
@@ -471,6 +472,7 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <SkipToMain />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded"

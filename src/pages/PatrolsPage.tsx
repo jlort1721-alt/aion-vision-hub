@@ -395,7 +395,7 @@ export default function PatrolsPage() {
                    GPS ACTIVO
                  </Badge>
                </CardHeader>
-               <CardContent className="p-0 flex-1 relative bg-[#0a0f12] flex items-center justify-center pt-14">
+               <CardContent className="p-0 flex-1 relative bg-navy-800 flex items-center justify-center pt-14">
                  <div className="absolute w-full h-full opacity-20" style={{ 
                      backgroundImage: "linear-gradient(#00ff88 1px, transparent 1px), linear-gradient(90deg, #00ff88 1px, transparent 1px)", 
                      backgroundSize: "40px 40px" 

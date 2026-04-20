@@ -36,3 +36,8 @@
 2026-04-16T05:52:00Z | VERIFY | Frontend hash index-CD6TEmkw.js confirmado en aionseg.co, 0 supabase refs | OK |
 2026-04-16T05:52:00Z | VERIFY | API health uptime 393s, 28 PM2 online, 0 errores, migraciones 030-032 en DB | OK |
 2026-04-16T06:00:00Z | I18N | Agentes procesando 14 paginas i18n + 37 tests handlers en paralelo | EN CURSO |
+2026-04-16T07:30:00Z | FIX-A | AMI call logger: restart con ENABLE_CALL_LOGGER=true — 3 calls registradas | OK |
+2026-04-16T07:30:00Z | FIX-B | Nginx: movido backup aionseg.co.bak fuera de sites-enabled — 0 warnings | OK |
+2026-04-16T07:30:00Z | FIX-C | dist workers: eliminados 2 huerfanos (dahua-stream-monitor, hik-alarm-worker) — 13=13 sync | OK |
+2026-04-16T07:30:00Z | FIX-D | Frontend rebuild con FF activados — 7 componentes Live View Pro code-split en chunks | OK |
+2026-04-16T17:09:00Z | VERIFY | Auditoria 20 puntos: API healthy 34709s, 28 PM2, 0 errors, 3 intercom_calls, 128 streams, SSL 75d | OK |

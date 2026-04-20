@@ -94,10 +94,10 @@ export default function VisionHubPage() {
   }, [devices]);
 
   return (
-    <div className="min-h-screen bg-[#030810] text-slate-100">
+    <div className="min-h-screen bg-navy-900 text-slate-100">
       <header className="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Radar className="w-8 h-8 text-[#D4A017]" />
+          <Radar className="w-8 h-8 text-gold" />
           <div>
             <h1
               className="text-3xl font-black tracking-tight uppercase"
@@ -192,7 +192,7 @@ export default function VisionHubPage() {
           {liveEvents.slice(0, 3).map((e, i) => (
             <Card key={i} className="bg-slate-900 border-[#D4A017]/40">
               <CardContent className="p-3 text-xs">
-                <div className="font-bold text-[#D4A017] flex items-center gap-1">
+                <div className="font-bold text-gold flex items-center gap-1">
                   <Radio className="w-3 h-3" /> Failover · {e.device_id}
                 </div>
                 <div className="text-slate-400 mt-1">

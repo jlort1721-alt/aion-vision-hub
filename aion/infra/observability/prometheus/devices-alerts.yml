@@ -1,0 +1,48 @@
+groups:
+  - name: aion.devices
+    interval: 30s
+    rules:
+      - alert: DeviceSnapshotStale
+        expr: (time() - aion_device_last_snapshot_timestamp_seconds) > 300
+        for: 5m
+        labels:
+          severity: medium
+          group: devices
+        annotations:
+          summary: "Snapshots de {{ $labels.device_id }} llevan >5min sin actualizar"
+
+      - alert: HikPushDropped
+        expr: rate(aion_isapi_events_total[10m]) < 0.01
+        for: 15m
+        labels:
+          severity: high
+          group: devices
+        annotations:
+          summary: "No hay pushes ISAPI recibidos en 15 min — DVRs sin conectividad"
+
+      - alert: DahuaP2PBridgeDown
+        expr: up{job=~"dh-p2p-.+"} == 0
+        for: 3m
+        labels:
+          severity: high
+          group: devices
+        annotations:
+          summary: "dh-p2p bridge {{ $labels.instance }} down"
+
+      - alert: AccessDoorCommandFailing
+        expr: rate(aion_access_door_open_failed_total[15m]) > 0.05
+        for: 10m
+        labels:
+          severity: high
+          group: access
+        annotations:
+          summary: "Comandos apertura puerta fallando >5% en 15min"
+
+      - alert: EventGatewayBacklog
+        expr: aion_event_gateway_failed > 10
+        for: 5m
+        labels:
+          severity: medium
+          group: bus
+        annotations:
+          summary: "event-gateway acumulando fallos de publish"

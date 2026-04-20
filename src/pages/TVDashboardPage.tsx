@@ -78,11 +78,11 @@ export default function TVDashboardPage() {
   const dateStr = clock.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
-    <div className="h-screen w-screen bg-[#030810] text-white flex flex-col overflow-hidden select-none cursor-none">
+    <div className="h-screen w-screen bg-navy-900 text-white flex flex-col overflow-hidden select-none cursor-none">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <Shield className="h-8 w-8 text-[#D4A017]" />
+          <Shield className="h-8 w-8 text-gold" />
           <div>
             <h1 className="text-xl font-bold tracking-wide">AION Centro de Monitoreo</h1>
             <p className="text-xs text-gray-500">Clave Seguridad CTA</p>
@@ -123,7 +123,7 @@ export default function TVDashboardPage() {
         {/* Right: Status panel */}
         <div className="w-80 flex flex-col gap-3 shrink-0">
           {/* System status */}
-          <div className="bg-[#0D1B2A] rounded-xl p-4 border border-green-500/30">
+          <div className="bg-navy-700 rounded-xl p-4 border border-green-500/30">
             <div className="flex items-center gap-2 mb-3">
               <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
               <span className="font-semibold text-green-400 text-sm">Sistema Operativo</span>
@@ -137,8 +137,8 @@ export default function TVDashboardPage() {
           </div>
 
           {/* Recent alerts */}
-          <div className="bg-[#0D1B2A] rounded-xl p-4 border border-white/10 flex-1 overflow-auto">
-            <h3 className="text-sm font-semibold text-[#D4A017] mb-3 flex items-center gap-2">
+          <div className="bg-navy-700 rounded-xl p-4 border border-white/10 flex-1 overflow-auto">
+            <h3 className="text-sm font-semibold text-gold mb-3 flex items-center gap-2">
               <Clock className="h-4 w-4" /> Actividad Reciente
             </h3>
             <div className="space-y-2">
@@ -170,7 +170,7 @@ export default function TVDashboardPage() {
 
 function StatusCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="bg-[#030810] rounded-lg p-3 text-center">
+    <div className="bg-navy-900 rounded-lg p-3 text-center">
       <div className="flex justify-center mb-1">{icon}</div>
       <div className="text-lg font-bold">{value}</div>
       <div className="text-[10px] text-gray-500">{label}</div>

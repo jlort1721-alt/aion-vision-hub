@@ -1,0 +1,30 @@
+{
+  "title": "OpenClaw Dashboard",
+  "panels": [
+    {
+      "title": "Agent Status",
+      "type": "stat",
+      "targets": [{"expr": "openclaw_agent_status"}]
+    },
+    {
+      "title": "Tasks Processed",
+      "type": "timeseries",
+      "targets": [{"expr": "openclaw_tasks_processed_total"}]
+    },
+    {
+      "title": "DVR Login Failures",
+      "type": "timeseries",
+      "targets": [{"expr": "openclaw_dvr_login_failures"}]
+    },
+    {
+      "title": "Imou Tokens Refreshed",
+      "type": "timeseries",
+      "targets": [{"expr": "openclaw_imou_tokens_refreshed"}]
+    },
+    {
+      "title": "CPU Usage (%)",
+      "type": "gauge",
+      "targets": [{"expr": "openclaw_cpu_usage_percent"}]
+    }
+  ]
+}
