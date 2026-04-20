@@ -16,9 +16,30 @@ test.describe("Live Streams", () => {
     await expect(slots.first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test("page content mentions video/streams/sitios", async ({ page }) => {
-    const content = await page.locator("body").textContent();
-    expect(content).toMatch(/sitios|puestos|streams|video|en vivo/i);
+  test("page has a video/stream grid region with rendered cells", async ({
+    page,
+  }) => {
+    // Strong: expect a real layout — a grid container with at least one
+    // data-testid or video element, plus a heading/header for the section.
+    const gridContainer = page
+      .locator(
+        '[data-testid="stream-grid"], [class*="grid"]:has(video), main [role="region"]',
+      )
+      .first();
+    await expect(gridContainer).toBeVisible({ timeout: 15_000 });
+
+    const cells = gridContainer.locator(
+      ":scope > *, [data-testid^='stream-'], video",
+    );
+    expect(await cells.count()).toBeGreaterThanOrEqual(1);
+
+    // Page also has a visible section heading (h1/h2/h3 that mentions
+    // en vivo/streams/sitios).
+    const heading = page
+      .locator("h1, h2, h3")
+      .filter({ hasText: /en vivo|stream|sitio|puesto|video/i })
+      .first();
+    await expect(heading).toBeVisible();
   });
 
   test.skip("G5: fullscreen modal on stream dblclick (deferred)", async ({

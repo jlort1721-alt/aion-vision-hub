@@ -12,8 +12,20 @@ test.describe("Dashboard", () => {
   });
 
   test("page loads without fatal error", async ({ page }) => {
-    const html = await page.locator("body").textContent();
-    expect(html?.length ?? 0).toBeGreaterThan(100);
+    // Strong check: no Vite error overlay, no "Error"/"500" in title,
+    // and the #root (or main content) has actually rendered children.
+    const errorOverlay = page.locator(
+      "vite-error-overlay, #__vite_plugin_react_preamble_error_overlay",
+    );
+    await expect(errorOverlay).toHaveCount(0);
+
+    const title = await page.title();
+    expect(title).not.toMatch(/Error|500|Something went wrong/i);
+
+    const root = page.locator("#root, main, [role=main]").first();
+    await expect(root).toBeVisible({ timeout: 10_000 });
+    const childrenCount = await root.locator(":scope > *").count();
+    expect(childrenCount).toBeGreaterThan(0);
   });
 
   test("page title reflects brand", async ({ page }) => {

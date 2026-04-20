@@ -10,9 +10,20 @@ test.describe("Events / Alarms", () => {
     await requireAuth(page);
   });
 
-  test("events page loads with domain vocabulary", async ({ page }) => {
-    const body = await page.locator("body").textContent();
-    expect(body).toMatch(/evento|alarm|incident|notific/i);
+  test("events page has heading and feed region", async ({ page }) => {
+    // Strong: explicit heading (not random body match) + a feed/list region.
+    const heading = page
+      .locator("h1, h2")
+      .filter({ hasText: /evento|alarm|incident|notific/i })
+      .first();
+    await expect(heading).toBeVisible({ timeout: 10_000 });
+
+    const feedRegion = page
+      .locator(
+        '[data-testid="events-feed"], [data-testid="alarms-feed"], [role="feed"], main [role="list"]',
+      )
+      .first();
+    await expect(feedRegion).toBeVisible();
   });
 
   test("list container or empty-state rendered", async ({ page }) => {

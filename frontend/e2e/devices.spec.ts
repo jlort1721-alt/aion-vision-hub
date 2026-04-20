@@ -10,9 +10,32 @@ test.describe("Devices", () => {
     await requireAuth(page);
   });
 
-  test("page loads with device list or empty-state", async ({ page }) => {
-    const body = await page.locator("body").textContent();
-    expect(body).toMatch(/dispositivo|device|cámara|camera/i);
+  test("page renders device list container with real cards or explicit empty state", async ({
+    page,
+  }) => {
+    // Strong: expect EITHER a real card-list with >=1 device-shaped item
+    // OR an explicit "no hay dispositivos" empty state (not just a word match).
+    const cards = page.locator(
+      '[data-testid^="device-"], [data-testid="device-card"], table tbody tr, [role="listitem"]',
+    );
+    const emptyState = page.locator(
+      '[data-testid="empty-state"], [data-testid*="empty"]',
+    );
+
+    const cardCount = await cards.count();
+    const emptyVisible = await emptyState
+      .first()
+      .isVisible()
+      .catch(() => false);
+
+    expect(cardCount > 0 || emptyVisible).toBeTruthy();
+
+    // Page heading must explicitly mention devices — not just a random match in footer/nav.
+    const heading = page
+      .locator("h1, h2")
+      .filter({ hasText: /dispositivo|device|cámara/i })
+      .first();
+    await expect(heading).toBeVisible({ timeout: 10_000 });
   });
 
   test("nav links back to other sections", async ({ page }) => {
