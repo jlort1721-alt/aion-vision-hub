@@ -87,8 +87,6 @@ const DEFAULT_WIDGETS: WidgetConfig[] = [
   { id: 'sla_widget', label: 'SLA & Cumplimiento', enabled: true },
   { id: 'activity_heatmap', label: 'Activity Heatmap', enabled: true },
   { id: 'cross_site', label: 'Cross-Site Dashboard', enabled: false },
-  { id: 'ai_detections', label: 'Últimas Detecciones IA', enabled: true },
-  { id: 'pm2_status', label: 'PM2 Cluster Status', enabled: true },
 ];
 
 const WIDGETS_STORAGE_KEY = 'aion-dashboard-widgets';
@@ -730,56 +728,6 @@ export default function DashboardPage() {
           <ActivityFeed />
         </CardContent>
       </Card>
-      )}
-
-      {/* AI Detections & PM2 Status */}
-      {wEnabled('ai_detections') && (
-        <Card aria-label="Últimas Detecciones IA">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Video className="h-4 w-4" /> Últimas Detecciones IA
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className="min-w-[140px] space-y-2">
-                  <div className="aspect-video bg-muted rounded-md flex items-center justify-center overflow-hidden border">
-                    <img src={`https://picsum.photos/seed/${i}/140/80`} alt="Thumbnail" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="text-xs font-medium truncate px-1">Intruso Detectado</div>
-                  <div className="text-[10px] text-muted-foreground px-1">Hace {i * 2} min</div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {wEnabled('pm2_status') && (
-        <Card aria-label="PM2 Status">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Activity className="h-4 w-4" /> PM2 Cluster Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-               {['aionseg-api', 'openclaw', 'nginx', 'go2rtc'].map(s => (
-                 <div key={s} className="flex flex-col gap-1 p-3 border rounded-md bg-muted/20">
-                   <div className="flex items-center justify-between">
-                     <span className="text-sm font-medium">{s}</span>
-                     <CheckCircle2 className="h-4 w-4 text-success" />
-                   </div>
-                   <div className="flex gap-2 text-[10px] text-muted-foreground">
-                     <span>CPU: 1.2%</span>
-                     <span>MEM: 124MB</span>
-                   </div>
-                 </div>
-               ))}
-             </div>
-          </CardContent>
-        </Card>
       )}
 
       </>}

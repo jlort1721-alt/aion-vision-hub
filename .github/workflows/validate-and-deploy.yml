@@ -46,7 +46,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
-      - run: npm install -g turbo
       - run: pnpm install --frozen-lockfile
 
       - name: Lint
@@ -113,7 +112,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
-      - run: npm install -g turbo
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r build
 
@@ -121,7 +119,9 @@ jobs:
         run: |
           tar --exclude=node_modules --exclude=.git \
               -czf aion-build-${{ github.sha }}.tar.gz \
-              dist package.json pnpm-lock.yaml pnpm-workspace.yaml || true
+              api/dist frontend/.next agent/dist model-router/dist \
+              vision-hub/dist comms/dist worker/dist scheduler/dist \
+              package.json pnpm-lock.yaml pnpm-workspace.yaml ecosystem.config.js
 
       - uses: actions/upload-artifact@v4
         with:
